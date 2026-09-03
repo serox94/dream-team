@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "dream-team",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-09-03",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "dream-team-db",
+      "database_id": "b64c7a2c-8694-41c6-b54a-857b88bf2c96"
+    }
+  ]
+}
