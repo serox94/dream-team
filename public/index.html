@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#07120e">
+  <title>Dream Team | Carp Fishing Trip Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#"><span class="brand-mark">DT</span><span><b>DREAM TEAM</b><small>CARP FISHING</small></span></a>
+      <div class="trip-switcher"><span class="eyebrow">AKTYWNY WYJAZD</span><button id="tripButton" class="trip-button"><span><b id="tripButtonName">Ładowanie…</b><small id="tripButtonMeta">—</small></span><i>⌄</i></button><div id="tripMenu" class="trip-menu hidden"></div></div>
+      <nav>
+        <a class="active" href="#dashboard">⌂ <span>Dashboard</span></a>
+        <a href="#catches">◉ <span>Połowy</span></a>
+        <a href="#weather">☁ <span>Pogoda PRO</span></a>
+        <a href="#lake">⌖ <span>Łowisko</span></a>
+        <a href="#map">◇ <span>Mapa spotów</span></a>
+        <a href="#checklists">✓ <span>Checklisty</span></a>
+        <a href="#knowledge">◎ <span>Baza wiedzy</span></a>
+      </nav>
+      <div class="sidebar-bottom"><a href="#archive">▣ <span>Archiwum wyjazdów</span></a><div class="crew"><div class="avatars"><span>P</span><span>M</span></div><div><b>Patryk & Maciek</b><small>Dream Team</small></div></div></div>
+    </aside>
+
+    <main>
+      <header class="topbar"><button class="mobile-menu" id="mobileMenu">☰</button><div><span class="eyebrow">CENTRUM DOWODZENIA</span><h1 id="pageTitle">Dream Team</h1></div><div class="status-pill" id="systemStatus"><span></span><b>Łączenie z bazą…</b></div></header>
+      <section class="content" id="dashboard">
+        <article class="hero"><img id="lakeImage" src="https://raw.githubusercontent.com/serox94/ryby2026/main/assets/img/lowisko.jpg" alt="Łowisko"><div class="hero-overlay"></div><div class="hero-content"><div><span class="badge" id="tripStatus">PLANOWANIE</span><h2 id="lakeName">Łowisko do ustawienia</h2><p id="tripLocation">Nowy wyjazd Dream Team</p></div><div class="countdown"><span>DO WYJAZDU</span><strong id="countdown">—</strong><small id="tripDates">Termin do ustawienia</small></div></div></article>
+
+        <div class="section-title"><div><span class="eyebrow">WYJAZD W SKRÓCIE</span><h3>Najważniejsze informacje</h3></div><button class="ghost" id="editTrip">Edytuj wyjazd</button></div>
+        <section class="info-grid">
+          <article><span class="icon">⌖</span><small>STANOWISKO</small><b id="peg">—</b></article>
+          <article><span class="icon">◫</span><small>POWIERZCHNIA</small><b id="waterSize">—</b></article>
+          <article><span class="icon">↕</span><small>GŁĘBOKOŚĆ</small><b id="depth">—</b></article>
+          <article><span class="icon">♛</span><small>REKORD ŁOWISKA</small><b id="carpRecord">—</b></article>
+          <article><span class="icon">⚡</span><small>PRĄD</small><b id="power">—</b></article>
+          <article><span class="icon">➤</span><small>ŁÓDKA ZANĘTOWA</small><b id="baitBoat">—</b></article>
+        </section>
+
+        <div class="dashboard-grid"><section><div class="section-title compact"><div><span class="eyebrow">LIVE STATS</span><h3>Wyniki wyjazdu</h3></div></div><div class="stats-grid"><article><small>ŁĄCZNIE KG</small><strong id="totalWeight">0.0</strong><em>kg</em></article><article><small>LICZBA RYB</small><strong id="fishCount">0</strong><em>szt.</em></article><article class="accent"><small>NAJWIĘKSZA</small><strong id="biggestFish">—</strong><em id="biggestAngler">Brak danych</em></article><article><small>TOP SPOT</small><strong class="text-stat" id="bestSpot">—</strong><em>najskuteczniejszy</em></article></div></section><aside class="next-action"><span class="eyebrow">NASTĘPNY KROK</span><h3>Przygotuj wyjazd</h3><p id="nextActionText">Ustaw łowisko i termin.</p><button id="setupTrip">Ustaw dane wyjazdu →</button></aside></div>
+
+        <section class="crew-section"><div class="section-title compact"><div><span class="eyebrow">DREAM TEAM</span><h3>Załoga</h3></div></div><div class="angler-grid" id="anglerGrid"></div></section>
+        <section id="archive" class="archive"><div class="section-title compact"><div><span class="eyebrow">HISTORIA</span><h3>Archiwum wyjazdów</h3></div></div><div id="archiveList" class="archive-list"></div></section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="tripDialog"><form method="dialog" id="tripForm"><div class="dialog-head"><div><span class="eyebrow">KONFIGURACJA</span><h3>Ustaw aktywny wyjazd</h3></div><button value="cancel" class="close">×</button></div><label>Nazwa łowiska<input id="inputLake" required></label><div class="form-grid"><label>Data od<input id="inputStart" type="date" required></label><label>Data do<input id="inputEnd" type="date" required></label></div><label>Kraj / lokalizacja<input id="inputCountry"></label><label>Stanowisko<input id="inputPeg"></label><p class="form-note">Po zapisaniu dane trafiają do Cloudflare D1 i są wspólne dla Patryka i Maćka.</p><button class="primary" id="saveTrip" type="button">Zapisz w bazie</button></form></dialog>
+  <script src="app.js"></script>
+</body>
+</html>
