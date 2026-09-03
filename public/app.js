@@ -1,240 +1,48 @@
-const $ = s => document.querySelector(s);
-let model = null;
-let active = null;
-let currentView = location.hash.replace('#','') || 'dashboard';
+const $=s=>document.querySelector(s);let model=null,active=null,currentView=location.hash.slice(1)||'dashboard';
+async function api(path,opt={}){const r=await fetch(path,{...opt,headers:{'content-type':'application/json',...(opt.headers||{})}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||d.detail||`HTTP ${r.status}`);return d}
+const fmt=v=>v?new Intl.DateTimeFormat('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric'}).format(new Date(v)):'—';const fmtdt=v=>v?new Intl.DateTimeFormat('pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—';
+function status(t,e=false){const x=$('#systemStatus');x.querySelector('b').textContent=t;x.classList.toggle('error',e)}
+function esc(v=''){return String(v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 
-async function api(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    headers: { 'content-type': 'application/json', ...(options.headers || {}) }
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || data.detail || `HTTP ${response.status}`);
-  return data;
-}
+const KNOTS=[
+{name:'Knotless Knot',img:'https://www.netknots.com/index.php/download_file/411/0',desc:'Podstawa klasycznych przyponów włosowych: Hair Rig, Blowback, KD i wiele innych.',tips:['materiał wychodzi od tyłu oczka','kontroluj liczbę zwojów','przed rzutem sprawdź pozycję włosa']},
+{name:'Palomar',img:'https://www.netknots.com/application/files/5515/6443/4339/palomar_knot.jpg',desc:'Bardzo mocny węzeł do krętlików, agrafek i plecionek.',tips:['prosty i mocny','dobry do oczek','zawsze zwilż przed dociągnięciem']},
+{name:'Uni / Grinner',img:'https://www.netknots.com/index.php/download_file/442/0',desc:'Uniwersalny węzeł do żyłki, fluorocarbonu i połączeń końcowych.',tips:['warto znać perfekcyjnie','dobry awaryjnie','kontroluj równe zwoje']},
+{name:'Albright',img:'https://www.netknots.com/index.php/download_file/381/0',desc:'Połączenie dwóch materiałów o różnej średnicy, przydatne m.in. w Combi Rig.',tips:['świetny fluorocarbon + plecionka','dociągaj stopniowo','obetnij końcówki krótko']},
+{name:'Figure-of-8',img:'https://www.netknots.com/download_file/481/0',desc:'Prosta i pewna pętla końcowa do loop-to-loop.',tips:['szybka wymiana przyponów','bardzo powtarzalna','sprawdź symetrię pętli']},
+{name:'Non-Slip Mono Loop',img:'',desc:'Pętla nie zaciskająca się, dobra tam gdzie chcesz więcej swobody pracy.',tips:['Ronnie / Chod / ruchome prezentacje','nie zaciska elementu','dobry do sztywnych materiałów']}
+];
+const RIGS=[
+['Blowback Rig','blow%20back%20rig.jpeg','bottom / snowman','Uniwersalny klasyk na czyste i średnio twarde dno.'],['Tube Blow Back','tube%20blow%20back%20rig.jpeg','wafter / snowman','Techniczna odmiana Blowbacka z kontrolą pracy przynęty.'],['KD Rig','kd%20rig.jpeg','wafter','Agresywna geometria haka, dobry na piasek i lekki muł.'],['German Rig','german%20rig.jpeg','wafter / bottom','Bardzo czysta prezentacja, szczególnie na twarde miejsca.'],['IQ D-Rig','iq%20d-rig.jpeg','wafter','Sztywny, precyzyjny rig na żwir i piasek.'],['IQ D-Rig Combi','iq%20d-rig%20combi.jpeg','wafter','Połączenie sztywnego boomu z pracującą sekcją końcową.'],['Blow Back Combi','blow%20back%20combi%20rig.jpeg','snowman','Dobry kompromis między antysplątaniem i naturalną pracą.'],['Ronnie Rig','ronnie%20rig.jpeg','pop-up','Świetny kij szukający i prezentacja pop-up.'],['Multi Rig','multi%20rig.jpeg','pop-up','Szybka wymiana haka i bardzo praktyczna obsługa.'],['Slip D-Rig','slip%20d-rig.jpeg','wafter','Skuteczny nowoczesny rig bez klasycznego włosa.'],['Solid Bag Rig','solid%20bag%20rig.jpeg','PVA','Krótki zestaw pod worek PVA, świetny gdy chcesz podać wszystko punktowo.'],['Hinged Stiff Rig','hinged%20stiff%20rig.jpeg','pop-up','Sztywna prezentacja pop-up na czystszym dnie.']
+].map(([name,file,type,desc])=>({name,type,desc,img:`https://raw.githubusercontent.com/serox94/ryby2026/main/assets/img/rigi/${file}`}));
+const ADVICE=[['Start na nowej wodzie','Najpierw echosonda/Deeper i obserwacja. Szukaj przejść twarde–miękkie, półek, blatów, krawędzi i naturalnych tras ryb.'],['Nęcenie','Zaczynaj rozsądnie. Dokarmiaj na podstawie brań, a nie z przyzwyczajenia. Zimą i przy słabej aktywności szczególnie ogranicz ilość.'],['Trzy różne prezentacje','Na początku testuj różne wysokości/przynęty: bottom lub snowman, wafter i pop-up. Wynik szybko pokaże kierunek.'],['Ciśnienie','Sam poziom ciśnienia jest mniej ważny niż trend. Stabilne lub łagodnie zmieniające się warunki zwykle są łatwiejsze do interpretacji niż gwałtowne skoki.'],['Wiatr','Patrz nie tylko na kierunek, ale też czas działania wiatru i temperaturę wody. Dłuższy wiatr może przemieścić cieplejszą wodę i naturalny pokarm.'],['Bezpieczeństwo ryby','Mata, podbierak, środek do ran, bezpieczny system ciężarka i pełna kontrola zestawu to priorytet.'],['Plan B','Jeśli przez kilkanaście godzin nie ma oznak życia, zmień jeden parametr naraz: spot, głębokość, przynętę albo sposób nęcenia.']];
 
-function setStatus(text, error = false) {
-  const el = $('#systemStatus');
-  el.querySelector('b').textContent = text;
-  el.classList.toggle('error', error);
-}
+function titles(v){return ({dashboard:['CENTRUM DOWODZENIA',active?.name||'Dream Team'],catches:['REJESTR POŁOWÓW','Połowy'],weather:['ANALIZA WARUNKÓW','Pogoda PRO'],lake:['PROFIL WYJAZDU','Łowisko / regulamin'],map:['SPOTY I DNO','Mapa spotów'],checklists:['PRZYGOTOWANIE','Checklisty'],knots:['TECHNIKA','Węzły'],rigs:['PRZYPONY','Rigi / przypony'],advice:['BAZA WIEDZY','Porady'],archive:['HISTORIA','Archiwum wyjazdów']})[v]||['DREAM TEAM','Dream Team']}
+function show(v){currentView=document.getElementById(`view-${v}`)?v:'dashboard';document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active-view',x.id===`view-${currentView}`));document.querySelectorAll('.nav-link').forEach(x=>x.classList.toggle('active',x.dataset.view===currentView));const t=titles(currentView);$('#pageEyebrow').textContent=t[0];$('#pageTitle').textContent=t[1];$('#sidebar').classList.remove('open');if(currentView==='catches')loadCatches();if(currentView==='weather')loadWeather();if(currentView==='map')loadSpots();if(currentView==='checklists')loadChecklist();if(currentView==='lake')loadDocuments()}
 
-function fmtDate(value) {
-  if (!value) return null;
-  return new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(value));
-}
+async function load(){try{status('Łączenie z D1…');model=await api('/api/bootstrap');active=model.trips.find(x=>x.id===model.app.activeTripId)||model.trips[0];renderAll();bind();show(currentView);status('D1 online')}catch(e){console.error(e);status('Błąd D1',true)}}
+function renderAll(){if(!active)return;const f=active.facts||{};$('#tripButtonName').textContent=active.lake;$('#tripButtonMeta').textContent=`${active.year} · ${active.status==='archived'?'Archiwum':active.status==='active'?'Aktywny':'Planowanie'}`;$('#lakeName').textContent=active.lake;$('#tripLocation').textContent=[active.country,active.peg].filter(x=>x&&x!=='—').join(' · ');$('#tripStatus').textContent=active.status==='archived'?'ARCHIWUM':active.status==='active'?'AKTYWNY':'PLANOWANIE';$('#lakeImage').src=active.lakeImage||'https://raw.githubusercontent.com/serox94/ryby2026/main/assets/img/lowisko.jpg';$('#peg').textContent=active.peg||'—';for(const k of ['waterSize','depth','carpRecord','power','baitBoat'])$('#'+k).textContent=f[k]||'—';$('#totalWeight').textContent=Number(active.stats?.totalWeightKg||0).toFixed(1);$('#fishCount').textContent=active.stats?.fishCount||0;$('#biggestFish').textContent=active.stats?.biggestFishKg?`${active.stats.biggestFishKg} kg`:'—';$('#biggestAngler').textContent=active.stats?.biggestFishAngler||'Brak';$('#bestSpot').textContent=active.stats?.bestSpot||'—';$('#nextActionText').textContent=active.start?'Termin, baza i moduły są gotowe. Używaj checklist, pogody, spotów i połowów na bieżąco.':'Ustaw termin i łowisko.';countdown();tripMenu();archive();anglers();lakeProfile();staticKnowledge()}
+function countdown(){if(!active.start){$('#countdown').textContent='—';$('#tripDates').textContent='Termin do ustawienia';return}const d=Math.ceil((new Date(active.start)-new Date())/864e5);$('#countdown').textContent=d>0?`${d} dni`:d===0?'DZISIAJ':active.status==='archived'?'ZAKOŃCZONY':'TRWA';$('#tripDates').textContent=`${fmt(active.start)} — ${fmt(active.end)}`}
+function tripMenu(){const b=$('#tripMenu');b.innerHTML=model.trips.map(t=>`<button data-trip="${t.id}"><b>${esc(t.lake)}</b><small>${t.year} · ${t.status}</small></button>`).join('');b.querySelectorAll('button').forEach(x=>x.onclick=async()=>{await api(`/api/trips/${encodeURIComponent(x.dataset.trip)}/activate`,{method:'POST'});model=await api('/api/bootstrap');active=model.trips.find(t=>t.id===x.dataset.trip)||model.trips[0];b.classList.add('hidden');renderAll();show(currentView)})}
+function archive(){const ts=model.trips.filter(t=>t.status==='archived');$('#archiveList').innerHTML=ts.length?ts.map(t=>`<article class="archive-item"><div><b>${esc(t.name)}</b><small>${esc(t.lake)} · ${fmt(t.start)} — ${fmt(t.end)}</small></div><button data-arch="${t.id}">Otwórz</button></article>`).join(''):'<div class="empty-state">Brak archiwum.</div>';document.querySelectorAll('[data-arch]').forEach(b=>b.onclick=()=>{active=model.trips.find(t=>t.id===b.dataset.arch);renderAll();location.hash='dashboard';show('dashboard')})}
+function anglers(){$('#anglerGrid').innerHTML=model.anglers.map(a=>`<article><div class="angler-head"><span>${a.name[0]}</span><div><h4>${a.name}</h4><small>PB: ${Number(a.pbKg).toFixed(1)} kg</small></div></div></article>`).join('')}
+function lakeProfile(){const f=active.facts||{};$('#lakeProfileTitle').textContent=active.lake;const rows=[['Adres',f.address||active.country],['Termin',active.start?`${fmt(active.start)} — ${fmt(active.end)}`:'—'],['Stanowisko',active.peg],['Powierzchnia',f.waterSize],['Głębokość',f.depth],['Rekord',f.carpRecord],['Liczba wędek',f.rods],['Łódka zanętowa',f.baitBoat],['Łódź',f.boat],['Prąd',f.power],['Sanitariaty',f.sanitary],['Woda',f.water],['Przyjazd',f.arrival||f.arrivalNote],['Wyjazd',f.departure]];$('#lakeProfile').innerHTML=rows.map(([k,v])=>`<article><small>${k}</small><strong>${esc(v||'—')}</strong></article>`).join('')}
+function staticKnowledge(){$('#knotsGrid').innerHTML=KNOTS.map(k=>`<article class="knowledge-card"><h3>${k.name}</h3>${k.img?`<div class="guide-media"><img src="${k.img}" alt="${k.name}" loading="lazy" referrerpolicy="no-referrer"></div>`:''}<p>${k.desc}</p><ul>${k.tips.map(x=>`<li>${x}</li>`).join('')}</ul></article>`).join('');$('#rigsGrid').innerHTML=RIGS.map(r=>`<article class="knowledge-card"><h3>${r.name}</h3><div class="guide-media"><img src="${r.img}" alt="${r.name}" loading="lazy"></div><span class="badge">${r.type}</span><p>${r.desc}</p></article>`).join('');$('#adviceGrid').innerHTML=ADVICE.map(([a,b])=>`<article><small>${a}</small><strong>${b}</strong></article>`).join('')}
 
-function fmtDateTime(value) {
-  if (!value) return '—';
-  return new Intl.DateTimeFormat('pl-PL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }).format(new Date(value));
-}
+async function refresh(){model=await api('/api/bootstrap');active=model.trips.find(t=>t.id===active.id)||model.trips.find(t=>t.id===model.app.activeTripId)||model.trips[0];renderAll()}
+async function loadCatches(){const {catches}=await api(`/api/catches?tripId=${encodeURIComponent(active.id)}`);const total=catches.reduce((s,x)=>s+Number(x.weightKg||0),0),big=[...catches].sort((a,b)=>b.weightKg-a.weightKg)[0];const mode=k=>Object.entries(catches.reduce((m,x)=>(x[k]&&(m[x[k]]=(m[x[k]]||0)+1),m),{})).sort((a,b)=>b[1]-a[1])[0]?.[0]||'Brak';$('#catchSummary').innerHTML=`<div><span>Liczba</span><strong>${catches.length}</strong></div><div><span>Waga</span><strong>${total.toFixed(1)} kg</strong></div><div><span>Największa</span><strong>${big?`${big.weightKg} kg · ${big.anglerName}`:'Brak'}</strong></div><div><span>Top spot</span><strong>${mode('spot')}</strong></div><div><span>Top przynęta</span><strong>${mode('bait')}</strong></div><div><span>Top rig</span><strong>${mode('rig')}</strong></div>`;$('#catchesList').innerHTML=catches.length?catches.map(c=>`<article class="list-item"><div><b>${c.weightKg} kg · ${esc(c.species)} · ${esc(c.anglerName)}</b><small>${fmtdt(c.caughtAt)}${c.spot?` · ${esc(c.spot)}`:''}${c.bait?` · ${esc(c.bait)}`:''}${c.rig?` · ${esc(c.rig)}`:''}</small>${c.notes?`<p>${esc(c.notes)}</p>`:''}</div><button data-delcatch="${c.id}">Usuń</button></article>`).join(''):'<div class="empty-state">Brak połowów dla tego wyjazdu.</div>';document.querySelectorAll('[data-delcatch]').forEach(b=>b.onclick=async()=>{if(confirm('Usunąć połów?')){await api(`/api/catches/${b.dataset.delcatch}`,{method:'DELETE'});await loadCatches();await refresh()}})}
+async function addCatch(){const w=Number($('#catchWeight').value);if(!(w>0))return alert('Podaj wagę.');await api('/api/catches',{method:'POST',body:JSON.stringify({tripId:active.id,anglerId:$('#catchAngler').value,weightKg:w,species:$('#catchSpecies').value||'Karp',caughtAt:$('#catchTime').value?new Date($('#catchTime').value).toISOString():new Date().toISOString(),spot:$('#catchSpot').value.trim()||null,bait:$('#catchBait').value.trim()||null,rig:$('#catchRig').value.trim()||null,depthM:$('#catchDepth').value?Number($('#catchDepth').value):null,notes:$('#catchNotes').value.trim()||null})});for(const id of ['catchWeight','catchSpot','catchBait','catchRig','catchDepth','catchNotes'])$('#'+id).value='';await loadCatches();await refresh();status('D1 online · połów zapisany')}
+async function loadSpots(){const {spots}=await api(`/api/spots?tripId=${encodeURIComponent(active.id)}`);$('#spotsList').innerHTML=spots.length?spots.map(s=>`<article class="list-item"><div><b>${esc(s.name)}</b><small>${s.depthM??'—'} m · ${s.distanceM??'—'} m · ${esc(s.bottomType||'dno ?')}</small>${s.obstacles?`<p>Zaczepy: ${esc(s.obstacles)}</p>`:''}${s.bestTime||s.bestWind?`<p>${s.bestTime?`Pora: ${esc(s.bestTime)} `:''}${s.bestWind?`Wiatr: ${esc(s.bestWind)}`:''}</p>`:''}${s.notes?`<p>${esc(s.notes)}</p>`:''}</div><button data-delspot="${s.id}">Usuń</button></article>`).join(''):'<div class="empty-state">Brak spotów.</div>';document.querySelectorAll('[data-delspot]').forEach(b=>b.onclick=async()=>{await api(`/api/spots/${b.dataset.delspot}`,{method:'DELETE'});loadSpots()})}
+async function addSpot(){const n=$('#spotName').value.trim();if(!n)return alert('Podaj nazwę spotu.');await api('/api/spots',{method:'POST',body:JSON.stringify({tripId:active.id,name:n,depthM:$('#spotDepth').value?Number($('#spotDepth').value):null,distanceM:$('#spotDistance').value?Number($('#spotDistance').value):null,bottomType:$('#spotBottom').value.trim()||null,obstacles:$('#spotObstacles').value.trim()||null,bestTime:$('#spotBestTime').value.trim()||null,bestWind:$('#spotBestWind').value.trim()||null,notes:$('#spotNotes').value.trim()||null})});['spotName','spotDepth','spotDistance','spotBottom','spotObstacles','spotBestTime','spotBestWind','spotNotes'].forEach(id=>$('#'+id).value='');loadSpots()}
+async function loadChecklist(){const {items}=await api(`/api/checklist?tripId=${encodeURIComponent(active.id)}`),done=items.filter(x=>x.packed).length;$('#checkProgress').textContent=`${done}/${items.length} odhaczone`;const groups=Object.groupBy?Object.groupBy(items,x=>x.category):items.reduce((m,x)=>((m[x.category]??=[]).push(x),m),{});$('#checklistList').innerHTML=items.length?Object.entries(groups).map(([cat,arr])=>`<div class="check-group"><h4>${esc(cat)}</h4>${arr.map(i=>`<article class="check-item ${i.packed?'done':''}"><label><input type="checkbox" data-check="${i.id}" ${i.packed?'checked':''}><span><b>${esc(i.label)}</b><small>${esc(i.quantity||'')}${i.assignedTo?` · ${esc(i.assignedTo)}`:''}</small></span></label><button data-delcheck="${i.id}">×</button></article>`).join('')}</div>`).join(''):'<div class="empty-state">Lista pusta.</div>';document.querySelectorAll('[data-check]').forEach(c=>c.onchange=async()=>{await api(`/api/checklist/${c.dataset.check}`,{method:'PATCH',body:JSON.stringify({packed:c.checked})});loadChecklist()});document.querySelectorAll('[data-delcheck]').forEach(b=>b.onclick=async()=>{if(confirm('Usunąć pozycję?')){await api(`/api/checklist/${b.dataset.delcheck}`,{method:'DELETE'});loadChecklist()}})}
+async function addChecklist(){const l=$('#checkLabel').value.trim();if(!l)return alert('Podaj nazwę.');await api('/api/checklist',{method:'POST',body:JSON.stringify({tripId:active.id,category:$('#checkCategory').value,label:l,assignedTo:$('#checkAssigned').value||null,quantity:$('#checkQuantity').value.trim()||null})});$('#checkLabel').value='';$('#checkQuantity').value='';loadChecklist()}
+async function loadDocuments(){const {documents}=await api(`/api/documents?tripId=${encodeURIComponent(active.id)}`);$('#documentsBox').innerHTML=documents.length?documents.map(d=>`<article class="list-item"><div><b>${esc(d.title)}</b><small>${esc(d.kind)}</small><p>${esc(d.content||'')}</p>${d.sourceUrl?`<a href="${d.sourceUrl}" target="_blank" rel="noopener">Źródło ↗</a>`:''}</div></article>`).join(''):'<div class="empty-state">Brak dokumentów dla tego wyjazdu.</div>'}
 
-function showView(view) {
-  currentView = document.getElementById(`view-${view}`) ? view : 'dashboard';
-  document.querySelectorAll('.view').forEach(el => el.classList.toggle('active-view', el.id === `view-${currentView}`));
-  document.querySelectorAll('.nav-link').forEach(a => a.classList.toggle('active', a.dataset.view === currentView));
-  const titles = {
-    dashboard:['CENTRUM DOWODZENIA', active?.name || 'Dream Team'], catches:['REJESTR POŁOWÓW','Połowy'], weather:['ANALIZA WARUNKÓW','Pogoda PRO'], lake:['PROFIL WYJAZDU','Łowisko'], map:['SPOTY I DNO','Mapa spotów'], checklists:['PRZYGOTOWANIE','Checklisty'], knowledge:['WIEDZA','Baza wiedzy'], archive:['HISTORIA','Archiwum wyjazdów']
-  };
-  $('#pageEyebrow').textContent = titles[currentView][0];
-  $('#pageTitle').textContent = titles[currentView][1];
-  $('#sidebar').classList.remove('open');
-  if (currentView === 'catches') loadCatches();
-  if (currentView === 'weather') loadWeather();
-  if (currentView === 'map') loadSpots();
-  if (currentView === 'checklists') loadChecklist();
-}
+function moonPhase(date=new Date()){const syn=29.53058867,ref=new Date('2000-01-06T18:14:00Z'),age=((date-ref)/864e5%syn+syn)%syn,p=age/syn;let name='Nów';if(p<.03||p>.97)name='Nów';else if(p<.22)name='Przybywający sierp';else if(p<.28)name='Pierwsza kwadra';else if(p<.47)name='Przybywający garb';else if(p<.53)name='Pełnia';else if(p<.72)name='Ubywający garb';else if(p<.78)name='Ostatnia kwadra';else name='Ubywający sierp';return{name,illum:Math.round((1-Math.cos(2*Math.PI*p))/2*100),age:age.toFixed(1)}}
+function biteScore({pressure,wind,gust,temp,cloud,rain,trend,hour}){let s=0;if(pressure>=1000&&pressure<=1025)s+=2;if(trend==='stabilne')s+=2;else if(trend==='rośnie')s++;if(temp>=8&&temp<=22)s+=2;else if(temp>=4&&temp<=25)s++;if(wind>=6&&wind<=22)s+=2;else if(wind<30)s++;if(gust<35)s++;if(cloud>=25&&cloud<=90)s+=2;if(rain>0&&rain<2)s++;if((hour>=4&&hour<=9)||(hour>=17&&hour<=23))s+=2;return s}
+async function loadWeather(){const box=$('#weatherBox');if(active.latitude==null||active.longitude==null){box.innerHTML='<p class="muted">Brak współrzędnych łowiska.</p>';return}box.innerHTML='<p class="muted">Pobieranie Open-Meteo…</p>';try{const url=new URL('https://api.open-meteo.com/v1/forecast');url.search=new URLSearchParams({latitude:active.latitude,longitude:active.longitude,current:'temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m',hourly:'temperature_2m,precipitation_probability,precipitation,cloud_cover,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m',daily:'temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,sunrise,sunset',timezone:'auto',forecast_days:'7'});const d=await fetch(url).then(r=>{if(!r.ok)throw new Error('Pogoda HTTP '+r.status);return r.json()});const c=d.current,idx=Math.max(0,d.hourly.time.findIndex(t=>new Date(t)>=new Date())),prev=Number(d.hourly.pressure_msl[Math.max(0,idx-3)]),cur=Number(c.pressure_msl),trend=cur-prev>2?'rośnie':cur-prev<-2?'spada':'stabilne',hour=new Date().getHours(),score=biteScore({pressure:cur,wind:Number(c.wind_speed_10m),gust:Number(c.wind_gusts_10m),temp:Number(c.temperature_2m),cloud:Number(c.cloud_cover),rain:Number(c.precipitation),trend,hour}),rating=score>=10?'Bardzo dobre':score>=8?'Dobre':score>=6?'Średnie':'Słabsze',moon=moonPhase();const best=[];for(let i=idx;i<Math.min(idx+24,d.hourly.time.length);i++){const pr=Number(d.hourly.pressure_msl[i]),pp=Number(d.hourly.pressure_msl[Math.max(0,i-3)]),tr=pr-pp>2?'rośnie':pr-pp<-2?'spada':'stabilne',sc=biteScore({pressure:pr,wind:Number(d.hourly.wind_speed_10m[i]),gust:Number(d.hourly.wind_gusts_10m[i]),temp:Number(d.hourly.temperature_2m[i]),cloud:Number(d.hourly.cloud_cover[i]),rain:Number(d.hourly.precipitation[i]),trend:tr,hour:new Date(d.hourly.time[i]).getHours()});best.push({i,sc})}best.sort((a,b)=>b.sc-a.sc);const bi=best[0]?.i;box.innerHTML=`<div class="weather-current"><div><small>TEMPERATURA</small><strong>${c.temperature_2m}°C</strong><span>odczuwalna ${c.apparent_temperature}°C</span></div><div><small>CIŚNIENIE</small><strong>${Math.round(cur)} hPa</strong><span>${trend}</span></div><div><small>WIATR</small><strong>${c.wind_speed_10m} km/h</strong><span>porywy ${c.wind_gusts_10m} · ${c.wind_direction_10m}°</span></div><div><small>CHMURY / OPAD</small><strong>${c.cloud_cover}%</strong><span>${c.precipitation} mm</span></div><div class="accent"><small>OCENA BRAŃ</small><strong>${rating}</strong><span>${score}/12</span></div><div><small>KSIĘŻYC</small><strong>${moon.name}</strong><span>oświetlenie ${moon.illum}% · wiek ${moon.age} d</span></div></div><div class="weather-note">Najlepsze okno z najbliższych 24 h: <b>${bi!=null?fmtdt(d.hourly.time[bi]):'—'}</b>. Ocena jest wskaźnikiem pomocniczym opartym o pogodę, porę dnia i trend ciśnienia — nie gwarancją brań.</div><div class="forecast-grid">${d.daily.time.map((day,i)=>`<article><b>${fmt(day)}</b><span>${d.daily.temperature_2m_min[i]}–${d.daily.temperature_2m_max[i]}°C</span><small>opad ${d.daily.precipitation_sum[i]} mm · wiatr max ${d.daily.wind_speed_10m_max[i]} km/h</small></article>`).join('')}</div>`}catch(e){box.innerHTML=`<p class="muted">Nie udało się pobrać pogody: ${esc(e.message)}</p>`}}
 
-async function load() {
-  try {
-    setStatus('Łączenie z bazą…');
-    model = await api('/api/bootstrap');
-    active = model.trips.find(t => t.id === model.app.activeTripId) || model.trips[0];
-    render();
-    bind();
-    showView(currentView);
-    setStatus('D1 online');
-  } catch (error) {
-    console.error(error);
-    setStatus('Błąd połączenia z D1', true);
-    $('#pageTitle').textContent = 'Dream Team';
-  }
-}
-
-function render() {
-  if (!active) return;
-  const t = active;
-  $('#tripButtonName').textContent = t.lake;
-  $('#tripButtonMeta').textContent = `${t.year} · ${t.status === 'archived' ? 'Archiwum' : t.status === 'active' ? 'Aktywny' : 'Planowanie'}`;
-  $('#lakeName').textContent = t.lake;
-  $('#tripLocation').textContent = [t.country, t.peg && t.peg !== '—' ? t.peg : null].filter(Boolean).join(' · ') || 'Nowy wyjazd Dream Team';
-  $('#tripStatus').textContent = t.status === 'archived' ? 'ARCHIWUM' : t.status === 'active' ? 'AKTYWNY' : 'PLANOWANIE';
-  $('#lakeImage').src = t.lakeImage || 'https://raw.githubusercontent.com/serox94/ryby2026/main/assets/img/lowisko.jpg';
-  $('#peg').textContent = t.peg || '—';
-  ['waterSize','depth','carpRecord','power','baitBoat'].forEach(k => $('#'+k).textContent = t.facts?.[k] || '—');
-  $('#totalWeight').textContent = Number(t.stats?.totalWeightKg || 0).toFixed(1);
-  $('#fishCount').textContent = t.stats?.fishCount || 0;
-  $('#biggestFish').textContent = t.stats?.biggestFishKg ? `${t.stats.biggestFishKg} kg` : '—';
-  $('#biggestAngler').textContent = t.stats?.biggestFishAngler || 'Brak danych';
-  $('#bestSpot').textContent = t.stats?.bestSpot || '—';
-  $('#nextActionText').textContent = t.start && t.end ? 'Termin jest zapisany. Uzupełniamy informacje łowiska, pogodę, połowy, spoty i checklisty.' : 'Ustaw łowisko i termin. Dane zapiszą się wspólnie w Cloudflare D1.';
-  renderCountdown(); renderMenu(); renderArchive(); renderAnglers(); renderLakeProfile(); renderKnowledge();
-}
-
-function renderCountdown() {
-  if (!active.start) { $('#countdown').textContent = '—'; $('#tripDates').textContent = 'Termin do ustawienia'; return; }
-  const days = Math.ceil((new Date(active.start) - new Date()) / 864e5);
-  $('#countdown').textContent = days > 0 ? `${days} dni` : days === 0 ? 'DZISIAJ' : active.status === 'archived' ? 'ZAKOŃCZONY' : 'TRWA';
-  $('#tripDates').textContent = `${fmtDate(active.start)} — ${fmtDate(active.end)}`;
-}
-
-function renderMenu() {
-  const box = $('#tripMenu');
-  box.innerHTML = model.trips.map(t => `<button data-trip="${t.id}"><b>${t.lake}</b><small>${t.year} · ${t.status === 'archived' ? 'archiwum' : t.status === 'active' ? 'aktywny' : 'planowanie'}</small></button>`).join('');
-  box.querySelectorAll('button').forEach(button => button.onclick = async () => {
-    const id = button.dataset.trip;
-    try {
-      setStatus('Zmiana wyjazdu…');
-      await api(`/api/trips/${encodeURIComponent(id)}/activate`, { method: 'POST' });
-      model = await api('/api/bootstrap');
-      active = model.trips.find(t => t.id === id) || model.trips[0];
-      box.classList.add('hidden'); render(); showView(currentView); setStatus('D1 online');
-    } catch (error) { alert(`Nie udało się zmienić wyjazdu: ${error.message}`); setStatus('Błąd', true); }
-  });
-}
-
-function renderArchive() {
-  const trips = model.trips.filter(t => t.status === 'archived');
-  $('#archiveList').innerHTML = trips.length ? trips.map(t => `<article class="archive-item"><div><b>${t.name} · ${t.lake}</b><small>${fmtDate(t.start) || t.year} — ${fmtDate(t.end) || ''}</small></div><button data-open="${t.id}">Otwórz</button></article>`).join('') : '<div class="empty-state">Brak zakończonych wyjazdów.</div>';
-  document.querySelectorAll('[data-open]').forEach(button => button.onclick = () => { active = model.trips.find(t => t.id === button.dataset.open); render(); showView('dashboard'); location.hash='dashboard'; });
-}
-
-function renderAnglers() {
-  $('#anglerGrid').innerHTML = model.anglers.map(a => `<article><div class="angler-head"><span>${a.name[0]}</span><div><h4>${a.name}</h4><small>PB: ${Number(a.pbKg).toFixed(1)} kg</small></div></div></article>`).join('');
-}
-
-function renderLakeProfile() {
-  const f = active.facts || {};
-  $('#lakeProfileTitle').textContent = active.lake;
-  const rows = [
-    ['Lokalizacja', f.address || active.country || '—'], ['Stanowisko', active.peg || '—'], ['Termin', active.start ? `${fmtDate(active.start)} — ${fmtDate(active.end)}` : '—'], ['Powierzchnia', f.waterSize || '—'], ['Głębokość', f.depth || '—'], ['Rekord', f.carpRecord || '—'], ['Prąd', f.power || '—'], ['Sanitariaty', f.sanitary || '—'], ['Woda', f.water || '—'], ['Łódka zanętowa', f.baitBoat || '—'], ['Łódź', f.boat || '—'], ['Przyjazd', f.arrival || f.arrivalNote || '—'], ['Wyjazd', f.departure || '—']
-  ];
-  $('#lakeProfile').innerHTML = rows.map(([k,v]) => `<article><small>${k}</small><strong>${v}</strong></article>`).join('');
-}
-
-function renderKnowledge() {
-  const f = active.facts || {};
-  const rules = [
-    'Łódka zanętowa: ' + (f.baitBoat || 'sprawdź regulamin'),
-    f.boat || 'Zasady używania łodzi: sprawdź regulamin',
-    'Na miejscu używaj wyłącznie dozwolonego sprzętu i zestawów.',
-    'Przed wyjazdem sprawdź aktualny regulamin łowiska.',
-    f.source ? `Źródło profilu: ${f.source}` : 'Źródło profilu zostanie dodane podczas researchu.'
-  ];
-  $('#knowledgeBox').innerHTML = rules.map((r,i)=>`<article><small>${String(i+1).padStart(2,'0')}</small><strong>${r}</strong></article>`).join('');
-}
-
-async function refreshBootstrap() {
-  model = await api('/api/bootstrap');
-  active = model.trips.find(t => t.id === active?.id) || model.trips.find(t=>t.id===model.app.activeTripId) || model.trips[0];
-  render();
-}
-
-async function loadCatches() {
-  if (!active) return;
-  try {
-    const { catches } = await api(`/api/catches?tripId=${encodeURIComponent(active.id)}`);
-    const total = catches.reduce((s,c)=>s+Number(c.weightKg||0),0);
-    const biggest = catches.reduce((m,c)=>!m || Number(c.weightKg)>Number(m.weightKg) ? c : m,null);
-    const freq = key => { const m={}; catches.forEach(c=>{const v=c[key]; if(v) m[v]=(m[v]||0)+1}); return Object.entries(m).sort((a,b)=>b[1]-a[1])[0]?.[0] || 'Brak'; };
-    $('#catchSummary').innerHTML = `<div><span>Liczba ryb</span><strong>${catches.length}</strong></div><div><span>Łączna waga</span><strong>${total.toFixed(1)} kg</strong></div><div><span>Największa</span><strong>${biggest ? `${biggest.weightKg} kg · ${biggest.anglerName}` : 'Brak'}</strong></div><div><span>Top spot</span><strong>${freq('spot')}</strong></div><div><span>Top przynęta</span><strong>${freq('bait')}</strong></div>`;
-    $('#catchesList').innerHTML = catches.length ? catches.map(c=>`<article class="list-item"><div><b>${c.weightKg} kg · ${c.species} · ${c.anglerName}</b><small>${fmtDateTime(c.caughtAt)}${c.spot ? ` · ${c.spot}`:''}${c.bait ? ` · ${c.bait}`:''}</small>${c.notes ? `<p>${c.notes}</p>`:''}</div><button data-delete-catch="${c.id}">Usuń</button></article>`).join('') : '<div class="empty-state">Brak połowów dla tego wyjazdu.</div>';
-    document.querySelectorAll('[data-delete-catch]').forEach(b=>b.onclick=async()=>{ if(!confirm('Usunąć ten połów?')) return; await api(`/api/catches/${b.dataset.deleteCatch}`,{method:'DELETE'}); await loadCatches(); await refreshBootstrap(); });
-  } catch(e) { $('#catchesList').innerHTML=`<div class="empty-state">Błąd: ${e.message}</div>`; }
-}
-
-async function addCatch() {
-  const weight = Number($('#catchWeight').value);
-  if (!weight) return alert('Podaj wagę ryby.');
-  const dt = $('#catchTime').value ? new Date($('#catchTime').value).toISOString() : new Date().toISOString();
-  await api('/api/catches',{method:'POST',body:JSON.stringify({tripId:active.id,anglerId:$('#catchAngler').value,weightKg:weight,species:$('#catchSpecies').value||'Karp',caughtAt:dt,spot:$('#catchSpot').value.trim()||null,bait:$('#catchBait').value.trim()||null,notes:$('#catchNotes').value.trim()||null})});
-  $('#catchWeight').value=''; $('#catchSpot').value=''; $('#catchBait').value=''; $('#catchNotes').value='';
-  await loadCatches(); await refreshBootstrap(); setStatus('D1 online · połów zapisany');
-}
-
-async function loadSpots() {
-  try {
-    const { spots } = await api(`/api/spots?tripId=${encodeURIComponent(active.id)}`);
-    $('#spotsList').innerHTML = spots.length ? spots.map(s=>`<article class="list-item"><div><b>${s.name}</b><small>${s.depthM ? `${s.depthM} m`:'bez głębokości'}${s.distanceM ? ` · ${s.distanceM} m od brzegu`:''}${s.bottomType ? ` · ${s.bottomType}`:''}</small>${s.notes?`<p>${s.notes}</p>`:''}</div><button data-delete-spot="${s.id}">Usuń</button></article>`).join('') : '<div class="empty-state">Brak zapisanych spotów.</div>';
-    document.querySelectorAll('[data-delete-spot]').forEach(b=>b.onclick=async()=>{await api(`/api/spots/${b.dataset.deleteSpot}`,{method:'DELETE'});loadSpots();});
-  } catch(e) { $('#spotsList').innerHTML=`<div class="empty-state">Błąd: ${e.message}</div>`; }
-}
-
-async function addSpot() {
-  const name=$('#spotName').value.trim(); if(!name) return alert('Podaj nazwę spotu.');
-  await api('/api/spots',{method:'POST',body:JSON.stringify({tripId:active.id,name,depthM:$('#spotDepth').value?Number($('#spotDepth').value):null,distanceM:$('#spotDistance').value?Number($('#spotDistance').value):null,bottomType:$('#spotBottom').value.trim()||null,notes:$('#spotNotes').value.trim()||null})});
-  ['spotName','spotDepth','spotDistance','spotBottom','spotNotes'].forEach(id=>$('#'+id).value=''); loadSpots();
-}
-
-async function loadChecklist() {
-  try {
-    const { items } = await api(`/api/checklist?tripId=${encodeURIComponent(active.id)}`);
-    $('#checklistList').innerHTML = items.length ? items.map(i=>`<article class="check-item ${i.packed?'done':''}"><label><input type="checkbox" data-check="${i.id}" ${i.packed?'checked':''}><span><b>${i.label}</b><small>${i.category}${i.assignedTo ? ` · ${i.assignedTo}`:''}</small></span></label><button data-delete-check="${i.id}">×</button></article>`).join('') : '<div class="empty-state">Lista jest pusta.</div>';
-    document.querySelectorAll('[data-check]').forEach(c=>c.onchange=async()=>{await api(`/api/checklist/${c.dataset.check}`,{method:'PATCH',body:JSON.stringify({packed:c.checked})});loadChecklist();});
-    document.querySelectorAll('[data-delete-check]').forEach(b=>b.onclick=async()=>{await api(`/api/checklist/${b.dataset.deleteCheck}`,{method:'DELETE'});loadChecklist();});
-  } catch(e) { $('#checklistList').innerHTML=`<div class="empty-state">Błąd: ${e.message}</div>`; }
-}
-
-async function addChecklist() {
-  const label=$('#checkLabel').value.trim(); if(!label) return alert('Wpisz rzecz do zabrania.');
-  await api('/api/checklist',{method:'POST',body:JSON.stringify({tripId:active.id,label,category:$('#checkCategory').value.trim()||'Inne',assignedTo:$('#checkAssigned').value||null})});
-  $('#checkLabel').value=''; loadChecklist();
-}
-
-function weatherCode(code) {
-  if ([0].includes(code)) return 'Bezchmurnie'; if ([1,2,3].includes(code)) return 'Zachmurzenie'; if ([45,48].includes(code)) return 'Mgła'; if ([51,53,55,56,57].includes(code)) return 'Mżawka'; if ([61,63,65,66,67,80,81,82].includes(code)) return 'Deszcz'; if ([71,73,75,77,85,86].includes(code)) return 'Śnieg'; if ([95,96,99].includes(code)) return 'Burza'; return 'Warunki zmienne';
-}
-
-async function loadWeather() {
-  const box=$('#weatherBox');
-  if (active.latitude == null || active.longitude == null) { box.innerHTML='<p class="muted">Brak współrzędnych łowiska. Po uzupełnieniu profilu pogoda uruchomi się automatycznie.</p>'; return; }
-  box.innerHTML='<p class="muted">Pobieranie Open-Meteo…</p>';
-  try {
-    const url=`https://api.open-meteo.com/v1/forecast?latitude=${active.latitude}&longitude=${active.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,weather_code,cloud_cover,surface_pressure,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset&timezone=auto&forecast_days=7`;
-    const r=await fetch(url); if(!r.ok) throw new Error(`HTTP ${r.status}`); const w=await r.json();
-    const c=w.current;
-    const days=w.daily.time.map((d,i)=>`<article><small>${fmtDate(d)}</small><strong>${w.daily.temperature_2m_max[i]}° / ${w.daily.temperature_2m_min[i]}°</strong><span>${weatherCode(w.daily.weather_code[i])} · opad ${w.daily.precipitation_sum[i]} mm · wiatr max ${w.daily.wind_speed_10m_max[i]} km/h</span></article>`).join('');
-    box.innerHTML=`<div class="weather-now"><div><small>TERAZ</small><strong>${c.temperature_2m}°C</strong><span>${weatherCode(c.weather_code)} · odczuwalna ${c.apparent_temperature}°C</span></div><div><small>CIŚNIENIE</small><strong>${Math.round(c.surface_pressure)} hPa</strong><span>wilgotność ${c.relative_humidity_2m}%</span></div><div><small>WIATR</small><strong>${c.wind_speed_10m} km/h</strong><span>kierunek ${c.wind_direction_10m}°</span></div><div><small>OPAD</small><strong>${c.precipitation} mm</strong><span>zachmurzenie ${c.cloud_cover}%</span></div></div><div class="forecast-grid">${days}</div><p class="source-note">Źródło: Open-Meteo · lokalizacja aktywnego łowiska.</p>`;
-  } catch(e) { box.innerHTML=`<p class="muted">Nie udało się pobrać pogody: ${e.message}</p>`; }
-}
-
-function openDialog() {
-  $('#inputLake').value = active.lake === 'Łowisko do ustawienia' ? '' : active.lake;
-  $('#inputStart').value = active.start ? active.start.slice(0,10) : '';
-  $('#inputEnd').value = active.end ? active.end.slice(0,10) : '';
-  $('#inputCountry').value = active.country === '—' ? '' : (active.country || '');
-  $('#inputPeg').value = active.peg === '—' ? '' : (active.peg || '');
-  $('#tripDialog').showModal();
-}
-
-async function saveTrip() {
-  if (!$('#tripForm').reportValidity()) return;
-  const lake=$('#inputLake').value.trim(), startDate=$('#inputStart').value, endDate=$('#inputEnd').value;
-  const year=new Date(`${startDate}T12:00:00`).getFullYear();
-  const payload={lake,country:$('#inputCountry').value.trim()||'—',peg:$('#inputPeg').value.trim()||'—',start:`${startDate}T12:00:00`,end:`${endDate}T12:00:00`,name:`${lake} ${year}`,year,status:'planning'};
-  try { $('#saveTrip').disabled=true; $('#saveTrip').textContent='Zapisywanie…'; await api(`/api/trips/${encodeURIComponent(active.id)}`,{method:'PUT',body:JSON.stringify(payload)}); await refreshBootstrap(); $('#tripDialog').close(); setStatus('D1 online · zapisano'); }
-  catch(e){alert(`Nie udało się zapisać: ${e.message}`)} finally{$('#saveTrip').disabled=false;$('#saveTrip').textContent='Zapisz w bazie'}
-}
-
-function bind() {
-  $('#tripButton').onclick=()=>$('#tripMenu').classList.toggle('hidden');
-  $('#mobileMenu').onclick=()=>$('#sidebar').classList.toggle('open');
-  $('#editTrip').onclick=openDialog; $('#setupTrip').onclick=openDialog; $('#saveTrip').onclick=saveTrip;
-  $('#addCatch').onclick=addCatch; $('#refreshCatches').onclick=loadCatches;
-  $('#addSpot').onclick=addSpot; $('#addChecklist').onclick=addChecklist; $('#refreshWeather').onclick=loadWeather;
-  document.querySelectorAll('.nav-link').forEach(a=>a.onclick=e=>{e.preventDefault(); const v=a.dataset.view||'dashboard'; location.hash=v; showView(v);});
-  window.addEventListener('hashchange',()=>showView(location.hash.replace('#','')||'dashboard'));
-  const now=new Date(); now.setMinutes(now.getMinutes()-now.getTimezoneOffset()); $('#catchTime').value=now.toISOString().slice(0,16);
-}
-
+function openDialog(){ $('#inputLake').value=active.lake;$('#inputStart').value=active.start?active.start.slice(0,10):'';$('#inputEnd').value=active.end?active.end.slice(0,10):'';$('#inputCountry').value=active.country||'';$('#inputPeg').value=active.peg||'';$('#tripDialog').showModal()}
+async function saveTrip(){if(!$('#tripForm').reportValidity())return;const start=$('#inputStart').value,end=$('#inputEnd').value,lake=$('#inputLake').value.trim(),year=new Date(start+'T12:00').getFullYear();await api(`/api/trips/${encodeURIComponent(active.id)}`,{method:'PUT',body:JSON.stringify({lake,year,name:`${lake} ${year}`,country:$('#inputCountry').value.trim()||'—',peg:$('#inputPeg').value.trim()||'—',start:`${start}T12:00:00`,end:`${end}T10:00:00`,status:active.status==='archived'?'archived':'active'})});$('#tripDialog').close();await refresh();status('D1 online · zapisano')}
+function bind(){document.querySelectorAll('.nav-link').forEach(a=>a.onclick=e=>{e.preventDefault();location.hash=a.dataset.view;show(a.dataset.view)});window.addEventListener('hashchange',()=>show(location.hash.slice(1)||'dashboard'));$('#tripButton').onclick=()=>$('#tripMenu').classList.toggle('hidden');$('#mobileMenu').onclick=()=>$('#sidebar').classList.toggle('open');$('#editTrip').onclick=openDialog;$('#setupTrip').onclick=openDialog;$('#saveTrip').onclick=saveTrip;$('#addCatch').onclick=addCatch;$('#refreshCatches').onclick=loadCatches;$('#addSpot').onclick=addSpot;$('#addChecklist').onclick=addChecklist;$('#refreshWeather').onclick=loadWeather}
 load();
