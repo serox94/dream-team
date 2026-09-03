@@ -1,35 +1,270 @@
-const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
-const bad=m=>json({ok:false,error:m},400), nf=()=>json({ok:false,error:'Not found'},404);
-async function body(r){try{return await r.json()}catch{return null}}
+const json = (data, status = 200) => new Response(JSON.stringify(data), {
+  status,
+  headers: {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    'access-control-allow-origin': '*',
+    'access-control-allow-headers': 'content-type'
+  }
+});
+const bad = message => json({ ok: false, error: message }, 400);
+const notFound = () => json({ ok: false, error: 'Not found' }, 404);
+async function parseBody(request) { try { return await request.json(); } catch { return null; } }
 
-const OLD_URL='https://baiepgxqnppwokcmmpqw.supabase.co';
-const OLD_KEY='sb_publishable_ziiHPrhOisVJXnUeOdI4ug_b4y4djws';
-async function oldTable(name){const r=await fetch(`${OLD_URL}/rest/v1/${name}?select=*`,{headers:{apikey:OLD_KEY,Authorization:`Bearer ${OLD_KEY}`}});if(!r.ok)throw new Error(`${name}: ${r.status} ${await r.text()}`);return r.json()}
-async function importOld(env){
-  const done=await env.DB.prepare("SELECT value FROM app_settings WHERE key='supabase_import_v1'").first();if(done)return JSON.parse(done.value);
-  const [checks,spots,catches]=await Promise.all([oldTable('checklist_items'),oldTable('spots'),oldTable('catches')]);let ci=0,si=0,fi=0;
-  for(const x of checks){const qty=x.quantity==null?'':`${x.quantity}${x.unit?` ${x.unit}`:''}`;await env.DB.prepare(`INSERT INTO checklist_items(trip_id,category,label,packed,quantity,notes) VALUES('next-trip',?,?,?,?,?)`).bind(x.category||'Inne',x.item_name||x.name||'Pozycja',x.done?1:0,qty||null,'Import z Ryby 2026 / Supabase').run();ci++}
-  for(const x of spots){const extra=[x.note,x.obstacles&&`Zaczepy: ${x.obstacles}`,x.best_time&&`Najlepsza pora: ${x.best_time}`,x.best_wind&&`Najlepszy wiatr: ${x.best_wind}`].filter(Boolean).join(' · ');await env.DB.prepare(`INSERT INTO spots(trip_id,name,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind) VALUES('next-trip',?,?,?,?,?,?,?,?)`).bind(x.name||'Spot',x.depth_m??null,x.bottom_type||null,x.distance_m??null,extra||null,x.obstacles||null,x.best_time||null,x.best_wind||null).run();si++}
-  for(const x of catches){const ang=String(x.person||'').toLowerCase().includes('mac')?'maciek':'patryk',w=Number(x.weight);if(!(w>0))continue;await env.DB.prepare(`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,bait,notes) VALUES('la-plaine-2026',?,?,?,?,?,?,?)`).bind(ang,x.caught_at||new Date().toISOString(),w,x.species||'Karp',x.spot||null,x.bait||null,[x.note,'Import z Ryby 2026 / Supabase'].filter(Boolean).join(' · ')).run();fi++}
-  const summary={checklist:ci,spots:si,catches:fi,importedAt:new Date().toISOString()};await env.DB.prepare("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('supabase_import_v1',?,CURRENT_TIMESTAMP)").bind(JSON.stringify(summary)).run();return summary
-}
-async function ensureLegacyImport(env){try{return await importOld(env)}catch(e){console.error('Legacy import:',e);return null}}
+const OLD_URL = 'https://baiepgxqnppwokcmmpqw.supabase.co';
+const OLD_KEY = 'sb_publishable_ziiHPrhOisVJXnUeOdI4ug_b4y4djws';
 
-async function bootstrap(env){
-  await ensureLegacyImport(env);
-  const anglers=(await env.DB.prepare('SELECT id,name,pb_kg AS pbKg FROM anglers ORDER BY name').all()).results;
-  const trips=(await env.DB.prepare(`SELECT id,year,name,lake,country,status,start_at AS start,end_at AS end,peg,latitude,longitude,lake_image AS lakeImage,facts_json AS factsJson,is_active AS isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`).all()).results;const out=[];
-  for(const t of trips){const s=await env.DB.prepare(`SELECT COUNT(*) fishCount,COALESCE(SUM(weight_kg),0) totalWeightKg,COALESCE(MAX(weight_kg),0) biggestFishKg FROM catches WHERE trip_id=?`).bind(t.id).first();const b=await env.DB.prepare(`SELECT a.name anglerName FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.weight_kg DESC,c.caught_at ASC LIMIT 1`).bind(t.id).first();const p=await env.DB.prepare(`SELECT spot,COUNT(*) cnt FROM catches WHERE trip_id=? AND spot IS NOT NULL AND TRIM(spot)<>'' GROUP BY spot ORDER BY cnt DESC LIMIT 1`).bind(t.id).first();out.push({...t,isActive:Boolean(t.isActive),facts:JSON.parse(t.factsJson||'{}'),stats:{fishCount:Number(s?.fishCount||0),totalWeightKg:Number(s?.totalWeightKg||0),biggestFishKg:Number(s?.biggestFishKg||0),biggestFishAngler:b?.anglerName||null,bestSpot:p?.spot||null}})}
-  return {app:{name:'Dream Team',tagline:'Carp Fishing Trip Manager',activeTripId:out.find(x=>x.isActive)?.id||out[0]?.id||null},anglers,trips:out};
+async function oldTable(name) {
+  const response = await fetch(`${OLD_URL}/rest/v1/${name}?select=*`, {
+    headers: { apikey: OLD_KEY, Authorization: `Bearer ${OLD_KEY}` }
+  });
+  const text = await response.text();
+  if (!response.ok) throw new Error(`${name}: ${response.status} ${text.slice(0, 400)}`);
+  try { return JSON.parse(text); } catch { return []; }
 }
-async function updateTrip(r,env,id){const x=await body(r);if(!x)return bad('Invalid JSON');const c=await env.DB.prepare('SELECT * FROM trips WHERE id=?').bind(id).first();if(!c)return nf();const lake=String(x.lake??c.lake).trim();if(!lake)return bad('Lake name is required');const year=Number(x.year??c.year);await env.DB.prepare(`UPDATE trips SET year=?,name=?,lake=?,country=?,status=?,start_at=?,end_at=?,peg=?,latitude=?,longitude=?,lake_image=?,facts_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(year,String(x.name??c.name).trim()||`${lake} ${year}`,lake,String(x.country??c.country??'—').trim()||'—',['planning','active','archived'].includes(x.status)?x.status:c.status,x.start??c.start_at,x.end??c.end_at,String(x.peg??c.peg??'—').trim()||'—',x.latitude??c.latitude,x.longitude??c.longitude,x.lakeImage??c.lake_image,x.facts?JSON.stringify(x.facts):c.facts_json,id).run();return json({ok:true})}
-async function activate(env,id){if(!await env.DB.prepare('SELECT id FROM trips WHERE id=?').bind(id).first())return nf();await env.DB.batch([env.DB.prepare('UPDATE trips SET is_active=0 WHERE is_active=1'),env.DB.prepare('UPDATE trips SET is_active=1,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(id)]);return json({ok:true})}
-async function listCatches(r,env){const id=new URL(r.url).searchParams.get('tripId');if(!id)return bad('tripId is required');const q=await env.DB.prepare(`SELECT c.id,c.trip_id tripId,c.angler_id anglerId,a.name anglerName,c.caught_at caughtAt,c.weight_kg weightKg,c.species,c.spot,c.bait,c.rig,c.depth_m depthM,c.notes,c.photo_url photoUrl FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.caught_at DESC,c.id DESC`).bind(id).all();return json({ok:true,catches:q.results})}
-async function createCatch(r,env){const x=await body(r),w=Number(x?.weightKg);if(!x?.tripId||!x?.anglerId||!Number.isFinite(w)||w<=0)return bad('tripId, anglerId and positive weightKg are required');const q=await env.DB.prepare(`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,bait,rig,depth_m,notes,photo_url) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(x.tripId,x.anglerId,x.caughtAt||new Date().toISOString(),w,x.species||'Karp',x.spot||null,x.bait||null,x.rig||null,x.depthM??null,x.notes||null,x.photoUrl||null).run();return json({ok:true,id:q.meta.last_row_id},201)}
-async function listSpots(r,env){const id=new URL(r.url).searchParams.get('tripId');if(!id)return bad('tripId is required');const q=await env.DB.prepare(`SELECT id,trip_id tripId,name,latitude,longitude,depth_m depthM,bottom_type bottomType,distance_m distanceM,notes,catches_count catchesCount,obstacles,best_time bestTime,best_wind bestWind FROM spots WHERE trip_id=? ORDER BY id DESC`).bind(id).all();return json({ok:true,spots:q.results})}
-async function createSpot(r,env){const x=await body(r);if(!x?.tripId||!String(x.name||'').trim())return bad('tripId and name are required');const q=await env.DB.prepare(`INSERT INTO spots(trip_id,name,latitude,longitude,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(x.tripId,String(x.name).trim(),x.latitude??null,x.longitude??null,x.depthM??null,x.bottomType||null,x.distanceM??null,x.notes||null,x.obstacles||null,x.bestTime||null,x.bestWind||null).run();return json({ok:true,id:q.meta.last_row_id},201)}
-async function listChecklist(r,env){const id=new URL(r.url).searchParams.get('tripId');if(!id)return bad('tripId is required');const q=await env.DB.prepare(`SELECT id,trip_id tripId,category,label,assigned_to assignedTo,packed,quantity,notes,sort_order sortOrder FROM checklist_items WHERE trip_id=? ORDER BY category,sort_order,id`).bind(id).all();return json({ok:true,items:q.results.map(x=>({...x,packed:Boolean(x.packed)}))})}
-async function createChecklist(r,env){const x=await body(r);if(!x?.tripId||!String(x.label||'').trim())return bad('tripId and label are required');const q=await env.DB.prepare(`INSERT INTO checklist_items(trip_id,category,label,assigned_to,packed,quantity,notes,sort_order) VALUES(?,?,?,?,?,?,?,?)`).bind(x.tripId,x.category||'Inne',String(x.label).trim(),x.assignedTo||null,x.packed?1:0,x.quantity||null,x.notes||null,Number(x.sortOrder||0)).run();return json({ok:true,id:q.meta.last_row_id},201)}
-async function patchChecklist(r,env,id){const x=await body(r);if(!x)return bad('Invalid JSON');const c=await env.DB.prepare('SELECT * FROM checklist_items WHERE id=?').bind(id).first();if(!c)return nf();await env.DB.prepare(`UPDATE checklist_items SET category=?,label=?,assigned_to=?,packed=?,quantity=?,notes=?,sort_order=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(x.category??c.category,x.label??c.label,x.assignedTo??c.assigned_to,x.packed==null?c.packed:(x.packed?1:0),x.quantity??c.quantity,x.notes??c.notes,x.sortOrder??c.sort_order,id).run();return json({ok:true})}
-async function documents(r,env){const id=new URL(r.url).searchParams.get('tripId');if(!id)return bad('tripId is required');const q=await env.DB.prepare(`SELECT id,kind,title,content,source_url sourceUrl,sort_order sortOrder FROM trip_documents WHERE trip_id=? ORDER BY sort_order,id`).bind(id).all();return json({ok:true,documents:q.results})}
-export default{async fetch(r,env){const u=new URL(r.url);try{if(u.pathname==='/api/health'&&r.method==='GET'){const v=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first(),im=await env.DB.prepare("SELECT value FROM app_settings WHERE key='supabase_import_v1'").first();return json({ok:true,app:'dream-team',database:'connected',schemaVersion:v?.value||null,legacyImport:im?JSON.parse(im.value):null})}if(u.pathname==='/api/bootstrap'&&r.method==='GET')return json(await bootstrap(env));if(u.pathname==='/api/catches'&&r.method==='GET')return listCatches(r,env);if(u.pathname==='/api/catches'&&r.method==='POST')return createCatch(r,env);let m=u.pathname.match(/^\/api\/catches\/(\d+)$/);if(m&&r.method==='DELETE'){await env.DB.prepare('DELETE FROM catches WHERE id=?').bind(+m[1]).run();return json({ok:true})}if(u.pathname==='/api/spots'&&r.method==='GET')return listSpots(r,env);if(u.pathname==='/api/spots'&&r.method==='POST')return createSpot(r,env);m=u.pathname.match(/^\/api\/spots\/(\d+)$/);if(m&&r.method==='DELETE'){await env.DB.prepare('DELETE FROM spots WHERE id=?').bind(+m[1]).run();return json({ok:true})}if(u.pathname==='/api/checklist'&&r.method==='GET')return listChecklist(r,env);if(u.pathname==='/api/checklist'&&r.method==='POST')return createChecklist(r,env);m=u.pathname.match(/^\/api\/checklist\/(\d+)$/);if(m&&r.method==='PATCH')return patchChecklist(r,env,+m[1]);if(m&&r.method==='DELETE'){await env.DB.prepare('DELETE FROM checklist_items WHERE id=?').bind(+m[1]).run();return json({ok:true})}if(u.pathname==='/api/documents'&&r.method==='GET')return documents(r,env);m=u.pathname.match(/^\/api\/trips\/([^/]+)$/);if(m&&r.method==='PUT')return updateTrip(r,env,decodeURIComponent(m[1]));m=u.pathname.match(/^\/api\/trips\/([^/]+)\/activate$/);if(m&&r.method==='POST')return activate(env,decodeURIComponent(m[1]));if(u.pathname.startsWith('/api/'))return nf();return env.ASSETS.fetch(r)}catch(e){console.error(e);return json({ok:false,error:'Internal server error',detail:String(e?.message||e)},500)}}};
+
+async function importLegacy(env, force = false) {
+  const marker = await env.DB.prepare("SELECT value FROM app_settings WHERE key='supabase_import_v2'").first();
+  if (marker && !force) return { ok: true, cached: true, ...JSON.parse(marker.value) };
+
+  const [checks, spots, catches] = await Promise.all([
+    oldTable('checklist_items'), oldTable('spots'), oldTable('catches')
+  ]);
+
+  const existingChecks = Number((await env.DB.prepare("SELECT COUNT(*) c FROM checklist_items WHERE trip_id='next-trip'").first())?.c || 0);
+  const existingSpots = Number((await env.DB.prepare("SELECT COUNT(*) c FROM spots WHERE trip_id='next-trip'").first())?.c || 0);
+  const existingCatches = Number((await env.DB.prepare("SELECT COUNT(*) c FROM catches WHERE trip_id='la-plaine-2026'").first())?.c || 0);
+
+  let importedChecklist = 0, importedSpots = 0, importedCatches = 0;
+
+  if ((force || existingChecks === 0) && checks.length) {
+    if (force) await env.DB.prepare("DELETE FROM checklist_items WHERE trip_id='next-trip' AND notes LIKE 'Import z Ryby 2026%'").run();
+    for (const x of checks) {
+      const label = String(x.item_name || x.name || '').trim();
+      if (!label) continue;
+      const qty = x.quantity == null || x.quantity === '' ? null : `${x.quantity}${x.unit ? ` ${x.unit}` : ''}`;
+      const duplicate = await env.DB.prepare("SELECT id FROM checklist_items WHERE trip_id='next-trip' AND category=? AND label=? LIMIT 1")
+        .bind(x.category || 'Inne', label).first();
+      if (duplicate) continue;
+      await env.DB.prepare(`INSERT INTO checklist_items(trip_id,category,label,packed,quantity,notes,sort_order) VALUES('next-trip',?,?,?,?,?,?)`)
+        .bind(x.category || 'Inne', label, x.done ? 1 : 0, qty, 'Import z Ryby 2026 / Supabase', Number(x.id || 0)).run();
+      importedChecklist++;
+    }
+  }
+
+  if ((force || existingSpots === 0) && spots.length) {
+    if (force) await env.DB.prepare("DELETE FROM spots WHERE trip_id='next-trip' AND notes LIKE '%Import z Ryby 2026%'").run();
+    for (const x of spots) {
+      const name = String(x.name || '').trim();
+      if (!name) continue;
+      const duplicate = await env.DB.prepare("SELECT id FROM spots WHERE trip_id='next-trip' AND name=? LIMIT 1").bind(name).first();
+      if (duplicate) continue;
+      const note = [x.note, 'Import z Ryby 2026 / Supabase'].filter(Boolean).join(' · ');
+      await env.DB.prepare(`INSERT INTO spots(trip_id,name,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind) VALUES('next-trip',?,?,?,?,?,?,?,?)`)
+        .bind(name, x.depth_m ?? null, x.bottom_type || null, x.distance_m ?? null, note, x.obstacles || null, x.best_time || null, x.best_wind || null).run();
+      importedSpots++;
+    }
+  }
+
+  if ((force || existingCatches === 0) && catches.length) {
+    for (const x of catches) {
+      const weight = Number(x.weight);
+      if (!(weight > 0)) continue;
+      const anglerId = String(x.person || '').toLowerCase().includes('mac') ? 'maciek' : 'patryk';
+      const caughtAt = x.caught_at || new Date().toISOString();
+      const duplicate = await env.DB.prepare("SELECT id FROM catches WHERE trip_id='la-plaine-2026' AND angler_id=? AND caught_at=? AND ABS(weight_kg-?)<0.001 LIMIT 1")
+        .bind(anglerId, caughtAt, weight).first();
+      if (duplicate) continue;
+      await env.DB.prepare(`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,bait,notes) VALUES('la-plaine-2026',?,?,?,?,?,?,?)`)
+        .bind(anglerId, caughtAt, weight, x.species || 'Karp', x.spot || null, x.bait || null, [x.note, 'Import z Ryby 2026 / Supabase'].filter(Boolean).join(' · ')).run();
+      importedCatches++;
+    }
+  }
+
+  const summary = {
+    checklistSource: checks.length,
+    spotsSource: spots.length,
+    catchesSource: catches.length,
+    importedChecklist,
+    importedSpots,
+    importedCatches,
+    importedAt: new Date().toISOString()
+  };
+  if (checks.length || spots.length || catches.length) {
+    await env.DB.prepare("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('supabase_import_v2',?,CURRENT_TIMESTAMP)")
+      .bind(JSON.stringify(summary)).run();
+  }
+  return { ok: true, cached: false, ...summary };
+}
+
+async function safeLegacyImport(env) {
+  try { return await importLegacy(env, false); }
+  catch (error) { console.error('Legacy import failed:', error); return { ok: false, error: String(error?.message || error) }; }
+}
+
+async function bootstrap(env) {
+  const legacy = await safeLegacyImport(env);
+  const anglers = (await env.DB.prepare('SELECT id,name,pb_kg AS pbKg FROM anglers ORDER BY name').all()).results;
+  const trips = (await env.DB.prepare(`SELECT id,year,name,lake,country,status,start_at AS start,end_at AS end,peg,latitude,longitude,lake_image AS lakeImage,facts_json AS factsJson,is_active AS isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`).all()).results;
+  const output = [];
+  for (const trip of trips) {
+    const stats = await env.DB.prepare(`SELECT COUNT(*) fishCount,COALESCE(SUM(weight_kg),0) totalWeightKg,COALESCE(MAX(weight_kg),0) biggestFishKg FROM catches WHERE trip_id=?`).bind(trip.id).first();
+    const biggest = await env.DB.prepare(`SELECT a.name anglerName FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.weight_kg DESC,c.caught_at ASC LIMIT 1`).bind(trip.id).first();
+    const topSpot = await env.DB.prepare(`SELECT spot,COUNT(*) cnt FROM catches WHERE trip_id=? AND spot IS NOT NULL AND TRIM(spot)<>'' GROUP BY spot ORDER BY cnt DESC,spot ASC LIMIT 1`).bind(trip.id).first();
+    output.push({
+      ...trip,
+      isActive: Boolean(trip.isActive),
+      facts: JSON.parse(trip.factsJson || '{}'),
+      stats: {
+        fishCount: Number(stats?.fishCount || 0),
+        totalWeightKg: Number(stats?.totalWeightKg || 0),
+        biggestFishKg: Number(stats?.biggestFishKg || 0),
+        biggestFishAngler: biggest?.anglerName || null,
+        bestSpot: topSpot?.spot || null
+      }
+    });
+  }
+  return {
+    app: { name: 'Dream Team', tagline: 'Carp Fishing Trip Manager', activeTripId: output.find(x => x.isActive)?.id || output[0]?.id || null },
+    anglers,
+    trips: output,
+    legacyImport: legacy
+  };
+}
+
+async function updateTrip(request, env, id) {
+  const x = await parseBody(request); if (!x) return bad('Invalid JSON');
+  const c = await env.DB.prepare('SELECT * FROM trips WHERE id=?').bind(id).first(); if (!c) return notFound();
+  const lake = String(x.lake ?? c.lake).trim(); if (!lake) return bad('Lake name is required');
+  const year = Number(x.year ?? c.year);
+  await env.DB.prepare(`UPDATE trips SET year=?,name=?,lake=?,country=?,status=?,start_at=?,end_at=?,peg=?,latitude=?,longitude=?,lake_image=?,facts_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+    .bind(year, String(x.name ?? c.name).trim() || `${lake} ${year}`, lake, String(x.country ?? c.country ?? '—').trim() || '—', ['planning','active','archived'].includes(x.status) ? x.status : c.status, x.start ?? c.start_at, x.end ?? c.end_at, String(x.peg ?? c.peg ?? '—').trim() || '—', x.latitude ?? c.latitude, x.longitude ?? c.longitude, x.lakeImage ?? c.lake_image, x.facts ? JSON.stringify(x.facts) : c.facts_json, id).run();
+  return json({ ok: true });
+}
+
+async function activate(env, id) {
+  if (!await env.DB.prepare('SELECT id FROM trips WHERE id=?').bind(id).first()) return notFound();
+  await env.DB.batch([
+    env.DB.prepare('UPDATE trips SET is_active=0 WHERE is_active=1'),
+    env.DB.prepare('UPDATE trips SET is_active=1,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(id)
+  ]);
+  return json({ ok: true });
+}
+
+async function listCatches(request, env) {
+  const tripId = new URL(request.url).searchParams.get('tripId'); if (!tripId) return bad('tripId is required');
+  const q = await env.DB.prepare(`SELECT c.id,c.trip_id tripId,c.angler_id anglerId,a.name anglerName,c.caught_at caughtAt,c.weight_kg weightKg,c.species,c.spot,c.bait,c.rig,c.depth_m depthM,c.notes,c.photo_url photoUrl,c.created_at createdAt FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.caught_at DESC,c.id DESC`).bind(tripId).all();
+  return json({ ok: true, catches: q.results });
+}
+
+async function createCatch(request, env) {
+  const x = await parseBody(request), weight = Number(x?.weightKg);
+  if (!x?.tripId || !x?.anglerId || !Number.isFinite(weight) || weight <= 0) return bad('tripId, anglerId and positive weightKg are required');
+  const q = await env.DB.prepare(`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,bait,rig,depth_m,notes,photo_url) VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(x.tripId, x.anglerId, x.caughtAt || new Date().toISOString(), weight, x.species || 'Karp', x.spot || null, x.bait || null, x.rig || null, x.depthM ?? null, x.notes || null, x.photoUrl || null).run();
+  return json({ ok: true, id: q.meta.last_row_id }, 201);
+}
+
+async function updateCatch(request, env, id) {
+  const x = await parseBody(request); if (!x) return bad('Invalid JSON');
+  const c = await env.DB.prepare('SELECT * FROM catches WHERE id=?').bind(id).first(); if (!c) return notFound();
+  const weight = Number(x.weightKg ?? c.weight_kg); if (!(weight > 0)) return bad('weightKg must be positive');
+  await env.DB.prepare(`UPDATE catches SET angler_id=?,caught_at=?,weight_kg=?,species=?,spot=?,bait=?,rig=?,depth_m=?,notes=?,photo_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+    .bind(x.anglerId ?? c.angler_id, x.caughtAt ?? c.caught_at, weight, x.species ?? c.species, x.spot ?? c.spot, x.bait ?? c.bait, x.rig ?? c.rig, x.depthM ?? c.depth_m, x.notes ?? c.notes, x.photoUrl ?? c.photo_url, id).run();
+  return json({ ok: true });
+}
+
+async function listSpots(request, env) {
+  const tripId = new URL(request.url).searchParams.get('tripId'); if (!tripId) return bad('tripId is required');
+  const q = await env.DB.prepare(`SELECT id,trip_id tripId,name,latitude,longitude,depth_m depthM,bottom_type bottomType,distance_m distanceM,notes,catches_count catchesCount,obstacles,best_time bestTime,best_wind bestWind,created_at createdAt FROM spots WHERE trip_id=? ORDER BY created_at,id`).bind(tripId).all();
+  return json({ ok: true, spots: q.results });
+}
+
+async function createSpot(request, env) {
+  const x = await parseBody(request); if (!x?.tripId || !String(x.name || '').trim()) return bad('tripId and name are required');
+  const q = await env.DB.prepare(`INSERT INTO spots(trip_id,name,latitude,longitude,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind) VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(x.tripId, String(x.name).trim(), x.latitude ?? null, x.longitude ?? null, x.depthM ?? null, x.bottomType || null, x.distanceM ?? null, x.notes || null, x.obstacles || null, x.bestTime || null, x.bestWind || null).run();
+  return json({ ok: true, id: q.meta.last_row_id }, 201);
+}
+
+async function updateSpot(request, env, id) {
+  const x = await parseBody(request); if (!x) return bad('Invalid JSON');
+  const c = await env.DB.prepare('SELECT * FROM spots WHERE id=?').bind(id).first(); if (!c) return notFound();
+  await env.DB.prepare(`UPDATE spots SET name=?,latitude=?,longitude=?,depth_m=?,bottom_type=?,distance_m=?,notes=?,obstacles=?,best_time=?,best_wind=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+    .bind(x.name ?? c.name, x.latitude ?? c.latitude, x.longitude ?? c.longitude, x.depthM ?? c.depth_m, x.bottomType ?? c.bottom_type, x.distanceM ?? c.distance_m, x.notes ?? c.notes, x.obstacles ?? c.obstacles, x.bestTime ?? c.best_time, x.bestWind ?? c.best_wind, id).run();
+  return json({ ok: true });
+}
+
+async function listChecklist(request, env) {
+  const tripId = new URL(request.url).searchParams.get('tripId'); if (!tripId) return bad('tripId is required');
+  const q = await env.DB.prepare(`SELECT id,trip_id tripId,category,label,assigned_to assignedTo,packed,quantity,notes,sort_order sortOrder,created_at createdAt FROM checklist_items WHERE trip_id=? ORDER BY category,sort_order,id`).bind(tripId).all();
+  return json({ ok: true, items: q.results.map(x => ({ ...x, packed: Boolean(x.packed) })) });
+}
+
+async function createChecklist(request, env) {
+  const x = await parseBody(request); if (!x?.tripId || !String(x.label || '').trim()) return bad('tripId and label are required');
+  const q = await env.DB.prepare(`INSERT INTO checklist_items(trip_id,category,label,assigned_to,packed,quantity,notes,sort_order) VALUES(?,?,?,?,?,?,?,?)`)
+    .bind(x.tripId, x.category || 'Inne', String(x.label).trim(), x.assignedTo || null, x.packed ? 1 : 0, x.quantity || null, x.notes || null, Number(x.sortOrder || 0)).run();
+  return json({ ok: true, id: q.meta.last_row_id }, 201);
+}
+
+async function patchChecklist(request, env, id) {
+  const x = await parseBody(request); if (!x) return bad('Invalid JSON');
+  const c = await env.DB.prepare('SELECT * FROM checklist_items WHERE id=?').bind(id).first(); if (!c) return notFound();
+  await env.DB.prepare(`UPDATE checklist_items SET category=?,label=?,assigned_to=?,packed=?,quantity=?,notes=?,sort_order=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+    .bind(x.category ?? c.category, x.label ?? c.label, x.assignedTo ?? c.assigned_to, x.packed == null ? c.packed : (x.packed ? 1 : 0), x.quantity ?? c.quantity, x.notes ?? c.notes, x.sortOrder ?? c.sort_order, id).run();
+  return json({ ok: true });
+}
+
+async function documents(request, env) {
+  const tripId = new URL(request.url).searchParams.get('tripId'); if (!tripId) return bad('tripId is required');
+  const q = await env.DB.prepare(`SELECT id,kind,title,content,source_url sourceUrl,sort_order sortOrder FROM trip_documents WHERE trip_id=? ORDER BY sort_order,id`).bind(tripId).all();
+  return json({ ok: true, documents: q.results });
+}
+
+export default {
+  async fetch(request, env) {
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' } });
+    const url = new URL(request.url);
+    try {
+      if (url.pathname === '/api/health' && request.method === 'GET') {
+        const version = await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
+        const marker = await env.DB.prepare("SELECT value FROM app_settings WHERE key='supabase_import_v2'").first();
+        return json({ ok: true, app: 'dream-team', database: 'connected', schemaVersion: version?.value || null, legacyImport: marker ? JSON.parse(marker.value) : null });
+      }
+      if (url.pathname === '/api/legacy-import' && request.method === 'POST') return json(await importLegacy(env, Boolean((await parseBody(request))?.force)));
+      if (url.pathname === '/api/bootstrap' && request.method === 'GET') return json(await bootstrap(env));
+
+      if (url.pathname === '/api/catches' && request.method === 'GET') return listCatches(request, env);
+      if (url.pathname === '/api/catches' && request.method === 'POST') return createCatch(request, env);
+      let match = url.pathname.match(/^\/api\/catches\/(\d+)$/);
+      if (match && request.method === 'PUT') return updateCatch(request, env, Number(match[1]));
+      if (match && request.method === 'DELETE') { await env.DB.prepare('DELETE FROM catches WHERE id=?').bind(Number(match[1])).run(); return json({ ok: true }); }
+
+      if (url.pathname === '/api/spots' && request.method === 'GET') return listSpots(request, env);
+      if (url.pathname === '/api/spots' && request.method === 'POST') return createSpot(request, env);
+      match = url.pathname.match(/^\/api\/spots\/(\d+)$/);
+      if (match && request.method === 'PUT') return updateSpot(request, env, Number(match[1]));
+      if (match && request.method === 'DELETE') { await env.DB.prepare('DELETE FROM spots WHERE id=?').bind(Number(match[1])).run(); return json({ ok: true }); }
+
+      if (url.pathname === '/api/checklist' && request.method === 'GET') return listChecklist(request, env);
+      if (url.pathname === '/api/checklist' && request.method === 'POST') return createChecklist(request, env);
+      match = url.pathname.match(/^\/api\/checklist\/(\d+)$/);
+      if (match && request.method === 'PATCH') return patchChecklist(request, env, Number(match[1]));
+      if (match && request.method === 'DELETE') { await env.DB.prepare('DELETE FROM checklist_items WHERE id=?').bind(Number(match[1])).run(); return json({ ok: true }); }
+
+      if (url.pathname === '/api/documents' && request.method === 'GET') return documents(request, env);
+
+      match = url.pathname.match(/^\/api\/trips\/([^/]+)$/);
+      if (match && request.method === 'PUT') return updateTrip(request, env, decodeURIComponent(match[1]));
+      match = url.pathname.match(/^\/api\/trips\/([^/]+)\/activate$/);
+      if (match && request.method === 'POST') return activate(env, decodeURIComponent(match[1]));
+
+      if (url.pathname.startsWith('/api/')) return notFound();
+      return env.ASSETS.fetch(request);
+    } catch (error) {
+      console.error(error);
+      return json({ ok: false, error: 'Internal server error', detail: String(error?.message || error) }, 500);
+    }
+  }
+};
