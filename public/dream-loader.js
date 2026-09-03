@@ -9,6 +9,32 @@
     });
   }
 
+  function bindMobileMenu() {
+    document.querySelectorAll('.menu-toggle').forEach(button => {
+      if (button.dataset.dreamMenuBound === '1') return;
+      button.dataset.dreamMenuBound = '1';
+      const wrap = button.closest('.mobile-nav-wrap') || button.parentElement;
+      const nav = wrap?.querySelector('.main-nav') || document.querySelector('.main-nav');
+      if (!nav) return;
+
+      button.setAttribute('aria-expanded', nav.classList.contains('open') ? 'true' : 'false');
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const open = nav.classList.toggle('open');
+        button.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+
+      nav.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+        nav.classList.remove('open');
+        button.setAttribute('aria-expanded', 'false');
+      }));
+    });
+  }
+
+  bindMobileMenu();
+  document.addEventListener('DOMContentLoaded', bindMobileMenu, { once: true });
+
   try {
     const response = await fetch('/api/bootstrap', { cache: 'no-store' });
     const model = await response.json();
@@ -75,9 +101,10 @@
     if (document.querySelector('[data-use-fixes]') || location.pathname.includes('pogoda')) await loadScript('/fixes.js').catch(() => {});
     await loadScript('/app-plus.js').catch(() => {});
     if (document.getElementById('fishChart')) await loadScript('/dashboard-chart.js').catch(() => {});
+    bindMobileMenu();
   } catch (error) {
     console.error('Dream Team loader failed', error);
     const main = document.querySelector('main');
-    if (main) main.insertAdjacentHTML('afterbegin', `<div class="container"><div class="empty-box">Błąd uruchamiania Dream Team: ${String(error.message || error)}</div></div>`);
+    if (main) main.insertAdjacentHTML('afterbegin', `<div class="container"><div class="empty-box">Błą̨d uruchamiania Dream Team: ${String(error.message || error)}</div></div>`);
   }
 })();
