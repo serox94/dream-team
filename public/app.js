@@ -1659,7 +1659,11 @@ function bootApp() {
   initApp();
 }
 
-document.addEventListener("DOMContentLoaded", bootApp);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootApp);
+} else {
+  bootApp();
+}
 
 window.deleteCatch = deleteCatch;
 window.editCatch = editCatch;

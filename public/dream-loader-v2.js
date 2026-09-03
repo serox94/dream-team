@@ -129,14 +129,14 @@
     bindMobileMenu();
     markActiveNav();
 
-    await loadScript('/d1-supabase-compat.js?v=4');
-    await loadScript('/app.js?v=4');
+    await loadScript('/d1-supabase-compat.js?v=5');
+    await loadScript('/app.js?v=5');
 
     const path = location.pathname.replace(/\.html$/, '');
-    if (path.endsWith('/pages/pogoda')) await loadScript('/fixes.js?v=4');
-    await loadScript('/app-plus.js?v=4');
-    if (document.getElementById('weightChart')) await loadScript('/dashboard-chart.js?v=4');
-    await loadScript('/trip-renderer-v2.js?v=4');
+    if (path.endsWith('/pages/pogoda')) await loadScript('/fixes.js?v=5');
+    await loadScript('/app-plus.js?v=5');
+    if (document.getElementById('weightChart')) await loadScript('/dashboard-chart.js?v=5');
+    await loadScript('/trip-renderer-v2.js?v=5');
 
     if (window.DreamTripRenderer?.render) {
       const documents = await getJson(`/api/documents?tripId=${encodeURIComponent(trip.id)}`).then(x => x.documents || []).catch(() => []);
