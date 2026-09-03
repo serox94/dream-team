@@ -1,0 +1,176 @@
+import fs from 'node:fs';
+import cp from 'node:child_process';
+
+// 1) Dream Team owns its CSS locally. No runtime import from ryby2026.
+const baseCss = cp.execFileSync('curl', ['-fsSL','https://raw.githubusercontent.com/serox94/ryby2026/main/style.css'], {encoding:'utf8'});
+const dreamCss = `
+/* Dream Team permanent additions */
+.dream-trip-select{margin-top:12px;min-width:315px;max-width:440px;padding:10px 12px;border-radius:10px;background:#111a25;color:#f4f7fb;border:1px solid rgba(255,255,255,.14);font:inherit}
+.dream-trip-select:focus{outline:2px solid rgba(83,178,255,.55);outline-offset:2px}
+.dream-detail-list{display:grid;gap:10px;margin:14px 0}.dream-detail-list>div{display:flex;justify-content:space-between;gap:18px;padding:12px 14px;border:1px solid var(--border);border-radius:13px;background:rgba(13,18,27,.72)}.dream-detail-list span{color:var(--muted)}.dream-detail-list strong{text-align:right}
+.dream-action{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:14px 16px;border:1px solid rgba(83,178,255,.24);border-radius:13px;background:rgba(83,178,255,.08);font-weight:700}
+.source-panel{margin-top:24px}.knowledge-card ul{padding-left:20px}.knowledge-card li+li{margin-top:7px}
+.stat-card.status-success::after{background:linear-gradient(90deg,var(--success),var(--accent-2))}.stat-card.status-warn::after{background:linear-gradient(90deg,var(--warning),#ff9f43)}.stat-card.status-danger::after{background:linear-gradient(90deg,var(--danger),#b84155)}
+@media(min-width:761px){.main-nav{flex-wrap:wrap;overflow:visible}.main-nav::-webkit-scrollbar{display:none}}
+@media(max-width:760px){.dream-trip-select{min-width:0;width:100%;max-width:none}.dream-detail-list>div{display:grid;gap:4px}.dream-detail-list strong{text-align:left}}
+`;
+fs.writeFileSync('public/style.css', baseCss + '\n' + dreamCss);
+
+// 2) One loader only. Remove temporary launchers/fixes from HTML.
+const htmlFiles = ['public/index.html', ...fs.readdirSync('public/pages').filter(x=>x.endsWith('.html')).map(x=>'public/pages/'+x)];
+for (const file of htmlFiles) {
+  let h = fs.readFileSync(file,'utf8');
+  h = h.replace(/\s*<script src="\/(?:dream-loader|dream-loader-v2)\.js(?:\?[^\"]*)?"><\/script>/g,'');
+  h = h.replace(/\s*<script src="\/(?:wygonin-launcher|wygonin-encyclopedia|catch-fix)\.js(?:\?[^\"]*)?"><\/script>/g,'');
+  h = h.replace('</body>', '  <script src="/dream-loader-v2.js?v=4"></script>\n</body>');
+  fs.writeFileSync(file,h);
+}
+
+// 3) Compatibility layer: selected trip is local view, spot links persist, .in() works.
+{
+  const file='public/d1-supabase-compat.js';
+  let s=fs.readFileSync(file,'utf8');
+  s=s.replace(/const activeTrip = async \(\) => \{[\s\S]*?\n  \};/, `const activeTrip = async () => {
+    if (window.DREAM_TRIP?.id) return window.DREAM_TRIP;
+    if (!bootstrapPromise) bootstrapPromise = fetch('/api/bootstrap', { cache: 'no-store' }).then(r => r.json());
+    const model = await bootstrapPromise;
+    return model.trips.find(t => t.id === model.app.activeTripId) || model.trips[0];
+  };`);
+  s=s.replace('spot_id: null,', 'spot_id: x.spotId ?? x.spot_id ?? null,');
+  s=s.replace('eq(column, value) { this.filters.push([column, value]); return this; }', `eq(column, value) { this.filters.push([column, value]); return this; }
+    in(column, values) { this.filters.push([column, { __in: Array.isArray(values) ? values : [] }]); return this; }`);
+  s=s.replace('for (const [key, value] of this.filters) data = data.filter(row => String(row[key]) === String(value));', `for (const [key, value] of this.filters) {
+            if (value && typeof value === 'object' && Array.isArray(value.__in)) data = data.filter(row => value.__in.map(String).includes(String(row[key])));
+            else data = data.filter(row => String(row[key]) === String(value));
+          }`);
+  s=s.replace('notes: row.note || null\n              }) });', 'notes: row.note || null,\n                spotId: row.spot_id ?? null\n              }) });');
+  s=s.replace('notes: this.payload.note\n            }) });', 'notes: this.payload.note,\n              spotId: this.payload.spot_id\n            }) });');
+  s=s.replace(/const idFilter = this\.filters\.find\(\(\[key\]\) => key === 'id'\);\n        const id = idFilter \? Number\(idFilter\[1\]\) : null;/, `const idFilter = this.filters.find(([key]) => key === 'id');
+        const rawId = idFilter ? idFilter[1] : null;
+        const ids = rawId && typeof rawId === 'object' && Array.isArray(rawId.__in) ? rawId.__in.map(Number).filter(Number.isFinite) : [];
+        const id = ids.length ? null : (rawId == null ? null : Number(rawId));`);
+  s=s.replace("} else if (this.table === 'checklist_items' && id) {\n            const patch = {};", `} else if (this.table === 'checklist_items' && (id || ids.length)) {
+            const patch = {};`);
+  s=s.replace("await api(`/api/checklist/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });\n          }\n          return { data: this.singleMode ? { ...this.payload, id } : null, error: null };", `if (ids.length) {
+              for (const oneId of ids) await api(\`/api/checklist/\${oneId}\`, { method: 'PATCH', body: JSON.stringify(patch) });
+            } else {
+              await api(\`/api/checklist/\${id}\`, { method: 'PATCH', body: JSON.stringify(patch) });
+            }
+          }
+          return { data: this.singleMode ? { ...this.payload, id: id || ids[0] || null } : null, error: null };`);
+  fs.writeFileSync(file,s);
+}
+
+// 4) Catch form: spot is optional; fanfare only on a real new all-time PB.
+{
+  const file='public/app.js';
+  let s=fs.readFileSync(file,'utf8');
+  s=s.replace('if (!spotText && !spotId) return { ok: false, message: "Podaj spot albo wybierz spot z mapy." };','');
+  s=s.replace('spot: spotText || null,','spot: spotText || "Brak",');
+  s=s.replace(/function celebrateCatchIfNeeded\(item, \{ play = true \} = \{\}\) \{[\s\S]*?\n\}/, `function celebrateCatchIfNeeded(item, { play = true } = {}) {
+  if (!item) return false;
+  window.DREAM_RUNTIME_PB = window.DREAM_RUNTIME_PB || Object.fromEntries((window.DREAM_MODEL?.allTime?.anglers || []).map(a => [a.name, Number(a.pbKg || 0)]));
+  const person = item.person || item.anglerName || 'Patryk';
+  const weight = Number(item.weight || item.weightKg || 0);
+  const currentPb = Number(window.DREAM_RUNTIME_PB[person] || 0);
+  if (!(weight > currentPb)) return false;
+  window.DREAM_RUNTIME_PB[person] = weight;
+  const key = getPbCatchKey(item);
+  const storedKeys = new Set(getCelebratedPbCatchKeys());
+  if (storedKeys.has(key)) return false;
+  storedKeys.add(key);
+  saveCelebratedPbCatchKeys([...storedKeys]);
+  if (play) playPbCelebrationSound();
+  return true;
+}`);
+  s=s.replace(/function maybeCelebratePbMilestone\(catches\) \{[\s\S]*?\n\}\n\n\nfunction setMessage/, `function maybeCelebratePbMilestone(catches) {
+  if (!Array.isArray(catches)) return;
+  const storedKeys = new Set(getCelebratedPbCatchKeys());
+  catches.forEach(item => storedKeys.add(getPbCatchKey(item)));
+  saveCelebratedPbCatchKeys([...storedKeys]);
+  pbCelebrationPrimed = true;
+}
+
+
+function setMessage`);
+  fs.writeFileSync(file,s);
+}
+
+// 5) Worker: no automatic Supabase dependency, permanent lakes model, global PB, catch<->spot links.
+{
+  const file='src/worker.js';
+  let s=fs.readFileSync(file,'utf8');
+  const bootstrap = `async function bootstrap(env) {
+  const anglersRaw = (await env.DB.prepare(\`SELECT a.id,a.name,a.pb_kg storedPb,COALESCE(MAX(c.weight_kg),0) catchPb FROM anglers a LEFT JOIN catches c ON c.angler_id=a.id GROUP BY a.id,a.name,a.pb_kg ORDER BY a.name\`).all()).results;
+  const anglers = anglersRaw.map(a => ({ id:a.id, name:a.name, pbKg:Math.max(Number(a.storedPb||0),Number(a.catchPb||0)) }));
+  const lakesRaw = (await env.DB.prepare(\`SELECT id,name,country,latitude,longitude,image_url imageUrl,facts_json factsJson,source_url sourceUrl FROM lakes\`).all()).results;
+  const lakes = Object.fromEntries(lakesRaw.map(l => [l.id,{...l,facts:JSON.parse(l.factsJson||'{}')} ]));
+  const trips = (await env.DB.prepare(\`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at AS start,end_at AS end,peg,latitude,longitude,lake_image AS lakeImage,facts_json AS factsJson,is_active AS isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC\`).all()).results;
+  const output = [];
+  for (const trip of trips) {
+    const stats = await env.DB.prepare(\`SELECT COUNT(*) fishCount,COALESCE(SUM(weight_kg),0) totalWeightKg,COALESCE(MAX(weight_kg),0) biggestFishKg FROM catches WHERE trip_id=?\`).bind(trip.id).first();
+    const biggest = await env.DB.prepare(\`SELECT a.name anglerName,c.id,c.weight_kg weightKg,c.caught_at caughtAt FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.weight_kg DESC,c.caught_at ASC LIMIT 1\`).bind(trip.id).first();
+    const topSpot = await env.DB.prepare(\`SELECT COALESCE(s.name,c.spot) spot,COUNT(*) cnt FROM catches c LEFT JOIN spots s ON s.id=c.spot_id WHERE c.trip_id=? AND COALESCE(s.name,c.spot) IS NOT NULL AND TRIM(COALESCE(s.name,c.spot))<>'' GROUP BY COALESCE(s.name,c.spot) ORDER BY cnt DESC,spot ASC LIMIT 1\`).bind(trip.id).first();
+    output.push({ ...trip, isActive:Boolean(trip.isActive), facts:JSON.parse(trip.factsJson||'{}'), lakeProfile:lakes[trip.lakeId]||null, stats:{ fishCount:Number(stats?.fishCount||0), totalWeightKg:Number(stats?.totalWeightKg||0), biggestFishKg:Number(stats?.biggestFishKg||0), biggestFishAngler:biggest?.anglerName||null, bestSpot:topSpot?.spot||null } });
+  }
+  const record = await env.DB.prepare(\`SELECT c.id,c.trip_id tripId,c.weight_kg weightKg,c.caught_at caughtAt,c.species,a.id anglerId,a.name anglerName,t.lake,t.year FROM catches c JOIN anglers a ON a.id=c.angler_id JOIN trips t ON t.id=c.trip_id ORDER BY c.weight_kg DESC,c.caught_at ASC LIMIT 1\`).first();
+  return { app:{name:'Dream Team',tagline:'Carp Fishing Trip Manager',activeTripId:output.find(x=>x.isActive)?.id||output[0]?.id||null}, anglers, trips:output, allTime:{anglers,dreamTeamRecord:record||null} };
+}`;
+  s=s.replace(/async function bootstrap\(env\) \{[\s\S]*?\n\}\n\nasync function updateTrip/, bootstrap+'\n\nasync function updateTrip');
+  const listCatches = `async function listCatches(request, env) {
+  const tripId = new URL(request.url).searchParams.get('tripId'); if (!tripId) return bad('tripId is required');
+  const q = await env.DB.prepare(\`SELECT c.id,c.trip_id tripId,c.angler_id anglerId,a.name anglerName,c.caught_at caughtAt,c.weight_kg weightKg,c.species,c.spot,c.spot_id spotId,c.bait,c.rig,c.depth_m depthM,c.notes,c.photo_url photoUrl,c.created_at createdAt FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.caught_at DESC,c.id DESC\`).bind(tripId).all();
+  return json({ ok:true, catches:q.results });
+}`;
+  s=s.replace(/async function listCatches\(request, env\) \{[\s\S]*?\n\}\n\nasync function createCatch/, listCatches+'\n\nasync function createCatch');
+  const createCatch = `async function createCatch(request, env) {
+  const x = await parseBody(request), weight = Number(x?.weightKg);
+  if (!x?.tripId || !x?.anglerId || !Number.isFinite(weight) || weight <= 0) return bad('tripId, anglerId and positive weightKg are required');
+  const spotId = x.spotId == null || x.spotId === '' ? null : Number(x.spotId);
+  const q = await env.DB.prepare(\`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,spot_id,bait,rig,depth_m,notes,photo_url) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)\`)
+    .bind(x.tripId,x.anglerId,x.caughtAt||new Date().toISOString(),weight,x.species||'Karp',x.spot||'Brak',Number.isFinite(spotId)?spotId:null,x.bait||null,x.rig||null,x.depthM??null,x.notes||null,x.photoUrl||null).run();
+  await env.DB.prepare(\`UPDATE anglers SET pb_kg=MAX(pb_kg,?),updated_at=CURRENT_TIMESTAMP WHERE id=?\`).bind(weight,x.anglerId).run();
+  return json({ ok:true,id:q.meta.last_row_id },201);
+}`;
+  s=s.replace(/async function createCatch\(request, env\) \{[\s\S]*?\n\}\n\nasync function updateCatch/, createCatch+'\n\nasync function updateCatch');
+  const updateCatch = `async function updateCatch(request, env, id) {
+  const x = await parseBody(request); if (!x) return bad('Invalid JSON');
+  const c = await env.DB.prepare('SELECT * FROM catches WHERE id=?').bind(id).first(); if (!c) return notFound();
+  const weight = Number(x.weightKg ?? c.weight_kg); if (!(weight > 0)) return bad('weightKg must be positive');
+  const spotIdRaw = x.spotId === undefined ? c.spot_id : x.spotId;
+  const spotId = spotIdRaw == null || spotIdRaw === '' ? null : Number(spotIdRaw);
+  await env.DB.prepare(\`UPDATE catches SET angler_id=?,caught_at=?,weight_kg=?,species=?,spot=?,spot_id=?,bait=?,rig=?,depth_m=?,notes=?,photo_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?\`)
+    .bind(x.anglerId??c.angler_id,x.caughtAt??c.caught_at,weight,x.species??c.species,x.spot??c.spot,Number.isFinite(spotId)?spotId:null,x.bait??c.bait,x.rig??c.rig,x.depthM??c.depth_m,x.notes??c.notes,x.photoUrl??c.photo_url,id).run();
+  await env.DB.prepare(\`UPDATE anglers SET pb_kg=MAX(pb_kg,?),updated_at=CURRENT_TIMESTAMP WHERE id=?\`).bind(weight,x.anglerId??c.angler_id).run();
+  return json({ ok:true });
+}`;
+  s=s.replace(/async function updateCatch\(request, env, id\) \{[\s\S]*?\n\}\n\nasync function listSpots/, updateCatch+'\n\nasync function listSpots');
+  fs.writeFileSync(file,s);
+}
+
+// 6) Dashboard gets true all-time PB labels after normal trip rendering.
+{
+  const file='public/trip-renderer-v2.js';
+  let s=fs.readFileSync(file,'utf8');
+  s=s.replace("document.querySelectorAll('[data-lake-name]').forEach(x => x.textContent = trip.lake);", `document.querySelectorAll('[data-lake-name]').forEach(x => x.textContent = trip.lake);
+    const all = window.DREAM_MODEL?.allTime?.anglers || [];
+    for (const person of ['Patryk','Maciek']) {
+      const data = all.find(a => a.name === person);
+      if (!data) continue;
+      const key = person.toLowerCase();
+      const value = document.getElementById(key+'-pb-text');
+      const bar = document.getElementById(key+'-pb-bar');
+      const label = value?.closest('.pb-section')?.querySelector('.pb-top span:first-child');
+      if (value) value.textContent = Number(data.pbKg||0).toFixed(1)+' kg';
+      if (bar) bar.style.width = '100%';
+      if (label) label.textContent = 'PB ze wszystkich wyjazdów';
+    }`);
+  fs.writeFileSync(file,s);
+}
+
+// 7) Bump version to make deploy state obvious.
+{
+  const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+  p.version='1.0.0';
+  fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');
+}
