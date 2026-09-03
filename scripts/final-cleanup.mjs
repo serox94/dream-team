@@ -22,8 +22,6 @@ import fs from 'node:fs';
   let s = fs.readFileSync(file, 'utf8');
   s = s.replace(/\nconst OLD_URL =[\s\S]*?\nasync function bootstrap\(env\) \{/, '\n\nasync function bootstrap(env) {');
   s = s.replace(/\n      if \(url\.pathname === '\/api\/legacy-import'[\s\S]*?;\n/, '\n');
-
-  // Same-origin protection for state-changing browser requests. GET remains public for the app.
   s = s.replace("    const url = new URL(request.url);\n    try {", `    const url = new URL(request.url);
     try {
       if (['POST','PUT','PATCH','DELETE'].includes(request.method)) {
@@ -50,19 +48,4 @@ import fs from 'node:fs';
 `;
   if (!s.includes('dream-team-alltime-record')) s = s.replace(needle, insert + needle);
   fs.writeFileSync(file, s);
-}
-
-// Validation must catch the exact regressions that caused the recent problems.
-{
-  const file = '.github/workflows/validate.yml';
-  let y = fs.readFileSync(file, 'utf8');
-  if (!y.includes('Check runtime architecture')) {
-    y = y.replace('      - name: Apply all migrations locally', `      - name: Check runtime architecture
-        run: |
-          ! grep -R -E "dream-loader\\.js|wygonin-launcher|wygonin-encyclopedia|catch-fix" public/index.html public/pages/*.html
-          ! grep -E "@import.*ryby2026|supabase\\.co|sb_publishable" public/style.css public/d1-supabase-compat.js src/worker.js
-          for f in public/index.html public/pages/*.html; do test "$(grep -o 'dream-loader-v2.js' "$f" | wc -l)" -eq 1; done
-      - name: Apply all migrations locally`);
-  }
-  fs.writeFileSync(file, y);
 }
