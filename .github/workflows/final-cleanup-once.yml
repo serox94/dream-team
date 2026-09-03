@@ -1,0 +1,22 @@
+name: Final Dream Team cleanup once
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/final-cleanup-once.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/final-cleanup.mjs
+      - name: Commit cleanup
+        run: |
+          git config user.name "dream-team-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add public src .github/workflows/validate.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "Remove legacy runtime paths and finalize multi-year core"
+          git push
