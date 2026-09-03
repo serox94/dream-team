@@ -11,96 +11,6 @@ const bad = message => json({ ok: false, error: message }, 400);
 const notFound = () => json({ ok: false, error: 'Not found' }, 404);
 async function parseBody(request) { try { return await request.json(); } catch { return null; } }
 
-const OLD_URL = 'https://baiepgxqnppwokcmmpqw.supabase.co';
-const OLD_KEY = 'sb_publishable_ziiHPrhOisVJXnUeOdI4ug_b4y4djws';
-
-async function oldTable(name) {
-  const response = await fetch(`${OLD_URL}/rest/v1/${name}?select=*`, {
-    headers: { apikey: OLD_KEY, Authorization: `Bearer ${OLD_KEY}` }
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`${name}: ${response.status} ${text.slice(0, 400)}`);
-  try { return JSON.parse(text); } catch { return []; }
-}
-
-async function importLegacy(env, force = false) {
-  const marker = await env.DB.prepare("SELECT value FROM app_settings WHERE key='supabase_import_v2'").first();
-  if (marker && !force) return { ok: true, cached: true, ...JSON.parse(marker.value) };
-
-  const [checks, spots, catches] = await Promise.all([
-    oldTable('checklist_items'), oldTable('spots'), oldTable('catches')
-  ]);
-
-  const existingChecks = Number((await env.DB.prepare("SELECT COUNT(*) c FROM checklist_items WHERE trip_id='next-trip'").first())?.c || 0);
-  const existingSpots = Number((await env.DB.prepare("SELECT COUNT(*) c FROM spots WHERE trip_id='next-trip'").first())?.c || 0);
-  const existingCatches = Number((await env.DB.prepare("SELECT COUNT(*) c FROM catches WHERE trip_id='la-plaine-2026'").first())?.c || 0);
-
-  let importedChecklist = 0, importedSpots = 0, importedCatches = 0;
-
-  if ((force || existingChecks === 0) && checks.length) {
-    if (force) await env.DB.prepare("DELETE FROM checklist_items WHERE trip_id='next-trip' AND notes LIKE 'Import z Ryby 2026%'").run();
-    for (const x of checks) {
-      const label = String(x.item_name || x.name || '').trim();
-      if (!label) continue;
-      const qty = x.quantity == null || x.quantity === '' ? null : `${x.quantity}${x.unit ? ` ${x.unit}` : ''}`;
-      const duplicate = await env.DB.prepare("SELECT id FROM checklist_items WHERE trip_id='next-trip' AND category=? AND label=? LIMIT 1")
-        .bind(x.category || 'Inne', label).first();
-      if (duplicate) continue;
-      await env.DB.prepare(`INSERT INTO checklist_items(trip_id,category,label,packed,quantity,notes,sort_order) VALUES('next-trip',?,?,?,?,?,?)`)
-        .bind(x.category || 'Inne', label, x.done ? 1 : 0, qty, 'Import z Ryby 2026 / Supabase', Number(x.id || 0)).run();
-      importedChecklist++;
-    }
-  }
-
-  if ((force || existingSpots === 0) && spots.length) {
-    if (force) await env.DB.prepare("DELETE FROM spots WHERE trip_id='next-trip' AND notes LIKE '%Import z Ryby 2026%'").run();
-    for (const x of spots) {
-      const name = String(x.name || '').trim();
-      if (!name) continue;
-      const duplicate = await env.DB.prepare("SELECT id FROM spots WHERE trip_id='next-trip' AND name=? LIMIT 1").bind(name).first();
-      if (duplicate) continue;
-      const note = [x.note, 'Import z Ryby 2026 / Supabase'].filter(Boolean).join(' · ');
-      await env.DB.prepare(`INSERT INTO spots(trip_id,name,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind) VALUES('next-trip',?,?,?,?,?,?,?,?)`)
-        .bind(name, x.depth_m ?? null, x.bottom_type || null, x.distance_m ?? null, note, x.obstacles || null, x.best_time || null, x.best_wind || null).run();
-      importedSpots++;
-    }
-  }
-
-  if ((force || existingCatches === 0) && catches.length) {
-    for (const x of catches) {
-      const weight = Number(x.weight);
-      if (!(weight > 0)) continue;
-      const anglerId = String(x.person || '').toLowerCase().includes('mac') ? 'maciek' : 'patryk';
-      const caughtAt = x.caught_at || new Date().toISOString();
-      const duplicate = await env.DB.prepare("SELECT id FROM catches WHERE trip_id='la-plaine-2026' AND angler_id=? AND caught_at=? AND ABS(weight_kg-?)<0.001 LIMIT 1")
-        .bind(anglerId, caughtAt, weight).first();
-      if (duplicate) continue;
-      await env.DB.prepare(`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,bait,notes) VALUES('la-plaine-2026',?,?,?,?,?,?,?)`)
-        .bind(anglerId, caughtAt, weight, x.species || 'Karp', x.spot || null, x.bait || null, [x.note, 'Import z Ryby 2026 / Supabase'].filter(Boolean).join(' · ')).run();
-      importedCatches++;
-    }
-  }
-
-  const summary = {
-    checklistSource: checks.length,
-    spotsSource: spots.length,
-    catchesSource: catches.length,
-    importedChecklist,
-    importedSpots,
-    importedCatches,
-    importedAt: new Date().toISOString()
-  };
-  if (checks.length || spots.length || catches.length) {
-    await env.DB.prepare("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('supabase_import_v2',?,CURRENT_TIMESTAMP)")
-      .bind(JSON.stringify(summary)).run();
-  }
-  return { ok: true, cached: false, ...summary };
-}
-
-async function safeLegacyImport(env) {
-  try { return await importLegacy(env, false); }
-  catch (error) { console.error('Legacy import failed:', error); return { ok: false, error: String(error?.message || error) }; }
-}
 
 async function bootstrap(env) {
   const anglersRaw = (await env.DB.prepare(`SELECT a.id,a.name,a.pb_kg storedPb,COALESCE(MAX(c.weight_kg),0) catchPb FROM anglers a LEFT JOIN catches c ON c.angler_id=a.id GROUP BY a.id,a.name,a.pb_kg ORDER BY a.name`).all()).results;
@@ -219,12 +129,15 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS' } });
     const url = new URL(request.url);
     try {
+      if (['POST','PUT','PATCH','DELETE'].includes(request.method)) {
+        const origin = request.headers.get('origin');
+        if (origin && origin !== url.origin) return json({ ok:false, error:'Cross-origin write blocked' }, 403);
+      }
       if (url.pathname === '/api/health' && request.method === 'GET') {
         const version = await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
         const marker = await env.DB.prepare("SELECT value FROM app_settings WHERE key='supabase_import_v2'").first();
         return json({ ok: true, app: 'dream-team', database: 'connected', schemaVersion: version?.value || null, legacyImport: marker ? JSON.parse(marker.value) : null });
       }
-      if (url.pathname === '/api/legacy-import' && request.method === 'POST') return json(await importLegacy(env, Boolean((await parseBody(request))?.force)));
       if (url.pathname === '/api/bootstrap' && request.method === 'GET') return json(await bootstrap(env));
 
       if (url.pathname === '/api/catches' && request.method === 'GET') return listCatches(request, env);

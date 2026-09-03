@@ -66,6 +66,15 @@
     if (notes[1]) notes[1].textContent = `🎣 ${f.waterSize || '—'} · ${f.depth || 'głębokość do uzupełnienia'}`;
     document.querySelectorAll('[data-lake-name]').forEach(x => x.textContent = trip.lake);
     const all = window.DREAM_MODEL?.allTime?.anglers || [];
+    const record = window.DREAM_MODEL?.allTime?.dreamTeamRecord;
+    const statsGrid = document.querySelector('main .stats-grid');
+    if (record && statsGrid && !document.getElementById('dream-team-alltime-record')) {
+      const card = document.createElement('article');
+      card.id = 'dream-team-alltime-record';
+      card.className = 'stat-card status-success';
+      card.innerHTML = '<span class="label">👑 Rekord Dream Team — wszystkie wyjazdy</span><strong>' + Number(record.weightKg||0).toFixed(1) + ' kg · ' + esc(record.anglerName||'—') + '</strong>';
+      statsGrid.appendChild(card);
+    }
     for (const person of ['Patryk','Maciek']) {
       const data = all.find(a => a.name === person);
       if (!data) continue;

@@ -67,52 +67,6 @@
     };
   }
 
-  async function browserLegacyFallback(table, tripId) {
-    const endpoint = table === 'checklist_items' ? '/api/checklist' : table === 'spots' ? '/api/spots' : null;
-    if (!endpoint) return false;
-    try {
-      const existing = await api(`${endpoint}?tripId=${encodeURIComponent(tripId)}`);
-      const rows = table === 'checklist_items' ? existing.items : existing.spots;
-      if (rows?.length) return false;
-
-      const key = 'sb_publishable_ziiHPrhOisVJXnUeOdI4ug_b4y4djws';
-      const r = await fetch(`https://baiepgxqnppwokcmmpqw.supabase.co/rest/v1/${table}?select=*`, {
-        headers: { apikey: key, Authorization: `Bearer ${key}` }
-      });
-      if (!r.ok) return false;
-      const legacy = await r.json();
-      if (!Array.isArray(legacy) || !legacy.length) return false;
-
-      for (const x of legacy) {
-        if (table === 'checklist_items') {
-          await api('/api/checklist', { method: 'POST', body: JSON.stringify({
-            tripId,
-            category: x.category || 'Inne',
-            label: x.item_name || x.name || 'Pozycja',
-            packed: Boolean(x.done),
-            quantity: x.quantity == null ? null : `${x.quantity}${x.unit ? ` ${x.unit}` : ''}`,
-            notes: 'Import z Ryby 2026 / Supabase (browser)'
-          }) });
-        } else {
-          await api('/api/spots', { method: 'POST', body: JSON.stringify({
-            tripId,
-            name: x.name || 'Spot',
-            depthM: x.depth_m ?? null,
-            distanceM: x.distance_m ?? null,
-            bottomType: x.bottom_type || null,
-            notes: x.note || null,
-            obstacles: x.obstacles || null,
-            bestTime: x.best_time || null,
-            bestWind: x.best_wind || null
-          }) });
-        }
-      }
-      return true;
-    } catch (e) {
-      console.warn('Legacy browser fallback failed', table, e);
-      return false;
-    }
-  }
 
   class Builder {
     constructor(table) {
@@ -145,24 +99,10 @@
             const out = await api(`/api/catches?tripId=${encodeURIComponent(trip.id)}`);
             data = out.catches.map(oldCatch);
           } else if (this.table === 'spots') {
-            let out = await api(`/api/spots?tripId=${encodeURIComponent(trip.id)}`);
-            if (!out.spots.length) {
-              await api('/api/legacy-import', { method: 'POST', body: JSON.stringify({ force: false }) }).catch(() => {});
-              out = await api(`/api/spots?tripId=${encodeURIComponent(trip.id)}`);
-              if (!out.spots.length && trip.id === 'next-trip') {
-                if (await browserLegacyFallback('spots', trip.id)) out = await api(`/api/spots?tripId=${encodeURIComponent(trip.id)}`);
-              }
-            }
+            const out = await api(`/api/spots?tripId=${encodeURIComponent(trip.id)}`);
             data = out.spots.map(oldSpot);
           } else if (this.table === 'checklist_items') {
-            let out = await api(`/api/checklist?tripId=${encodeURIComponent(trip.id)}`);
-            if (!out.items.length) {
-              await api('/api/legacy-import', { method: 'POST', body: JSON.stringify({ force: false }) }).catch(() => {});
-              out = await api(`/api/checklist?tripId=${encodeURIComponent(trip.id)}`);
-              if (!out.items.length && trip.id === 'next-trip') {
-                if (await browserLegacyFallback('checklist_items', trip.id)) out = await api(`/api/checklist?tripId=${encodeURIComponent(trip.id)}`);
-              }
-            }
+            const out = await api(`/api/checklist?tripId=${encodeURIComponent(trip.id)}`);
             data = out.items.map(oldCheck);
           }
 
