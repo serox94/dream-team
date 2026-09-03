@@ -1,0 +1,25 @@
+name: Validate Dream Team
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check JavaScript syntax
+        run: |
+          node --check src/worker.js
+          for f in public/*.js; do node --check "$f"; done
+      - name: Apply all migrations locally
+        run: npm run db:migrate:local
+      - name: Validate Worker build
+        run: npx wrangler deploy --dry-run
