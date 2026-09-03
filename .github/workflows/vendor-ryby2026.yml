@@ -1,0 +1,33 @@
+name: Vendor Ryby2026 frontend
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/vendor-ryby2026.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Copy and patch complete legacy frontend
+        run: node scripts/sync-ryby2026.mjs
+      - name: Commit vendored frontend
+        run: |
+          git config user.name "dream-team-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -f public
+          if git diff --cached --quiet; then
+            echo "Frontend already vendored"
+            exit 0
+          fi
+          git commit -m "Vendor complete Ryby2026 frontend into Dream Team"
+          git push
