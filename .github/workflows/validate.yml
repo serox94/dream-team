@@ -18,6 +18,11 @@ jobs:
         run: |
           node --check src/worker.js
           for f in public/*.js; do node --check "$f"; done
+      - name: Check runtime architecture
+        run: |
+          ! grep -R -E "dream-loader\.js|wygonin-launcher|wygonin-encyclopedia|catch-fix" public/index.html public/pages/*.html
+          ! grep -E "@import.*ryby2026|supabase\.co|sb_publishable" public/style.css public/d1-supabase-compat.js src/worker.js
+          for f in public/index.html public/pages/*.html; do test "$(grep -o 'dream-loader-v2.js' "$f" | wc -l)" -eq 1; done
       - name: Apply all migrations locally
         run: npm run db:migrate:local
       - name: Validate Worker build
