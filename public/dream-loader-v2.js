@@ -118,6 +118,10 @@
     input.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
 
+  function isCanonicalFranceTrip(trip) {
+    return trip?.lakeId === 'plaine2' || trip?.lakeProfile?.id === 'plaine2';
+  }
+
   try {
     const model = await getJson('/api/bootstrap');
     const trip = selectTrip(model);
@@ -138,11 +142,16 @@
     if (path.endsWith('/pages/pogoda')) await loadScript('/fixes.js?v=5');
     await loadScript('/app-plus.js?v=5');
     if (document.getElementById('weightChart')) await loadScript('/dashboard-chart.js?v=5');
-    await loadScript('/trip-renderer-v2.js?v=5');
 
-    if (window.DreamTripRenderer?.render) {
-      const documents = await getJson(`/api/documents?tripId=${encodeURIComponent(trip.id)}`).then(x => x.documents || []).catch(() => []);
-      await window.DreamTripRenderer.render({ model, trip, documents });
+    // Plaine 2 is the canonical Ryby2026 baseline. Its proven static pages (Dojazd,
+    // Porady, Regulamin, Mapa, etc.) must never be replaced by the generic renderer.
+    // Dream Team still updates shared header/trip data and D1-backed interactive modules.
+    if (!isCanonicalFranceTrip(trip)) {
+      await loadScript('/trip-renderer-v2.js?v=6');
+      if (window.DreamTripRenderer?.render) {
+        const documents = await getJson(`/api/documents?tripId=${encodeURIComponent(trip.id)}`).then(x => x.documents || []).catch(() => []);
+        await window.DreamTripRenderer.render({ model, trip, documents });
+      }
     }
 
     setCurrentDateTime();
