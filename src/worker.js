@@ -103,33 +103,20 @@ async function safeLegacyImport(env) {
 }
 
 async function bootstrap(env) {
-  const legacy = await safeLegacyImport(env);
-  const anglers = (await env.DB.prepare('SELECT id,name,pb_kg AS pbKg FROM anglers ORDER BY name').all()).results;
-  const trips = (await env.DB.prepare(`SELECT id,year,name,lake,country,status,start_at AS start,end_at AS end,peg,latitude,longitude,lake_image AS lakeImage,facts_json AS factsJson,is_active AS isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`).all()).results;
+  const anglersRaw = (await env.DB.prepare(`SELECT a.id,a.name,a.pb_kg storedPb,COALESCE(MAX(c.weight_kg),0) catchPb FROM anglers a LEFT JOIN catches c ON c.angler_id=a.id GROUP BY a.id,a.name,a.pb_kg ORDER BY a.name`).all()).results;
+  const anglers = anglersRaw.map(a => ({ id:a.id, name:a.name, pbKg:Math.max(Number(a.storedPb||0),Number(a.catchPb||0)) }));
+  const lakesRaw = (await env.DB.prepare(`SELECT id,name,country,latitude,longitude,image_url imageUrl,facts_json factsJson,source_url sourceUrl FROM lakes`).all()).results;
+  const lakes = Object.fromEntries(lakesRaw.map(l => [l.id,{...l,facts:JSON.parse(l.factsJson||'{}')} ]));
+  const trips = (await env.DB.prepare(`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at AS start,end_at AS end,peg,latitude,longitude,lake_image AS lakeImage,facts_json AS factsJson,is_active AS isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`).all()).results;
   const output = [];
   for (const trip of trips) {
     const stats = await env.DB.prepare(`SELECT COUNT(*) fishCount,COALESCE(SUM(weight_kg),0) totalWeightKg,COALESCE(MAX(weight_kg),0) biggestFishKg FROM catches WHERE trip_id=?`).bind(trip.id).first();
-    const biggest = await env.DB.prepare(`SELECT a.name anglerName FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.weight_kg DESC,c.caught_at ASC LIMIT 1`).bind(trip.id).first();
-    const topSpot = await env.DB.prepare(`SELECT spot,COUNT(*) cnt FROM catches WHERE trip_id=? AND spot IS NOT NULL AND TRIM(spot)<>'' GROUP BY spot ORDER BY cnt DESC,spot ASC LIMIT 1`).bind(trip.id).first();
-    output.push({
-      ...trip,
-      isActive: Boolean(trip.isActive),
-      facts: JSON.parse(trip.factsJson || '{}'),
-      stats: {
-        fishCount: Number(stats?.fishCount || 0),
-        totalWeightKg: Number(stats?.totalWeightKg || 0),
-        biggestFishKg: Number(stats?.biggestFishKg || 0),
-        biggestFishAngler: biggest?.anglerName || null,
-        bestSpot: topSpot?.spot || null
-      }
-    });
+    const biggest = await env.DB.prepare(`SELECT a.name anglerName,c.id,c.weight_kg weightKg,c.caught_at caughtAt FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.weight_kg DESC,c.caught_at ASC LIMIT 1`).bind(trip.id).first();
+    const topSpot = await env.DB.prepare(`SELECT COALESCE(s.name,c.spot) spot,COUNT(*) cnt FROM catches c LEFT JOIN spots s ON s.id=c.spot_id WHERE c.trip_id=? AND COALESCE(s.name,c.spot) IS NOT NULL AND TRIM(COALESCE(s.name,c.spot))<>'' GROUP BY COALESCE(s.name,c.spot) ORDER BY cnt DESC,spot ASC LIMIT 1`).bind(trip.id).first();
+    output.push({ ...trip, isActive:Boolean(trip.isActive), facts:JSON.parse(trip.factsJson||'{}'), lakeProfile:lakes[trip.lakeId]||null, stats:{ fishCount:Number(stats?.fishCount||0), totalWeightKg:Number(stats?.totalWeightKg||0), biggestFishKg:Number(stats?.biggestFishKg||0), biggestFishAngler:biggest?.anglerName||null, bestSpot:topSpot?.spot||null } });
   }
-  return {
-    app: { name: 'Dream Team', tagline: 'Carp Fishing Trip Manager', activeTripId: output.find(x => x.isActive)?.id || output[0]?.id || null },
-    anglers,
-    trips: output,
-    legacyImport: legacy
-  };
+  const record = await env.DB.prepare(`SELECT c.id,c.trip_id tripId,c.weight_kg weightKg,c.caught_at caughtAt,c.species,a.id anglerId,a.name anglerName,t.lake,t.year FROM catches c JOIN anglers a ON a.id=c.angler_id JOIN trips t ON t.id=c.trip_id ORDER BY c.weight_kg DESC,c.caught_at ASC LIMIT 1`).first();
+  return { app:{name:'Dream Team',tagline:'Carp Fishing Trip Manager',activeTripId:output.find(x=>x.isActive)?.id||output[0]?.id||null}, anglers, trips:output, allTime:{anglers,dreamTeamRecord:record||null} };
 }
 
 async function updateTrip(request, env, id) {
@@ -153,25 +140,30 @@ async function activate(env, id) {
 
 async function listCatches(request, env) {
   const tripId = new URL(request.url).searchParams.get('tripId'); if (!tripId) return bad('tripId is required');
-  const q = await env.DB.prepare(`SELECT c.id,c.trip_id tripId,c.angler_id anglerId,a.name anglerName,c.caught_at caughtAt,c.weight_kg weightKg,c.species,c.spot,c.bait,c.rig,c.depth_m depthM,c.notes,c.photo_url photoUrl,c.created_at createdAt FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.caught_at DESC,c.id DESC`).bind(tripId).all();
-  return json({ ok: true, catches: q.results });
+  const q = await env.DB.prepare(`SELECT c.id,c.trip_id tripId,c.angler_id anglerId,a.name anglerName,c.caught_at caughtAt,c.weight_kg weightKg,c.species,c.spot,c.spot_id spotId,c.bait,c.rig,c.depth_m depthM,c.notes,c.photo_url photoUrl,c.created_at createdAt FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.trip_id=? ORDER BY c.caught_at DESC,c.id DESC`).bind(tripId).all();
+  return json({ ok:true, catches:q.results });
 }
 
 async function createCatch(request, env) {
   const x = await parseBody(request), weight = Number(x?.weightKg);
   if (!x?.tripId || !x?.anglerId || !Number.isFinite(weight) || weight <= 0) return bad('tripId, anglerId and positive weightKg are required');
-  const q = await env.DB.prepare(`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,bait,rig,depth_m,notes,photo_url) VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
-    .bind(x.tripId, x.anglerId, x.caughtAt || new Date().toISOString(), weight, x.species || 'Karp', x.spot || null, x.bait || null, x.rig || null, x.depthM ?? null, x.notes || null, x.photoUrl || null).run();
-  return json({ ok: true, id: q.meta.last_row_id }, 201);
+  const spotId = x.spotId == null || x.spotId === '' ? null : Number(x.spotId);
+  const q = await env.DB.prepare(`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,spot_id,bait,rig,depth_m,notes,photo_url) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`)
+    .bind(x.tripId,x.anglerId,x.caughtAt||new Date().toISOString(),weight,x.species||'Karp',x.spot||'Brak',Number.isFinite(spotId)?spotId:null,x.bait||null,x.rig||null,x.depthM??null,x.notes||null,x.photoUrl||null).run();
+  await env.DB.prepare(`UPDATE anglers SET pb_kg=MAX(pb_kg,?),updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(weight,x.anglerId).run();
+  return json({ ok:true,id:q.meta.last_row_id },201);
 }
 
 async function updateCatch(request, env, id) {
   const x = await parseBody(request); if (!x) return bad('Invalid JSON');
   const c = await env.DB.prepare('SELECT * FROM catches WHERE id=?').bind(id).first(); if (!c) return notFound();
   const weight = Number(x.weightKg ?? c.weight_kg); if (!(weight > 0)) return bad('weightKg must be positive');
-  await env.DB.prepare(`UPDATE catches SET angler_id=?,caught_at=?,weight_kg=?,species=?,spot=?,bait=?,rig=?,depth_m=?,notes=?,photo_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
-    .bind(x.anglerId ?? c.angler_id, x.caughtAt ?? c.caught_at, weight, x.species ?? c.species, x.spot ?? c.spot, x.bait ?? c.bait, x.rig ?? c.rig, x.depthM ?? c.depth_m, x.notes ?? c.notes, x.photoUrl ?? c.photo_url, id).run();
-  return json({ ok: true });
+  const spotIdRaw = x.spotId === undefined ? c.spot_id : x.spotId;
+  const spotId = spotIdRaw == null || spotIdRaw === '' ? null : Number(spotIdRaw);
+  await env.DB.prepare(`UPDATE catches SET angler_id=?,caught_at=?,weight_kg=?,species=?,spot=?,spot_id=?,bait=?,rig=?,depth_m=?,notes=?,photo_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`)
+    .bind(x.anglerId??c.angler_id,x.caughtAt??c.caught_at,weight,x.species??c.species,x.spot??c.spot,Number.isFinite(spotId)?spotId:null,x.bait??c.bait,x.rig??c.rig,x.depthM??c.depth_m,x.notes??c.notes,x.photoUrl??c.photo_url,id).run();
+  await env.DB.prepare(`UPDATE anglers SET pb_kg=MAX(pb_kg,?),updated_at=CURRENT_TIMESTAMP WHERE id=?`).bind(weight,x.anglerId??c.angler_id).run();
+  return json({ ok:true });
 }
 
 async function listSpots(request, env) {

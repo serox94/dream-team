@@ -1,6 +1,7 @@
 (() => {
   let bootstrapPromise = null;
   const activeTrip = async () => {
+    if (window.DREAM_TRIP?.id) return window.DREAM_TRIP;
     if (!bootstrapPromise) bootstrapPromise = fetch('/api/bootstrap', { cache: 'no-store' }).then(r => r.json());
     const model = await bootstrapPromise;
     return model.trips.find(t => t.id === model.app.activeTripId) || model.trips[0];
@@ -31,7 +32,7 @@
       weight: Number(x.weightKg),
       bait: x.bait,
       spot: x.spot,
-      spot_id: null,
+      spot_id: x.spotId ?? x.spot_id ?? null,
       note: x.notes,
       caught_at: x.caughtAt,
       created_at: x.createdAt || x.caughtAt
@@ -128,6 +129,7 @@
     update(payload) { this.operation = 'update'; this.payload = payload; return this; }
     delete() { this.operation = 'delete'; return this; }
     eq(column, value) { this.filters.push([column, value]); return this; }
+    in(column, values) { this.filters.push([column, { __in: Array.isArray(values) ? values : [] }]); return this; }
     single() { this.singleMode = true; return this; }
     maybeSingle() { this.singleMode = true; return this; }
     then(resolve, reject) { this.execute().then(resolve, reject); }
@@ -164,7 +166,10 @@
             data = out.items.map(oldCheck);
           }
 
-          for (const [key, value] of this.filters) data = data.filter(row => String(row[key]) === String(value));
+          for (const [key, value] of this.filters) {
+            if (value && typeof value === 'object' && Array.isArray(value.__in)) data = data.filter(row => value.__in.map(String).includes(String(row[key])));
+            else data = data.filter(row => String(row[key]) === String(value));
+          }
           if (this.singleMode) return { data: data[0] || null, error: null };
           return { data, error: null };
         }
@@ -181,7 +186,8 @@
                 caughtAt: row.caught_at || new Date().toISOString(),
                 spot: row.spot || null,
                 bait: row.bait || null,
-                notes: row.note || null
+                notes: row.note || null,
+                spotId: row.spot_id ?? null
               }) });
               saved.push({ ...row, id: out.id });
             } else if (this.table === 'spots') {
@@ -212,7 +218,9 @@
         }
 
         const idFilter = this.filters.find(([key]) => key === 'id');
-        const id = idFilter ? Number(idFilter[1]) : null;
+        const rawId = idFilter ? idFilter[1] : null;
+        const ids = rawId && typeof rawId === 'object' && Array.isArray(rawId.__in) ? rawId.__in.map(Number).filter(Number.isFinite) : [];
+        const id = ids.length ? null : (rawId == null ? null : Number(rawId));
 
         if (this.operation === 'update') {
           if (this.table === 'catches' && id) {
@@ -223,7 +231,8 @@
               caughtAt: this.payload.caught_at,
               spot: this.payload.spot,
               bait: this.payload.bait,
-              notes: this.payload.note
+              notes: this.payload.note,
+              spotId: this.payload.spot_id
             }) });
           } else if (this.table === 'spots' && id) {
             await api(`/api/spots/${id}`, { method: 'PUT', body: JSON.stringify({
@@ -236,15 +245,19 @@
               bestTime: this.payload.best_time,
               bestWind: this.payload.best_wind
             }) });
-          } else if (this.table === 'checklist_items' && id) {
+          } else if (this.table === 'checklist_items' && (id || ids.length)) {
             const patch = {};
             if ('category' in this.payload) patch.category = this.payload.category;
             if ('item_name' in this.payload) patch.label = this.payload.item_name;
             if ('done' in this.payload) patch.packed = Boolean(this.payload.done);
             if ('quantity' in this.payload || 'unit' in this.payload) patch.quantity = this.payload.quantity == null ? null : `${this.payload.quantity}${this.payload.unit ? ` ${this.payload.unit}` : ''}`;
-            await api(`/api/checklist/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+            if (ids.length) {
+              for (const oneId of ids) await api(`/api/checklist/${oneId}`, { method: 'PATCH', body: JSON.stringify(patch) });
+            } else {
+              await api(`/api/checklist/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+            }
           }
-          return { data: this.singleMode ? { ...this.payload, id } : null, error: null };
+          return { data: this.singleMode ? { ...this.payload, id: id || ids[0] || null } : null, error: null };
         }
 
         if (this.operation === 'delete') {

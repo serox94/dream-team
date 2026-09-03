@@ -65,6 +65,18 @@
     if (notes[0]) notes[0].textContent = `📍 Łowisko: ${trip.lake}`;
     if (notes[1]) notes[1].textContent = `🎣 ${f.waterSize || '—'} · ${f.depth || 'głębokość do uzupełnienia'}`;
     document.querySelectorAll('[data-lake-name]').forEach(x => x.textContent = trip.lake);
+    const all = window.DREAM_MODEL?.allTime?.anglers || [];
+    for (const person of ['Patryk','Maciek']) {
+      const data = all.find(a => a.name === person);
+      if (!data) continue;
+      const key = person.toLowerCase();
+      const value = document.getElementById(key+'-pb-text');
+      const bar = document.getElementById(key+'-pb-bar');
+      const label = value?.closest('.pb-section')?.querySelector('.pb-top span:first-child');
+      if (value) value.textContent = Number(data.pbKg||0).toFixed(1)+' kg';
+      if (bar) bar.style.width = '100%';
+      if (label) label.textContent = 'PB ze wszystkich wyjazdów';
+    }
   }
 
   function renderMap(trip) {

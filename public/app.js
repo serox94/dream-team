@@ -192,12 +192,16 @@ function playPbCelebrationSound() {
 }
 
 function celebrateCatchIfNeeded(item, { play = true } = {}) {
-  if (!item || Number(item.weight || 0) < PB_SOUND_THRESHOLD) return false;
-
+  if (!item) return false;
+  window.DREAM_RUNTIME_PB = window.DREAM_RUNTIME_PB || Object.fromEntries((window.DREAM_MODEL?.allTime?.anglers || []).map(a => [a.name, Number(a.pbKg || 0)]));
+  const person = item.person || item.anglerName || 'Patryk';
+  const weight = Number(item.weight || item.weightKg || 0);
+  const currentPb = Number(window.DREAM_RUNTIME_PB[person] || 0);
+  if (!(weight > currentPb)) return false;
+  window.DREAM_RUNTIME_PB[person] = weight;
   const key = getPbCatchKey(item);
   const storedKeys = new Set(getCelebratedPbCatchKeys());
   if (storedKeys.has(key)) return false;
-
   storedKeys.add(key);
   saveCelebratedPbCatchKeys([...storedKeys]);
   if (play) playPbCelebrationSound();
@@ -205,26 +209,11 @@ function celebrateCatchIfNeeded(item, { play = true } = {}) {
 }
 
 function maybeCelebratePbMilestone(catches) {
-  if (!Array.isArray(catches) || !catches.length) return;
-
-  const qualifying = catches.filter(item => Number(item.weight || 0) >= PB_SOUND_THRESHOLD);
-  if (!qualifying.length) return;
-
+  if (!Array.isArray(catches)) return;
   const storedKeys = new Set(getCelebratedPbCatchKeys());
-
-  if (!pbCelebrationPrimed) {
-    qualifying.forEach(item => storedKeys.add(getPbCatchKey(item)));
-    saveCelebratedPbCatchKeys([...storedKeys]);
-    pbCelebrationPrimed = true;
-    return;
-  }
-
-  const fresh = qualifying.filter(item => !storedKeys.has(getPbCatchKey(item)));
-  if (!fresh.length) return;
-
-  fresh.forEach(item => storedKeys.add(getPbCatchKey(item)));
+  catches.forEach(item => storedKeys.add(getPbCatchKey(item)));
   saveCelebratedPbCatchKeys([...storedKeys]);
-  playPbCelebrationSound();
+  pbCelebrationPrimed = true;
 }
 
 
@@ -464,7 +453,7 @@ function validateCatchPayload(raw) {
   if (!species) return { ok: false, message: "Podaj gatunek." };
   if (!Number.isFinite(weight)) return { ok: false, message: "Podaj poprawną wagę od 0.01 do 99.99 kg." };
   if (!bait) return { ok: false, message: "Podaj przynętę." };
-  if (!spotText && !spotId) return { ok: false, message: "Podaj spot albo wybierz spot z mapy." };
+  
   if (!caughtAt) return { ok: false, message: "Podaj datę i godzinę połowu." };
 
   const caughtDate = new Date(caughtAt);
@@ -478,7 +467,7 @@ function validateCatchPayload(raw) {
       species,
       weight,
       bait,
-      spot: spotText || null,
+      spot: spotText || "Brak",
       spot_id: Number.isFinite(spotId) ? spotId : null,
       note: note || null,
       caught_at: caughtDate.toISOString()
