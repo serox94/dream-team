@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dream Team | Połowy</title>
+  
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../weather-plus.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="header-top">
+        <div>
+          <h1>Dream Team</h1>
+          <p class="subtitle">LodgingCarp – La Plaine des Bois 2</p>
+        </div>
+
+        <div class="trip-box">
+          <div><strong>Wyjazd:</strong> 20.06.2026, 14:00</div>
+          <div><strong>Powrót:</strong> 27.06.2026, 10:00</div>
+          <div id="countdown"><strong>Status:</strong> ładowanie...</div>
+        </div>
+      </div>
+
+     <div class="mobile-nav-wrap">
+  <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+    ☰ Menu
+  </button>
+
+  <nav class="main-nav" id="main-nav">
+    <a href="../index.html">Dashboard</a>
+    <a href="polowy.html">Połowy</a>
+    <a href="pogoda.html">Pogoda PRO</a>
+    <a href="dojazd.html">Dojazd / okolica</a>
+    <a href="regulamin.html">Regulamin</a>
+    <a href="wezly.html">Węzły</a>
+    <a href="rigi.html">Rigi</a>
+    <a href="checklisty.html">Checklisty</a>
+    <a href="mapa.html">Mapa spotów / dna</a>
+    <a href="porady.html">Porady</a>
+  </nav>
+</div>
+    </div>
+  </header>
+
+  <main class="container page-content">
+    <section class="hero-card">
+      <div>
+        <div class="eyebrow">🐟 Rejestr połowów</div>
+        <h2>Połowy</h2>
+        <p>
+          Dodawanie, edycja i usuwanie połowów. Dane są wspólne i aktualizują się na żywo.
+        </p>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <article class="panel-card">
+        <h3 id="catch-form-title">Dodaj połów</h3>
+
+        <form id="catch-form" class="form-grid">
+          <input type="hidden" id="edit-catch-id" />
+
+          <div class="form-row">
+            <div>
+              <label for="person">Osoba</label>
+              <select id="person" required>
+                <option value="Patryk">Patryk</option>
+                <option value="Maciek">Maciek</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="species">Gatunek</label>
+              <input type="text" id="species" value="Karp" maxlength="50" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="weight">Waga (kg)</label>
+              <input type="number" id="weight" min="0.1" step="0.1" placeholder="np. 12.4" required />
+            </div>
+
+            <div>
+              <label for="bait">Przynęta</label>
+              <input type="text" id="bait" placeholder="np. Scopex" maxlength="50" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="spot">Spot (tekst)</label>
+              <input type="text" id="spot" placeholder="np. Spot 3" maxlength="50" />
+            </div>
+
+            <div>
+              <label for="spot-id">Spot z mapy</label>
+              <select id="spot-id">
+                <option value="">Brak powiązania</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="caught_at">Data i godzina</label>
+              <input type="datetime-local" id="caught_at" required />
+            </div>
+
+            <div>
+              <label for="note">Notatka</label>
+              <input type="text" id="note" maxlength="120" placeholder="Opcjonalna notatka" />
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="save-catch-btn">Dodaj połów</button>
+            <button type="button" id="cancel-edit-catch-btn" class="secondary-btn hidden">Anuluj edycję</button>
+          </div>
+
+          <div id="form-message" class="form-message" aria-live="polite"></div>
+        </form>
+      </article>
+
+      <article class="panel-card">
+        <h3>🐟 Szybkie podsumowanie</h3>
+
+        <div class="mini-stats">
+          <div><span>Liczba połowów</span><strong id="catch-count">0</strong></div>
+          <div><span>Łączna waga</span><strong id="catch-total-weight">0.0 kg</strong></div>
+          <div><span>Największa ryba</span><strong id="catch-biggest">Brak</strong></div>
+          <div><span>Najczęstszy spot</span><strong id="catch-best-spot">Brak</strong></div>
+          <div><span>Najlepsza przynęta</span><strong id="catch-best-bait">Brak</strong></div>
+          <div><span>Najlepsza pora</span><strong id="catch-best-hour">Brak</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>📋 Lista połowów</h3>
+        <button id="refresh-catches-btn" type="button" class="secondary-btn">Odśwież</button>
+      </div>
+
+      <div id="catches-list" class="list-grid">
+        <div class="empty-box">Ładowanie połowów...</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/dream-loader.js"></script></body>
+</html>

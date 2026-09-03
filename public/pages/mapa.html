@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dream Team | Mapa spotów / dna</title>
+  
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../ui-plus.css" />
+  <link rel="stylesheet" href="../media-plus.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="header-top">
+        <div>
+          <h1>Dream Team</h1>
+          <p class="subtitle">LodgingCarp – La Plaine des Bois 2</p>
+        </div>
+
+        <div class="trip-box">
+          <div><strong>Wyjazd:</strong> 20.06.2026, 14:00</div>
+          <div><strong>Powrót:</strong> 27.06.2026, 10:00</div>
+          <div id="countdown"><strong>Status:</strong> ładowanie...</div>
+        </div>
+      </div>
+
+      <div class="mobile-nav-wrap">
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+          ☰ Menu
+        </button>
+
+        <nav class="main-nav" id="main-nav">
+          <a href="../index.html">Dashboard</a>
+          <a href="polowy.html">Połowy</a>
+          <a href="pogoda.html">Pogoda PRO</a>
+          <a href="dojazd.html">Dojazd / okolica</a>
+          <a href="regulamin.html">Regulamin</a>
+          <a href="wezly.html">Węzły</a>
+          <a href="rigi.html">Rigi</a>
+          <a href="checklisty.html">Checklisty</a>
+          <a href="mapa.html" class="active">Mapa spotów / dna</a>
+          <a href="porady.html">Porady</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container page-content">
+    <section class="hero-card">
+      <div>
+        <h2>Mapa spotów / dna</h2>
+        <p>
+          Wspólna baza spotów, głębokości, typu dna, zaczepów, notatek, najlepszych warunków
+          i skuteczności na podstawie zapisanych połowów.
+        </p>
+      </div>
+    </section>
+
+    <section class="location-photo-card">
+      <img src="../assets/img/lowisko.jpg" alt="Zdjęcie łowiska z góry" loading="lazy" />
+      <div class="photo-caption">
+        Widok łowiska z góry — dobry punkt odniesienia do myślenia o stanowiskach, marginesach,
+        kierunku wiatru i układzie wody.
+      </div>
+    </section>
+
+    <section class="two-column">
+      <article class="panel-card">
+        <h3 id="spot-form-title">Dodaj spot</h3>
+
+        <form id="spot-form" class="form-grid">
+          <input type="hidden" id="edit-spot-id" />
+
+          <div class="form-row">
+            <div>
+              <label for="spot-name">Nazwa spotu</label>
+              <input type="text" id="spot-name" maxlength="60" placeholder="np. Spot 1 / lewa trzcina" required />
+            </div>
+
+            <div>
+              <label for="spot-distance">Odległość (m)</label>
+              <input type="number" id="spot-distance" min="0" step="0.1" placeholder="np. 85" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="spot-depth">Głębokość (m)</label>
+              <input type="number" id="spot-depth" min="0" step="0.1" placeholder="np. 2.4" />
+            </div>
+
+            <div>
+              <label for="spot-bottom">Typ dna</label>
+              <input type="text" id="spot-bottom" maxlength="60" placeholder="np. twarde / muł / żwir" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="spot-obstacles">Zaczepy / przeszkody</label>
+              <input type="text" id="spot-obstacles" maxlength="120" placeholder="np. gałęzie przy brzegu / czysto" />
+            </div>
+
+            <div>
+              <label for="spot-best-time">Najlepsza pora</label>
+              <input type="text" id="spot-best-time" maxlength="60" placeholder="np. rano / noc / wieczór" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="spot-best-wind">Najlepszy wiatr</label>
+              <input type="text" id="spot-best-wind" maxlength="60" placeholder="np. przy wietrze z lewej / południowy" />
+            </div>
+
+            <div>
+</div>
+          </div>
+
+          <div>
+            <label for="spot-note">Notatka</label>
+            <textarea id="spot-note" rows="4" maxlength="500" placeholder="Opis, marker, obserwacje, uwagi własne..."></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="save-spot-btn">Dodaj spot</button>
+            <button type="button" id="cancel-edit-spot-btn" class="secondary-btn hidden">Anuluj edycję</button>
+          </div>
+
+          <div id="spot-message" class="form-message" aria-live="polite"></div>
+        </form>
+      </article>
+
+      <article class="panel-card">
+        <h3>📍 Podsumowanie spotów</h3>
+
+        <div class="mini-stats">
+          <div><span>Liczba spotów</span><strong id="spots-count">0</strong></div>
+          <div><span>Śr. odległość</span><strong id="spots-avg-distance">--</strong></div>
+          <div><span>Śr. głębokość</span><strong id="spots-avg-depth">--</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>🗂️ Lista spotów</h3>
+        <button id="refresh-spots-btn" type="button" class="secondary-btn">Odśwież</button>
+      </div>
+
+      <div id="spots-list" class="list-grid">
+        <div class="empty-box">Ładowanie spotów...</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/dream-loader.js"></script></body>
+</html>

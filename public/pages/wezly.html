@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dream Team | Węzły i systemy</title>
+  
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../ui-plus.css" />
+  <style>
+    .guide-media {
+      margin: 14px 0 16px;
+      overflow: hidden;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(12, 17, 25, 0.9);
+    }
+
+    .guide-media img {
+      display: block;
+      width: 100%;
+      height: 240px;
+      object-fit: contain;
+      background: #f2f2ee;
+    }
+
+    .guide-caption {
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      border-top: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+
+    .guide-kicker {
+      margin: 0 0 10px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 640px) {
+      .guide-media img {
+        height: 190px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="header-top">
+        <div>
+          <h1>Dream Team</h1>
+          <p class="subtitle">LodgingCarp – La Plaine des Bois 2</p>
+        </div>
+
+        <div class="trip-box">
+          <div><strong>Wyjazd:</strong> 20.06.2026, 14:00</div>
+          <div><strong>Powrót:</strong> 27.06.2026, 10:00</div>
+          <div id="countdown"><strong>Status:</strong> ładowanie...</div>
+        </div>
+      </div>
+
+      <div class="mobile-nav-wrap">
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+          ☰ Menu
+        </button>
+
+        <nav class="main-nav" id="main-nav">
+          <a href="../index.html">Dashboard</a>
+          <a href="polowy.html">Połowy</a>
+          <a href="pogoda.html">Pogoda PRO</a>
+          <a href="dojazd.html">Dojazd / okolica</a>
+          <a href="regulamin.html">Regulamin</a>
+          <a href="wezly.html" class="active">Węzły</a>
+          <a href="rigi.html">Rigi</a>
+          <a href="checklisty.html">Checklisty</a>
+          <a href="mapa.html">Mapa spotów / dna</a>
+          <a href="porady.html">Porady</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container page-content">
+    <section class="hero-card">
+      <div>
+        <h2>Węzły, systemy i mechanika zacięcia</h2>
+        <p>
+          Najważniejsze węzły, systemy ciężarka i materiały do zestawów karpiowych.
+          Dodałem też schematy tam, gdzie udało się znaleźć czytelne grafiki.
+        </p>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>✅ Co naprawdę warto znać</h3>
+          <span class="section-chip">minimum</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-success">Knotless Knot — absolutna podstawa do Hair Riga, Blowbacka, KD i wielu innych.</div>
+          <div class="weather-note status-success">Figure-of-8 — szybka i pewna pętla na końcu przyponu.</div>
+          <div class="weather-note status-success">Palomar — bardzo mocny do krętlików i szybkich połączeń.</div>
+          <div class="weather-note status-success">Uni / Grinner — jeden z najbardziej uniwersalnych węzłów.</div>
+          <div class="weather-note status-success">Albright — bardzo praktyczny przy bardziej technicznych połączeniach.</div>
+          <div class="weather-note status-info">Najbardziej praktyczne systemy: Safety Clip, In-line i czasem Running Rig.</div>
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>⚠️ Uwaga pod Plaine 2</h3>
+          <span class="section-chip">regulamin</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-danger">Leadcore jest zabroniony, więc splicing traktuj tu jako wiedzę ogólną, nie plan na ten wyjazd.</div>
+          <div class="weather-note status-danger">Strzałówki są zabronione, więc marchewka / Mahin to też raczej teoria niż praktyka na tej wodzie.</div>
+          <div class="weather-note status-success">Najbezpieczniejszy kierunek: prosty, bezpieczny klips albo in-line pod PVA.</div>
+          <div class="weather-note status-warn">Nie komplikuj zestawu tylko dlatego, że istnieje bardziej „zaawansowany” patent.</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>I. Węzły — bezpieczeństwo i moc</h3>
+        <span class="section-chip">must know</span>
+      </div>
+
+      <div class="knowledge-grid">
+        <article class="knowledge-card">
+          <h3>1. Knotless Knot</h3>
+          <p class="guide-kicker">Węzeł bez węzła — najważniejszy punkt wyjścia do klasycznych przyponów włosowych.</p>
+
+          <div class="guide-media">
+            <img src="https://www.netknots.com/index.php/download_file/411/0" alt="Schemat wiązania Knotless Knot" loading="lazy" referrerpolicy="no-referrer" />
+            <div class="guide-caption">Schemat Knotless Knot.</div>
+          </div>
+
+          <ul>
+            <li>do wiązania haka z włosem</li>
+            <li>żyłka / materiał powinny wychodzić od tyłu oczka</li>
+            <li>podstawa do Hair Riga, Blowbacka i wielu klasyków</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>2. Palomar</h3>
+          <p class="guide-kicker">Bardzo mocny węzeł do krętlików, agrafek i wielu prostych połączeń.</p>
+
+          <div class="guide-media">
+            <img src="https://www.netknots.com/application/files/5515/6443/4339/palomar_knot.jpg" alt="Schemat wiązania Palomar Knot" loading="lazy" referrerpolicy="no-referrer" />
+            <div class="guide-caption">Schemat Palomar Knot.</div>
+          </div>
+
+          <ul>
+            <li>świetny do plecionek</li>
+            <li>dobry do krętlików i oczek</li>
+            <li>bardzo praktyczny na gotowych elementach zestawu</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>3. Uni / Grinner</h3>
+          <p class="guide-kicker">Jeden z najbardziej uniwersalnych węzłów w całym zestawie karpiowym.</p>
+
+          <div class="guide-media">
+            <img src="https://www.netknots.com/index.php/download_file/442/0" alt="Schemat wiązania Uni Knot" loading="lazy" referrerpolicy="no-referrer" />
+            <div class="guide-caption">Schemat Uni Knot.</div>
+          </div>
+
+          <ul>
+            <li>do żyłki, fluoro i wielu połączeń końcowych</li>
+            <li>bardzo praktyczny i łatwy do opanowania</li>
+            <li>warto znać go naprawdę dobrze</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>4. Albright</h3>
+          <p class="guide-kicker">Klasyczne połączenie cienkiego materiału z grubszym.</p>
+
+          <div class="guide-media">
+            <img src="https://www.netknots.com/index.php/download_file/381/0" alt="Schemat wiązania Albright Knot" loading="lazy" referrerpolicy="no-referrer" />
+            <div class="guide-caption">Schemat Albright Knot.</div>
+          </div>
+
+          <ul>
+            <li>świetny przy połączeniach plecionki i fluorocarbonu</li>
+            <li>bardzo przydatny przy Combi Rigu</li>
+            <li>na tym łowisku to raczej wiedza techniczna niż punkt obowiązkowy</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>5. Figure-of-8</h3>
+          <p class="guide-kicker">Najlepsza prosta pętla końcowa.</p>
+
+          <div class="guide-media">
+            <img src="https://www.netknots.com/download_file/481/0" alt="Schemat Figure Eight Knot" loading="lazy" referrerpolicy="no-referrer" />
+            <div class="guide-caption">Figure Eight — używaj jako czytelnej referencji do pętli typu ósemka.</div>
+          </div>
+
+          <ul>
+            <li>na końcu przyponu</li>
+            <li>do loop-to-loop</li>
+            <li>pewna, czysta i szybka w użyciu</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>6. Non-Slip Mono Loop</h3>
+          <p class="guide-kicker">Pętla, która się nie zaciska — bardzo przydatna przy bardziej ruchomych prezentacjach.</p>
+          <ul>
+            <li>szczególnie dobra przy Ronnie / Chod / prezentacjach ruchomych</li>
+            <li>daje więcej swobody niż sztywna pętla</li>
+            <li>warto znać, jeśli lubisz pracujące końcówki</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>7. Mahin / Marchewka</h3>
+          <p class="guide-kicker">Dobre połączenie żyłki głównej ze strzałówką.</p>
+          <ul>
+            <li>bardzo dobre do rzutów</li>
+            <li>tu raczej wiedza ogólna</li>
+            <li>na Plaine 2 strzałówki są zabronione</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>8. Splicing</h3>
+          <p class="guide-kicker">To bardziej zaplatanie niż klasyczny węzeł.</p>
+          <ul>
+            <li>najmocniejsze połączenie przy materiałach spliceable</li>
+            <li>technicznie bardzo ważne</li>
+            <li>na tej wodzie traktuj to jako wiedzę poboczną z powodu zakazu leadcore</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>II. Systemy obciążenia</h3>
+        <span class="section-chip">lead systems</span>
+      </div>
+
+      <div class="knowledge-grid">
+        <article class="knowledge-card">
+          <h3>🧱 Safety Clip</h3>
+          <p class="guide-kicker">Najbardziej uniwersalny i najczęściej najlepszy wybór.</p>
+          <ul>
+            <li>wypina ciężarek w zaczepie</li>
+            <li>bardzo bezpieczny dla ryby</li>
+            <li>świetny na wodach z lokalnymi przeszkodami</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🌀 Helicopter</h3>
+          <p class="guide-kicker">Przypon kręci się wokół osi systemu.</p>
+          <ul>
+            <li>dobry do rzutów i trudniejszego dna</li>
+            <li>często używany przy chodowych prezentacjach</li>
+            <li>na tej wodzie tylko zgodnie z regulaminem</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🎯 In-line</h3>
+          <p class="guide-kicker">Najmocniejsze, najbardziej bezpośrednie zacięcie.</p>
+          <ul>
+            <li>żyłka przechodzi przez środek ciężarka</li>
+            <li>bardzo dobry do PVA i krótkich rigów</li>
+            <li>mocna i prosta mechanika</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🏃 Running Rig</h3>
+          <p class="guide-kicker">Subtelniejszy, ryba mniej czuje ciężar.</p>
+          <ul>
+            <li>dobry na ostrożne ryby</li>
+            <li>spokojniejszy odjazd</li>
+            <li>czasem bardzo dobry przy trudnych braniach</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>⚖️ COG</h3>
+          <p class="guide-kicker">Centre of Gravity — bardzo agresywna mechanika wbicia haka.</p>
+          <ul>
+            <li>przypon wychodzi z najcięższego punktu ciężarka</li>
+            <li>maksymalizuje efekt zacięcia</li>
+            <li>bardziej dla ludzi, którzy lubią techniczne dopracowanie</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>III. Tuning i materiały</h3>
+        <span class="section-chip">wykończenie zestawu</span>
+      </div>
+
+      <div class="knowledge-grid">
+        <article class="knowledge-card">
+          <h3>🧵 Materiały</h3>
+          <ul>
+            <li><strong>Fluorocarbon:</strong> sztywny, mało widoczny</li>
+            <li><strong>Plecionka w otulinie:</strong> najbardziej uniwersalna</li>
+            <li><strong>Miękka plecionka:</strong> dobra do PVA i naturalnej pracy</li>
+            <li><strong>Mouthtrap:</strong> klasyka do chodów i sztywnych sekcji</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🪢 Bait Flossing</h3>
+          <p class="guide-kicker">Mocowanie kulki nicią zamiast przebijania.</p>
+          <ul>
+            <li>lepsze dla pływalności pop-upa</li>
+            <li>mniej psuje pracę przynęty</li>
+            <li>bardzo przydatne przy małych pop-upach</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>⚫ Tungsten Putty</h3>
+          <p class="guide-kicker">Pasta wolframowa do dociążania i przyklejania przyponu do dna.</p>
+          <ul>
+            <li>do strojenia pop-upa</li>
+            <li>do dociążania boomów</li>
+            <li>mały detal, a robi dużą różnicę</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🪓 Ostrzenie haków</h3>
+          <p class="guide-kicker">Dla osób, które lubią dopiąć detale.</p>
+          <ul>
+            <li>pilnik diamentowy</li>
+            <li>kontrola grotu po rybie i po kontakcie z dnem</li>
+            <li>nie każdy hak warto ostrzyć, ale każdy warto sprawdzać</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🔥 Termokurczka i alignery</h3>
+          <p class="guide-kicker">Małe dodatki, które mocno zmieniają geometrię haka.</p>
+          <ul>
+            <li>pomagają szybciej obrócić hak</li>
+            <li>robią dużą różnicę przy ostrożnych braniach</li>
+            <li>nie przesadź z długością i agresją</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>📦 Co mieć gotowe</h3>
+          <p class="guide-kicker">Najbardziej praktyczny zestaw na wyjazd:</p>
+          <ul>
+            <li>gotowe Hair Rigi</li>
+            <li>gotowe Blowbacki / KD</li>
+            <li>kilka Ronnie / Multi</li>
+            <li>kilka krótkich przyponów do PVA</li>
+            <li>zapas pętli, haków i krętlików</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>🎯 Najlepsza baza na wyjazd</h3>
+          <span class="section-chip">minimum</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-success">Knotless Knot</div>
+          <div class="weather-note status-success">Figure-of-8</div>
+          <div class="weather-note status-success">Palomar</div>
+          <div class="weather-note status-success">Uni / Grinner</div>
+          <div class="weather-note status-success">Non-Slip Mono Loop</div>
+          <div class="weather-note status-info">Albright jako bonus do bardziej technicznych przyponów</div>
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>🚫 Czego nie komplikować</h3>
+          <span class="section-chip">na wodzie</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-warn">Nie musisz znać perfekcyjnie 20 węzłów, jeśli realnie użyjesz 4–5.</div>
+          <div class="weather-note status-warn">Nie buduj planu wyjazdu na egzotycznych patentach tylko dlatego, że istnieją.</div>
+          <div class="weather-note status-success">Najwięcej daje dopracowany klasyk.</div>
+          <div class="weather-note status-info">Na tym łowisku bezpieczeństwo zestawu jest ważniejsze niż sprytne kombinacje.</div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/dream-loader.js"></script></body>
+</html>

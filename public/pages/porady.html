@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dream Team | Porady</title>
+  
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../ui-plus.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="header-top">
+        <div>
+          <h1>Dream Team</h1>
+          <p class="subtitle">LodgingCarp – La Plaine des Bois 2</p>
+        </div>
+
+        <div class="trip-box">
+          <div><strong>Wyjazd:</strong> 20.06.2026, 14:00</div>
+          <div><strong>Powrót:</strong> 27.06.2026, 10:00</div>
+          <div id="countdown"><strong>Status:</strong> ładowanie...</div>
+        </div>
+      </div>
+
+      <div class="mobile-nav-wrap">
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+          ☰ Menu
+        </button>
+
+        <nav class="main-nav" id="main-nav">
+          <a href="../index.html">Dashboard</a>
+          <a href="polowy.html">Połowy</a>
+          <a href="pogoda.html">Pogoda PRO</a>
+          <a href="dojazd.html">Dojazd / okolica</a>
+          <a href="regulamin.html">Regulamin</a>
+          <a href="wezly.html">Węzły</a>
+          <a href="rigi.html">Rigi</a>
+          <a href="checklisty.html">Checklisty</a>
+          <a href="mapa.html">Mapa spotów / dna</a>
+          <a href="porady.html" class="active">Porady</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container page-content">
+    <section class="hero-card">
+      <div>
+        <h2>Porady na Plaine 2 i ogólna taktyka</h2>
+        <p>
+          Najpierw rzeczy praktyczne pod to konkretne łowisko, a niżej dopiero porady ogólne.
+          Ta strona ma pomagać nad wodą, a nie tylko dobrze wyglądać.
+        </p>
+      </div>
+    </section>
+
+    <section class="stats-grid">
+      <article class="stat-card status-info">
+        <span class="label">🏞️ Typ wody</span>
+        <strong>Mała żwirownia</strong>
+      </article>
+
+      <article class="stat-card status-info">
+        <span class="label">📏 Wielkość</span>
+        <strong>około 2 ha</strong>
+      </article>
+
+      <article class="stat-card status-info">
+        <span class="label">🌊 Głębokość</span>
+        <strong>śr. 2,5 m / max 4 m</strong>
+      </article>
+
+      <article class="stat-card status-success">
+        <span class="label">🐟 Ryby</span>
+        <strong>około 150+</strong>
+      </article>
+
+      <article class="stat-card status-success">
+        <span class="label">🏕️ Stanowiska</span>
+        <strong>2 stanowiska</strong>
+      </article>
+
+      <article class="stat-card status-warn">
+        <span class="label">🪝 Regulamin</span>
+        <strong>Bardzo rygorystyczny</strong>
+      </article>
+
+      <article class="stat-card status-info">
+        <span class="label">🧭 Model łowienia</span>
+        <strong>Precyzja > ilość</strong>
+      </article>
+
+      <article class="stat-card status-warn">
+        <span class="label">🦞 Raki</span>
+        <strong>Traktuj jako ryzyko</strong>
+      </article>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>🎣 To łowisko w praktyce</h3>
+        <span class="section-chip">Plaine 2</span>
+      </div>
+
+      <div class="knowledge-grid">
+        <article class="knowledge-card">
+          <h3>🏞️ Charakter wody</h3>
+          <p>
+            To mała, płytka żwirownia z dwoma stanowiskami. Nie wygląda na wodę pod ciężkie,
+            bezmyślne nęcenie. Raczej wygrywa ten, kto łowi czysto, precyzyjnie i umie czytać wodę.
+          </p>
+          <ul>
+            <li>średnio około 2,5 m, maksymalnie około 4 m</li>
+            <li>mało lub bardzo mało zielska</li>
+            <li>lokalne przeszkody i zaczepy przy marginesach</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🐟 Ryby</h3>
+          <p>
+            Najczęściej przewija się mocna obsada karpi i realna szansa na bardzo dobrą rybę.
+            W wodzie są też amury, koi i pojedyncze sumy.
+          </p>
+          <ul>
+            <li>typowe ryby 9–29 kg</li>
+            <li>średnia około 14 kg</li>
+            <li>warto być gotowym na naprawdę mocny hol</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🧠 Główny wniosek</h3>
+          <p>
+            Na tej wodzie nie chodzi o to, żeby wsypać najwięcej. Lepiej znaleźć 2–3 sensowne miejsca,
+            utrzymać porządek i reagować na to, co pokazuje łowisko.
+          </p>
+          <ul>
+            <li>obserwacja marginesów</li>
+            <li>szukanie twardych placków</li>
+            <li>utrzymywanie jednej logicznej taktyki</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>📍 Gdzie szukać ryb</h3>
+          <span class="section-chip">spoty</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-success">Marginesy i czyste miejsca przy brzegu mogą dawać ryby o świcie i wieczorem.</div>
+          <div class="weather-note status-info">Warto szukać twardych placków i przejść między 2,5 a 4 m.</div>
+          <div class="weather-note status-warn">Nie wciskaj zestawów w same zaczepy. Łów obok problemu, nie w problemie.</div>
+          <div class="weather-note status-info">Jeśli masz łódkę i echosondę, wykorzystaj je do szukania czystych placków i uskoków.</div>
+          <div class="weather-note status-success">Jeżeli masz Poste 1, największy sens ma precyzyjne granie pod wyspę i jej stok.</div>
+          <div class="weather-note status-success">Jeżeli masz Poste 2, warto szukać spokojniejszych, głębszych stref i rejonu „krzewu”.</div>
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>🕒 Kiedy ryby są najbardziej warte uwagi</h3>
+          <span class="section-chip">warunki</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-success">Największą czujność zachowaj od około 03:00 do 07:00 rano.</div>
+          <div class="weather-note status-success">Wieczór i noc też potrafią dać bardzo dobry ruch.</div>
+          <div class="weather-note status-warn">Środek dnia bywa spokojniejszy, szczególnie przy stabilnym wyżu i ostrym słońcu.</div>
+          <div class="weather-note status-info">Przy zmianie pogody i ruchu powietrza warto odważniej podejść do aktywności ryb.</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>🪝 Zestawy i taktyka pod Plaine 2</h3>
+        <span class="section-chip">sprzęt</span>
+      </div>
+
+      <div class="knowledge-grid">
+        <article class="knowledge-card">
+          <h3>✨ Kij szukający</h3>
+          <p>
+            Najmocniejsza praktyczna wskazówka z materiału: Ronnie / Spinner na jasnego, małego pop-upa.
+          </p>
+          <ul>
+            <li>hak rozmiar 6</li>
+            <li>pop-up około 15 mm, można przyciąć mniejszy</li>
+            <li>kolory: róż, żółty, beż / jasne naturalne</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>⚖️ Kij „jedzeniowy”</h3>
+          <p>
+            Drugi kij warto oprzeć o wafter albo twardszy balanced bottom bait na czystym placku.
+          </p>
+          <ul>
+            <li>nie przesadzaj z wielkością przynęty</li>
+            <li>bardziej „jedzeniowa” prezentacja ma tu sens</li>
+            <li>dobrze działa logika: precyzja, nie objętość</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🧱 Bezpieczeństwo zestawu</h3>
+          <p>
+            Tu nie ma miejsca na „jakoś przejdzie”. Regulamin jest twardy i zestaw ma być naprawdę bezpieczny.
+          </p>
+          <ul>
+            <li>bezzadzior</li>
+            <li>bez leadcore</li>
+            <li>bez strzałówek</li>
+            <li>bezpieczne uwalnianie ciężarka</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🧵 Materiały</h3>
+          <p>
+            Na tej wodzie sensownie wygląda mocna żyłka główna i kontrola nad holowaniem ryby przy marginesach.
+          </p>
+          <ul>
+            <li>minimum około 15 lb na żyłce głównej</li>
+            <li>fluorocarbon albo odpowiedni materiał zgodny z regulaminem</li>
+            <li>hol zdecydowany, ale bez głupiej siłówki</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🚫 Czego nie robić</h3>
+          <p>Materiał wyraźnie sugeruje, żeby nie kombinować z rzeczami, które i tak nie są tu potrzebne.</p>
+          <ul>
+            <li>bez zig rigów</li>
+            <li>bez surface fishing</li>
+            <li>bez wciskania zestawu w sam środek zawady</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🎯 Trzeci kij</h3>
+          <p>
+            Jeżeli grasz trzema kijami, trzeci powinien być najbardziej mobilny.
+          </p>
+          <ul>
+            <li>pod pokazującą się rybę</li>
+            <li>pod zmianę wiatru</li>
+            <li>pod ruch przy marginesie lub w płytszej strefie</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>🍪 Przynęty i nęcenie</h3>
+          <span class="section-chip">jedzenie</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-success">Na start lepiej łowić lekko i precyzyjnie niż od razu ładować dywan zanęty.</div>
+          <div class="weather-note status-info">Jako punkt wyjścia warto myśleć o 20–30 kulkach wokół miejsca, a nie o wiadrze na dzień dobry.</div>
+          <div class="weather-note status-success">Jedna linia owocowa / jasna na przynętę haczykową ma sens, bo pojawia się jako praktyczna wskazówka z relacji.</div>
+          <div class="weather-note status-info">Druga linia może być bardziej jedzeniowa: fishmeal / spicy / crayfish / nut.</div>
+          <div class="weather-note status-warn">Przy leszczu i potencjalnym sumie uważaj z nadmiarem drobnej frakcji i ciężkim pelletem.</div>
+          <div class="weather-note status-success">Po serii brań warto donęcić małą porcją świeżego towaru, zamiast czekać aż ryby odpłyną.</div>
+          <div class="weather-note status-info">PVA punktowo przy haku może dobrze podtrzymywać aktywność bez przesady.</div>
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>🦞 Plan antyrak</h3>
+          <span class="section-chip">na wszelki wypadek</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-warn">W materiale przewija się ostrożność wobec raków, ale lepiej potraktować to jako ryzyko do sprawdzenia, nie pewnik.</div>
+          <div class="weather-note status-success">Twarde kulki 20–24 mm, hard hookbaits i tygrys wyglądają tu rozsądnie.</div>
+          <div class="weather-note status-success">Mesh / osłona na przynętę i krótszy włos mogą ograniczyć problem.</div>
+          <div class="weather-note status-info">Przypony bardziej sztywne lepiej wracają do poprawnej prezentacji po ruszaniu przez drobnicę lub raka.</div>
+          <div class="weather-note status-warn">Nie polegaj na bardzo miękkich przynętach i nie zostawiaj ich bez kontroli na wiele godzin.</div>
+          <div class="weather-note status-info">W pierwszej dobie po prostu sprawdź, czy przynęta znika bez sygnału i jak wygląda hak po kilku godzinach.</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>📅 Plan gry na pierwsze 72h</h3>
+        <span class="section-chip">gotowiec</span>
+      </div>
+
+      <div class="knowledge-grid">
+        <article class="knowledge-card">
+          <h3>🧭 Doba 0 — rozpoznanie</h3>
+          <ul>
+            <li>obejdź wodę i patrz w marginesy</li>
+            <li>sprawdź 2–3 czyste miejsca</li>
+            <li>jeśli masz łódkę / echosondę, szukaj twardych placków i uskoków</li>
+            <li>na początek po pół kilograma do 1 kg zanęty na aktywny punkt to już dużo</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🌙 Doba 1</h3>
+          <ul>
+            <li>1 kij na jasnego pop-upa / Ronnie</li>
+            <li>1 kij na wafter lub twardy bottom bait</li>
+            <li>1 kij mobilny pod pokazującą się rybę</li>
+            <li>donęcaj dopiero po sygnałach z łowiska</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🔁 Doba 2</h3>
+          <ul>
+            <li>jeśli punkt daje ryby, utrzymuj go małymi dokładkami</li>
+            <li>jeśli cisza, przesuń kij o 10–20 m albo na inną krawędź</li>
+            <li>obserwuj zmianę wiatru i reaguj szybciej niż na dużej wodzie</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🌄 Doba 3</h3>
+          <ul>
+            <li>pracuj nocą i nad ranem</li>
+            <li>w dzień ogranicz chaos i pilnuj najlepszych godzin</li>
+            <li>jeżeli ryby pokazują się w marginesie, nie bój się podejść stalkingowo</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+<section class="panel-card">
+  <div class="section-head">
+    <h3>🎯 Plan na 7 dni — 6 wędek (Patryk 3 + Maciek 3)</h3>
+    <span class="section-chip">gotowy podział</span>
+  </div>
+
+  <div class="weather-interpretation">
+    <div class="weather-note status-info">
+      Układ bazowy: 3 wędki Patryk + 3 wędki Maciek. Plan jest elastyczny — role można zamieniać między sobą
+      zależnie od tego, kto ma lepszy kontakt z rybą, lepiej rzuca w dany punkt albo szybciej reaguje na warunki.
+    </div>
+    <div class="weather-note status-success">
+      Najlepszy układ na to łowisko: 2 wędki „stabilne” na pewne miejsca + 1 wędka „szukająca” na osobę.
+    </div>
+    <div class="weather-note status-warn">
+      Nie próbujcie codziennie zmieniać wszystkich 6 kijów naraz. Na tej wodzie więcej daje świadoma korekta 1–2 wędek niż pełny chaos.
+    </div>
+  </div>
+</section>
+
+<section class="knowledge-grid">
+  <article class="knowledge-card">
+    <h3>👤 Patryk — układ bazowy</h3>
+    <p class="muted">3 wędki Patryka</p>
+    <ul>
+      <li><strong>Wędka 1:</strong> pewny spot, zestaw jedzeniowy, wafter / twardszy bottom bait</li>
+      <li><strong>Wędka 2:</strong> czysty placek lub stok, druga stabilna prezentacja</li>
+      <li><strong>Wędka 3:</strong> kij mobilny / szukający, Ronnie / Spinner + jasny pop-up</li>
+    </ul>
+  </article>
+
+  <article class="knowledge-card">
+    <h3>👤 Maciek — układ bazowy</h3>
+    <p class="muted">3 wędki Maćka</p>
+    <ul>
+      <li><strong>Wędka 1:</strong> pewny punkt, bardziej „jedzeniowy” kij</li>
+      <li><strong>Wędka 2:</strong> drugi stabilny punkt, np. inna głębokość albo inny kąt podania</li>
+      <li><strong>Wędka 3:</strong> kij obserwacyjny / reagujący na rybę, wiatr albo margines</li>
+    </ul>
+  </article>
+
+  <article class="knowledge-card">
+    <h3>🔁 Zamienność ról</h3>
+    <p class="muted">Nie trzeba trzymać się sztywno nazwisk.</p>
+    <ul>
+      <li>jeśli Patryk lepiej czuje kij mobilny — bierze rolę „szukającego”</li>
+      <li>jeśli Maciek lepiej utrzymuje regularny punkt — trzyma 2 kije stabilne</li>
+      <li>najważniejsze: każdy ma wiedzieć, które 3 kije są jego odpowiedzialnością</li>
+    </ul>
+  </article>
+</section>
+
+<section class="panel-card">
+  <div class="section-head">
+    <h3>📅 Dzień po dniu</h3>
+    <span class="section-chip">7 dni</span>
+  </div>
+
+  <div class="knowledge-grid">
+    <article class="knowledge-card">
+      <h3>🧭 Dzień 1 — rozpoznanie i czysty start</h3>
+      <p class="muted">Cel: nie przesadzić i zbudować plan.</p>
+      <ul>
+        <li><strong>Patryk 1:</strong> czysty, pewny spot z małą ilością zanęty</li>
+        <li><strong>Patryk 2:</strong> drugi stabilny punkt, lekko odsunięty od pierwszego</li>
+        <li><strong>Patryk 3:</strong> Ronnie / Spinner na jasnego pop-upa — kij szukający</li>
+        <li><strong>Maciek 1:</strong> spokojny punkt na wafter / bottom bait</li>
+        <li><strong>Maciek 2:</strong> drugi punkt na innym kącie / głębokości</li>
+        <li><strong>Maciek 3:</strong> kij mobilny na pokazującą się rybę lub margines</li>
+      </ul>
+    </article>
+
+    <article class="knowledge-card">
+      <h3>🌙 Dzień 2 — utrzymanie tylko tego, co ma sens</h3>
+      <p class="muted">Cel: nie rozjechać dobrej pracy wędek.</p>
+      <ul>
+        <li>kije, które miały kontakt, zostają w grze</li>
+        <li>1–2 martwe wędki można delikatnie przesunąć</li>
+        <li>nie ruszaj wszystkiego tylko dlatego, że jedna noc była cicha</li>
+        <li>szczególnie pilnuj godzin porannych i wieczornych</li>
+      </ul>
+    </article>
+
+    <article class="knowledge-card">
+      <h3>🎯 Dzień 3 — pierwsze zawężenie</h3>
+      <p class="muted">Cel: ustalić, które wędki są „produkcyjne”.</p>
+      <ul>
+        <li>wybierzcie 2–3 najlepsze miejsca z pierwszych dwóch dób</li>
+        <li>Patryk i Maciek zostawiają po 2 kije na mocnych punktach</li>
+        <li>po 1 kiju na osobę zostaje mobilny i reaguje na warunki</li>
+        <li>jeśli coś wyraźnie nie działa — tnijcie to bez sentymentu</li>
+      </ul>
+    </article>
+
+    <article class="knowledge-card">
+      <h3>🌬️ Dzień 4 — reakcja na pogodę</h3>
+      <p class="muted">Cel: wykorzystać zmianę warunków.</p>
+      <ul>
+        <li>jeżeli wiatr zaczyna pracować, mobilne kije dostają priorytet</li>
+        <li>jeden z Was powinien pilnować marginesu / krótszej odległości</li>
+        <li>drugi może utrzymać głębszy, spokojniejszy punkt</li>
+        <li>nie zwiększajcie od razu mocno nęcenia</li>
+      </ul>
+    </article>
+
+    <article class="knowledge-card">
+      <h3>🍪 Dzień 5 — dobijanie skutecznych miejsc</h3>
+      <p class="muted">Cel: wykorzystać to, co już się potwierdziło.</p>
+      <ul>
+        <li>najlepsze 2–3 punkty utrzymujcie świeżym, ale małym donęceniem</li>
+        <li>kije mobilne dalej szukają bonusowej ryby</li>
+        <li>jeśli działa jasny pop-up, nie zmieniaj go tylko dlatego, że „wypada coś nowego przetestować”</li>
+      </ul>
+    </article>
+
+    <article class="knowledge-card">
+      <h3>🌄 Dzień 6 — gra pod największą rybę</h3>
+      <p class="muted">Cel: mniej chaosu, więcej jakości.</p>
+      <ul>
+        <li>2–4 najlepsze wędki trzymajcie na topowych punktach</li>
+        <li>pozostałe 2 wędki niech szukają jednej jakościowej ryby</li>
+        <li>nie idźcie w masowe sypanie — lepiej utrzymać zaufanie do miejsca</li>
+      </ul>
+    </article>
+
+    <article class="knowledge-card">
+      <h3>🏁 Dzień 7 — końcówka bez głupich ruchów</h3>
+      <p class="muted">Cel: dowieźć wynik do końca.</p>
+      <ul>
+        <li>na finiszu nie przewracajcie planu do góry nogami</li>
+        <li>trzymajcie najbardziej produktywne punkty</li>
+        <li>mobilne kije zostają tylko tam, gdzie widać realny sens zmiany</li>
+        <li>ostatnia noc i poranek mogą dać najlepszą rybę wyjazdu</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section class="two-column">
+  <article class="panel-card">
+    <div class="section-head">
+      <h3>🪝 Podział typów wędek</h3>
+      <span class="section-chip">6 kijów</span>
+    </div>
+
+    <div class="weather-interpretation">
+      <div class="weather-note status-success"><strong>2 wędki Patryk + 2 wędki Maciek</strong> — stabilne, „produkcyjne”, trzymane na najlepszych punktach.</div>
+      <div class="weather-note status-info"><strong>1 wędka Patryk + 1 wędka Maciek</strong> — mobilne, reagujące na pokazującą się rybę, wiatr, margines albo zmianę aktywności.</div>
+      <div class="weather-note status-warn">Jeżeli tylko jedna osoba ma lepsze wyczucie mobilnego kija, można zrobić układ 4 stabilne + 2 mobilne z przewagą jednej osoby.</div>
+    </div>
+  </article>
+
+  <article class="panel-card">
+    <div class="section-head">
+      <h3>✅ Kiedy zamienić role</h3>
+      <span class="section-chip">elastycznie</span>
+    </div>
+
+    <div class="weather-interpretation">
+      <div class="weather-note status-info">Jeżeli Patryk ma regularne kontakty na mobilnym kiju, niech dalej go prowadzi.</div>
+      <div class="weather-note status-info">Jeżeli Maciek lepiej „dowozi” stabilny punkt, niech utrzymuje dwa najmocniejsze miejsca.</div>
+      <div class="weather-note status-success">Nie chodzi o sztywny podział „kto ważniejszy”, tylko o to, żeby każdy robił to, co daje wynik.</div>
+      <div class="weather-note status-warn">Najgorszy układ to taki, w którym obaj codziennie chcą robić to samo i nikt nie pilnuje reszty.</div>
+    </div>
+  </article>
+</section>
+
+<section class="panel-card">
+  <div class="section-head">
+    <h3>📌 Najprostszy gotowiec startowy</h3>
+    <span class="section-chip">na szybko</span>
+  </div>
+
+  <div class="knowledge-grid">
+    <article class="knowledge-card">
+      <h3>👤 Patryk</h3>
+      <ul>
+        <li>Wędka 1 — pewny spot, wafter</li>
+        <li>Wędka 2 — drugi pewny spot, bottom bait</li>
+        <li>Wędka 3 — Ronnie / Spinner + jasny pop-up</li>
+      </ul>
+    </article>
+
+    <article class="knowledge-card">
+      <h3>👤 Maciek</h3>
+      <ul>
+        <li>Wędka 1 — pewny spot, wafter</li>
+        <li>Wędka 2 — inny kąt / inna głębokość, bottom bait</li>
+        <li>Wędka 3 — kij mobilny pod rybę lub wiatr</li>
+      </ul>
+    </article>
+
+    <article class="knowledge-card">
+      <h3>🧠 Logika</h3>
+      <ul>
+        <li>4 kije trzymają wynik</li>
+        <li>2 kije szukają przewagi</li>
+        <li>codziennie koryguj tylko to, co naprawdę nie działa</li>
+      </ul>
+    </article>
+  </div>
+</section>
+    
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>📦 Must have na ten wyjazd</h3>
+        <span class="section-chip">sprawdź przed wyjazdem</span>
+      </div>
+
+      <div class="knowledge-grid">
+        <article class="knowledge-card">
+          <h3>🧴 Fish care</h3>
+          <ul>
+            <li>własny antyseptyk / środek do odkażania ryb</li>
+            <li>własny podbierak</li>
+            <li>gotowość do szybkiego ważenia i wypuszczenia ryby</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🛏️ Komfort</h3>
+          <ul>
+            <li>własna pościel lub śpiwór</li>
+            <li>ręczniki i środki czystości</li>
+            <li>organizacja rzeczy osobno: chalet / stanowisko</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🚣 Łódka i elektronika</h3>
+          <ul>
+            <li>kamizelka przy łodzi obowiązkowa</li>
+            <li>echosonda bardzo pomaga</li>
+            <li>silnik elektryczny warto zamówić wcześniej, jeśli chcesz korzystać</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🦞 Antyrak</h3>
+          <ul>
+            <li>hard hookbaits 20–24 mm</li>
+            <li>mesh / osłony</li>
+            <li>tygrys lub twardsze przynęty</li>
+            <li>zapas stoperów i gotowych przyponów</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🎣 Zestawy</h3>
+          <ul>
+            <li>haki bezzadziorowe</li>
+            <li>bez leadcore</li>
+            <li>bez strzałówek</li>
+            <li>bezpieczny system zrzutu ciężarka</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🧠 Podejście</h3>
+          <ul>
+            <li>patrz na wodę</li>
+            <li>nie przebaituj</li>
+            <li>nie ignoruj nocy</li>
+            <li>nie siedź tydzień na martwych miejscach</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>💡 Porady ogólne dla karpiarzy</h3>
+        <span class="section-chip">uniwersalne</span>
+      </div>
+
+      <div class="knowledge-grid">
+        <article class="knowledge-card">
+          <h3>🎯 Pierwsze godziny na nowej wodzie</h3>
+          <ul>
+            <li>najpierw obserwacja, potem stawianie planu</li>
+            <li>nie rozstawiaj wszystkiego w ciemno</li>
+            <li>szukaj logiki, nie tylko „ładnego miejsca”</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🌦️ Pogoda</h3>
+          <ul>
+            <li>małe, płytkie wody szybciej reagują na zmiany niż duże zbiorniki</li>
+            <li>przy stabilnym wyżu tnij ilość zanęty</li>
+            <li>przy spadku ciśnienia i ruchu powietrza możesz grać odważniej</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🍽️ Nęcenie</h3>
+          <ul>
+            <li>nie zawsze więcej znaczy lepiej</li>
+            <li>na małych wodach łatwiej przesadzić niż dać za mało</li>
+            <li>donęcaj po sygnałach, nie z przyzwyczajenia</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🪝 Zestaw</h3>
+          <ul>
+            <li>prosty i pewny zestaw jest lepszy niż pięć eksperymentów naraz</li>
+            <li>sprawdzaj hak i końcówkę po każdej rybie lub kontakcie z dnem</li>
+            <li>przy łowieniu przy przeszkodach pewność zestawu jest ważniejsza niż moda</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>🌙 Noc</h3>
+          <ul>
+            <li>wieczorem przygotuj matę, wagę, podbierak i światło</li>
+            <li>nocne branie nie może zaczynać się od szukania sprzętu</li>
+            <li>porządek na stanowisku daje więcej niż kolejny gadżet</li>
+          </ul>
+        </article>
+
+        <article class="knowledge-card">
+          <h3>📓 Notatki</h3>
+          <ul>
+            <li>zapisuj godziny brań, przynętę, wiatr i ciśnienie</li>
+            <li>szukaj wzoru, nie pojedynczego przypadku</li>
+            <li>po 2–3 dobach notatki są często cenniejsze niż pamięć</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="/dream-loader.js"></script></body>
+</html>

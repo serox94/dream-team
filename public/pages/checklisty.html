@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dream Team | Checklisty</title>
+  
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../ui-plus.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="header-top">
+        <div>
+          <h1>Dream Team</h1>
+          <p class="subtitle">LodgingCarp – La Plaine des Bois 2</p>
+        </div>
+
+        <div class="trip-box">
+          <div><strong>Wyjazd:</strong> 20.06.2026, 14:00</div>
+          <div><strong>Powrót:</strong> 27.06.2026, 10:00</div>
+          <div id="countdown"><strong>Status:</strong> ładowanie...</div>
+        </div>
+      </div>
+
+      <div class="mobile-nav-wrap">
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+          ☰ Menu
+        </button>
+
+        <nav class="main-nav" id="main-nav">
+          <a href="../index.html">Dashboard</a>
+          <a href="polowy.html">Połowy</a>
+          <a href="pogoda.html">Pogoda PRO</a>
+          <a href="dojazd.html">Dojazd / okolica</a>
+          <a href="regulamin.html">Regulamin</a>
+          <a href="wezly.html">Węzły</a>
+          <a href="rigi.html">Rigi</a>
+          <a href="checklisty.html" class="active">Checklisty</a>
+          <a href="mapa.html">Mapa spotów / dna</a>
+          <a href="porady.html">Porady</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container page-content">
+    <section class="hero-card">
+      <div>
+        <h2>Checklisty</h2>
+        <p>
+          Wspólna lista rzeczy do zabrania, kupienia i ogarnięcia przed wyjazdem.
+          Masz teraz filtry, sortowanie i szybkie akcje.
+        </p>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <article class="panel-card">
+        <h3 id="checklist-form-title">Dodaj pozycję</h3>
+
+        <form id="checklist-form" class="form-grid">
+          <input type="hidden" id="edit-check-id" />
+
+          <div class="form-row">
+            <div>
+              <label for="check-category">Kategoria</label>
+              <select id="check-category" required>
+                <option value="sprzęt">Sprzęt</option>
+                <option value="zakupy">Zakupy</option>
+                <option value="jedzenie / picie">Jedzenie / picie</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="check-name">Nazwa</label>
+              <input type="text" id="check-name" maxlength="80" placeholder="np. Kulki proteinowe" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="check-quantity">Ilość</label>
+              <input type="number" id="check-quantity" min="0" step="0.1" placeholder="np. 5" />
+            </div>
+
+            <div>
+              <label for="check-unit">Jednostka</label>
+              <select id="check-unit">
+                <option value="szt.">szt.</option>
+                <option value="kg">kg</option>
+                <option value="litry">litry</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" id="save-check-btn">Dodaj pozycję</button>
+            <button type="button" id="cancel-edit-check-btn" class="secondary-btn hidden">Anuluj edycję</button>
+          </div>
+
+          <div id="checklist-message" class="form-message" aria-live="polite"></div>
+        </form>
+      </article>
+
+      <article class="panel-card">
+        <h3>📦 Podsumowanie</h3>
+
+        <div class="mini-stats">
+          <div><span>Wszystkie pozycje</span><strong id="check-all-count">0</strong></div>
+          <div><span>Odhaczone</span><strong id="check-done-count">0</strong></div>
+          <div><span>Do ogarnięcia</span><strong id="check-open-count">0</strong></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>✅ Lista pozycji</h3>
+        <button id="refresh-checklist-btn" type="button" class="secondary-btn">Odśwież</button>
+      </div>
+
+      <div id="checklist-groups" class="list-grid">
+        <div class="empty-box">Ładowanie checklist...</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/dream-loader.js"></script></body>
+</html>

@@ -1,0 +1,147 @@
+.hero-split {
+  display: grid;
+  grid-template-columns: 1.35fr 0.95fr;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.hero-side-card {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(14, 19, 28, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.hero-side-card img {
+  width: 100%;
+  height: 100%;
+  min-height: 290px;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-side-body {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  background: rgba(14, 19, 28, 0.96);
+}
+
+.hero-side-body strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.hero-side-body span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.location-photo-card {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(14, 19, 28, 0.9);
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+}
+
+.location-photo-card img {
+  width: 100%;
+  height: 340px;
+  object-fit: cover;
+  display: block;
+}
+
+.location-photo-card .photo-caption {
+  padding: 14px 16px;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  background: rgba(14, 19, 28, 0.96);
+}
+
+.chart-panel {
+  margin-top: 24px;
+}
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 340px;
+  height: 340px;
+}
+
+.chart-wrap canvas,
+#fishChart {
+  display: block;
+  width: 100% !important;
+  height: 340px !important;
+  max-width: 100%;
+}
+
+.menu-toggle {
+  display: none;
+}
+
+/* KLUCZOWA NAPRAWA MENU */
+@media (max-width: 900px) {
+  .hero-split {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-side-card img {
+    min-height: 220px;
+  }
+
+  .location-photo-card img {
+    height: 240px;
+  }
+
+  .mobile-nav-wrap {
+    display: block;
+    position: relative;
+    z-index: 5000;
+  }
+
+  .menu-toggle {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+    margin-bottom: 12px;
+    position: relative;
+    z-index: 5002;
+  }
+
+  .main-nav {
+    display: none !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    position: relative !important;
+    z-index: 5001;
+    padding-bottom: 14px;
+  }
+
+  .main-nav.open {
+    display: flex !important;
+  }
+
+  .main-nav a {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .chart-wrap {
+    min-height: 280px;
+    height: 280px;
+  }
+
+  .chart-wrap canvas,
+  #fishChart {
+    height: 280px !important;
+  }
+}

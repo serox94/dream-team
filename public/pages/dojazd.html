@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dream Team | Dojazd i okolica</title>
+  
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../ui-plus.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="header-top">
+        <div>
+          <h1>Dream Team</h1>
+          <p class="subtitle">LodgingCarp – La Plaine des Bois 2</p>
+        </div>
+
+        <div class="trip-box">
+          <div><strong>Wyjazd:</strong> 20.06.2026, 14:00</div>
+          <div><strong>Powrót:</strong> 27.06.2026, 10:00</div>
+          <div id="countdown"><strong>Status:</strong> ładowanie...</div>
+        </div>
+      </div>
+
+      <div class="mobile-nav-wrap">
+        <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="main-nav">
+          ☰ Menu
+        </button>
+
+        <nav class="main-nav" id="main-nav">
+          <a href="../index.html">Dashboard</a>
+          <a href="polowy.html">Połowy</a>
+          <a href="pogoda.html">Pogoda PRO</a>
+          <a href="dojazd.html" class="active">Dojazd / okolica</a>
+          <a href="regulamin.html">Regulamin</a>
+          <a href="wezly.html">Węzły</a>
+          <a href="rigi.html">Rigi</a>
+          <a href="checklisty.html">Checklisty</a>
+          <a href="mapa.html">Mapa spotów / dna</a>
+          <a href="porady.html">Porady</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="container page-content">
+    <section class="hero-card">
+      <div>
+        <h2>Dojazd i okolica</h2>
+        <p>
+          Łowisko, sklepy, awaryjne miejsca i najważniejsze informacje organizacyjne.
+          Na telefonie przyciski z nawigacją otwierają od razu Google Maps.
+        </p>
+      </div>
+    </section>
+
+    <section class="two-column">
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>🎣 Łowisko</h3>
+          <span class="section-chip">główny punkt</span>
+        </div>
+
+        <div class="mini-stats">
+          <div><span>Kraj</span><strong>Francja</strong></div>
+          <div><span>Departament</span><strong>Loiret</strong></div>
+          <div><span>Region</span><strong>Centre-Val de Loire</strong></div>
+          <div><span>Gmina</span><strong>Fontenay-sur-Loing</strong></div>
+          <div><span>Adres</span><strong>Rue de Maison Blanche 5</strong></div>
+          <div><span>GPS</span><strong>48.064060, 2.756781</strong></div>
+        </div>
+
+        <div class="quick-links" style="margin-top:16px;">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=48.064060,2.756781" target="_blank" rel="noopener">
+            🚗 Jedź na łowisko
+          </a>
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>📋 Logistyka na miejscu</h3>
+          <span class="section-chip">ważne</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-info">Pobyty są tygodniowe, zwykle sobota–sobota.</div>
+          <div class="weather-note status-warn">Przyjazd 12:00–14:00, wyjazd 09:00–10:00.</div>
+          <div class="weather-note status-warn">Na miejscu obowiązuje kaucja 200 EUR w gotówce.</div>
+          <div class="weather-note status-info">Po rozładowaniu sprzętu auto trzeba odstawić na parking.</div>
+          <div class="weather-note status-info">Przynęty, ziarna i ewentualny silnik elektryczny warto zamawiać 2–3 tygodnie wcześniej.</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="knowledge-grid">
+      <article class="knowledge-card">
+        <h3>🛒 Lidl</h3>
+        <p class="muted">Supermarket (mały)</p>
+        <p>6 avenue du général Leclerc, 45120 Châlette-sur-Loing</p>
+        <p class="muted-small">około 6 km od wody</p>
+        <div class="quick-links">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=6%20avenue%20du%20g%C3%A9n%C3%A9ral%20Leclerc%2C%2045120%20Ch%C3%A2lette-sur-Loing%2C%20France" target="_blank" rel="noopener">🚗 Nawiguj</a>
+        </div>
+      </article>
+
+      <article class="knowledge-card">
+        <h3>🛍️ E. Leclerc</h3>
+        <p class="muted">Supermarket (duży)</p>
+        <p>1094 avenue d'Antibes, 45200 Amilly</p>
+        <p class="muted-small">około 12 km od wody</p>
+        <div class="quick-links">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=1094%20avenue%20d%27Antibes%2C%2045200%20Amilly%2C%20France" target="_blank" rel="noopener">🚗 Nawiguj</a>
+        </div>
+      </article>
+
+      <article class="knowledge-card">
+        <h3>🥖 Au fournil de Saint Loup</h3>
+        <p class="muted">Piekarnia</p>
+        <p>11 Place Saint Loup, 45210 Cepoy</p>
+        <p class="muted-small">około 4 km od wody</p>
+        <div class="quick-links">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=11%20Place%20Saint%20Loup%2C%2045210%20Cepoy%2C%20France" target="_blank" rel="noopener">🚗 Nawiguj</a>
+        </div>
+      </article>
+
+      <article class="knowledge-card">
+        <h3>🍽️ Les Pitchouns</h3>
+        <p class="muted">Restauracja</p>
+        <p>6 Rue du Dévidet, 45200 Montargis</p>
+        <div class="quick-links">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=6%20Rue%20du%20D%C3%A9videt%2C%2045200%20Montargis%2C%20France" target="_blank" rel="noopener">🚗 Nawiguj</a>
+        </div>
+      </article>
+
+      <article class="knowledge-card">
+        <h3>⛽ Total</h3>
+        <p class="muted">Stacja paliw</p>
+        <p>Route Nationale 7, 45210 Fontenay-sur-Loing</p>
+        <p class="muted-small">około 2 km od wody</p>
+        <div class="quick-links">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=Route%20Nationale%207%2C%2045210%20Fontenay-sur-Loing%2C%20France" target="_blank" rel="noopener">🚗 Nawiguj</a>
+        </div>
+      </article>
+
+      <article class="knowledge-card">
+        <h3>🎣 Pêche Chasse Dordives</h3>
+        <p class="muted">Sklep wędkarski</p>
+        <p>96 Place du Général de Gaulle, 45680 Dordives</p>
+        <p class="muted-small">około 12 km od wody</p>
+        <div class="quick-links">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=96%20Place%20du%20G%C3%A9n%C3%A9ral%20de%20Gaulle%2C%2045680%20Dordives%2C%20France" target="_blank" rel="noopener">🚗 Nawiguj</a>
+        </div>
+      </article>
+
+      <article class="knowledge-card">
+        <h3>🩺 Dr Anne Sophie Leloup</h3>
+        <p class="muted">Lekarz</p>
+        <p>24b Avenue du Chateau, Cepoy</p>
+        <p class="muted-small">około 3 km od wody</p>
+        <div class="quick-links">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=24b%20Avenue%20du%20Chateau%2C%20Cepoy%2C%20France" target="_blank" rel="noopener">🚗 Nawiguj</a>
+        </div>
+      </article>
+
+      <article class="knowledge-card">
+        <h3>🐶 Dr Benoit Collet</h3>
+        <p class="muted">Weterynarz</p>
+        <p>33 Grande Rue, 45210 Ferrières-en-Gâtinais</p>
+        <div class="quick-links">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=33%20Grande%20Rue%2C%2045210%20Ferri%C3%A8res-en-G%C3%A2tinais%2C%20France" target="_blank" rel="noopener">🚗 Nawiguj</a>
+        </div>
+      </article>
+
+      <article class="knowledge-card">
+        <h3>🏥 Centre Hospitalier de Montargis</h3>
+        <p class="muted">Szpital</p>
+        <p>658 Rue des Bourgoins, 45200 Amilly</p>
+        <p class="muted-small">około 10 km od wody</p>
+        <div class="quick-links">
+          <a href="https://www.google.com/maps/dir/?api=1&destination=658%20Rue%20des%20Bourgoins%2C%2045200%20Amilly%2C%20France" target="_blank" rel="noopener">🚗 Nawiguj</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="two-column">
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>🏡 Chalet i zaplecze</h3>
+          <span class="section-chip">komfort</span>
+        </div>
+
+        <div class="weather-interpretation">
+          <div class="weather-note status-success">Na każdym stanowisku jest chalet około 14–15 m².</div>
+          <div class="weather-note status-success">W środku: 2 łóżka, prąd, lodówka z zamrażarką, mikrofalówka, płyta indukcyjna, czajnik, toster i ekspres Tassimo.</div>
+          <div class="weather-note status-info">Na zewnątrz: woda pitna i zadaszona część ze stołem.</div>
+          <div class="weather-note status-info">Wspólne sanitariaty: 2 prysznice, 2 toalety i umywalka.</div>
+          <div class="weather-note status-warn">Pościeli i prześcieradeł nie ma — trzeba zabrać własne.</div>
+          <div class="weather-note status-warn">Nie podłączaj własnych mocnych urządzeń elektrycznych.</div>
+        </div>
+      </article>
+
+      <article class="panel-card">
+        <div class="section-head">
+          <h3>🚨 Numery alarmowe</h3>
+          <span class="section-chip">awaryjnie</span>
+        </div>
+
+        <div class="quick-links">
+          <a href="tel:112">📞 112</a>
+          <a href="tel:15">📞 SAMU 15</a>
+          <a href="tel:17">📞 Policja 17</a>
+          <a href="tel:18">📞 Straż pożarna 18</a>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/dream-loader.js"></script></body>
+</html>
