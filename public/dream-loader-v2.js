@@ -91,9 +91,11 @@
       if (!nav) return;
       button.addEventListener('click', e => {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         const open = nav.classList.toggle('open');
         button.setAttribute('aria-expanded', open ? 'true' : 'false');
-      });
+      }, true);
       $$('a', nav).forEach(a => a.addEventListener('click', () => nav.classList.remove('open')));
     });
   }
