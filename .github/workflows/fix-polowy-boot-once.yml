@@ -1,0 +1,44 @@
+name: Fix catches boot once
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/fix-polowy-boot-once.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix app bootstrap and cache version
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const appFile = 'public/app.js';
+          let app = fs.readFileSync(appFile, 'utf8');
+          const oldBoot = 'document.addEventListener("DOMContentLoaded", bootApp);';
+          const newBoot = `if (document.readyState === "loading") {\n  document.addEventListener("DOMContentLoaded", bootApp);\n} else {\n  bootApp();\n}`;
+          if (!app.includes(oldBoot) && !app.includes('bootApp();\n}\n\nwindow.deleteCatch')) {
+            throw new Error('Expected app bootstrap marker not found');
+          }
+          app = app.replace(oldBoot, newBoot);
+          fs.writeFileSync(appFile, app);
+
+          const loaderFile = 'public/dream-loader-v2.js';
+          let loader = fs.readFileSync(loaderFile, 'utf8');
+          loader = loader.replaceAll('?v=4', '?v=5');
+          fs.writeFileSync(loaderFile, loader);
+          NODE
+      - name: Verify syntax
+        run: |
+          node --check public/app.js
+          node --check public/dream-loader-v2.js
+      - name: Commit fix
+        run: |
+          git config user.name "dream-team-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/app.js public/dream-loader-v2.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Fix app initialization after delayed loader"
+          git push
