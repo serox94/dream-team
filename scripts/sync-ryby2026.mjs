@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 const RAW = 'https://raw.githubusercontent.com/serox94/ryby2026/main';
@@ -39,6 +39,9 @@ function patchAppJs(js) {
   js = js.replace(/const FISHING_SPOT = \{[\s\S]*?\};/, `const FISHING_SPOT = {\n  name: window.DREAM_TRIP?.lake || "LodgingCarp - La Plaine des Bois 2",\n  latitude: Number(window.DREAM_TRIP?.latitude ?? 48.064130),\n  longitude: Number(window.DREAM_TRIP?.longitude ?? 2.757058)\n};`);
   js = js.replace('const FALLBACK_CATCHES = [', 'const FALLBACK_CATCHES = false ? [');
   js = js.replace(/\n\];\n\nlet realtimeChannelsStarted/, '\n] : [];\n\nlet realtimeChannelsStarted');
+  // Spot is optional in Dream Team. A catch can be saved before a map spot is created.
+  js = js.replace('if (!spotText && !spotId) return { ok: false, message: "Podaj spot albo wybierz spot z mapy." };', 'if (!spotText && !spotId) raw.spot = "Brak";');
+  js = js.replace('spot: spotText || null,', 'spot: spotText || "Brak",');
   return js;
 }
 
@@ -66,4 +69,6 @@ const extraCss = `\n/* Dream Team additions */\n.dream-trip-select{margin-top:10
 const style = await get(`${RAW}/style.css`);
 await writeFile(join(OUT, 'style.css'), style + extraCss);
 
-console.log('Dream Team frontend synced 1:1 from Ryby 2026 and connected to D1');
+// Runtime Dream Team files are intentionally NOT downloaded from Ryby2026.
+// They stay in public/ and are the stable integration layer for D1 + multi-trip rendering.
+console.log('Dream Team frontend synced from Ryby 2026; local Dream Team runtime files preserved');
