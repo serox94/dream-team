@@ -3,11 +3,12 @@ import { dirname, join } from 'node:path';
 
 const RAW = 'https://raw.githubusercontent.com/serox94/ryby2026/main';
 const API = 'https://api.github.com/repos/serox94/ryby2026/contents';
-const OUT = 'public/legacy';
+const OUT = 'public';
 
 const files = [
+  'index.html',
   'style.css','ui-plus.css','weather-plus.css','media-plus.css','app.js','app-plus.js','fixes.js','dashboard-chart.js',
-  'pages/pogoda.html','pages/wezly.html','pages/rigi.html','pages/porady.html','pages/regulamin.html','pages/dojazd.html'
+  'pages/polowy.html','pages/pogoda.html','pages/dojazd.html','pages/regulamin.html','pages/wezly.html','pages/rigi.html','pages/checklisty.html','pages/mapa.html','pages/porady.html'
 ];
 
 async function get(url, binary = false) {
@@ -19,44 +20,41 @@ async function get(url, binary = false) {
 function patchHtml(html) {
   html = html.replace(/<script>[\s\S]*?ryby2026_auth_v1[\s\S]*?<\/script>/i, '');
   html = html.replaceAll('Ryby 2026', 'Dream Team');
-  html = html.replaceAll('20.06.2026, 14:00', '<span data-trip-start>—</span>');
-  html = html.replaceAll('27.06.2026, 10:00', '<span data-trip-end>—</span>');
-  html = html.replace(/<p class="subtitle">[\s\S]*?<\/p>/i, '<p class="subtitle" data-trip-subtitle>Ładowanie aktywnego wyjazdu…</p>');
-  html = html.replaceAll('../assets/img/', './assets/img/');
-  html = html.replaceAll('../style.css', './style.css');
-  html = html.replaceAll('../ui-plus.css', './ui-plus.css');
-  html = html.replaceAll('../weather-plus.css', './weather-plus.css');
-  html = html.replaceAll('../media-plus.css', './media-plus.css');
-  html = html.replaceAll('../app.js', './app.js');
-  html = html.replaceAll('../app-plus.js', './app-plus.js');
-  html = html.replaceAll('../fixes.js', './fixes.js');
-  html = html.replaceAll('../dashboard-chart.js', './dashboard-chart.js');
-  html = html.replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2"><\/script>/g, '');
-  html = html.replace(/<script src="\.\.\/auth\.js"><\/script>/g, '');
-  html = html.replace('</body>', '<script src="./dream-bridge.js"></script></body>');
-  html = html.replace(/href="\.\.\/index\.html"/g, 'href="/"');
-  html = html.replace(/href="polowy\.html"/g, 'href="/#catches"');
-  html = html.replace(/href="checklisty\.html"/g, 'href="/#checklists"');
-  html = html.replace(/href="mapa\.html"/g, 'href="/#map"');
-  html = html.replace(/href="pogoda\.html"/g, 'href="./pogoda.html"');
-  html = html.replace(/href="wezly\.html"/g, 'href="./wezly.html"');
-  html = html.replace(/href="rigi\.html"/g, 'href="./rigi.html"');
-  html = html.replace(/href="porady\.html"/g, 'href="./porady.html"');
-  html = html.replace(/href="regulamin\.html"/g, 'href="./regulamin.html"');
-  html = html.replace(/href="dojazd\.html"/g, 'href="./dojazd.html"');
+  html = html.replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@2"><\/script>\s*/g, '');
+  html = html.replace(/<script src="(?:\.\.\/)?auth\.js"><\/script>\s*/g, '');
+  html = html.replace(/<script src="(?:\.\.\/)?app\.js"><\/script>\s*/g, '');
+  html = html.replace(/<script src="(?:\.\.\/)?fixes\.js"><\/script>\s*/g, '');
+  html = html.replace(/<script src="(?:\.\.\/)?app-plus\.js"><\/script>\s*/g, '');
+  html = html.replace(/<script src="(?:\.\.\/)?dashboard-chart\.js"><\/script>\s*/g, '');
+  html = html.replace(/<script src="(?:\.\.\/)?dream-loader\.js"><\/script>\s*/g, '');
+  html = html.replace('</body>', '<script src="/dream-loader.js"></script></body>');
+  html = html.replace(/<span class="section-chip">czerwiec<\/span>/gi, '<span class="section-chip">warunki</span>');
   return html;
 }
 
+function patchAppJs(js) {
+  js = js.replace('const TRIP_START = new Date("2026-06-20T14:00:00");', 'const TRIP_START = new Date(window.DREAM_TRIP?.start || "2026-11-14T12:00:00+01:00");');
+  js = js.replace('const TRIP_END = new Date("2026-06-27T10:00:00");', 'const TRIP_END = new Date(window.DREAM_TRIP?.end || "2026-11-21T10:00:00+01:00");');
+  js = js.replace(/const SUPABASE_URL =[\s\S]*?window\.supabaseClient = supabaseClient;\n/, 'const supabaseClient = window.d1SupabaseCompat || window.supabaseClient || null;\nwindow.supabaseClient = supabaseClient;\n');
+  js = js.replace(/const FISHING_SPOT = \{[\s\S]*?\};/, `const FISHING_SPOT = {\n  name: window.DREAM_TRIP?.lake || "LodgingCarp - La Plaine des Bois 2",\n  latitude: Number(window.DREAM_TRIP?.latitude ?? 48.064130),\n  longitude: Number(window.DREAM_TRIP?.longitude ?? 2.757058)\n};`);
+  js = js.replace('const FALLBACK_CATCHES = [', 'const FALLBACK_CATCHES = false ? [');
+  js = js.replace(/\n\];\n\nlet realtimeChannelsStarted/, '\n] : [];\n\nlet realtimeChannelsStarted');
+  return js;
+}
+
 for (const path of files) {
-  const text = await get(`${RAW}/${path}`);
-  const target = join(OUT, path.startsWith('pages/') ? path.slice(6) : path);
+  let text = await get(`${RAW}/${path}`);
+  if (path.endsWith('.html')) text = patchHtml(text);
+  if (path === 'app.js') text = patchAppJs(text);
+  const target = join(OUT, path);
   await mkdir(dirname(target), { recursive: true });
-  await writeFile(target, path.endsWith('.html') ? patchHtml(text) : text);
+  await writeFile(target, text);
 }
 
 await mkdir(join(OUT, 'assets/img/rigi'), { recursive: true });
-const rootImage = await get(`${RAW}/assets/img/lowisko.jpg`, true);
-await writeFile(join(OUT, 'assets/img/lowisko.jpg'), rootImage);
+for (const image of ['lowisko.jpg', 'patryk-maciek.jpeg']) {
+  await writeFile(join(OUT, 'assets/img', image), await get(`${RAW}/assets/img/${image}`, true));
+}
 
 const list = JSON.parse(await get(`${API}/assets/img/rigi?ref=main`));
 for (const f of list) {
@@ -64,8 +62,8 @@ for (const f of list) {
   await writeFile(join(OUT, 'assets/img/rigi', f.name), await get(f.download_url, true));
 }
 
-const bridge = `
-(async()=>{try{const r=await fetch('/api/bootstrap',{cache:'no-store'});const m=await r.json();const t=m.trips.find(x=>x.id===m.app.activeTripId)||m.trips[0];if(!t)return;document.querySelectorAll('[data-trip-subtitle]').forEach(x=>x.textContent=t.lake);const f=v=>v?new Intl.DateTimeFormat('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(new Date(v)):'—';document.querySelectorAll('[data-trip-start]').forEach(x=>x.textContent=f(t.start));document.querySelectorAll('[data-trip-end]').forEach(x=>x.textContent=f(t.end));document.title=document.title.replace('Ryby 2026','Dream Team');}catch(e){console.error('Dream Team bridge',e)}})();
-`;
-await writeFile(join(OUT, 'dream-bridge.js'), bridge);
-console.log('Ryby 2026 modules synced to public/legacy');
+const extraCss = `\n/* Dream Team additions */\n.dream-trip-select{margin-top:10px;max-width:420px;background:#111923;color:#fff;border:1px solid #2c3745;border-radius:9px;padding:9px 11px;font:inherit}.dream-trip-select:focus{outline:2px solid #5fa9ff;outline-offset:2px}\n`;
+const style = await get(`${RAW}/style.css`);
+await writeFile(join(OUT, 'style.css'), style + extraCss);
+
+console.log('Dream Team frontend synced 1:1 from Ryby 2026 and connected to D1');
