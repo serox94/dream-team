@@ -24,7 +24,7 @@ SELECT
   48.064130,
   2.757058,
   lake_image,
-  facts_json,
+  json_set(COALESCE(facts_json,'{}'),'$.presentation','legacy'),
   'https://lodgingcarp.com/en/destination/la-plaine-des-bois-etang-2/',
   CURRENT_TIMESTAMP
 FROM trips WHERE id='next-trip';
@@ -36,8 +36,8 @@ SELECT
   'Polska',
   latitude,
   longitude,
-  lake_image,
-  facts_json,
+  'https://www.fishsurfing.com/photos/blog/3021_2.jpg?hash=64d1eb78bb6d92614dd528c9af28483a',
+  json_set(COALESCE(facts_json,'{}'),'$.presentation','dynamic'),
   'https://bookingfish.eu/lowiska/jezioro-wygonin',
   CURRENT_TIMESTAMP
 FROM trips WHERE id='poland-2027';
