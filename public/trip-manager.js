@@ -14,7 +14,7 @@
   });}
   async function refresh(){await Dream.refreshModel();render();}
   function tripEditor(trip=null){
-    const m=window.DREAM_MODEL,lake=m.lakes.find(l=>l.id===(trip?.lakeId||m.lakes[0]?.id));
+    const m=window.DREAM_MODEL,lake=m.lakes.find(l=>l.id===(trip?.lakeId||window.DREAM_TRIP?.lakeId||m.lakes[0]?.id));
     const zone=lake?.facts?.timeZone||'Europe/Paris';
     return `<form id="trip-edit" class="form-grid"><input type="hidden" name="id" value="${E(trip?.id||'')}">
       <h3>${trip?'Edytuj wyjazd':'Nowy wyjazd'}</h3><div class="form-row">
