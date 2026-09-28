@@ -28,7 +28,7 @@ Node.js 24, `npm ci`, `npm test`, `npm run build`.
 ## Deployment i dane
 
 - Cloudflare Workers: istniejący hosting i API; Cloudflare D1: istniejąca baza `dream-team-db`.
-- `npm run deploy:production`: testy → przygotowanie assetów → migracje zdalne → deploy.
+- `npm run deploy:production`: testy → przygotowanie assetów → deploy. Przy pierwszym żądaniu API nowy Worker przeprowadza addytywną migrację D1, zapisując również znacznik Wrangler.
 - Migracja `0017` dodaje uczestników wyjazdu, podstawę PB i odzyskiwanie wpisów; nie usuwa oryginalnych rekordów.
 - GitHub Actions sprawdza testy, migracje i build. Wdrożenie wykonuje istniejące połączenie Cloudflare z gałęzią `main`.
 - Przed ręcznymi migracjami zewnętrznymi zawsze pobierz eksport i zweryfikuj kopię. Nie uruchamiaj ponownie starego importera Supabase z opcją wymuszonego czyszczenia.

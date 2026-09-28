@@ -62,4 +62,4 @@ No new HTML pages and no lake-specific JavaScript branches should be required.
 
 Lake profiles are editable in the management page, including coordinates, timezone, maps, rules, logistics and advice. Existing trip-specific researched documents remain in D1. Preserved rich Plaine material is a static content pack under `public/data/lakes/`, selected by profile data. New lake profiles use generic renderers and do not need a new HTML page.
 
-Cloudflare builds use Node 24 (`.node-version`). Production deployment applies the additive migration before publishing the Worker. Rollback should restore code only; never drop the additive columns or clear data to roll back a release.
+Cloudflare builds use Node 24 (`.node-version`). Production deployment runs the regression suite and publishes the Worker. If D1 is at schema 16, the Worker applies the additive migration on its first API request and records the Wrangler migration marker. Rollback should restore code only; never drop the additive columns or clear data to roll back a release.

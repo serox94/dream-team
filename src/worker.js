@@ -1,3 +1,4 @@
+import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
 
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
@@ -40,7 +41,7 @@ async function bootstrap(env) {
   }));
   const record = await one(env,`SELECT c.id,c.trip_id tripId,c.weight_kg weightKg,c.caught_at caughtAt,c.species,a.id anglerId,a.name anglerName,t.lake,t.year FROM catches c JOIN anglers a ON a.id=c.angler_id JOIN trips t ON t.id=c.trip_id WHERE c.deleted_at IS NULL ORDER BY c.weight_kg DESC,c.caught_at,c.id LIMIT 1`);
   const marker = await one(env,"SELECT value FROM app_settings WHERE key='supabase_import_v2'");
-  return {app:{name:'Dream Team',version:'1.1.0',activeTripId:trips.find(t=>t.isActive)?.id||null},anglers,lakes,trips,
+  return {app:{name:'Dream Team',version:'1.1.1',activeTripId:trips.find(t=>t.isActive)?.id||null},anglers,lakes,trips,
     allTime:{anglers,dreamTeamRecord:record||null},legacyImport:marker?parseFacts(marker.value):null};
 }
 async function participantsFor(env, ids) {
@@ -174,6 +175,7 @@ export default {
     const url=new URL(request.url),method=request.method,path=url.pathname;
     try{
       if(!path.startsWith('/api/'))return env.ASSETS.fetch(request);
+      await ensureSchema(env);
       if(['POST','PUT','PATCH','DELETE'].includes(method)){
         const origin=request.headers.get('origin');
         if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return json({ok:false,error:'Cross-origin write blocked'},403);
@@ -181,7 +183,7 @@ export default {
       if(path==='/api/health'&&method==='GET'){
         const version=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
         const marker=await one(env,"SELECT value FROM app_settings WHERE key='supabase_import_v2'");
-        return json({ok:true,app:'dream-team',version:'1.1.0',database:'connected',schemaVersion:version?.value||null,legacyImport:marker?parseFacts(marker.value):null});
+        return json({ok:true,app:'dream-team',version:'1.1.1',database:'connected',schemaVersion:version?.value||null,legacyImport:marker?parseFacts(marker.value):null});
       }
       if(path==='/api/bootstrap'&&method==='GET')return json(await bootstrap(env));
       if(path==='/api/export'&&method==='GET')return await exportData(env);

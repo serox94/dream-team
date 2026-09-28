@@ -1,13 +1,13 @@
 {
   "name": "dream-team",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "npm run deploy:production",
     "db:migrate:local": "wrangler d1 migrations apply dream-team-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply dream-team-db --remote",
-    "deploy:production": "npm test && wrangler d1 migrations apply dream-team-db --remote && wrangler deploy",
+    "deploy:production": "npm test && wrangler deploy",
     "test": "node --test tests/*.test.mjs",
     "build": "node scripts/build.mjs && wrangler deploy --dry-run",
     "dev:qa": "node scripts/qa-server.mjs",
