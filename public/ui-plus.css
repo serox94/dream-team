@@ -16,6 +16,13 @@
   --ui-danger-tx: #ffd0d0;
 }
 
+.write-auth-dialog{border:0;border-radius:16px;padding:24px;width:min(420px,calc(100vw - 32px));box-shadow:0 16px 60px #0006;color:#18252a}
+.write-auth-dialog::backdrop{background:#0b1b23aa}
+.write-auth-dialog h2{margin:0 0 10px}
+.write-auth-dialog label{display:grid;gap:8px;margin:16px 0}
+.write-auth-dialog input{width:100%;box-sizing:border-box;padding:10px}
+.write-auth-dialog .form-actions{display:flex;gap:10px;justify-content:flex-end}
+
 .main-nav a[href*="dojazd"]::before { content: "🧭"; }
 .main-nav a[href*="regulamin"]::before { content: "📜"; }
 

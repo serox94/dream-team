@@ -225,6 +225,5 @@
     // Synchronization is handled explicitly by app.js (visibility-aware polling).
   };
 
-  window.d1SupabaseCompat = compat;
-  window.supabaseClient = compat;
+  window.d1Client = compat;
 })();

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/worker.js';
 import {database} from './db.mjs';
-const setup=(WEATHER_FETCH)=>{const DB=database();return {DB,async req(path,method='GET',value,headers={}){const r=await worker.fetch(new Request('https://dream.test/api/'+path,{method,headers:{'content-type':'application/json',...headers},body:value===undefined?undefined:JSON.stringify(value)}),{DB,WEATHER_FETCH,ASSETS:{fetch:()=>new Response('asset')}});return {status:r.status,data:await r.json()};}};};
+const setup=(WEATHER_FETCH,RYBY_API_WRITE_TOKEN)=>{const DB=database();return {DB,async req(path,method='GET',value,headers={}){const r=await worker.fetch(new Request('https://dream.test/api/'+path,{method,headers:{'content-type':'application/json',...headers},body:value===undefined?undefined:JSON.stringify(value)}),{DB,WEATHER_FETCH,RYBY_API_WRITE_TOKEN,ASSETS:{fetch:()=>new Response('asset')}});return {status:r.status,data:await r.json()};}};};
 const scoped=(resource,id,trip='next-trip')=>`${resource}/${id}?tripId=${trip}`;
 const catchData={tripId:'next-trip',anglerId:'patryk',weightKg:14,bait:'test',caughtAt:'2026-09-01T10:00:00Z'};
 
@@ -47,6 +47,21 @@ test('validates dates, participants, finite weight, content type and cross-site 
  assert.equal((await s.req('catches','POST',catchData,{'content-type':'text/plain'})).status,415);
  assert.equal((await s.req('catches','POST',catchData,{origin:'https://evil.test'})).status,403);
  assert.equal((await s.req('catches','POST',catchData,{'sec-fetch-site':'cross-site'})).status,403);s.DB.close();
+});
+test('configured token protects every write and complete export without changing data for unauthenticated requests',async()=>{
+ const token='abcdef1234567890abcdef1234567890abcdef1234567890',s=setup(undefined,token),header={authorization:`Bearer ${token}`};
+ try{
+  assert.equal((await s.req('bootstrap')).status,200);
+  assert.equal((await s.req('catches','POST',catchData)).status,401);
+  assert.equal((await s.req('trips/next-trip/activate','POST',{})).status,401);
+  assert.equal((await s.req('export')).status,401);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,0);
+  assert.equal((await s.req('catches','POST',catchData,{authorization:'Bearer wrong'})).status,401);
+  assert.equal((await s.req('catches','POST',catchData,{...header,origin:'https://evil.test'})).status,403);
+  assert.equal((await s.req('catches','POST',catchData,header)).status,201);
+  assert.equal((await s.req('export','GET',undefined,header)).data.tables.catches.length,1);
+  assert.equal((await s.req('catches?tripId=next-trip')).data.catches.length,1);
+ }finally{s.DB.close();}
 });
 test('spot lifecycle preserves catch history and rejects spots from another trip',async()=>{
  const s=setup();const spot=(await s.req('spots','POST',{tripId:'next-trip',name:'Górka',depthM:4,notes:'rock'})).data.id;

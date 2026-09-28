@@ -7,7 +7,7 @@ import worker from '../src/worker.js';
 import {database} from '../tests/db.mjs';
 const publicDir=path.resolve(fileURLToPath(new URL('../public/',import.meta.url))); 
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.json':'application/json'};
-export async function serve({port=0,seed=false,weatherFetch}={}){
+export async function serve({port=0,seed=false,weatherFetch,writeToken}={}){
  const DB=database();
  if(seed){
   DB.sqlite.exec("INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,bait) VALUES('next-trip','maciek','2026-09-03T10:00:00Z',18,'Karp','tuti'),('next-trip','patryk','2026-09-03T11:00:00Z',5,'Karp','coco');");
@@ -27,7 +27,7 @@ export async function serve({port=0,seed=false,weatherFetch}={}){
   try{
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
    const request=new Request(`http://${req.headers.host}${req.url}`,{method:req.method,headers:req.headers,body:['GET','HEAD'].includes(req.method)?undefined:Buffer.concat(chunks)});
-   const response=await worker.fetch(request,{DB,ASSETS,WEATHER_FETCH:weatherFetch});
+   const response=await worker.fetch(request,{DB,ASSETS,WEATHER_FETCH:weatherFetch,RYBY_API_WRITE_TOKEN:writeToken});
    requests.push({method:req.method,url:req.url,status:response.status});
    res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
   }catch(error){res.writeHead(500);res.end(error.message);}

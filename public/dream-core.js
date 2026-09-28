@@ -17,13 +17,43 @@
     if(!value)return '';
     try {const u=new URL(value,location.origin);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}
   }
+  const writeTokenKey='ryby_write_token';
+  let credentialPrompt=null;
+  function askWriteToken(){
+    if(credentialPrompt)return credentialPrompt;
+    credentialPrompt=new Promise(resolve=>{
+      const dialog=document.createElement('dialog');dialog.className='write-auth-dialog';
+      dialog.innerHTML='<form><h2>Klucz dostępu do RYBY</h2><p>Administrator przekazuje klucz osobom uprawnionym do zapisu.</p><label>Klucz dostępu<input type="password" autocomplete="off" required minlength="32"></label><div class="form-actions"><button type="button" class="secondary-btn">Anuluj</button><button type="submit">Potwierdź</button></div></form>';
+      const finish=value=>{dialog.remove();resolve(value);};
+      dialog.querySelector('button[type="button"]').addEventListener('click',()=>finish(''));
+      dialog.querySelector('form').addEventListener('submit',e=>{e.preventDefault();finish(dialog.querySelector('input').value.trim());});
+      dialog.addEventListener('cancel',e=>{e.preventDefault();finish('');});
+      document.body.append(dialog);
+      if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
+      dialog.querySelector('input').focus();
+    }).finally(()=>{credentialPrompt=null;});
+    return credentialPrompt;
+  }
+  async function authorizedFetch(path,options,signal){
+    const protectedRoute=options.method&&options.method!=='GET'||path==='/api/export';
+    const send=token=>fetch(path,{cache:'no-store',...options,headers:{'content-type':'application/json',...options.headers,...(token?{authorization:`Bearer ${token}`}:{})},signal});
+    if(!protectedRoute)return send('');
+    let token='';try{token=sessionStorage.getItem(writeTokenKey)||'';}catch{}
+    let response=await send(token);
+    if(response.status!==401)return response;
+    token=await askWriteToken();
+    if(!token)return response;
+    response=await send(token);
+    if(response.ok){try{sessionStorage.setItem(writeTokenKey,token);}catch{}}
+    return response;
+  }
   async function api(path,options={}){
     const get=!options.method||options.method==='GET';
     if(get&&pending.has(path))return pending.get(path);
     const task=(async()=>{
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
       try{
-        const response=await fetch(path,{cache:'no-store',...options,headers:{'content-type':'application/json',...options.headers},signal:controller.signal});
+        const response=await authorizedFetch(path,options,controller.signal);
         const data=await response.json();
         if(!response.ok||data.ok===false)throw new Error(data.error||`HTTP ${response.status}`);
         return data;
@@ -31,6 +61,16 @@
     })();
     if(get)pending.set(path,task);
     try{return await task;}finally{if(get)pending.delete(path);}
+  }
+  async function downloadBackup(){
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000);
+    try{
+      const response=await authorizedFetch('/api/export',{method:'GET'},controller.signal);
+      if(!response.ok){const data=await response.json();throw new Error(data.error||`HTTP ${response.status}`);}
+      const href=URL.createObjectURL(await response.blob()),a=document.createElement('a');
+      a.href=href;a.download=`dream-team-backup-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),60000);
+    }finally{clearTimeout(timeout);}
   }
   function notice(message,error=false){
     let box=document.getElementById('app-notice');
@@ -69,7 +109,7 @@
     b.addEventListener('click',async()=>{b.disabled=true;try{await api(`/api/${kind}/${id}/restore?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`,{method:'POST',body:'{}'});await refreshModel();await refresh();notice('Wpis przywrócony.');}catch(e){notice(e.message,true);b.disabled=false;}});
     document.getElementById('app-notice')?.append(b);
   }
-  window.Dream={renderHeader,api,esc,zone,dateInput,fromInput,format,safeUrl,notice,refreshModel,rememberTrip,readTrip,undo,
+  window.Dream={renderHeader,api,downloadBackup,esc,zone,dateInput,fromInput,format,safeUrl,notice,refreshModel,rememberTrip,readTrip,undo,
     hour:value=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:zone(),hour:'2-digit',hourCycle:'h23'}).format(new Date(value))),
     day:value=>new Date(value).toLocaleDateString('pl-PL',{timeZone:zone()})};
 })();

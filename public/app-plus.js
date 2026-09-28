@@ -272,13 +272,13 @@
   }
 
   async function renderDashboardExtras(cachedCatches, cachedSpots, cachedChecklist) {
-    if (!$("total-weight") || typeof loadCatchesFromSupabase !== "function") return;
+    if (!$("total-weight") || typeof loadCatchesFromD1 !== "function") return;
 
     try {
       const [catches, spots, checklistItems] = cachedCatches ? [cachedCatches, cachedSpots, cachedChecklist] : await Promise.all([
-        loadCatchesFromSupabase(),
-        typeof loadSpotsFromSupabase === "function" ? loadSpotsFromSupabase() : [],
-        typeof loadChecklistFromSupabase === "function" ? loadChecklistFromSupabase() : []
+        loadCatchesFromD1(),
+        typeof loadSpotsFromD1 === "function" ? loadSpotsFromD1() : [],
+        typeof loadChecklistFromD1 === "function" ? loadChecklistFromD1() : []
       ]);
 
       const spotsMap = new Map(spots.map((spot) => [Number(spot.id), spot]));
@@ -512,12 +512,12 @@
     });
 
     $("check-uncheck-all-btn")?.addEventListener("click", async () => {
-      if (!window.supabaseClient) return;
-      const items = await loadChecklistFromSupabase();
+      if (!window.d1Client) return;
+      const items = await loadChecklistFromD1();
       const ids = items.filter((item) => item.done).map((item) => Number(item.id));
       if (!ids.length) return;
       if (!window.confirm(`Odznaczyć ${ids.length} pozycji w tym wyjeździe?`)) return;
-      const { error } = await supabaseClient.from("checklist_items").update({ done: false }).in("id", ids);
+      const { error } = await d1Client.from("checklist_items").update({ done: false }).in("id", ids);
       if (error) {
         window.alert("Nie udało się odznaczyć wszystkich pozycji.");
         return;
@@ -622,8 +622,8 @@
           checkbox.type = "checkbox";
           checkbox.checked = Boolean(item.done);
           checkbox.addEventListener("change", async () => {
-            if (!window.supabaseClient) return;
-            const { error } = await supabaseClient.from("checklist_items").update({ done: checkbox.checked }).eq("id", item.id);
+            if (!window.d1Client) return;
+            const { error } = await d1Client.from("checklist_items").update({ done: checkbox.checked }).eq("id", item.id);
             if (error) {
               checkbox.checked = Boolean(item.done);
               window.alert("Nie udało się zaktualizować pozycji.");
@@ -671,7 +671,7 @@
   }
 
   async function renderChecklistPagePlus() {
-    if (!$("checklist-groups") || typeof loadChecklistFromSupabase !== "function") return;
+    if (!$("checklist-groups") || typeof loadChecklistFromD1 !== "function") return;
 
     ensureChecklistToolbar();
     bindChecklistPlusEvents();
@@ -679,7 +679,7 @@
     const container = $("checklist-groups");
     container.innerHTML = '<div class="empty-box">Ładowanie checklist...</div>';
 
-    const items = await loadChecklistFromSupabase();
+    const items = await loadChecklistFromD1();
     renderChecklistSummaryPlus(items);
     renderChecklistGroupsPlus(filterChecklistItems(items));
   }
@@ -883,15 +883,15 @@
   }
 
   async function renderSpotsPagePlus() {
-    if (!$("spots-list") || typeof loadSpotsFromSupabase !== "function") return;
+    if (!$("spots-list") || typeof loadSpotsFromD1 !== "function") return;
     ensureMapExtras();
 
     const list = $("spots-list");
     list.innerHTML = '<div class="empty-box">Ładowanie spotów...</div>';
 
     const [spots, catches] = await Promise.all([
-      loadSpotsFromSupabase(),
-      typeof loadCatchesFromSupabase === "function" ? loadCatchesFromSupabase() : []
+      loadSpotsFromD1(),
+      typeof loadCatchesFromD1 === "function" ? loadCatchesFromD1() : []
     ]);
 
     renderSpotsSummaryPlus(spots, catches);

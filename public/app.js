@@ -2,8 +2,7 @@ const TRIP_START = window.DREAM_TRIP?.start ? new Date(window.DREAM_TRIP.start) 
 const TRIP_END = window.DREAM_TRIP?.end ? new Date(window.DREAM_TRIP.end) : null;
 const PB_CELEBRATION_STORAGE_KEY = "ryby2026_pb_celebrated_catches";
 
-const supabaseClient = window.d1SupabaseCompat || window.supabaseClient || null;
-window.supabaseClient = supabaseClient;
+const d1Client = window.d1Client || null;
 
 const FISHING_SPOT = {
   name: window.DREAM_TRIP?.lakeProfile?.name || window.DREAM_TRIP?.lake || 'Łowisko',
@@ -183,8 +182,8 @@ function setMessage(id, message, type = "") {
 
 async function getSpotNameById(spotId) {
   const parsedId = Number(spotId);
-  if (!Number.isFinite(parsedId) || !supabaseClient) return "";
-  const { data, error } = await supabaseClient.from("spots").select("name").eq("id", parsedId).maybeSingle();
+  if (!Number.isFinite(parsedId) || !d1Client) return "";
+  const { data, error } = await d1Client.from("spots").select("name").eq("id", parsedId).maybeSingle();
   if (error) {
     console.error("Błąd pobrania nazwy spotu:", error.message);
     return "";
@@ -335,9 +334,9 @@ function getPersonStats(catches, personName, spots = []) {
   };
 }
 
-async function loadCatchesFromSupabase() {
-  if (!supabaseClient) throw new Error('Brak połączenia z bazą.');
-  const { data, error } = await supabaseClient.from("catches").select("*").order("caught_at", { ascending: false });
+async function loadCatchesFromD1() {
+  if (!d1Client) throw new Error('Brak połączenia z bazą.');
+  const { data, error } = await d1Client.from("catches").select("*").order("caught_at", { ascending: false });
   if (error) {
     console.error("Błąd pobierania połowów:", error.message);
     throw new Error(error.message);
@@ -345,9 +344,9 @@ async function loadCatchesFromSupabase() {
   return data || [];
 }
 
-async function loadChecklistFromSupabase() {
-  if (!supabaseClient) return [];
-  const { data, error } = await supabaseClient
+async function loadChecklistFromD1() {
+  if (!d1Client) return [];
+  const { data, error } = await d1Client
     .from("checklist_items")
     .select("*")
     .order("category", { ascending: true })
@@ -359,9 +358,9 @@ async function loadChecklistFromSupabase() {
   return data || [];
 }
 
-async function loadSpotsFromSupabase() {
-  if (!supabaseClient) return [];
-  const { data, error } = await supabaseClient.from("spots").select("*").order("created_at", { ascending: true });
+async function loadSpotsFromD1() {
+  if (!d1Client) return [];
+  const { data, error } = await d1Client.from("spots").select("*").order("created_at", { ascending: true });
   if (error) {
     console.error("Błąd pobierania spotów:", error.message);
     throw new Error(error.message);
@@ -463,7 +462,7 @@ function resetCatchForm() {
 
 async function handleCatchSubmit(event) {
   event.preventDefault();
-  if (!supabaseClient) return;
+  if (!d1Client) return;
 
   const selectedSpotId = $("spot-id")?.value;
   let resolvedSpotText = normalizeText($("spot")?.value, 80);
@@ -495,14 +494,14 @@ async function handleCatchSubmit(event) {
   let error;
   let savedCatch = null;
   if (editId) {
-    ({ data: savedCatch, error } = await supabaseClient
+    ({ data: savedCatch, error } = await d1Client
       .from("catches")
       .update(validation.payload)
       .eq("id", Number(editId))
       .select("id, person, weight, caught_at")
       .single());
   } else {
-    ({ data: savedCatch, error } = await supabaseClient
+    ({ data: savedCatch, error } = await d1Client
       .from("catches")
       .insert([validation.payload])
       .select("id, person, weight, caught_at")
@@ -523,9 +522,9 @@ async function handleCatchSubmit(event) {
 }
 
 async function deleteCatch(id) {
-  if (!supabaseClient) return;
+  if (!d1Client) return;
   if (!window.confirm("Usunąć ten połów?")) return;
-  const { error } = await supabaseClient.from("catches").delete().eq("id", id);
+  const { error } = await d1Client.from("catches").delete().eq("id", id);
   if (error) {
     window.alert("Nie udało się usunąć połowu.");
     return;
@@ -536,7 +535,7 @@ async function deleteCatch(id) {
 }
 
 async function editCatch(id) {
-  const catches = await loadCatchesFromSupabase();
+  const catches = await loadCatchesFromD1();
   const item = catches.find(c => Number(c.id) === Number(id));
   if (item) fillCatchFormForEdit(item);
 }
@@ -603,7 +602,7 @@ async function renderCatchesPage() {
   const list = $("catches-list");
   if (!list) return;
   list.innerHTML = '<div class="empty-box">Ładowanie połowów...</div>';
-  const [catches, spots] = await Promise.all([loadCatchesFromSupabase(), loadSpotsFromSupabase()]);
+  const [catches, spots] = await Promise.all([loadCatchesFromD1(), loadSpotsFromD1()]);
   populateSpotSelect(spots);
   renderCatchSummary(catches, spots);
   renderCatchesList(catches, spots);
@@ -619,7 +618,7 @@ function bindCatchesPageEvents() {
   $("spot-id")?.addEventListener("change", async e => {
     const selectedId = Number(e.target.value);
     if (!Number.isFinite(selectedId)) return;
-    const spots = await loadSpotsFromSupabase();
+    const spots = await loadSpotsFromD1();
     const selectedSpot = spots.find(spot => Number(spot.id) === selectedId);
     if (selectedSpot && !normalizeText($("spot")?.value, 80)) {
       $("spot").value = selectedSpot.name;
@@ -680,7 +679,7 @@ function resetChecklistForm() {
 
 async function handleChecklistSubmit(event) {
   event.preventDefault();
-  if (!supabaseClient) return;
+  if (!d1Client) return;
 
   const validation = validateChecklistPayload({
     category: $("check-category")?.value,
@@ -700,9 +699,9 @@ async function handleChecklistSubmit(event) {
 
   let error;
   if (editId) {
-    ({ error } = await supabaseClient.from("checklist_items").update(validation.payload).eq("id", Number(editId)));
+    ({ error } = await d1Client.from("checklist_items").update(validation.payload).eq("id", Number(editId)));
   } else {
-    ({ error } = await supabaseClient.from("checklist_items").insert([validation.payload]));
+    ({ error } = await d1Client.from("checklist_items").insert([validation.payload]));
   }
 
   if (error) {
@@ -717,9 +716,9 @@ async function handleChecklistSubmit(event) {
 }
 
 async function deleteChecklistItem(id) {
-  if (!supabaseClient) return;
+  if (!d1Client) return;
   if (!window.confirm("Usunąć tę pozycję?")) return;
-  const { error } = await supabaseClient.from("checklist_items").delete().eq("id", id);
+  const { error } = await d1Client.from("checklist_items").delete().eq("id", id);
   if (error) {
     window.alert("Nie udało się usunąć pozycji.");
     return;
@@ -729,14 +728,14 @@ async function deleteChecklistItem(id) {
 }
 
 async function editChecklistItem(id) {
-  const items = await loadChecklistFromSupabase();
+  const items = await loadChecklistFromD1();
   const item = items.find(row => Number(row.id) === Number(id));
   if (item) fillChecklistFormForEdit(item);
 }
 
 async function toggleChecklistItem(id, done) {
-  if (!supabaseClient) return;
-  const { error } = await supabaseClient.from("checklist_items").update({ done }).eq("id", id);
+  if (!d1Client) return;
+  const { error } = await d1Client.from("checklist_items").update({ done }).eq("id", id);
   if (error) {
     console.error("Błąd aktualizacji checklisty:", error.message);
     return;
@@ -811,7 +810,7 @@ async function renderChecklistPage() {
   }
 
   container.innerHTML = '<div class="empty-box">Ładowanie checklist...</div>';
-  const items = await loadChecklistFromSupabase();
+  const items = await loadChecklistFromD1();
   renderChecklistSummary(items);
   renderChecklistGroups(items);
 }
@@ -880,7 +879,7 @@ function resetSpotForm() {
 
 async function handleSpotSubmit(event) {
   event.preventDefault();
-  if (!supabaseClient) return;
+  if (!d1Client) return;
 
   const validation = validateSpotPayload({
     name: $("spot-name")?.value,
@@ -903,9 +902,9 @@ async function handleSpotSubmit(event) {
 
   let error;
   if (editId) {
-    ({ error } = await supabaseClient.from("spots").update(validation.payload).eq("id", Number(editId)));
+    ({ error } = await d1Client.from("spots").update(validation.payload).eq("id", Number(editId)));
   } else {
-    ({ error } = await supabaseClient.from("spots").insert([validation.payload]));
+    ({ error } = await d1Client.from("spots").insert([validation.payload]));
   }
 
   if (error) {
@@ -917,32 +916,32 @@ async function handleSpotSubmit(event) {
   resetSpotForm();
   setMessage("spot-message", editId ? "Zmiany zapisane." : "Spot został dodany.", "success");
   await renderSpotsPage();
-  const spots = await loadSpotsFromSupabase();
+  const spots = await loadSpotsFromD1();
   populateSpotSelect(spots);
 }
 
 async function deleteSpot(id) {
-  if (!supabaseClient) return;
+  if (!d1Client) return;
 
-  const spots = await loadSpotsFromSupabase();
+  const spots = await loadSpotsFromD1();
   const spot = spots.find(item => Number(item.id) === Number(id));
   const spotName = normalizeText(spot?.name || "", 80);
 
   if (!window.confirm("Usunąć ten spot?")) return;
 
-  const { error } = await supabaseClient.from("spots").delete().eq("id", id);
+  const { error } = await d1Client.from("spots").delete().eq("id", id);
   if (error) {
     window.alert("Nie udało się usunąć spotu.");
     return;
   }
   await renderSpotsPage();
-  const refreshedSpots = await loadSpotsFromSupabase();
+  const refreshedSpots = await loadSpotsFromD1();
   populateSpotSelect(refreshedSpots);
   Dream.undo('spots', id, renderSpotsPage);
 }
 
 async function editSpot(id) {
-  const spots = await loadSpotsFromSupabase();
+  const spots = await loadSpotsFromD1();
   const item = spots.find(spot => Number(spot.id) === Number(id));
   if (item) fillSpotFormForEdit(item);
 }
@@ -1017,7 +1016,7 @@ async function renderSpotsPage() {
   }
 
   list.innerHTML = '<div class="empty-box">Ładowanie spotów...</div>';
-  const spots = await loadSpotsFromSupabase();
+  const spots = await loadSpotsFromD1();
   renderSpotsSummary(spots);
   renderSpotsList(spots);
 }
@@ -1120,9 +1119,9 @@ function guardedSubmit(handler) {
 
 async function initDashboardPage() {
   const [catches, spots, checklist] = await Promise.all([
-    loadCatchesFromSupabase(),
-    loadSpotsFromSupabase(),
-    loadChecklistFromSupabase()
+    loadCatchesFromD1(),
+    loadSpotsFromD1(),
+    loadChecklistFromD1()
   ]);
   updateDashboard(catches, spots, checklist);
   setupRealtime();

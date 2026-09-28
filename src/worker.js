@@ -12,6 +12,19 @@ const stmt = (env, sql, ...args) => env.DB.prepare(sql).bind(...args);
 const parseFacts = value => { try { return JSON.parse(value || '{}'); } catch { return {}; } };
 const tables = { catches:'catches', spots:'spots', checklist:'checklist_items' };
 
+async function authorized(request, secret) {
+  // The credential lives only in a Cloudflare Worker secret, never in source or D1.
+  if (!secret) return true; // Enable after provisioning the production secret.
+  if (typeof secret !== 'string' || secret.length < 32) return false;
+  const provided = request.headers.get('authorization') || '';
+  const token = provided.startsWith('Bearer ') ? provided.slice(7) : '';
+  const digest = async value => new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)));
+  const [expected,actual] = await Promise.all([digest(secret),digest(token)]);
+  let mismatch=0;
+  for(let i=0;i<expected.length;i++) mismatch|=expected[i]^actual[i];
+  return mismatch===0 && token.length>0;
+}
+
 async function tripExists(env, id) {
   const trip = await one(env,'SELECT * FROM trips WHERE id=?',id);
   if (!trip) fail('Nie znaleziono wyjazdu.',404);
@@ -41,9 +54,8 @@ async function bootstrap(env) {
     stats:{fishCount:0,totalWeightKg:0,biggestFishKg:0,...stats.find(s=>s.tripId===t.id),biggestFishAngler:leaders.find(s=>s.tripId===t.id)?.anglerName||null,bestSpot:topSpots.find(s=>s.tripId===t.id)?.spot||null}
   }));
   const record = await one(env,`SELECT c.id,c.trip_id tripId,c.weight_kg weightKg,c.caught_at caughtAt,c.species,a.id anglerId,a.name anglerName,t.lake,t.year FROM catches c JOIN anglers a ON a.id=c.angler_id JOIN trips t ON t.id=c.trip_id WHERE c.deleted_at IS NULL ORDER BY c.weight_kg DESC,c.caught_at,c.id LIMIT 1`);
-  const marker = await one(env,"SELECT value FROM app_settings WHERE key='supabase_import_v2'");
   return {app:{name:'Dream Team',version:'1.1.1',activeTripId:trips.find(t=>t.isActive)?.id||null},anglers,lakes,trips,
-    allTime:{anglers,dreamTeamRecord:record||null},legacyImport:marker?parseFacts(marker.value):null};
+    allTime:{anglers,dreamTeamRecord:record||null}};
 }
 async function participantsFor(env, ids) {
   if (!Array.isArray(ids)||!ids.length||ids.length>30||ids.some(x=>typeof x!=='string')) fail('Wybierz od 1 do 30 uczestników.');
@@ -176,15 +188,18 @@ export default {
     const url=new URL(request.url),method=request.method,path=url.pathname;
     try{
       if(!path.startsWith('/api/'))return env.ASSETS.fetch(request);
+      const write=['POST','PUT','PATCH','DELETE'].includes(method);
+      if(write||path==='/api/export'){
+        if(!await authorized(request,env.RYBY_API_WRITE_TOKEN))return json({ok:false,error:'Wymagane uprawnienie do zapisu lub pobrania kopii.'},401,{'www-authenticate':'Bearer realm="RYBY"'});
+      }
       await ensureSchema(env);
-      if(['POST','PUT','PATCH','DELETE'].includes(method)){
+      if(write){
         const origin=request.headers.get('origin');
         if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return json({ok:false,error:'Cross-origin write blocked'},403);
       }
       if(path==='/api/health'&&method==='GET'){
         const version=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
-        const marker=await one(env,"SELECT value FROM app_settings WHERE key='supabase_import_v2'");
-        return json({ok:true,app:'dream-team',version:'1.1.1',database:'connected',schemaVersion:version?.value||null,legacyImport:marker?parseFacts(marker.value):null});
+        return json({ok:true,app:'dream-team',version:'1.1.1',database:'connected',schemaVersion:version?.value||null});
       }
       if(path==='/api/bootstrap'&&method==='GET')return json(await bootstrap(env));
       if(path==='/api/weather'&&method==='GET')return json(await weatherForTrip(env,url.searchParams.get('tripId')),200,{'cache-control':'public, max-age=300'});

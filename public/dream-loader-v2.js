@@ -1,5 +1,5 @@
 (async () => {
-  const VERSION='20260928-2';
+  const VERSION='20260928-3';
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
@@ -14,7 +14,7 @@
       const normalize=p=>p.replace(/\/index(?:\.html)?$/,'/').replace(/\.html$/,'').replace(/\/$/,'');
       const active=normalize(new URL(a.href).pathname)===normalize(location.pathname);a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');
     });
-    await loadScript('d1-supabase-compat.js');
+    await loadScript('d1-api-compat.js');
     await loadScript('app.js');
     await loadScript('app-plus.js');
     await loadScript('trip-renderer-v2.js');
