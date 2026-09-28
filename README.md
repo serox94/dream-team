@@ -1,14 +1,36 @@
-# Dream Team
+# RYBY / Dream Team
 
-Stała aplikacja do organizacji wyjazdów karpiowych Patryka i Maćka.
+Jedna aplikacja do wyjazdów wędkarskich na wiele lat.
 
-## Architektura
+Produkcja: https://dream-team.sewerynski00.workers.dev/
 
-- Cloudflare Workers — hosting aplikacji i API
-- Cloudflare D1 — trwała baza danych
-- GitHub — kod, historia zmian i automatyczne wdrożenia
-- `public/` — frontend
-- `src/worker.js` — API
-- `migrations/` — wersjonowany schemat bazy
+Źródłem produkcji jest `serox94/dream-team`. Repozytorium `serox94/ryby2026` pozostaje archiwum i źródłem wcześniejszych materiałów.
 
-Projekt jest wieloletni: łowiska, terminy i wyjazdy są danymi, a nie osobnymi stronami.
+## Korzystanie
+
+- **Wyjazdy i archiwum**: dodawanie wyjazdu, roku, terminu, uczestników, łowiska, kopiowanie checklisty, ustawienie aktywnego wyjazdu i archiwizacja.
+- Lista w nagłówku wybiera oglądany wyjazd. Gwiazdka oznacza wspólny aktywny wyjazd. Sam podgląd nie zmienia aktywnego wyjazdu.
+- Dane połowów, spotów i checklisty należą do wyjazdu. PB uwzględnia wszystkie lata i zapisany rekord sprzed aplikacji.
+- Godziny są pokazywane w strefie czasowej łowiska. Brak terminu oznacza „termin do ustalenia”.
+- Usunięcie wpisu można cofnąć od razu lub w panelu przywracania. Archiwizacja nie usuwa połowów.
+- Panel pozwala pobrać kopię JSON całej bazy. Kopia zawiera również ukryte wpisy i historię importu.
+
+## Uruchomienie i weryfikacja
+
+Node.js 24, `npm ci`, `npm test`, `npm run build`.
+
+`npm run dev` uruchamia standardowy serwer Wrangler. Najpierw zastosuj lokalne migracje poleceniem `npm run db:migrate:local`.
+
+`npm run dev:qa` uruchamia lokalny podgląd z tym samym handlerem Worker i jednorazową bazą SQLite. Dane testowe znikają po zatrzymaniu procesu. Nie łączy się z produkcyjną bazą.
+
+`/responsive-check.html` umożliwia kontrolę tych samych ekranów w ramce 360, 390 lub 1280 px. Jest narzędziem QA; nie jest emulatorem urządzenia mobilnego.
+
+## Deployment i dane
+
+- Cloudflare Workers: istniejący hosting i API; Cloudflare D1: istniejąca baza `dream-team-db`.
+- `npm run deploy:production`: testy → przygotowanie assetów → migracje zdalne → deploy.
+- Migracja `0017` dodaje uczestników wyjazdu, podstawę PB i odzyskiwanie wpisów; nie usuwa oryginalnych rekordów.
+- GitHub Actions sprawdza testy, migracje i build. Wdrożenie wykonuje istniejące połączenie Cloudflare z gałęzią `main`.
+- Przed ręcznymi migracjami zewnętrznymi zawsze pobierz eksport i zweryfikuj kopię. Nie uruchamiaj ponownie starego importera Supabase z opcją wymuszonego czyszczenia.
+
+Szczegóły: [architektura](ARCHITECTURE.md), [audyt](docs/AUDIT-2026-09-28.md).

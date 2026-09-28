@@ -1,6 +1,6 @@
 # Dream Team — permanent architecture
 
-Dream Team is one multi-year carp fishing trip manager for Patryk and Maciek. It must never require a new website for a new year or lake.
+Dream Team is one multi-year carp fishing trip manager for its participating anglers. It must never require a new website for a new year or lake.
 
 ## Source of truth
 
@@ -12,7 +12,7 @@ These are global and independent of a trip/lake:
 - Wezly
 - Rigi
 - application shell/navigation/responsive UI
-- anglers Patryk and Maciek
+- anglers and historical personal bests
 - all-time statistics and personal bests
 
 ## Trip-scoped modules
@@ -36,8 +36,8 @@ Advice combines lake knowledge with the trip date/season and can be extended wit
 ## Statistics
 
 - Trip record: largest catch in the selected trip.
-- Angler PB: largest catch by that angler across every trip/year.
-- Dream Team record: largest catch by either angler across every trip/year.
+- Angler PB: maximum of the recorded pre-application PB and non-deleted catches across every trip/year.
+- Dream Team record: largest catch by any angler across every trip/year.
 - Historical catches are never deleted when a trip is archived.
 
 ## UI rule
@@ -53,3 +53,13 @@ Adding a future trip must require only:
 4. activate/select the trip.
 
 No new HTML pages and no lake-specific JavaScript branches should be required.
+
+## Runtime and recovery (2026-09)
+
+`dream-core.js` owns API access, lake timezone conversion and header state. The loader initializes existing screen modules once, after bootstrap. The compatibility facade preserves the legacy frontend API while routing all persistence to D1. There is no runtime Supabase dependency.
+
+`trip_participants` joins trips and anglers. Catch, spot and checklist writes require the selected trip. Archiving does not remove data. Deletions set `deleted_at`; recovery and full JSON export retain the original IDs and links.
+
+Lake profiles are editable in the management page, including coordinates, timezone, maps, rules, logistics and advice. Existing trip-specific researched documents remain in D1. Preserved rich Plaine material is a static content pack under `public/data/lakes/`, selected by profile data. New lake profiles use generic renderers and do not need a new HTML page.
+
+Cloudflare builds use Node 24 (`.node-version`). Production deployment applies the additive migration before publishing the Worker. Rollback should restore code only; never drop the additive columns or clear data to roll back a release.
