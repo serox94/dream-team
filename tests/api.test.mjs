@@ -2,9 +2,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/worker.js';
 import {database} from './db.mjs';
-const setup=()=>{const DB=database();return {DB,async req(path,method='GET',value,headers={}){const r=await worker.fetch(new Request('https://dream.test/api/'+path,{method,headers:{'content-type':'application/json',...headers},body:value===undefined?undefined:JSON.stringify(value)}),{DB,ASSETS:{fetch:()=>new Response('asset')}});return {status:r.status,data:await r.json()};}};};
+const setup=(WEATHER_FETCH)=>{const DB=database();return {DB,async req(path,method='GET',value,headers={}){const r=await worker.fetch(new Request('https://dream.test/api/'+path,{method,headers:{'content-type':'application/json',...headers},body:value===undefined?undefined:JSON.stringify(value)}),{DB,WEATHER_FETCH,ASSETS:{fetch:()=>new Response('asset')}});return {status:r.status,data:await r.json()};}};};
 const scoped=(resource,id,trip='next-trip')=>`${resource}/${id}?tripId=${trip}`;
 const catchData={tripId:'next-trip',anglerId:'patryk',weightKg:14,bait:'test',caughtAt:'2026-09-01T10:00:00Z'};
+
+test('weather uses only coordinates of a stored trip and handles upstream failures',async()=>{
+ const calls=[],s=setup(async (url)=>{calls.push(new URL(url));return Response.json({current:{temperature_2m:15},hourly:{time:['2026-09-28T12:00']},daily:{time:['2026-09-28']}});});
+ try{
+  assert.equal((await s.req('weather?tripId=next-trip&latitude=0&longitude=0')).status,200);
+  assert.equal(calls.length,1);assert.equal(calls[0].hostname,'api.open-meteo.com');
+  assert.notEqual(calls[0].searchParams.get('latitude'),'0');
+  assert.equal(calls[0].searchParams.get('forecast_days'),'7');
+  assert.ok(calls[0].searchParams.get('hourly').includes('soil_temperature_0cm'));
+  assert.equal((await s.req('weather?tripId=not-a-trip')).status,404);
+  assert.equal((await s.req('weather')).status,400);
+  s.DB.sqlite.exec("UPDATE lakes SET latitude=NULL,longitude=NULL WHERE id='plaine2'; UPDATE trips SET latitude=NULL,longitude=NULL WHERE id='next-trip'");
+  assert.equal((await s.req('weather?tripId=next-trip')).status,422);
+ }finally{s.DB.close();}
+ const broken=setup(async()=>new Response('Service Unavailable',{status:503}));
+ try{const r=await broken.req('weather?tripId=next-trip');assert.equal(r.status,502);assert.match(r.data.error,/503/);}finally{broken.DB.close();}
+});
 
 test('all migrations, bootstrap, participants, original PB and legacy content survive',async()=>{
  const s=setup(),b=(await s.req('bootstrap')).data;

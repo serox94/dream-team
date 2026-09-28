@@ -494,58 +494,11 @@
   async function fetchWeatherDataEnhanced() {
     const spot = getFishingSpotSafe();
     if (spot.latitude == null || spot.longitude == null) throw new Error("Uzupełnij GPS łowiska w panelu wyjazdów.");
-    const params = new URLSearchParams({
-      latitude: String(spot.latitude),
-      longitude: String(spot.longitude),
-      current: [
-        "temperature_2m",
-        "apparent_temperature",
-        "relative_humidity_2m",
-        "dew_point_2m",
-        "precipitation",
-        "weather_code",
-        "pressure_msl",
-        "wind_speed_10m",
-        "wind_direction_10m",
-        "wind_gusts_10m",
-        "cloud_cover",
-        "visibility",
-        "uv_index"
-      ].join(","),
-      hourly: [
-        "temperature_2m",
-        "apparent_temperature",
-        "relative_humidity_2m",
-        "dew_point_2m",
-        "precipitation",
-        "weather_code",
-        "pressure_msl",
-        "wind_speed_10m",
-        "wind_direction_10m",
-        "wind_gusts_10m",
-        "cloud_cover",
-        "visibility",
-        "uv_index",
-        "soil_temperature_0cm",
-        "soil_moisture_0_to_1cm"
-      ].join(","),
-      daily: [
-        "weather_code",
-        "temperature_2m_max",
-        "temperature_2m_min",
-        "precipitation_sum",
-        "wind_speed_10m_max",
-        "wind_direction_10m_dominant",
-        "wind_gusts_10m_max",
-        "sunshine_duration",
-        "uv_index_max"
-      ].join(","),
-      timezone: "auto",
-      forecast_days: "7"
-    });
-
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, { signal: AbortSignal.timeout(15000) });
-    if (!response.ok) throw new Error(`Błąd pobierania pogody: ${response.status}`);
+    const response = await fetch(`/api/weather?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`, { signal: AbortSignal.timeout(18000) });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || `Błąd pobierania pogody: ${response.status}`);
+    }
     return response.json();
   }
 

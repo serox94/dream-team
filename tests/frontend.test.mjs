@@ -8,7 +8,7 @@ async function page(server,path,trip='next-trip',failure=null){
  const dom=await JSDOM.fromURL(server.url+path,{resources:'usable',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:console,beforeParse(w){
   w.localStorage.setItem('dream_team_viewed_trip',trip);w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;w.alert=()=>{};
   w.AbortController=AbortController;w.AbortSignal=AbortSignal;w.ResizeObserver=class{observe(){}disconnect(){}};
-  w.fetch=async(url,opts)=>{calls.push({url:String(url),method:opts?.method||'GET'});if(String(url).startsWith('https://api.open-meteo.com'))return new Response(JSON.stringify(weather()),{status:200});if(failure&&String(url).includes(failure))return new Response('{"ok":false,"error":"Offline test"}',{status:503});return fetch(new URL(url,server.url),opts);};
+  w.fetch=async(url,opts)=>{calls.push({url:String(url),method:opts?.method||'GET'});if(String(url).startsWith('/api/weather'))return new Response(JSON.stringify(weather()),{status:200});if(failure&&String(url).includes(failure))return new Response('{"ok":false,"error":"Offline test"}',{status:503});return fetch(new URL(url,server.url),opts);};
  }});
  await waitFor(()=>dom.window.document.documentElement.dataset.ready,'page '+path);
  return {dom,w:dom.window,d:dom.window.document,errors,calls,close(){dom.window.close();}};
@@ -26,7 +26,7 @@ test('every route boots, preserves legacy knowledge, sends no duplicate initial 
   const p=await page(s,path);try{assert.equal(p.d.documentElement.dataset.ready,'true',path+': '+p.errors.join(';'));assert.deepEqual(p.errors,[],path);assert.ok(p.d.querySelector('main').textContent.length>80);assert.equal(p.calls.filter(x=>x.url==='/api/bootstrap').length,1);
    if(path==='/'){assert.equal(p.d.getElementById('total-fish').textContent,'2');assert.equal(p.d.getElementById('angler-maciek-pb-text').textContent,'18.0 kg');}
    if(path.includes('checklisty'))assert.equal(p.d.getElementById('check-all-count').textContent,'2');
-   if(path.includes('pogoda'))assert.equal(p.calls.filter(x=>x.url.includes('open-meteo')).length,1);
+   if(path.includes('pogoda'))assert.equal(p.calls.filter(x=>x.url.startsWith('/api/weather?tripId=next-trip')).length,1);
   }finally{p.close();}
  }}finally{await s.close();}
 });

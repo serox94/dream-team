@@ -175,16 +175,7 @@
     if(dashboardWeatherCache && Date.now()-dashboardWeatherCache.at<600000)return dashboardWeatherCache.data;
     const spot = getSpotCoordsSafe();
     if (spot.latitude == null || spot.longitude == null) throw new Error("Brak GPS łowiska.");
-    const params = new URLSearchParams({
-      latitude: String(spot.latitude),
-      longitude: String(spot.longitude),
-      hourly: "temperature_2m,pressure_msl,wind_speed_10m,wind_gusts_10m,cloud_cover,precipitation",
-      daily: "wind_speed_10m_max,wind_gusts_10m_max,precipitation_sum",
-      timezone: "auto",
-      forecast_days: "3"
-    });
-
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {signal:AbortSignal.timeout(15000)});
+    const response = await fetch(`/api/weather?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`, {signal:AbortSignal.timeout(18000)});
     if (!response.ok) throw new Error(`Weather ${response.status}`);
     const data=await response.json();
     dashboardWeatherCache={at:Date.now(),data};

@@ -1,5 +1,6 @@
 import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
+import { weatherForTrip } from './weather.js';
 
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
   status, headers: { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-store', 'x-content-type-options':'nosniff', ...extra }
@@ -186,6 +187,7 @@ export default {
         return json({ok:true,app:'dream-team',version:'1.1.1',database:'connected',schemaVersion:version?.value||null,legacyImport:marker?parseFacts(marker.value):null});
       }
       if(path==='/api/bootstrap'&&method==='GET')return json(await bootstrap(env));
+      if(path==='/api/weather'&&method==='GET')return json(await weatherForTrip(env,url.searchParams.get('tripId')),200,{'cache-control':'public, max-age=300'});
       if(path==='/api/export'&&method==='GET')return await exportData(env);
       if(path==='/api/trash'&&method==='GET'){
         const tripId=url.searchParams.get('tripId');if(!tripId)fail('Wymagany tripId.');await tripExists(env,tripId);
