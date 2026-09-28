@@ -76,6 +76,23 @@ test('protected save prompts for a token once and reuses it for later writes',as
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
+test('management page downloads a complete JSON backup through the Worker without writing rows',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/wyjazdy.html');
+ try{
+  let content=null,filename=null;
+  p.w.URL.createObjectURL=blob=>{content=blob;return 'blob:ryby-test';};
+  p.w.URL.revokeObjectURL=()=>{};
+  p.w.HTMLAnchorElement.prototype.click=function(){filename=this.download;};
+  p.d.getElementById('backup-download').click();
+  await waitFor(()=>content&&filename,'backup download');
+  assert.match(filename,/^dream-team-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  const data=JSON.parse(await content.text());
+  assert.equal(data.tables.catches.length,2);
+  assert.equal(s.requests.filter(r=>r.url==='/api/export'&&r.status===200).length,1);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,2);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
 test('new participant and year can be managed in UI; no date fallback; lake knowledge isolated',async()=>{
  const s=await testServe(),p=await page(s,'/pages/wyjazdy.html');
  try{
