@@ -1,24 +1,14 @@
 (function () {
   const $ = (id) => document.getElementById(id);
 
-  function getSupabaseClientSafe() {
-    try {
-      if (typeof window !== "undefined" && window.supabaseClient) return window.supabaseClient;
-    } catch (_) {}
-    try {
-      if (typeof supabaseClient !== "undefined" && supabaseClient) return supabaseClient;
-    } catch (_) {}
-    return null;
-  }
-
   function getFishingSpotSafe() {
     try {
       if (typeof FISHING_SPOT !== "undefined" && FISHING_SPOT) return FISHING_SPOT;
     } catch (_) {}
 
     return {
-      latitude: 50.0,
-      longitude: 5.0,
+      latitude: null,
+      longitude: null,
       name: "Miejsce zasiadki"
     };
   }
@@ -164,52 +154,26 @@
   }
 
   function getHourlyIndexForNow(data) {
-    const currentTime = data?.current?.time;
-    const hourly = data?.hourly?.time || [];
-    const index = hourly.indexOf(currentTime);
-    if (index >= 0) return index;
-
-    const now = Date.now();
-    let closestIndex = 0;
-    let closestDiff = Infinity;
-
-    hourly.forEach((value, idx) => {
-      const diff = Math.abs(new Date(value).getTime() - now);
-      if (diff < closestDiff) {
-        closestDiff = diff;
-        closestIndex = idx;
-      }
-    });
-
-    return closestIndex;
+    const times=data?.hourly?.time||[], current=data?.current?.time;
+    if(!current || !times.length) throw new Error('Brak czasu prognozy.');
+    const hour=current.slice(0,13)+':00';
+    const index=times.indexOf(hour);
+    if(index>=0)return index;
+    const next=times.findIndex(t=>t>=hour);
+    return next<0?times.length-1:next;
   }
 
-  function pickNearestNightWindow(hourly, startIndex) {
-    const times = hourly.time || [];
-    const start = Math.max(0, startIndex);
-
-    for (let i = start; i < times.length; i += 1) {
-      const hour = new Date(times[i]).getHours();
-      if (hour >= 22 || hour <= 5) {
-        return {
-          temp: Number(hourly.temperature_2m?.[i] || 0),
-          wind: Number(hourly.wind_speed_10m?.[i] || 0),
-          gusts: Number(hourly.wind_gusts_10m?.[i] || 0),
-          humidity: Number(hourly.relative_humidity_2m?.[i] || 0),
-          visibility: Number(hourly.visibility?.[i] || 0),
-          cloud: Number(hourly.cloud_cover?.[i] || 0)
-        };
-      }
+  function pickNearestNightWindow(hourly,startIndex) {
+    const indices=[];
+    for(let i=Math.max(0,startIndex);i<(hourly.time||[]).length;i++){
+      const hour=Number(hourly.time[i].slice(11,13));
+      if(hour>=22||hour<=5)indices.push(i);
+      else if(indices.length)break;
     }
-
-    return {
-      temp: Number(hourly.temperature_2m?.[start] || 0),
-      wind: Number(hourly.wind_speed_10m?.[start] || 0),
-      gusts: Number(hourly.wind_gusts_10m?.[start] || 0),
-      humidity: Number(hourly.relative_humidity_2m?.[start] || 0),
-      visibility: Number(hourly.visibility?.[start] || 0),
-      cloud: Number(hourly.cloud_cover?.[start] || 0)
-    };
+    if(!indices.length)indices.push(startIndex);
+    const vals=key=>indices.map(i=>hourly[key]?.[i]).filter(v=>v!=null).map(Number);
+    const min=key=>Math.min(...vals(key)),max=key=>Math.max(...vals(key));
+    return {temp:min('temperature_2m'),wind:max('wind_speed_10m'),gusts:max('wind_gusts_10m'),humidity:max('relative_humidity_2m'),visibility:min('visibility'),cloud:max('cloud_cover')};
   }
 
   function getNightCampRating(night) {
@@ -529,6 +493,7 @@
 
   async function fetchWeatherDataEnhanced() {
     const spot = getFishingSpotSafe();
+    if (spot.latitude == null || spot.longitude == null) throw new Error("Uzupełnij GPS łowiska w panelu wyjazdów.");
     const params = new URLSearchParams({
       latitude: String(spot.latitude),
       longitude: String(spot.longitude),
@@ -579,7 +544,7 @@
       forecast_days: "7"
     });
 
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, { signal: AbortSignal.timeout(15000) });
     if (!response.ok) throw new Error(`Błąd pobierania pogody: ${response.status}`);
     return response.json();
   }
@@ -606,7 +571,7 @@
     if ($("weather-current-condition-icon")) $("weather-current-condition-icon").textContent = icon;
     if ($("weather-summary-location")) $("weather-summary-location").textContent = spot.name || "Miejsce zasiadki";
     if ($("weather-summary-updated")) {
-      $("weather-summary-updated").textContent = `Aktualizacja: ${new Date().toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" })}`;
+      $("weather-summary-updated").textContent = `Dane: ${current.time.replace("T", " ")} · ${data.timezone || Dream.zone()}`;
     }
     if ($("weather-rating-hero")) $("weather-rating-hero").textContent = `Ocena: ${rating}`;
     if ($("bite-chance-hero")) $("bite-chance-hero").textContent = `Brania: ${biteAnalysis.label}`;
@@ -792,6 +757,7 @@
       renderDailyWeatherEnhanced(data);
     } catch (error) {
       console.error(error);
+      Dream.notice(`Pogoda niedostępna: ${error.message}`,true);
       const ids = [
         "weather-current-temp",
         "weather-current-wind",
@@ -814,110 +780,6 @@
     }
   }
 
-  async function overrideChecklistSubmit(event) {
-    const form = $("checklist-form");
-    if (!form) return;
-
-    event.preventDefault();
-    event.stopImmediatePropagation();
-
-    const client = getSupabaseClientSafe();
-    if (!client) return;
-
-    const editId = $("edit-check-id")?.value || "";
-    const category = normalizeText($("check-category")?.value, 40);
-    const itemName = normalizeText($("check-name")?.value, 80);
-    const unit = normalizeText($("check-unit")?.value, 20) || "szt.";
-    const quantityRaw = $("check-quantity")?.value;
-    const quantity = quantityRaw === "" ? null : Number(quantityRaw);
-
-    const allowedCategories = ["sprzęt", "zakupy", "jedzenie / picie"];
-    const allowedUnits = ["szt.", "kg", "litry"];
-
-    const message = $("checklist-message");
-    const setMessage = (text, type = "") => {
-      if (!message) return;
-      message.textContent = text;
-      message.className = `form-message ${type}`.trim();
-    };
-
-    if (!allowedCategories.includes(category)) {
-      setMessage("Wybierz poprawną kategorię.", "error");
-      return;
-    }
-
-    if (!itemName) {
-      setMessage("Podaj nazwę pozycji.", "error");
-      return;
-    }
-
-    if (quantity !== null && (!Number.isFinite(quantity) || quantity < 0)) {
-      setMessage("Ilość musi być liczbą 0 lub większą.", "error");
-      return;
-    }
-
-    if (!allowedUnits.includes(unit)) {
-      setMessage("Wybierz poprawną jednostkę.", "error");
-      return;
-    }
-
-    setMessage(editId ? "Zapisywanie zmian..." : "Dodawanie pozycji...");
-
-    try {
-      if (editId) {
-        const { data: existing, error: existingError } = await client
-          .from("checklist_items")
-          .select("done")
-          .eq("id", Number(editId))
-          .single();
-
-        if (existingError) throw existingError;
-
-        const { error } = await client
-          .from("checklist_items")
-          .update({
-            category,
-            item_name: itemName,
-            quantity,
-            unit,
-            done: Boolean(existing?.done)
-          })
-          .eq("id", Number(editId));
-
-        if (error) throw error;
-        setMessage("Zmiany zapisane.", "success");
-      } else {
-        const { error } = await client
-          .from("checklist_items")
-          .insert([{
-            category,
-            item_name: itemName,
-            quantity,
-            unit,
-            done: false
-          }]);
-
-        if (error) throw error;
-        setMessage("Pozycja została dodana.", "success");
-      }
-
-      form.reset();
-      if ($("edit-check-id")) $("edit-check-id").value = "";
-      if ($("checklist-form-title")) $("checklist-form-title").textContent = "Dodaj pozycję";
-      if ($("save-check-btn")) $("save-check-btn").textContent = "Dodaj pozycję";
-      if ($("cancel-edit-check-btn")) $("cancel-edit-check-btn").classList.add("hidden");
-
-      if (typeof renderChecklistPage === "function") {
-        await renderChecklistPage();
-      } else {
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error(error);
-      setMessage(editId ? "Nie udało się zapisać zmian." : "Nie udało się dodać pozycji.", "error");
-    }
-  }
-
   function enhanceNavigationIcons() {
     const nav = document.querySelector(".main-nav");
     if (nav) nav.classList.add("nav-iconized");
@@ -929,32 +791,14 @@
     });
   }
 
-  function bindChecklistFix() {
-    const form = $("checklist-form");
-    if (!form) return;
-    form.addEventListener("submit", overrideChecklistSubmit, true);
-  }
-
-  function init() {
+  async function init() {
     enhanceNavigationIcons();
     bindRefreshButton();
 
     if ($("weather-current-temp")) {
-      renderEnhancedWeatherPage();
+      await renderEnhancedWeatherPage();
     }
   }
 
-  function bootFixes() {
-    if (window.RybyAuth && !window.RybyAuth.isAuthenticated()) {
-      document.addEventListener("ryby:auth-success", init, { once: true });
-      return;
-    }
-    init();
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootFixes);
-  } else {
-    bootFixes();
-  }
+  window.DreamWeather = { init, render: renderEnhancedWeatherPage, getHourlyIndexForNow, pickNearestNightWindow };
 })();

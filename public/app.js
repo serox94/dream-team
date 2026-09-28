@@ -1,47 +1,16 @@
-const TRIP_START = new Date(window.DREAM_TRIP?.start || "2026-11-14T12:00:00+01:00");
-const TRIP_END = new Date(window.DREAM_TRIP?.end || "2026-11-21T10:00:00+01:00");
-const PB_TARGET = 13;
-const PB_SOUND_THRESHOLD = 13;
+const TRIP_START = window.DREAM_TRIP?.start ? new Date(window.DREAM_TRIP.start) : null;
+const TRIP_END = window.DREAM_TRIP?.end ? new Date(window.DREAM_TRIP.end) : null;
 const PB_CELEBRATION_STORAGE_KEY = "ryby2026_pb_celebrated_catches";
 
 const supabaseClient = window.d1SupabaseCompat || window.supabaseClient || null;
 window.supabaseClient = supabaseClient;
 
 const FISHING_SPOT = {
-  name: window.DREAM_TRIP?.lake || "LodgingCarp - La Plaine des Bois 2",
-  latitude: Number(window.DREAM_TRIP?.latitude ?? 48.064130),
-  longitude: Number(window.DREAM_TRIP?.longitude ?? 2.757058)
+  name: window.DREAM_TRIP?.lakeProfile?.name || window.DREAM_TRIP?.lake || 'Łowisko',
+  latitude: window.DREAM_TRIP?.lakeProfile?.latitude ?? window.DREAM_TRIP?.latitude ?? null,
+  longitude: window.DREAM_TRIP?.lakeProfile?.longitude ?? window.DREAM_TRIP?.longitude ?? null
 };
-
-const FALLBACK_CATCHES = false ? [
-  {
-    person: "Patryk",
-    species: "Karp",
-    weight: 14.2,
-    bait: "Scopex",
-    spot: "Spot 3",
-    note: null,
-    caught_at: "2026-06-21T05:40:00"
-  },
-  {
-    person: "Maciek",
-    species: "Karp",
-    weight: 11.8,
-    bait: "Halibut",
-    spot: "Spot 1",
-    note: null,
-    caught_at: "2026-06-21T22:10:00"
-  },
-  {
-    person: "Patryk",
-    species: "Karp",
-    weight: 16.7,
-    bait: "Scopex",
-    spot: "Spot 3",
-    note: null,
-    caught_at: "2026-06-22T04:55:00"
-  }
-] : [];
+const FALLBACK_CATCHES = [];
 
 let realtimeChannelsStarted = false;
 let catchFormBound = false;
@@ -83,20 +52,8 @@ function average(values) {
   return values.reduce((sum, value) => sum + Number(value || 0), 0) / values.length;
 }
 
-function formatCaughtAt(value) {
-  if (!value) return "Brak daty";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Brak daty";
-  return date.toLocaleString("pl-PL");
-}
-
-function formatDateForInput(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60000).toISOString().slice(0, 16);
-}
+function formatCaughtAt(value) { return value ? Dream.format(value) : 'Brak daty'; }
+function formatDateForInput(value) { return Dream.dateInput(value); }
 
 function formatHour(value) {
   return new Date(value).toLocaleString("pl-PL", {
@@ -193,12 +150,11 @@ function playPbCelebrationSound() {
 
 function celebrateCatchIfNeeded(item, { play = true } = {}) {
   if (!item) return false;
-  window.DREAM_RUNTIME_PB = window.DREAM_RUNTIME_PB || Object.fromEntries((window.DREAM_MODEL?.allTime?.anglers || []).map(a => [a.name, Number(a.pbKg || 0)]));
-  const person = item.person || item.anglerName || 'Patryk';
+  const person = item.person || item.anglerName;
+  if (!person) return false;
   const weight = Number(item.weight || item.weightKg || 0);
-  const currentPb = Number(window.DREAM_RUNTIME_PB[person] || 0);
+  const currentPb = Number(window.DREAM_MODEL?.anglers.find(a=>a.name===person)?.pbKg || 0);
   if (!(weight > currentPb)) return false;
-  window.DREAM_RUNTIME_PB[person] = weight;
   const key = getPbCatchKey(item);
   const storedKeys = new Set(getCelebratedPbCatchKeys());
   if (storedKeys.has(key)) return false;
@@ -240,6 +196,7 @@ function updateCountdown() {
   const countdownEl = $("countdown");
   if (!countdownEl) return;
 
+  if (!TRIP_START) { countdownEl.textContent = window.DREAM_TRIP?.status === 'archived' ? 'Status: archiwum · termin nieustalony' : 'Status: termin do ustalenia'; return; }
   const now = new Date();
   if (now < TRIP_START) {
     const diff = TRIP_START - now;
@@ -250,7 +207,7 @@ function updateCountdown() {
     return;
   }
 
-  if (now >= TRIP_START && now <= TRIP_END) {
+  if (now >= TRIP_START && (!TRIP_END || now <= TRIP_END)) {
     countdownEl.textContent = "Status: wyjazd trwa";
     return;
   }
@@ -322,7 +279,7 @@ function getBestHourLabel(catches) {
   if (!catches.length) return "Brak";
   const counts = new Map();
   catches.forEach(item => {
-    const hour = new Date(item.caught_at).getHours();
+    const hour = Dream.hour(item.caught_at);
     if (!Number.isFinite(hour)) return;
     const label = `${String(hour).padStart(2, "0")}:00-${String(hour).padStart(2, "0")}:59`;
     counts.set(label, (counts.get(label) || 0) + 1);
@@ -379,11 +336,11 @@ function getPersonStats(catches, personName, spots = []) {
 }
 
 async function loadCatchesFromSupabase() {
-  if (!supabaseClient) return FALLBACK_CATCHES;
+  if (!supabaseClient) throw new Error('Brak połączenia z bazą.');
   const { data, error } = await supabaseClient.from("catches").select("*").order("caught_at", { ascending: false });
   if (error) {
     console.error("Błąd pobierania połowów:", error.message);
-    return FALLBACK_CATCHES;
+    throw new Error(error.message);
   }
   return data || [];
 }
@@ -397,7 +354,7 @@ async function loadChecklistFromSupabase() {
     .order("created_at", { ascending: true });
   if (error) {
     console.error("Błąd pobierania checklisty:", error.message);
-    return [];
+    throw new Error(error.message);
   }
   return data || [];
 }
@@ -407,7 +364,7 @@ async function loadSpotsFromSupabase() {
   const { data, error } = await supabaseClient.from("spots").select("*").order("created_at", { ascending: true });
   if (error) {
     console.error("Błąd pobierania spotów:", error.message);
-    return [];
+    throw new Error(error.message);
   }
   return data || [];
 }
@@ -440,7 +397,7 @@ function populateSpotSelect(spots) {
 }
 
 function validateCatchPayload(raw) {
-  const person = normalizeText(raw.person, 30);
+  const person = normalizeText(raw.person, 60);
   const species = normalizeText(raw.species, 50);
   const bait = normalizeText(raw.bait, 50);
   const spotText = normalizeText(raw.spot, 80);
@@ -449,14 +406,15 @@ function validateCatchPayload(raw) {
   const spotId = raw.spot_id ? Number(raw.spot_id) : null;
   const caughtAt = raw.caught_at;
 
-  if (!["Patryk", "Maciek"].includes(person)) return { ok: false, message: "Wybierz osobę." };
+  if (!window.DREAM_TRIP.participants.some(a => a.name === person)) return { ok: false, message: "Wybierz osobę." };
   if (!species) return { ok: false, message: "Podaj gatunek." };
   if (!Number.isFinite(weight)) return { ok: false, message: "Podaj poprawną wagę od 0.01 do 99.99 kg." };
   if (!bait) return { ok: false, message: "Podaj przynętę." };
   
   if (!caughtAt) return { ok: false, message: "Podaj datę i godzinę połowu." };
 
-  const caughtDate = new Date(caughtAt);
+  let caughtDate;
+  try { caughtDate = new Date(Dream.fromInput(caughtAt)); } catch (e) { return {ok:false,message:e.message}; }
   if (Number.isNaN(caughtDate.getTime())) return { ok: false, message: "Nieprawidłowa data połowu." };
   if (caughtDate.getTime() > Date.now() + 5 * 60 * 1000) return { ok: false, message: "Data połowu nie może być z przyszłości." };
 
@@ -477,7 +435,7 @@ function validateCatchPayload(raw) {
 
 function fillCatchFormForEdit(item) {
   $("edit-catch-id").value = item.id;
-  $("person").value = item.person || "Patryk";
+  $("person").value = item.person || "";
   $("species").value = item.species || "Karp";
   $("weight").value = item.weight ?? "";
   $("bait").value = item.bait || "";
@@ -558,9 +516,9 @@ async function handleCatchSubmit(event) {
   }
 
   if (savedCatch) celebrateCatchIfNeeded(savedCatch, { play: true });
-
-  setMessage("form-message", editId ? "Zmiany zapisane." : "Połów został dodany.", "success");
   resetCatchForm();
+  setMessage("form-message", editId ? "Zmiany zapisane." : "Połów został dodany.", "success");
+  await Dream.refreshModel();
   await renderCatchesPage();
 }
 
@@ -572,7 +530,9 @@ async function deleteCatch(id) {
     window.alert("Nie udało się usunąć połowu.");
     return;
   }
+  await Dream.refreshModel();
   await renderCatchesPage();
+  Dream.undo('catches', id, renderCatchesPage);
 }
 
 async function editCatch(id) {
@@ -653,8 +613,8 @@ function bindCatchesPageEvents() {
   if (catchFormBound) return;
   catchFormBound = true;
 
-  $("catch-form")?.addEventListener("submit", handleCatchSubmit);
-  $("refresh-catches-btn")?.addEventListener("click", renderCatchesPage);
+  $("catch-form")?.addEventListener("submit", guardedSubmit(handleCatchSubmit));
+  $("refresh-catches-btn")?.addEventListener("click", () => renderCatchesPage().catch(error=>Dream.notice(error.message,true)));
   $("cancel-edit-catch-btn")?.addEventListener("click", resetCatchForm);
   $("spot-id")?.addEventListener("change", async e => {
     const selectedId = Number(e.target.value);
@@ -676,10 +636,10 @@ function validateChecklistPayload(raw) {
   const allowedCategories = ["sprzęt", "zakupy", "jedzenie / picie"];
   const allowedUnits = ["szt.", "kg", "litry"];
 
-  if (!allowedCategories.includes(category)) return { ok: false, message: "Wybierz poprawną kategorię." };
+  if (!category) return { ok: false, message: "Wybierz kategorię." };
   if (!itemName) return { ok: false, message: "Podaj nazwę pozycji." };
   if (Number.isNaN(quantity)) return { ok: false, message: "Ilość musi być liczbą 0 lub większą." };
-  if (!allowedUnits.includes(unit)) return { ok: false, message: "Wybierz poprawną jednostkę." };
+
 
   return {
     ok: true,
@@ -695,6 +655,10 @@ function validateChecklistPayload(raw) {
 
 function fillChecklistFormForEdit(item) {
   $("edit-check-id").value = item.id;
+  for (const [id, value] of [['check-category', item.category], ['check-unit', item.unit || 'szt.']]) {
+    const select = $(id);
+    if (![...select.options].some(o => o.value === value)) { const option = document.createElement('option'); option.value = value; option.textContent = value; select.append(option); }
+  }
   $("check-category").value = item.category;
   $("check-name").value = item.item_name;
   $("check-quantity").value = item.quantity ?? "";
@@ -731,6 +695,7 @@ async function handleChecklistSubmit(event) {
   }
 
   const editId = $("edit-check-id")?.value;
+  if (editId) delete validation.payload.done;
   setMessage("checklist-message", editId ? "Zapisywanie zmian..." : "Dodawanie pozycji...");
 
   let error;
@@ -746,8 +711,8 @@ async function handleChecklistSubmit(event) {
     return;
   }
 
-  setMessage("checklist-message", editId ? "Zmiany zapisane." : "Pozycja została dodana.", "success");
   resetChecklistForm();
+  setMessage("checklist-message", editId ? "Zmiany zapisane." : "Pozycja została dodana.", "success");
   await renderChecklistPage();
 }
 
@@ -760,6 +725,7 @@ async function deleteChecklistItem(id) {
     return;
   }
   await renderChecklistPage();
+  Dream.undo('checklist', id, renderChecklistPage);
 }
 
 async function editChecklistItem(id) {
@@ -853,8 +819,8 @@ async function renderChecklistPage() {
 function bindChecklistPageEvents() {
   if (checklistFormBound) return;
   checklistFormBound = true;
-  $("checklist-form")?.addEventListener("submit", handleChecklistSubmit);
-  $("refresh-checklist-btn")?.addEventListener("click", renderChecklistPage);
+  $("checklist-form")?.addEventListener("submit", guardedSubmit(handleChecklistSubmit));
+  $("refresh-checklist-btn")?.addEventListener("click", () => renderChecklistPage().catch(error=>Dream.notice(error.message,true)));
   $("cancel-edit-check-btn")?.addEventListener("click", resetChecklistForm);
 }
 
@@ -948,8 +914,8 @@ async function handleSpotSubmit(event) {
     return;
   }
 
-  setMessage("spot-message", editId ? "Zmiany zapisane." : "Spot został dodany.", "success");
   resetSpotForm();
+  setMessage("spot-message", editId ? "Zmiany zapisane." : "Spot został dodany.", "success");
   await renderSpotsPage();
   const spots = await loadSpotsFromSupabase();
   populateSpotSelect(spots);
@@ -964,17 +930,6 @@ async function deleteSpot(id) {
 
   if (!window.confirm("Usunąć ten spot?")) return;
 
-  const { error: catchesError } = await supabaseClient
-    .from("catches")
-    .update({ spot: spotName || "Usunięty spot", spot_id: null })
-    .eq("spot_id", Number(id));
-
-  if (catchesError) {
-    console.error("Błąd odpinania połowów od spotu:", catchesError.message);
-    window.alert("Nie udało się bezpiecznie odpiąć połowów od tego spotu.");
-    return;
-  }
-
   const { error } = await supabaseClient.from("spots").delete().eq("id", id);
   if (error) {
     window.alert("Nie udało się usunąć spotu.");
@@ -983,6 +938,7 @@ async function deleteSpot(id) {
   await renderSpotsPage();
   const refreshedSpots = await loadSpotsFromSupabase();
   populateSpotSelect(refreshedSpots);
+  Dream.undo('spots', id, renderSpotsPage);
 }
 
 async function editSpot(id) {
@@ -1069,432 +1025,34 @@ async function renderSpotsPage() {
 function bindSpotsPageEvents() {
   if (spotsFormBound) return;
   spotsFormBound = true;
-  $("spot-form")?.addEventListener("submit", handleSpotSubmit);
-  $("refresh-spots-btn")?.addEventListener("click", renderSpotsPage);
+  $("spot-form")?.addEventListener("submit", guardedSubmit(handleSpotSubmit));
+  $("refresh-spots-btn")?.addEventListener("click", () => renderSpotsPage().catch(error=>Dream.notice(error.message,true)));
   $("cancel-edit-spot-btn")?.addEventListener("click", resetSpotForm);
-}
-
-function weatherCodeToText(code) {
-  const map = {
-    0: "Bezchmurnie",
-    1: "Przeważnie pogodnie",
-    2: "Częściowe zachmurzenie",
-    3: "Pochmurno",
-    45: "Mgła",
-    48: "Mgła osadzająca",
-    51: "Lekka mżawka",
-    53: "Mżawka",
-    55: "Silna mżawka",
-    61: "Słaby deszcz",
-    63: "Deszcz",
-    65: "Silny deszcz",
-    80: "Przelotne opady",
-    81: "Przelotny deszcz",
-    82: "Silne przelotne opady",
-    95: "Burza"
-  };
-  return map[code] || `Kod ${code}`;
-}
-
-function windDirectionToText(deg) {
-  if (deg === null || deg === undefined) return "Brak";
-  const dirs = ["Północ", "Północny-wschód", "Wschód", "Południowy-wschód", "Południe", "Południowy-zachód", "Zachód", "Północny-zachód"];
-  const index = Math.round(Number(deg) / 45) % 8;
-  return `${dirs[index]} (${Math.round(Number(deg))}°)`;
-}
-
-function getHourlyIndexForNow(data) {
-  const currentTime = data?.current?.time;
-  const hourlyTimes = data?.hourly?.time || [];
-  if (!currentTime || !hourlyTimes.length) return 0;
-  const direct = hourlyTimes.indexOf(currentTime);
-  if (direct !== -1) return direct;
-
-  const target = new Date(currentTime).getTime();
-  let bestIndex = 0;
-  let bestDiff = Infinity;
-  hourlyTimes.forEach((time, index) => {
-    const diff = Math.abs(new Date(time).getTime() - target);
-    if (diff < bestDiff) {
-      bestDiff = diff;
-      bestIndex = index;
-    }
-  });
-  return bestIndex;
-}
-
-function getPressureTrend(hourlyPressure, currentIndex = 0) {
-  if (!hourlyPressure || hourlyPressure.length < 2) return "Brak danych";
-  const start = Number(hourlyPressure[currentIndex] ?? hourlyPressure[0]);
-  const compareIndex = Math.min(hourlyPressure.length - 1, currentIndex + 6);
-  const end = Number(hourlyPressure[compareIndex] ?? start);
-  const diff = end - start;
-  if (diff >= 2) return "Rośnie";
-  if (diff <= -2) return "Spada";
-  return "Stabilne";
-}
-
-function getWeatherRating(current, hourly, currentIndex) {
-  const wind = Number(current.wind_speed_10m || 0);
-  const gusts = Number(current.wind_gusts_10m || 0);
-  const pressure = Number(current.pressure_msl || 0);
-  const precipitation = Number(current.precipitation || 0);
-  const trend = getPressureTrend(hourly.pressure_msl, currentIndex);
-
-  let score = 0;
-  if (wind >= 8 && wind <= 22) score += 2;
-  else if (wind > 22) score += 1;
-  if (gusts <= 35) score += 1;
-  else if (gusts > 55) score -= 1;
-  if (pressure >= 1005 && pressure <= 1020) score += 2;
-  else if (pressure >= 995 && pressure <= 1025) score += 1;
-  if (trend === "Spada") score += 2;
-  else if (trend === "Stabilne") score += 1;
-  if (precipitation > 0 && precipitation <= 2) score += 1;
-  if (precipitation > 5) score -= 1;
-
-  if (score >= 6) return "Dobre";
-  if (score >= 3) return "Średnie";
-  return "Słabe";
-}
-
-function getMoonPhaseInfo(dateInput) {
-  const date = new Date(dateInput);
-  const knownNewMoon = new Date("2000-01-06T18:14:00Z");
-  const synodicMonth = 29.53058867;
-  const daysSince = (date - knownNewMoon) / 86400000;
-  const phase = ((daysSince % synodicMonth) + synodicMonth) % synodicMonth;
-  const illumination = (1 - Math.cos((2 * Math.PI * phase) / synodicMonth)) / 2;
-
-  let name = "Nów";
-  if (phase < 1.84566) name = "Nów";
-  else if (phase < 5.53699) name = "Przybywający sierp";
-  else if (phase < 9.22831) name = "Pierwsza kwadra";
-  else if (phase < 12.91963) name = "Przybywający garb";
-  else if (phase < 16.61096) name = "Pełnia";
-  else if (phase < 20.30228) name = "Ubywający garb";
-  else if (phase < 23.99361) name = "Ostatnia kwadra";
-  else if (phase < 27.68493) name = "Ubywający sierp";
-
-  return { name, illumination: `${Math.round(illumination * 100)}%` };
-}
-
-function pickNearestNightWindow(hourly) {
-  if (!hourly?.time?.length) {
-    return { temp: 0, wind: 0, gusts: 0, humidity: 0, visibility: 0 };
-  }
-
-  const buckets = new Map();
-  const now = new Date();
-
-  hourly.time.forEach((time, index) => {
-    const date = new Date(time);
-    const hour = date.getHours();
-    const isNight = hour >= 22 || hour <= 5;
-    if (!isNight) return;
-
-    const bucketDate = new Date(date);
-    if (hour <= 5) bucketDate.setDate(bucketDate.getDate() - 1);
-    const key = bucketDate.toISOString().slice(0, 10);
-
-    if (!buckets.has(key)) {
-      buckets.set(key, {
-        startTime: date,
-        temp: [],
-        wind: [],
-        gusts: [],
-        humidity: [],
-        visibility: []
-      });
-    }
-
-    const bucket = buckets.get(key);
-    bucket.temp.push(Number(hourly.temperature_2m?.[index] || 0));
-    bucket.wind.push(Number(hourly.wind_speed_10m?.[index] || 0));
-    bucket.gusts.push(Number(hourly.wind_gusts_10m?.[index] || 0));
-    bucket.humidity.push(Number(hourly.relative_humidity_2m?.[index] || 0));
-    bucket.visibility.push(Number(hourly.visibility?.[index] || 0));
-  });
-
-  const windows = [...buckets.values()].sort((a, b) => a.startTime - b.startTime);
-  const selected = windows.find(window => window.startTime.getTime() >= now.getTime() - 6 * 60 * 60 * 1000) || windows[0];
-  if (!selected) return { temp: 0, wind: 0, gusts: 0, humidity: 0, visibility: 0 };
-
-  return {
-    temp: average(selected.temp),
-    wind: average(selected.wind),
-    gusts: average(selected.gusts),
-    humidity: average(selected.humidity),
-    visibility: average(selected.visibility)
-  };
-}
-
-function getNightCampRating(night) {
-  let score = 0;
-  if (night.temp >= 10 && night.temp <= 18) score += 2;
-  else if (night.temp >= 6 && night.temp < 10) score += 1;
-  if (night.wind <= 18) score += 2;
-  else if (night.wind <= 28) score += 1;
-  if (night.gusts <= 30) score += 1;
-  else if (night.gusts > 45) score -= 1;
-  if (night.humidity <= 88) score += 1;
-  else score -= 1;
-  if (night.visibility >= 3000) score += 1;
-  else score -= 1;
-
-  if (score >= 5) return "Komfortowa";
-  if (score >= 2) return "Średnia";
-  return "Ciężka";
-}
-
-function buildWeatherInterpretation(current, hourly, currentIndex) {
-  const notes = [];
-  const wind = Number(current.wind_speed_10m || 0);
-  const gusts = Number(current.wind_gusts_10m || 0);
-  const pressure = Number(current.pressure_msl || 0);
-  const direction = windDirectionToText(current.wind_direction_10m);
-  const trend = getPressureTrend(hourly.pressure_msl, currentIndex);
-
-  if (trend === "Spada") notes.push("Ciśnienie spada - często daje okno aktywności przed zmianą pogody.");
-  else if (trend === "Rośnie") notes.push("Ciśnienie rośnie - ryby mogą brać ostrożniej, warto łowić precyzyjnie.");
-  else notes.push("Ciśnienie jest stabilne - warunki są bardziej przewidywalne.");
-
-  if (wind >= 8 && wind <= 22) notes.push(`Wiatr jest sensowny (${wind.toFixed(1)} km/h). Kierunek: ${direction}.`);
-  else if (wind > 22) notes.push(`Wiatr jest mocny (${wind.toFixed(1)} km/h, porywy ${gusts.toFixed(1)} km/h).`);
-  else notes.push(`Wiatr jest słaby (${wind.toFixed(1)} km/h). Ryby mogą być bardziej ostrożne.`);
-
-  if (pressure >= 1022) notes.push(`Ciśnienie jest wysokie (${pressure.toFixed(0)} hPa).`);
-  else if (pressure <= 1000) notes.push(`Ciśnienie jest niskie (${pressure.toFixed(0)} hPa). To bywa dobry moment pod aktywność.`);
-
-  return notes;
-}
-
-function buildCampInterpretation(night, moonInfo) {
-  const notes = [];
-  const rating = getNightCampRating(night);
-  notes.push(`Ocena nocy na obozowanie: ${rating}.`);
-  if (night.wind > 25) notes.push("Noc zapowiada się wietrznie - sprawdź namiot, śledzie i luźne rzeczy.");
-  else notes.push("Wiatr nocą nie wygląda groźnie.");
-
-  if (night.humidity > 88) notes.push("Wilgotność nocą będzie wysoka - spodziewaj się rosy i mokrego obozowiska.");
-  if (night.visibility < 2000) notes.push("Widzialność nocą może być słaba - możliwa mgła.");
-  notes.push(`Faza księżyca: ${moonInfo.name} (${moonInfo.illumination}). Traktuj to jako dodatek, nie wyrocznię.`);
-  return notes;
-}
-
-function setWeatherNotes(containerId, notes) {
-  const container = $(containerId);
-  if (!container) return;
-  clearNode(container);
-  notes.forEach(note => {
-    container.appendChild(el("div", "weather-note", note));
-  });
-}
-
-async function fetchWeatherData() {
-  const params = new URLSearchParams({
-    latitude: String(FISHING_SPOT.latitude),
-    longitude: String(FISHING_SPOT.longitude),
-    current: [
-      "temperature_2m",
-      "apparent_temperature",
-      "relative_humidity_2m",
-      "dew_point_2m",
-      "precipitation",
-      "weather_code",
-      "pressure_msl",
-      "wind_speed_10m",
-      "wind_direction_10m",
-      "wind_gusts_10m",
-      "cloud_cover",
-      "visibility",
-      "uv_index"
-    ].join(","),
-    hourly: [
-      "temperature_2m",
-      "apparent_temperature",
-      "relative_humidity_2m",
-      "dew_point_2m",
-      "precipitation",
-      "weather_code",
-      "pressure_msl",
-      "wind_speed_10m",
-      "wind_direction_10m",
-      "wind_gusts_10m",
-      "cloud_cover",
-      "visibility",
-      "uv_index",
-      "soil_temperature_0cm",
-      "soil_moisture_0_to_1cm"
-    ].join(","),
-    daily: [
-      "weather_code",
-      "temperature_2m_max",
-      "temperature_2m_min",
-      "precipitation_sum",
-      "wind_speed_10m_max",
-      "wind_direction_10m_dominant",
-      "wind_gusts_10m_max",
-      "sunshine_duration",
-      "uv_index_max"
-    ].join(","),
-    timezone: "auto",
-    forecast_days: "7"
-  });
-
-  const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
-  if (!response.ok) throw new Error(`Błąd pogody: ${response.status}`);
-  return response.json();
-}
-
-function renderWeatherCurrent(data) {
-  const current = data.current;
-  const hourly = data.hourly;
-  const daily = data.daily;
-  const currentIndex = getHourlyIndexForNow(data);
-  const trend = getPressureTrend(hourly.pressure_msl, currentIndex);
-  const rating = getWeatherRating(current, hourly, currentIndex);
-
-  $("weather-current-temp").textContent = `${Number(current.temperature_2m).toFixed(1)}°C`;
-  $("weather-current-wind").textContent = `${Number(current.wind_speed_10m).toFixed(1)} / ${Number(current.wind_gusts_10m).toFixed(1)} km/h`;
-  $("weather-current-pressure").textContent = `${Number(current.pressure_msl).toFixed(0)} hPa / ${trend}`;
-  $("weather-rating").textContent = rating;
-  $("weather-description").textContent = weatherCodeToText(current.weather_code);
-  $("weather-apparent-temp").textContent = `${Number(current.apparent_temperature).toFixed(1)}°C`;
-  $("weather-wind-direction").textContent = windDirectionToText(current.wind_direction_10m);
-  $("weather-cloud-cover").textContent = `${Math.round(Number(current.cloud_cover || 0))}%`;
-  $("weather-precipitation").textContent = `${Number(current.precipitation || 0).toFixed(1)} mm`;
-  $("weather-humidity").textContent = `${Math.round(Number(current.relative_humidity_2m || 0))}%`;
-  $("weather-dew-point").textContent = `${Number(current.dew_point_2m || 0).toFixed(1)}°C`;
-
-  const currentVisibility = Number(current.visibility || 0);
-  $("weather-visibility").textContent = currentVisibility >= 1000 ? `${(currentVisibility / 1000).toFixed(1)} km` : `${Math.round(currentVisibility)} m`;
-  $("weather-uv").textContent = current.uv_index !== null && current.uv_index !== undefined ? Number(current.uv_index).toFixed(1) : "--";
-  $("weather-sunshine").textContent = `${Math.round((daily.sunshine_duration?.[0] || 0) / 3600)} h`;
-
-  setWeatherNotes("weather-interpretation", buildWeatherInterpretation(current, hourly, currentIndex));
-
-  const night = pickNearestNightWindow(hourly);
-  const moonInfo = getMoonPhaseInfo(new Date());
-  $("camp-night-temp").textContent = `${night.temp.toFixed(1)}°C`;
-  $("camp-night-wind").textContent = `${night.wind.toFixed(1)} km/h`;
-  $("camp-night-gusts").textContent = `${night.gusts.toFixed(1)} km/h`;
-  $("camp-night-humidity").textContent = `${Math.round(night.humidity)}%`;
-  $("camp-night-visibility").textContent = night.visibility >= 1000 ? `${(night.visibility / 1000).toFixed(1)} km` : `${Math.round(night.visibility)} m`;
-  $("camp-night-rating").textContent = getNightCampRating(night);
-  $("moon-phase").textContent = moonInfo.name;
-  $("moon-illumination").textContent = moonInfo.illumination;
-  setWeatherNotes("camp-interpretation", buildCampInterpretation(night, moonInfo));
-
-  $("soil-temp").textContent = `${Number(hourly.soil_temperature_0cm?.[currentIndex] || 0).toFixed(1)}°C`;
-  $("soil-moisture").textContent = `${Math.round(Number(hourly.soil_moisture_0_to_1cm?.[currentIndex] || 0) * 100)}%`;
-}
-
-function renderWeatherHourly(data) {
-  const container = $("weather-hourly-list");
-  if (!container) return;
-  clearNode(container);
-
-  const startIndex = getHourlyIndexForNow(data);
-  const endIndex = Math.min(data.hourly.time.length, startIndex + 24);
-  for (let i = startIndex; i < endIndex; i += 1) {
-    const row = el("div", "weather-row");
-    row.appendChild(el("strong", "", formatHour(data.hourly.time[i])));
-    row.appendChild(el("div", "weather-chip", `${Number(data.hourly.temperature_2m[i]).toFixed(1)}°C`));
-    row.appendChild(el("div", "weather-chip", `${Number(data.hourly.wind_speed_10m[i]).toFixed(1)} / ${Number(data.hourly.wind_gusts_10m[i]).toFixed(1)} km/h`));
-    row.appendChild(el("div", "weather-chip", windDirectionToText(data.hourly.wind_direction_10m[i])));
-    row.appendChild(el("div", "weather-chip", `${Number(data.hourly.pressure_msl[i]).toFixed(0)} hPa`));
-    row.appendChild(el("div", "weather-chip", `${Number(data.hourly.precipitation[i] || 0).toFixed(1)} mm`));
-    row.appendChild(el("div", "weather-chip", weatherCodeToText(data.hourly.weather_code[i])));
-    container.appendChild(row);
-  }
-}
-
-function renderWeatherDaily(data) {
-  const container = $("weather-daily-list");
-  if (!container) return;
-  clearNode(container);
-
-  data.daily.time.forEach((time, index) => {
-    const row = el("div", "weather-row");
-    row.appendChild(el("strong", "", formatDay(time)));
-    row.appendChild(el("div", "weather-chip", weatherCodeToText(data.daily.weather_code[index])));
-    row.appendChild(el("div", "weather-chip", `Min ${Number(data.daily.temperature_2m_min[index]).toFixed(1)}°C / Max ${Number(data.daily.temperature_2m_max[index]).toFixed(1)}°C`));
-    row.appendChild(el("div", "weather-chip", `Opad ${Number(data.daily.precipitation_sum[index] || 0).toFixed(1)} mm`));
-    row.appendChild(el("div", "weather-chip", `Wiatr ${Number(data.daily.wind_speed_10m_max[index] || 0).toFixed(1)} km/h`));
-    row.appendChild(el("div", "weather-chip", `Porywy ${Number(data.daily.wind_gusts_10m_max[index] || 0).toFixed(1)} km/h`));
-    row.appendChild(el("div", "weather-chip", `Słońce ${Math.round((data.daily.sunshine_duration[index] || 0) / 3600)} h`));
-    container.appendChild(row);
-  });
-}
-
-async function renderWeatherPage() {
-  if (!$("weather-current-temp")) return;
-  try {
-    $("weather-current-temp").textContent = "Ładowanie...";
-    const data = await fetchWeatherData();
-    renderWeatherCurrent(data);
-    renderWeatherHourly(data);
-    renderWeatherDaily(data);
-  } catch (error) {
-    console.error(error);
-    [
-      "weather-current-temp",
-      "weather-current-wind",
-      "weather-current-pressure",
-      "weather-rating"
-    ].forEach(id => {
-      if ($(id)) $(id).textContent = "Błąd";
-    });
-    if ($("weather-description")) $("weather-description").textContent = "Nie udało się pobrać pogody";
-    setWeatherNotes("weather-interpretation", ["Nie udało się pobrać danych pogodowych."]);
-    setWeatherNotes("camp-interpretation", ["Brak danych do oceny obozowania."]);
-  }
-}
-
-function bindWeatherPageEvents() {
-  if (weatherEventsBound) return;
-  weatherEventsBound = true;
-  $("refresh-weather-btn")?.addEventListener("click", renderWeatherPage);
 }
 
 function updateDashboard(catches, spots = [], checklist = []) {
   if (!$("total-weight")) return;
-
-  const globalStats = getStats(catches, spots);
-  const patrykStats = getPersonStats(catches, "Patryk", spots);
-  const maciekStats = getPersonStats(catches, "Maciek", spots);
-
-  $("total-weight").textContent = `${globalStats.totalWeight.toFixed(1)} kg`;
-  $("total-fish").textContent = String(globalStats.totalFish);
-  $("biggest-fish").textContent = globalStats.biggestFish;
-  const biggestFishItem = catches.reduce((best, item) => {
-    if (!best) return item;
-    return Number(item.weight || 0) > Number(best.weight || 0) ? item : best;
-  }, null);
-  const biggestFishPerson = biggestFishItem ? normalizeText(biggestFishItem.person, 40) : "Brak";
-  if ($("biggest-fish-person")) $("biggest-fish-person").textContent = biggestFishPerson;
-  $("best-spot").textContent = globalStats.bestSpot;
-  $("best-bait-global").textContent = globalStats.bestBait;
-  $("best-hour-global").textContent = globalStats.bestHour;
+  const stats = getStats(catches, spots);
+  $("total-weight").textContent = `${stats.totalWeight.toFixed(1)} kg`;
+  $("total-fish").textContent = String(stats.totalFish);
+  $("biggest-fish").textContent = stats.biggestFish;
+  const biggest = [...catches].sort((a,b) => b.weight-a.weight || new Date(a.caught_at)-new Date(b.caught_at))[0];
+  $("biggest-fish-person").textContent = biggest?.person || 'Brak';
+  $("best-spot").textContent = stats.bestSpot;
+  $("best-bait-global").textContent = stats.bestBait;
+  $("best-hour-global").textContent = stats.bestHour;
   $("spots-count-dashboard").textContent = String(spots.length);
-
-  $("patryk-biggest").textContent = `${patrykStats.biggest.toFixed(1)} kg`;
-  $("patryk-total").textContent = `${patrykStats.total.toFixed(1)} kg`;
-  $("patryk-count").textContent = String(patrykStats.count);
-  $("patryk-bait").textContent = patrykStats.bestBait;
-  $("patryk-spot").textContent = patrykStats.bestSpot;
-  $("patryk-pb-text").textContent = `${patrykStats.biggest.toFixed(1)} kg`;
-  $("patryk-pb-bar").style.width = `${Math.min((patrykStats.biggest / PB_TARGET) * 100, 100)}%`;
-
-  $("maciek-biggest").textContent = `${maciekStats.biggest.toFixed(1)} kg`;
-  $("maciek-total").textContent = `${maciekStats.total.toFixed(1)} kg`;
-  $("maciek-count").textContent = String(maciekStats.count);
-  $("maciek-bait").textContent = maciekStats.bestBait;
-  $("maciek-spot").textContent = maciekStats.bestSpot;
-  $("maciek-pb-text").textContent = `${maciekStats.biggest.toFixed(1)} kg`;
-  $("maciek-pb-bar").style.width = `${Math.min((maciekStats.biggest / PB_TARGET) * 100, 100)}%`;
-
+  for (const a of window.DREAM_TRIP.participants) {
+    const person = getPersonStats(catches,a.name,spots), key='angler-'+a.id;
+    for (const [field,value] of Object.entries({biggest:person.biggest.toFixed(1)+' kg',total:person.total.toFixed(1)+' kg',count:person.count,bait:person.bestBait,spot:person.bestSpot})) {
+      if ($(key+'-'+field)) $(key+'-'+field).textContent=value;
+    }
+    const pb=window.DREAM_MODEL.anglers.find(p=>p.id===a.id)?.pbKg||0;
+    if ($(key+'-pb-text')) $(key+'-pb-text').textContent=pb.toFixed(1)+' kg';
+    if ($(key+'-pb-bar')) $(key+'-pb-bar').style.width=(pb?Math.min(person.biggest/pb*100,100):0)+'%';
+  }
+  const record=window.DREAM_MODEL.allTime.dreamTeamRecord;
+  if ($('dream-team-alltime-value')) $('dream-team-alltime-value').textContent=record?`${Number(record.weightKg).toFixed(1)} kg · ${record.anglerName}`:'Brak zapisanych połowów';
   const lastEntryBox = $("last-entry");
   if (lastEntryBox) {
     clearNode(lastEntryBox);
@@ -1524,80 +1082,40 @@ function updateDashboard(catches, spots = [], checklist = []) {
 
   maybeCelebratePbMilestone(catches);
 
-  const ctx = document.getElementById("fishChart");
-  if (typeof window.renderDashboardExtras === "function") {
-    window.renderDashboardExtras();
-  }
-
-  if (ctx && window.Chart) {
-    const labels = ["Patryk", "Maciek"];
-    const values = labels.map(name =>
-      catches
-        .filter(item => item.person === name)
-        .reduce((sum, item) => sum + Number(item.weight || 0), 0)
-    );
-
-    if (chartInstance) chartInstance.destroy();
-
-    chartInstance = new window.Chart(ctx, {
-      type: "bar",
-      data: {
-        labels,
-        datasets: [{
-          label: "Łączna waga ryb (kg)",
-          data: values,
-          backgroundColor: ["rgba(73,166,255,0.7)", "rgba(61,220,151,0.7)"],
-          borderRadius: 8
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              callback: value => `${value} kg`
-            }
-          }
-        }
-      }
-    });
-  }
+  if (typeof window.renderDashboardExtras === 'function') window.renderDashboardExtras(catches,spots,checklist);
+  window.renderDreamChart?.(catches);
 }
 
 function setupRealtime() {
-  if (!supabaseClient || realtimeChannelsStarted) return;
+  if (realtimeChannelsStarted) return;
   realtimeChannelsStarted = true;
-
-  const rerenderAll = async () => {
-    if ($("total-weight")) {
-      const [catches, spots, checklist] = await Promise.all([
-        loadCatchesFromSupabase(),
-        loadSpotsFromSupabase(),
-        loadChecklistFromSupabase()
-      ]);
-      updateDashboard(catches, spots, checklist);
-    }
-    if ($("catches-list")) await renderCatchesPage();
-    if ($("checklist-groups")) await renderChecklistPage();
-    if ($("spots-list")) await renderSpotsPage();
+  let running=false;
+  const refresh=async()=>{
+    if(running||document.hidden||document.querySelector('form[data-dirty="true"]')||document.querySelector('form[data-saving="true"]'))return;
+    running=true;
+    try {
+      await Dream.refreshModel();
+      if ($('total-weight')) await initDashboardPage();
+      if ($('catches-list')) await renderCatchesPage();
+      if ($('checklist-groups')) await renderChecklistPage();
+      if ($('spots-list')) await renderSpotsPage();
+    } catch(error) { Dream.notice('Nie udało się odświeżyć danych. '+error.message,true); }
+    finally {running=false;}
   };
+  setInterval(refresh,30000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
+}
 
-  supabaseClient.channel("realtime-catches")
-    .on("postgres_changes", { event: "*", schema: "public", table: "catches" }, rerenderAll)
-    .subscribe();
-
-  supabaseClient.channel("realtime-checklist")
-    .on("postgres_changes", { event: "*", schema: "public", table: "checklist_items" }, rerenderAll)
-    .subscribe();
-
-  supabaseClient.channel("realtime-spots")
-    .on("postgres_changes", { event: "*", schema: "public", table: "spots" }, rerenderAll)
-    .subscribe();
+function guardedSubmit(handler) {
+  return async event => {
+    event.preventDefault();
+    const form=event.currentTarget;
+    if(form.dataset.saving==='true')return;
+    form.dataset.saving='true';
+    const buttons=[...form.querySelectorAll('button[type="submit"]')];buttons.forEach(b=>b.disabled=true);
+    try {await handler(event);} catch(error){Dream.notice(error.message,true);}
+    finally {delete form.dataset.saving;buttons.forEach(b=>b.disabled=false);}
+  };
 }
 
 async function initDashboardPage() {
@@ -1624,8 +1142,7 @@ async function initChecklistPage() {
 }
 
 async function initWeatherPage() {
-  bindWeatherPageEvents();
-  await renderWeatherPage();
+  await window.DreamWeather?.init();
 }
 
 async function initSpotsPage() {
@@ -1638,32 +1155,25 @@ function initKnowledgePage() {
   // same shared header/countdown/menu only
 }
 
-function initApp() {
+async function initApp() {
+  document.querySelectorAll('form').forEach(form=>{
+    form.addEventListener('input',()=>form.dataset.dirty='true');
+    form.addEventListener('change',()=>form.dataset.dirty='true');
+    form.addEventListener('reset',()=>delete form.dataset.dirty);
+  });
   updateCountdown();
   setupMobileMenu();
   setInterval(updateCountdown, 60000);
 
-  if ($("total-weight")) initDashboardPage();
-  if ($("catch-form")) initCatchesPage();
-  if ($("checklist-form")) initChecklistPage();
-  if ($("weather-current-temp")) initWeatherPage();
-  if ($("spot-form")) initSpotsPage();
+  if ($("total-weight")) await initDashboardPage();
+  if ($("catch-form")) await initCatchesPage();
+  if ($("checklist-form")) await initChecklistPage();
+  if ($("weather-current-temp")) await initWeatherPage();
+  if ($("spot-form")) await initSpotsPage();
   if (document.querySelector(".knowledge-grid")) initKnowledgePage();
 }
 
-function bootApp() {
-  if (window.RybyAuth && !window.RybyAuth.isAuthenticated()) {
-    document.addEventListener("ryby:auth-success", initApp, { once: true });
-    return;
-  }
-  initApp();
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", bootApp);
-} else {
-  bootApp();
-}
+window.initDreamApp = initApp;
 
 window.deleteCatch = deleteCatch;
 window.editCatch = editCatch;

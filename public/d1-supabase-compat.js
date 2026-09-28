@@ -8,13 +8,14 @@
   };
 
   async function api(path, options = {}) {
-    const response = await fetch(path, {
-      ...options,
-      headers: { 'content-type': 'application/json', ...(options.headers || {}) }
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || data.detail || `HTTP ${response.status}`);
-    return data;
+    const method = options.method || 'GET';
+    if (method !== 'GET' && /\/\d+$/.test(path)) path += '?tripId=' + encodeURIComponent(window.DREAM_TRIP.id);
+    return window.Dream.api(path, options);
+  }
+  function anglerId(name) {
+    const found = window.DREAM_MODEL.anglers.find(a => a.name === name);
+    if (!found) throw new Error('Nieznany uczestnik: ' + name);
+    return found.id;
   }
 
   function parseQuantity(value) {
@@ -28,6 +29,7 @@
     return {
       id: x.id,
       person: x.anglerName,
+      angler_id: x.anglerId,
       species: x.species,
       weight: Number(x.weightKg),
       bait: x.bait,
@@ -78,7 +80,7 @@
       this.selected = '*';
     }
     select(columns = '*') { this.selected = columns; return this; }
-    order() { return this; }
+    order(column, { ascending = true } = {}) { (this.orders ||= []).push([column, ascending]); return this; }
     insert(rows) { this.operation = 'insert'; this.payload = Array.isArray(rows) ? rows : [rows]; return this; }
     update(payload) { this.operation = 'update'; this.payload = payload; return this; }
     delete() { this.operation = 'delete'; return this; }
@@ -110,6 +112,7 @@
             if (value && typeof value === 'object' && Array.isArray(value.__in)) data = data.filter(row => value.__in.map(String).includes(String(row[key])));
             else data = data.filter(row => String(row[key]) === String(value));
           }
+          for (const [column, asc] of [...(this.orders || [])].reverse()) data.sort((a,b) => String(a[column] ?? '').localeCompare(String(b[column] ?? ''), 'pl', { numeric:true }) * (asc?1:-1));
           if (this.singleMode) return { data: data[0] || null, error: null };
           return { data, error: null };
         }
@@ -120,7 +123,7 @@
             if (this.table === 'catches') {
               const out = await api('/api/catches', { method: 'POST', body: JSON.stringify({
                 tripId: trip.id,
-                anglerId: String(row.person || '').toLowerCase().includes('mac') ? 'maciek' : 'patryk',
+                anglerId: anglerId(row.person),
                 weightKg: Number(row.weight),
                 species: row.species || 'Karp',
                 caughtAt: row.caught_at || new Date().toISOString(),
@@ -165,7 +168,7 @@
         if (this.operation === 'update') {
           if (this.table === 'catches' && id) {
             await api(`/api/catches/${id}`, { method: 'PUT', body: JSON.stringify({
-              anglerId: this.payload.person ? (String(this.payload.person).toLowerCase().includes('mac') ? 'maciek' : 'patryk') : undefined,
+              anglerId: this.payload.person ? anglerId(this.payload.person) : undefined,
               weightKg: this.payload.weight,
               species: this.payload.species,
               caughtAt: this.payload.caught_at,
@@ -197,6 +200,7 @@
               await api(`/api/checklist/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
             }
           }
+          if (!id && !ids.length) throw new Error('Aktualizacja wymaga identyfikatora wpisu.');
           return { data: this.singleMode ? { ...this.payload, id: id || ids[0] || null } : null, error: null };
         }
 
@@ -217,8 +221,8 @@
   }
 
   const compat = {
-    from(table) { return new Builder(table); },
-    channel() { return { on() { return this; }, subscribe() { return this; } }; }
+    from(table) { if (!['catches','spots','checklist_items'].includes(table)) throw new Error('Nieobsługiwana tabela'); return new Builder(table); },
+    // Synchronization is handled explicitly by app.js (visibility-aware polling).
   };
 
   window.d1SupabaseCompat = compat;

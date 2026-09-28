@@ -11,11 +11,6 @@
     return { ...(trip.lakeProfile?.facts || {}), ...(trip.facts || {}) };
   }
 
-  function shouldUseDynamic(trip) {
-    const f = factsOf(trip);
-    return f.presentation !== 'legacy';
-  }
-
   function status(text = '') {
     const t = String(text).toLowerCase();
     if (/zakaz|zabron|nie wolno|bez zwrotu|nie wraca|natychmiast|surow/.test(t)) return 'danger';
@@ -51,53 +46,41 @@
 
   function sources(docs, profile) {
     const seen = new Map();
-    if (profile?.sourceUrl) seen.set(profile.sourceUrl, profile.name || 'Oficjalna strona łowiska');
-    docs.forEach(d => { if (d.sourceUrl) seen.set(d.sourceUrl, d.title || 'Źródło'); });
+    if (Dream.safeUrl(profile?.sourceUrl)) seen.set(Dream.safeUrl(profile.sourceUrl), profile.name || 'Oficjalna strona łowiska');
+    docs.forEach(d => { if (Dream.safeUrl(d.sourceUrl)) seen.set(Dream.safeUrl(d.sourceUrl), d.title || 'Źródło'); });
     if (!seen.size) return '';
     return `<section class="panel-card source-panel"><div class="section-head"><h3>🔎 Źródła i weryfikacja</h3><span class="section-chip">dane łowiska</span></div><div class="quick-links">${[...seen.entries()].map(([url,label]) => `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`).join('')}</div></section>`;
   }
 
   function renderDashboard(trip) {
-    const f = factsOf(trip);
-    const hero = document.querySelector('.hero-card');
-    if (!hero) return;
-    const notes = [...hero.querySelectorAll('.weather-note')];
-    if (notes[0]) notes[0].textContent = `📍 Łowisko: ${trip.lake}`;
-    if (notes[1]) notes[1].textContent = `🎣 ${f.waterSize || '—'} · ${f.depth || 'głębokość do uzupełnienia'}`;
-    document.querySelectorAll('[data-lake-name]').forEach(x => x.textContent = trip.lake);
-    const all = window.DREAM_MODEL?.allTime?.anglers || [];
-    const record = window.DREAM_MODEL?.allTime?.dreamTeamRecord;
-    const statsGrid = document.querySelector('main .stats-grid');
-    if (record && statsGrid && !document.getElementById('dream-team-alltime-record')) {
-      const card = document.createElement('article');
-      card.id = 'dream-team-alltime-record';
-      card.className = 'stat-card status-success';
-      card.innerHTML = '<span class="label">👑 Rekord Dream Team — wszystkie wyjazdy</span><strong>' + Number(record.weightKg||0).toFixed(1) + ' kg · ' + esc(record.anglerName||'—') + '</strong>';
-      statsGrid.appendChild(card);
-    }
-    for (const person of ['Patryk','Maciek']) {
-      const data = all.find(a => a.name === person);
-      if (!data) continue;
-      const key = person.toLowerCase();
-      const value = document.getElementById(key+'-pb-text');
-      const bar = document.getElementById(key+'-pb-bar');
-      const label = value?.closest('.pb-section')?.querySelector('.pb-top span:first-child');
-      if (value) value.textContent = Number(data.pbKg||0).toFixed(1)+' kg';
-      if (bar) bar.style.width = '100%';
-      if (label) label.textContent = 'PB ze wszystkich wyjazdów';
-    }
+    const f=factsOf(trip), p=profileOf(trip), hero=document.querySelector('.hero-card');
+    if(!hero)return;
+    const notes=hero.querySelectorAll('.weather-note');
+    if(notes[0])notes[0].textContent=`📍 Łowisko: ${p.name}`;
+    if(notes[1])notes[1].textContent=`🎣 ${f.waterSize || 'Wielkość do uzupełnienia'} · ${f.depth || 'głębokość do uzupełnienia'}`;
+    if(notes[2])notes[2].textContent=trip.status==='archived'?'Archiwum wyjazdu — historia połowów i przygotowań':'Statystyki dotyczą wybranego wyjazdu.';
+    const crew=hero.querySelector('.hero-side-body strong');
+    if(crew)crew.textContent=trip.participants.map(a=>a.name).join(' · ');
+    const photo=hero.querySelector('.hero-side-card img');
+    if(photo){photo.src=Dream.safeUrl(p.imageUrl)||'/assets/img/lowisko.jpg';photo.alt=p.imageUrl?p.name:'Zdjęcie z archiwum Dream Team';}
+    const stats=document.querySelector('main .stats-grid');
+    if(stats&&!document.getElementById('dream-team-alltime-value'))stats.insertAdjacentHTML('beforeend','<article class="stat-card status-success"><span class="label">👑 Rekord z zapisanych połowów — wszystkie wyjazdy</span><strong id="dream-team-alltime-value">—</strong></article>');
+    const target=document.getElementById('angler-stats');
+    if(target)target.innerHTML=trip.participants.map(a=>{
+      const id='angler-'+esc(a.id);
+      return panel(`🎣 ${esc(a.name)}`,'TEN WYJAZD',`<div class="mini-stats">
+        ${[['biggest','Największa ryba'],['total','Łączna waga'],['count','Liczba ryb'],['bait','Najlepsza przynęta'],['spot','Najlepszy spot']].map(([k,label])=>`<div><span>${label}</span><strong id="${id}-${k}">—</strong></div>`).join('')}
+        </div><div class="pb-section"><div class="pb-top"><span>PB ze wszystkich lat, z uwzględnieniem wcześniejszego rekordu</span><strong id="${id}-pb-text">—</strong></div><div class="pb-track"><div id="${id}-pb-bar" class="pb-fill"></div></div><small>Największa ryba tego wyjazdu w stosunku do PB.</small></div>`);
+    }).join('');
   }
 
   function renderMap(trip) {
-    const p = profileOf(trip);
-    const f = factsOf(trip);
-    const image = document.querySelector('.location-photo-card img');
-    if (image && (p.imageUrl || f.mapImage)) {
-      image.src = f.mapImage || p.imageUrl;
-      image.alt = `Mapa / widok: ${trip.lake}`;
-    }
-    const title = document.querySelector('.location-photo-card h3');
-    if (title) title.textContent = `🗺️ ${trip.lake}`;
+    const p=profileOf(trip),f=factsOf(trip),card=document.querySelector('.location-photo-card');
+    if(!card)return;
+    const url=Dream.safeUrl(f.mapImage||p.imageUrl),image=card.querySelector('img');
+    if(image){image.hidden=!url;if(url)image.src=url;image.alt=`Mapa / widok: ${p.name}`;}
+    const caption=card.querySelector('.photo-caption');
+    if(caption)caption.innerHTML=url?`${esc(p.name)} · mapa orientacyjna. <a href="${esc(url)}" target="_blank" rel="noopener">Otwórz cały obraz</a>`:'Brak mapy łowiska. Możesz dodać adres obrazu w profilu łowiska.';
   }
 
   function renderDirections(trip, docs) {
@@ -106,7 +89,7 @@
     const logistics = docs.filter(d => d.kind === 'logistics');
     const facilities = docs.filter(d => d.kind === 'facilities');
     const reservation = docs.filter(d => d.kind === 'reservation');
-    const maps = p.latitude && p.longitude ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${p.latitude},${p.longitude}`)}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(f.address || trip.lake)}`;
+    const maps = p.latitude != null && p.longitude != null ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${p.latitude},${p.longitude}`)}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(f.address || trip.lake)}`;
 
     const accessDocs = logistics.filter(d => /dojazd|przepraw|przyjazd|wyjazd/i.test(d.title));
     const baseDocs = logistics.filter(d => !accessDocs.includes(d));
@@ -116,7 +99,7 @@
         ${panel('📍 Łowisko', 'GŁÓWNY PUNKT', `<div class="dream-detail-list">
           <div><span>Kraj</span><strong>${esc(p.country || trip.country || '—')}</strong></div>
           <div><span>Adres</span><strong>${esc(f.address || 'do uzupełnienia')}</strong></div>
-          <div><span>GPS</span><strong>${p.latitude && p.longitude ? `${p.latitude}, ${p.longitude}` : '—'}</strong></div>
+          <div><span>GPS</span><strong>${p.latitude != null && p.longitude != null ? `${p.latitude}, ${p.longitude}` : '—'}</strong></div>
           ${f.managerPhone ? `<div><span>Manager</span><strong>${esc(f.managerPhone)}</strong></div>` : ''}
           ${f.crossingPhone ? `<div><span>Przeprawa</span><strong>${esc(f.crossingPhone)}</strong></div>` : ''}
         </div><a class="dream-action" href="${maps}" target="_blank" rel="noopener">🚗 Jedź do łowiska <span>→</span></a>`)}
@@ -206,7 +189,19 @@
     const path = route();
     if (path === '' || path === '/' || path.endsWith('/index')) renderDashboard(trip);
     if (path.endsWith('/pages/mapa')) renderMap(trip);
-    if (!shouldUseDynamic(trip)) return;
+    const profile=profileOf(trip),pack=profile.facts?.contentPack;
+    const topic=path.endsWith('/pages/regulamin')?'rules':path.endsWith('/pages/dojazd')?'logistics':path.endsWith('/pages/porady')?'advice':null;
+    const extra=topic?profile.facts?.[topic+'Text']:null;
+    if(extra)documents=[...(documents||[]),{kind:topic==='advice'?'overview':topic,title:'Zapisane informacje o łowisku',content:extra}];
+    document.querySelectorAll('[data-lake-only]').forEach(el=>el.hidden=el.dataset.lakeOnly!==pack);
+    if(pack==='plaine2' && /\/pages\/(dojazd|regulamin|porady)$/.test(path)){
+      const name=path.split('/').pop();
+      const response=await fetch(`/data/lakes/plaine2/${name}.html`);
+      if(!response.ok)throw new Error('Nie udało się wczytać zachowanej wiedzy o łowisku.');
+      main().innerHTML=await response.text();
+      if(extra)main().insertAdjacentHTML('beforeend',panel('Zapisane informacje o łowisku','PROFIL',`<p class="preserve-lines">${esc(extra)}</p>`));
+      return;
+    }
     if (path.endsWith('/pages/dojazd')) renderDirections(trip, documents || []);
     if (path.endsWith('/pages/regulamin')) renderRules(trip, documents || []);
     if (path.endsWith('/pages/porady')) renderAdvice(trip, documents || []);

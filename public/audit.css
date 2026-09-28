@@ -1,0 +1,36 @@
+/* Accessibility, readable maps and management screens; reuse the existing theme. */
+[hidden] { display: none !important; }
+.header-top > div, .trip-box, .form-row > div, .two-column > *, .hero-split > * { min-width: 0; }
+.dream-trip-select { width: 100%; max-width: 38rem; margin-top: 12px; }
+#app-notice { margin-bottom: 18px; overflow-wrap: anywhere; }
+#app-notice button { margin: 8px; }
+#trip-manager { display: grid; gap: 24px; }
+#trip-manager section { min-width: 0; }
+#trip-manager fieldset { border: 1px solid #496062; border-radius: 10px; padding: 14px; }
+.participant-options { display: flex; flex-wrap: wrap; gap: 16px; }
+.participant-options label { display: flex; gap: 8px; align-items: center; }
+.participant-options input { width: auto; }
+#trip-manager button, #trip-manager a { min-height: 44px; }
+#trip-manager .form-actions { flex-wrap: wrap; }
+#trip-manager h2, #trip-manager h3 { margin-bottom: 12px; }
+#trip-manager small, .trip-box small { display: block; line-height: 1.5; color: #b7c9c8; }
+#lake-editor { margin-top: 24px; }
+.recovery-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid #496062; }
+.recovery-row span { overflow-wrap: anywhere; }
+.location-photo-card { display: block !important; }
+.location-photo-card img { width: 100% !important; height: auto !important; max-height: 75vh; object-fit: contain !important; border-radius: 12px; }
+.location-photo-card .photo-caption { position: static !important; padding: 16px; }
+.pb-track { height: 8px; border-radius: 8px; background: #314348; margin: 8px 0; overflow: hidden; }
+.pb-fill { height: 100%; background: #68c3a2; }
+input, select, textarea { max-width: 100%; }
+button:disabled { opacity: .6; cursor: wait; }
+:focus-visible { outline: 3px solid #c8db75; outline-offset: 3px; }
+@media(max-width: 700px) {
+  .header-top { flex-direction: column; align-items: stretch; }
+  .header-top > div, .trip-box, .dream-trip-select { width: 100%; max-width: 100%; }
+  #trip-manager .form-row { grid-template-columns: 1fr; }
+  .recovery-row { align-items: flex-start; flex-direction: column; }
+  .panel-card, .stat-card, .weather-note, .catch-card { overflow-wrap: anywhere; }
+}
+
+.preserve-lines { white-space: pre-line; }

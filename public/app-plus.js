@@ -33,6 +33,7 @@
     if (!value) return "Brak danych";
     const date = new Date(value);
     return date.toLocaleDateString("pl-PL", {
+      timeZone: Dream.zone(),
       day: "2-digit",
       month: "2-digit",
       year: "numeric"
@@ -43,6 +44,7 @@
     if (!value) return "Brak danych";
     const date = new Date(value);
     return date.toLocaleString("pl-PL", {
+      timeZone: Dream.zone(),
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -162,14 +164,17 @@
       if (typeof FISHING_SPOT !== "undefined" && FISHING_SPOT) return FISHING_SPOT;
     } catch (_) {}
     return {
-      latitude: 48.06406,
-      longitude: 2.756781,
-      name: "La Plaine des Bois Etang 2"
+      latitude: null,
+      longitude: null,
+      name: "Łowisko"
     };
   }
 
+  let dashboardWeatherCache=null;
   async function fetchDashboardWeatherAlerts() {
+    if(dashboardWeatherCache && Date.now()-dashboardWeatherCache.at<600000)return dashboardWeatherCache.data;
     const spot = getSpotCoordsSafe();
+    if (spot.latitude == null || spot.longitude == null) throw new Error("Brak GPS łowiska.");
     const params = new URLSearchParams({
       latitude: String(spot.latitude),
       longitude: String(spot.longitude),
@@ -179,9 +184,11 @@
       forecast_days: "3"
     });
 
-    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`);
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params.toString()}`, {signal:AbortSignal.timeout(15000)});
     if (!response.ok) throw new Error(`Weather ${response.status}`);
-    return response.json();
+    const data=await response.json();
+    dashboardWeatherCache={at:Date.now(),data};
+    return data;
   }
 
   function getPressureTrend(pressures, currentIndex) {
@@ -273,11 +280,11 @@
     });
   }
 
-  async function renderDashboardExtras() {
+  async function renderDashboardExtras(cachedCatches, cachedSpots, cachedChecklist) {
     if (!$("total-weight") || typeof loadCatchesFromSupabase !== "function") return;
 
     try {
-      const [catches, spots, checklistItems] = await Promise.all([
+      const [catches, spots, checklistItems] = cachedCatches ? [cachedCatches, cachedSpots, cachedChecklist] : await Promise.all([
         loadCatchesFromSupabase(),
         typeof loadSpotsFromSupabase === "function" ? loadSpotsFromSupabase() : [],
         typeof loadChecklistFromSupabase === "function" ? loadChecklistFromSupabase() : []
@@ -295,10 +302,10 @@
       const spotNames = [];
 
       catches.forEach((item) => {
-        const dayKey = new Date(item.caught_at).toLocaleDateString("pl-PL");
+        const dayKey = Dream.day(item.caught_at);
         dayTotals.set(dayKey, (dayTotals.get(dayKey) || 0) + Number(item.weight || 0));
 
-        const hourKey = new Date(item.caught_at).getHours().toString().padStart(2, "0") + ":00";
+        const hourKey = Dream.hour(item.caught_at).toString().padStart(2, "0") + ":00";
         hourTotals.set(hourKey, (hourTotals.get(hourKey) || 0) + 1);
 
         baits.push(normalizeTextSafe(item.bait, 80));
@@ -348,12 +355,13 @@
 
       try {
         const weather = await fetchDashboardWeatherAlerts();
-        const nowIndex = 0;
-        const limit = Math.min(weather.hourly.time.length, 24);
+        const localNow = Dream.dateInput(new Date().toISOString(), weather.timezone || Dream.zone());
+        const nowIndex = Math.max(0, weather.hourly.time.findIndex(t => t >= localNow.slice(0,13)+':00'));
+        const limit = Math.min(weather.hourly.time.length, nowIndex + 24);
         let bestScore = -999;
         let bestIndex = 0;
 
-        for (let i = 0; i < limit; i += 1) {
+        for (let i = nowIndex; i < limit; i += 1) {
           const hour = new Date(weather.hourly.time[i]).getHours();
           const trend = getPressureTrend(weather.hourly.pressure_msl, i);
           const score = getBiteScore({
@@ -373,7 +381,7 @@
 
         const bestDate = new Date(weather.hourly.time[bestIndex]);
         const bestHourStart = bestDate.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-        const bestHourEndDate = new Date(bestDate.getTime() + 3 * 60 * 60 * 1000);
+        const bestHourEndDate = new Date(bestDate.getTime() + 60 * 60 * 1000);
         const bestHourEnd = bestHourEndDate.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
         bestBiteWindow = `${bestHourStart}–${bestHourEnd} (${biteScoreLabel(bestScore)})`;
 
@@ -391,7 +399,7 @@
 
       renderAlertCards([
         {
-          title: "🎣 Dziś najlepsze okno brań",
+          title: "🎣 Najbliższe 24 h · orientacyjne warunki",
           value: bestBiteWindow,
           status: bestBiteWindow === "Brak danych" ? "info" : "success"
         },
@@ -441,7 +449,7 @@
         <button type="button" class="filter-btn" data-filter="done">Zrobione</button>
       </div>
 
-      <select id="check-sort-select">
+      <select id="check-sort-select" aria-label="Sortowanie checklisty">
         <option value="category">Sortuj: kategoria</option>
         <option value="name">Sortuj: nazwa</option>
         <option value="created">Sortuj: data dodania</option>
@@ -517,6 +525,7 @@
       const items = await loadChecklistFromSupabase();
       const ids = items.filter((item) => item.done).map((item) => Number(item.id));
       if (!ids.length) return;
+      if (!window.confirm(`Odznaczyć ${ids.length} pozycji w tym wyjeździe?`)) return;
       const { error } = await supabaseClient.from("checklist_items").update({ done: false }).in("id", ids);
       if (error) {
         window.alert("Nie udało się odznaczyć wszystkich pozycji.");
@@ -618,12 +627,14 @@
 
           const left = createNode("div", "check-item-left");
           const checkbox = document.createElement("input");
+          checkbox.setAttribute("aria-label", `Spakowane: ${item.item_name}`);
           checkbox.type = "checkbox";
           checkbox.checked = Boolean(item.done);
           checkbox.addEventListener("change", async () => {
             if (!window.supabaseClient) return;
             const { error } = await supabaseClient.from("checklist_items").update({ done: checkbox.checked }).eq("id", item.id);
             if (error) {
+              checkbox.checked = Boolean(item.done);
               window.alert("Nie udało się zaktualizować pozycji.");
               return;
             }
@@ -749,7 +760,7 @@
         </div>
 
         <div class="spot-map-hint">
-          Nie znalazłem publicznej mapy batymetrycznej tego łowiska. Najlepszy ruch: zapisuj własne głębokości,
+          Mapy łowiska są punktem odniesienia. Zapisuj również własne głębokości,
           rodzaj dna, zaczepy, najlepszy czas i krótki opis tego, czego spodziewać się na danym miejscu.
         </div>
       </article>
@@ -757,119 +768,11 @@
     lastPanel.insertAdjacentElement("afterend", section);
   }
 
-  function validateSpotPayloadPlus(raw) {
-    const name = normalizeTextSafe(raw.name, 60);
-    const distance_m = parseNum(raw.distance_m);
-    const depth_m = parseNum(raw.depth_m);
-    const bottom_type = normalizeTextSafe(raw.bottom_type, 60);
-    const note = normalizeTextSafe(raw.note, 500);
-    const obstacles = normalizeTextSafe(raw.obstacles, 120);
-    const best_time = normalizeTextSafe(raw.best_time, 60);
-    const best_wind = normalizeTextSafe(raw.best_wind, 60);
-
-    if (!name) return { ok: false, message: "Podaj nazwę spotu." };
-    if (Number.isNaN(distance_m)) return { ok: false, message: "Odległość musi być liczbą 0 lub większą." };
-    if (Number.isNaN(depth_m)) return { ok: false, message: "Głębokość musi być liczbą 0 lub większą." };
-
-    return {
-      ok: true,
-      payload: {
-        name,
-        distance_m,
-        depth_m,
-        bottom_type: bottom_type || null,
-        note: note || null,
-        obstacles: obstacles || null,
-        best_time: best_time || null,
-        best_wind: best_wind || null
-      }
-    };
-  }
-
-  function fillSpotFormForEditPlus(item) {
-    if ($("edit-spot-id")) $("edit-spot-id").value = item.id;
-    if ($("spot-name")) $("spot-name").value = item.name || "";
-    if ($("spot-distance")) $("spot-distance").value = item.distance_m ?? "";
-    if ($("spot-depth")) $("spot-depth").value = item.depth_m ?? "";
-    if ($("spot-bottom")) $("spot-bottom").value = item.bottom_type || "";
-    if ($("spot-note")) $("spot-note").value = item.note || "";
-    if ($("spot-obstacles")) $("spot-obstacles").value = item.obstacles || "";
-    if ($("spot-best-time")) $("spot-best-time").value = item.best_time || "";
-    if ($("spot-best-wind")) $("spot-best-wind").value = item.best_wind || "";
-    if ($("spot-form-title")) $("spot-form-title").textContent = "Edytuj spot";
-    if ($("save-spot-btn")) $("save-spot-btn").textContent = "Zapisz zmiany";
-    if ($("cancel-edit-spot-btn")) $("cancel-edit-spot-btn").classList.remove("hidden");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function resetSpotFormPlus() {
-    $("spot-form")?.reset();
-    if ($("edit-spot-id")) $("edit-spot-id").value = "";
-    if ($("spot-form-title")) $("spot-form-title").textContent = "Dodaj spot";
-    if ($("save-spot-btn")) $("save-spot-btn").textContent = "Dodaj spot";
-    if ($("cancel-edit-spot-btn")) $("cancel-edit-spot-btn").classList.add("hidden");
-    if (typeof setMessage === "function") setMessage("spot-message", "");
-  }
-
-  async function handleSpotSubmitPlus(event) {
-    event.preventDefault();
-    if (!window.supabaseClient) return;
-
-    const validation = validateSpotPayloadPlus({
-      name: $("spot-name")?.value,
-      distance_m: $("spot-distance")?.value,
-      depth_m: $("spot-depth")?.value,
-      bottom_type: $("spot-bottom")?.value,
-      note: $("spot-note")?.value,
-      obstacles: $("spot-obstacles")?.value,
-      best_time: $("spot-best-time")?.value,
-      best_wind: $("spot-best-wind")?.value
-    });
-
-    if (!validation.ok) {
-      if (typeof setMessage === "function") setMessage("spot-message", validation.message, "error");
-      return;
-    }
-
-    const editId = $("edit-spot-id")?.value;
-    if (typeof setMessage === "function") {
-      setMessage("spot-message", editId ? "Zapisywanie zmian..." : "Dodawanie spotu...");
-    }
-
-    let error;
-    if (editId) {
-      ({ error } = await supabaseClient.from("spots").update(validation.payload).eq("id", Number(editId)));
-    } else {
-      ({ error } = await supabaseClient.from("spots").insert([validation.payload]));
-    }
-
-    if (error) {
-      console.error("Błąd zapisu spotu:", error.message);
-      if (typeof setMessage === "function") {
-        setMessage("spot-message", editId ? "Nie udało się zapisać zmian." : "Nie udało się dodać spotu.", "error");
-      }
-      return;
-    }
-
-    if (typeof setMessage === "function") {
-      setMessage("spot-message", editId ? "Zmiany zapisane." : "Spot został dodany.", "success");
-    }
-    resetSpotFormPlus();
-    await renderSpotsPagePlus();
-  }
-
-  async function editSpotPlus(id) {
-    if (typeof loadSpotsFromSupabase !== "function") return;
-    const spots = await loadSpotsFromSupabase();
-    const item = spots.find((row) => Number(row.id) === Number(id));
-    if (item) fillSpotFormForEditPlus(item);
-  }
-
   function renderSpotsSummaryPlus(spots, catches) {
     setText("spots-count", String(spots.length));
 
-    const distances = spots.map((spot) => Number(spot.distance_m)).filter((v) => Number.isFinite(v));
-    const depths = spots.map((spot) => Number(spot.depth_m)).filter((v) => Number.isFinite(v));
+    const distances = spots.filter(spot => spot.distance_m != null).map(spot => Number(spot.distance_m)).filter(Number.isFinite);
+    const depths = spots.filter(spot => spot.depth_m != null).map(spot => Number(spot.depth_m)).filter(Number.isFinite);
 
     setText("spots-avg-distance", distances.length ? `${average(distances).toFixed(1)} m` : "--");
     setText("spots-avg-depth", depths.length ? `${average(depths).toFixed(1)} m` : "--");
@@ -945,7 +848,7 @@
       const actions = createNode("div", "inline-actions");
       const editBtn = createNode("button", "edit-btn", "Edytuj");
       editBtn.type = "button";
-      editBtn.addEventListener("click", () => editSpotPlus(item.id));
+      editBtn.addEventListener("click", () => window.editSpot(item.id));
 
       const deleteBtn = createNode("button", "danger-btn", "Usuń");
       deleteBtn.type = "button";
@@ -969,11 +872,11 @@
 
       const metaGrid = createNode("div", "spot-meta-grid");
       const meta1 = createNode("div", "spot-meta-box");
-      meta1.innerHTML = `<span>Zaczepy / uwagi</span><strong>${normalizeTextSafe(item.obstacles || "brak", 120)}</strong>`;
+      meta1.innerHTML = `<span>Zaczepy / uwagi</span><strong>${Dream.esc(normalizeTextSafe(item.obstacles || "brak", 120))}</strong>`;
       const meta2 = createNode("div", "spot-meta-box");
-      meta2.innerHTML = `<span>Najlepsza pora</span><strong>${normalizeTextSafe(item.best_time || "brak", 60)}</strong>`;
+      meta2.innerHTML = `<span>Najlepsza pora</span><strong>${Dream.esc(normalizeTextSafe(item.best_time || "brak", 60))}</strong>`;
       const meta3 = createNode("div", "spot-meta-box");
-      meta3.innerHTML = `<span>Najlepszy wiatr</span><strong>${normalizeTextSafe(item.best_wind || "brak", 60)}</strong>`;
+      meta3.innerHTML = `<span>Najlepszy wiatr</span><strong>${Dream.esc(normalizeTextSafe(item.best_wind || "brak", 60))}</strong>`;
       const meta4 = createNode("div", "spot-meta-box");
       meta4.innerHTML = `<span>Skuteczność</span><strong>${linkedCatches.length ? `${linkedCatches.length} brań • śr. ${avgWeight} kg` : "Brak połowów"}</strong>`;
 
@@ -1107,17 +1010,5 @@
   window.renderChecklistPagePlus = renderChecklistPagePlus;
   window.renderSpotsPagePlus = renderSpotsPagePlus;
 
-  function bootPlus() {
-    if (window.RybyAuth && !window.RybyAuth.isAuthenticated()) {
-      document.addEventListener("ryby:auth-success", initPlus, { once: true });
-      return;
-    }
-    initPlus();
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bootPlus);
-  } else {
-    bootPlus();
-  }
+  window.initDreamPlus = initPlus;
 })();

@@ -10,14 +10,16 @@
     if (!trip) return false;
 
     const f = factsOf(trip);
-    if (!f.pegName) return true;
+    if (!f.pegName || (trip.peg && !trip.peg.includes(String(f.peg)))) return true;
 
     const photo = document.querySelector('.location-photo-card');
     if (!photo || document.getElementById('dream-peg-map-plan')) return true;
 
     const caption = photo.querySelector('.photo-caption');
     if (caption) {
-      caption.textContent = `Wyjazd: ${f.pegName}${f.historicalPeg ? ` · na historycznej mapie: stare stanowisko ${f.historicalPeg}` : ''}. Dokładne spoty zapisujemy po sondowaniu na miejscu.`;
+      const detail=document.createElement('p');
+      detail.textContent = `Wyjazd: ${f.pegName}${f.historicalPeg ? ` · na historycznej mapie: stare stanowisko ${f.historicalPeg}` : ''}. Dokładne spoty zapisujemy po sondowaniu na miejscu.`;
+      caption.append(detail);
     }
 
     const section = document.createElement('section');
@@ -57,12 +59,6 @@
     photo.insertAdjacentElement('afterend', section);
     return true;
   }
-
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts += 1;
-    if (mount() || attempts >= 100) clearInterval(timer);
-  }, 100);
 
   mount();
 })();
