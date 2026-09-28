@@ -58,6 +58,8 @@ No new HTML pages and no lake-specific JavaScript branches should be required.
 
 `dream-core.js` owns API access, lake timezone conversion and header state. The loader initializes existing screen modules once, after bootstrap. The compatibility facade preserves the legacy frontend API while routing all persistence to D1. There is no runtime Supabase dependency.
 
+When the `RYBY_API_WRITE_TOKEN` Worker secret is provisioned, every mutating API route and the complete JSON export require its bearer token. Reads remain public. The frontend requests the token on the first protected action and stores it for that browser tab. Without a configured secret, existing public behavior remains in place to avoid locking users out during rollout. A separate Cloudflare Workflow Worker under `backup/` can export D1 daily to private R2 after Cloudflare provisioning. It does not change any production rows or the main Worker's bindings.
+
 `trip_participants` joins trips and anglers. Catch, spot and checklist writes require the selected trip. Archiving does not remove data. Deletions set `deleted_at`; recovery and full JSON export retain the original IDs and links.
 
 Lake profiles are editable in the management page, including coordinates, timezone, maps, rules, logistics and advice. Existing trip-specific researched documents remain in D1. Preserved rich Plaine material is a static content pack under `public/data/lakes/`, selected by profile data. New lake profiles use generic renderers and do not need a new HTML page.

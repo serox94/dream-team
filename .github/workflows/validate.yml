@@ -24,9 +24,11 @@ jobs:
       - name: Check runtime architecture
         run: |
           ! grep -R -E "dream-loader\.js|wygonin-launcher|wygonin-encyclopedia|catch-fix" public/index.html public/pages/*.html
-          ! grep -E "@import.*ryby2026|supabase\.co|sb_publishable" public/style.css public/d1-supabase-compat.js src/worker.js
+          ! grep -R -i -E "supabase|sb_publishable|postgrest" public src backup
           for f in public/index.html public/pages/*.html; do test "$(grep -o 'dream-loader-v2.js' "$f" | wc -l)" -eq 1; done
       - name: Apply all migrations locally
         run: npm run db:migrate:local
       - name: Validate Worker build
         run: npm run build
+      - name: Validate scheduled D1 backup Worker build
+        run: npx wrangler deploy --dry-run --config backup/wrangler.jsonc

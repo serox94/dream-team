@@ -1,0 +1,20 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "dream-team-d1-backup",
+  "main": "./worker.js",
+  "compatibility_date": "2026-09-28",
+  "vars": {
+    "DREAM_TEAM_DATABASE_ID": "b64c7a2c-8694-41c6-b54a-857b88bf2c96"
+  },
+  "triggers": {"crons": ["17 3 * * *"]},
+  "workflows": [
+    {
+      "name": "dream-team-d1-backup-daily",
+      "binding": "BACKUP_WORKFLOW",
+      "class_name": "DreamTeamD1Backup"
+    }
+  ],
+  "r2_buckets": [
+    {"binding": "BACKUP_BUCKET", "bucket_name": "dream-team-d1-backups"}
+  ]
+}
