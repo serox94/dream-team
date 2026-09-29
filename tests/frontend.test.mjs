@@ -52,6 +52,8 @@ test('dashboard leads with the selected trip, live weather and checklist progres
   assert.ok(p.d.getElementById('dashboard-lake').textContent.length>2);
   await waitFor(()=>p.d.getElementById('dashboard-check-progress').textContent==='1/2','checklist overview');
   await waitFor(()=>p.d.querySelector('#dashboard-alerts')?.textContent.includes('15°C'),'weather overview');
+  assert.match(p.d.getElementById('dashboard-weather-now').textContent,/15°C/);
+  assert.match(p.d.getElementById('dashboard-check-inline').textContent,/1 z 2/);
   assert.equal(p.d.querySelector('.dashboard-primary-stats #total-fish').textContent,'2');
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}

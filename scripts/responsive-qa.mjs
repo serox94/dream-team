@@ -29,6 +29,12 @@ try{
         for(const link of await links.all()){
           const box=await link.boundingBox();assert.ok(box&&box.height>=44&&box.width>=44,`${width} ${route}: small bottom navigation target`);
         }
+        if(route==='/'){
+          await page.locator('#bottom-more').click();
+          const menu=page.locator('#main-nav.open'),menuBox=await menu.boundingBox();
+          assert.ok(menuBox&&menuBox.y>=0&&menuBox.y+menuBox.height<=844-60,`${width}: menu is not within the usable viewport`);
+          await page.locator('#bottom-more').click();
+        }
       }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html'].includes(route)){
         const label=route==='/'?'dashboard':route.split('/').pop().replace('.html','');
