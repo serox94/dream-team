@@ -57,15 +57,20 @@ jobs:
           printf '%s' "$D1_EXPORT_TOKEN" | npx wrangler secret put D1_EXPORT_TOKEN --config backup/wrangler.jsonc
           printf '%s' "$CLOUDFLARE_ACCOUNT_ID" | npx wrangler secret put CLOUDFLARE_ACCOUNT_ID --config backup/wrangler.jsonc
       - name: Trigger first real backup
+        id: trigger
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler workflows trigger dream-team-d1-backup-daily --config backup/wrangler.jsonc
+        run: |
+          echo "started_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          npx wrangler workflows trigger dream-team-d1-backup-daily --config backup/wrangler.jsonc
       - name: Verify nonempty SQL stored in private R2
         id: verify
+        timeout-minutes: 16
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MIN_BACKUP_TIMESTAMP: ${{ steps.trigger.outputs.started_at }}
         run: node scripts/verify-r2-backup.mjs
       - name: Configure 30-day lifecycle retention
         env:

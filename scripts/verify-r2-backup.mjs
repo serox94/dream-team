@@ -4,7 +4,8 @@ const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API
 assert.ok(account&&token,'Cloudflare deployment credentials missing');
 const base=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/r2/buckets/dream-team-d1-backups/objects`;
 const headers={Authorization:`Bearer ${token}`};
-const since=Date.now()-15*60*1000,deadline=Date.now()+180000;
+const since=Date.parse(process.env.MIN_BACKUP_TIMESTAMP||'')||Date.now()-15*60*1000;
+const deadline=Date.now()+12*60*1000;
 let object;
 while(Date.now()<deadline){
  const r=await fetch(base+'?prefix=dream-team-db%2F&per_page=100',{headers});
@@ -16,7 +17,7 @@ while(Date.now()<deadline){
  if(object)break;
  await new Promise(done=>setTimeout(done,5000));
 }
-assert.ok(object,'No new, nonempty D1 backup appeared in R2 within 3 minutes');
+assert.ok(object,'No new, nonempty D1 backup appeared in R2 within 12 minutes');
 const key=object.key,encoded=key.split('/').map(encodeURIComponent).join('/');
 const response=await fetch(base+'/'+encoded,{headers});
 assert.equal(response.status,200,`R2 object download returned ${response.status}`);
