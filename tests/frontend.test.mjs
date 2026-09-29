@@ -45,6 +45,32 @@ test('shared mobile navigation opens the full menu and follows the current scree
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
+test('dashboard leads with the selected trip, live weather and checklist progress',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/');
+ try{
+  assert.notEqual(p.d.getElementById('dashboard-trip-name').textContent,'Wczytywanie wyjazdu…');
+  assert.ok(p.d.getElementById('dashboard-lake').textContent.length>2);
+  await waitFor(()=>p.d.getElementById('dashboard-check-progress').textContent==='1/2','checklist overview');
+  await waitFor(()=>p.d.querySelector('#dashboard-alerts')?.textContent.includes('15°C'),'weather overview');
+  assert.equal(p.d.querySelector('.dashboard-primary-stats #total-fish').textContent,'2');
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('trip management reveals the editor on demand and checklist opens with the list',async()=>{
+ const s=await testServe({seed:true});
+ try{
+  const p=await page(s,'/pages/wyjazdy.html');
+  try{
+   const panel=p.d.getElementById('trip-editor-panel');assert.equal(panel.open,false);
+   p.d.getElementById('create-trip').click();assert.equal(panel.open,true);
+   p.d.querySelector('[data-edit]').click();assert.equal(panel.open,true);
+   assert.deepEqual(p.errors,[]);
+  }finally{p.close();}
+  const checklist=await page(s,'/pages/checklisty.html');
+  try{assert.ok(checklist.d.getElementById('checklist-groups').compareDocumentPosition(checklist.d.getElementById('checklist-form')) & checklist.w.Node.DOCUMENT_POSITION_FOLLOWING);}
+  finally{checklist.close();}
+ }finally{await s.close();}
+});
 test('checklist edit preserves packed state, filters, quantity clear and undo persist',async()=>{
  const s=await testServe({seed:true}),p=await page(s,'/pages/checklisty.html');
  try{
