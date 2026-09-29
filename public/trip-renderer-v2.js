@@ -53,17 +53,22 @@
   }
 
   function renderDashboard(trip) {
-    const f=factsOf(trip), p=profileOf(trip), hero=document.querySelector('.hero-card');
+    const p=profileOf(trip), hero=document.querySelector('.dashboard-hero');
     if(!hero)return;
-    const notes=hero.querySelectorAll('.weather-note');
-    if(notes[0])notes[0].textContent=`📍 Łowisko: ${p.name}`;
-    if(notes[1])notes[1].textContent=`🎣 ${f.waterSize || 'Wielkość do uzupełnienia'} · ${f.depth || 'głębokość do uzupełnienia'}`;
-    if(notes[2])notes[2].textContent=trip.status==='archived'?'Archiwum wyjazdu — historia połowów i przygotowań':'Statystyki dotyczą wybranego wyjazdu.';
+    const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value;};
+    const date=value=>value?new Date(value).toLocaleDateString('pl-PL',{timeZone:Dream.zone(),day:'numeric',month:'short',year:'numeric'}):'do ustalenia';
+    set('dashboard-status',trip.status==='archived'?'Archiwum':trip.isActive?'Aktywny wyjazd':'Wybrany wyjazd');
+    set('dashboard-trip-name',trip.name);
+    set('dashboard-lake',p.name||trip.lake);
+    set('dashboard-peg',trip.peg||'do ustalenia');
+    set('dashboard-dates',trip.start?`${date(trip.start)} – ${date(trip.end)}`:'do ustalenia');
+    set('dashboard-crew',trip.participants.map(a=>a.name).join(' · ')||'do ustalenia');
+    set('dashboard-photo-caption',p.name||trip.lake);
     const crew=hero.querySelector('.hero-side-body strong');
-    if(crew)crew.textContent=trip.participants.map(a=>a.name).join(' · ');
+    if(crew)crew.textContent=trip.name;
     const photo=hero.querySelector('.hero-side-card img');
     if(photo){photo.src=Dream.safeUrl(p.imageUrl)||'/assets/img/lowisko.jpg';photo.alt=p.imageUrl?p.name:'Zdjęcie z archiwum Dream Team';}
-    const stats=document.querySelector('main .stats-grid');
+    const stats=document.querySelector('main .dashboard-secondary-stats');
     if(stats&&!document.getElementById('dream-team-alltime-value'))stats.insertAdjacentHTML('beforeend','<article class="stat-card status-success"><span class="label">👑 Rekord z zapisanych połowów — wszystkie wyjazdy</span><strong id="dream-team-alltime-value">—</strong></article>');
     const target=document.getElementById('angler-stats');
     if(target)target.innerHTML=trip.participants.map(a=>{

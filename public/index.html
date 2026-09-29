@@ -49,70 +49,81 @@
   </header>
 
   <main class="container page-content">
-    <section class="hero-card">
+    <section class="hero-card dashboard-hero">
       <div class="hero-split">
         <div>
-          <h2>Centrum dowodzenia wyjazdu</h2>
-          <p>
-            Wszystko w jednym miejscu: połowy, najlepsze godziny, alerty pogodowe, checklisty,
-            skuteczność spotów i szybki dostęp do najważniejszych sekcji.
-          </p>
-
-          <div class="weather-interpretation" style="margin-top:16px;">
-            <div class="weather-note status-info">📍 Łowisko: La Plaine des Bois – Plaine 2</div>
-            <div class="weather-note status-success">🎣 Połowy, pogoda, mapa, checklisty i porady w jednym panelu</div>
-            <div class="weather-note status-warn">🧠 Wszystko ma działać wygodnie także na telefonie</div>
+          <span class="dashboard-eyebrow" id="dashboard-status">Wybrany wyjazd</span>
+          <h2 id="dashboard-trip-name">Wczytywanie wyjazdu…</h2>
+          <p class="dashboard-lake" id="dashboard-lake">Łowisko</p>
+          <div class="trip-facts">
+            <span>Stanowisko · <strong id="dashboard-peg">—</strong></span>
+            <span>Termin · <strong id="dashboard-dates">—</strong></span>
+            <span>Załoga · <strong id="dashboard-crew">—</strong></span>
+            <span id="dashboard-countdown">Ładowanie odliczania…</span>
+          </div>
+          <div class="hero-actions">
+            <a href="pages/polowy.html">+ Dodaj połów</a>
+            <a href="pages/checklisty.html">Otwórz checklistę</a>
+            <a href="pages/wyjazdy.html">Wyjazdy</a>
           </div>
         </div>
 
         <div class="hero-side-card">
-          <img src="assets/img/patryk-maciek.jpeg" alt="Patryk i Maciek z rybą" loading="lazy" />
+          <img src="assets/img/lowisko.jpg" alt="Widok łowiska" loading="lazy" />
           <div class="hero-side-body">
-            <strong>Patryk &amp; Maciek</strong>
-            <span>Załoga Dream Team</span>
+            <strong>RYBY / Dream Team</strong>
+            <span id="dashboard-photo-caption">Wspomnienia z wyjazdu</span>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="stats-grid">
+    <section class="stats-grid dashboard-primary-stats" aria-label="Najważniejsze liczby wyjazdu">
       <article class="stat-card">
-        <span class="label">🎣 Łącznie złowiono</span>
+        <span class="label">Łączna waga</span>
         <strong id="total-weight">0.0 kg</strong>
       </article>
 
       <article class="stat-card">
-        <span class="label">🐟 Liczba ryb</span>
+        <span class="label">Liczba ryb</span>
         <strong id="total-fish">0</strong>
       </article>
 
       <article class="stat-card">
-        <span class="label">🏆 Największa ryba wyjazdu</span>
+        <span class="label">Największa ryba</span>
         <strong id="biggest-fish">Brak danych</strong>
       </article>
 
       <article class="stat-card">
-        <span class="label">🥇 Rekord złowił</span>
+        <span class="label">Spakowane</span>
+        <strong id="dashboard-check-progress">—</strong>
+        <div class="dashboard-progress" aria-hidden="true"><span id="dashboard-check-bar"></span></div>
+        <a class="dashboard-mini-link" href="pages/checklisty.html">Zobacz listę →</a>
+      </article>
+    </section>
+
+    <section class="stats-grid dashboard-secondary-stats" aria-label="Pozostałe statystyki wyjazdu">
+      <article class="stat-card">
+        <span class="label">Rekord złowił</span>
         <strong id="biggest-fish-person">Brak</strong>
       </article>
-
       <article class="stat-card">
-        <span class="label">🪱 Najlepsza przynęta</span>
+        <span class="label">Najlepsza przynęta</span>
         <strong id="best-bait-global">Brak danych</strong>
       </article>
 
       <article class="stat-card">
-        <span class="label">⏰ Najlepsza pora brań</span>
+        <span class="label">Najlepsza pora brań</span>
         <strong id="best-hour-global">Brak danych</strong>
       </article>
 
       <article class="stat-card">
-        <span class="label">🗺️ Liczba spotów</span>
+        <span class="label">Liczba spotów</span>
         <strong id="spots-count-dashboard">0</strong>
       </article>
 
       <article class="stat-card">
-        <span class="label">📍 Top spot wyjazdu</span>
+        <span class="label">Top spot wyjazdu</span>
         <strong id="best-spot">Brak danych</strong>
       </article>
     </section>
@@ -121,26 +132,26 @@
 
     <section class="two-column">
       <article class="panel-card">
-        <h3>🕘 3 ostatnie wpisy</h3>
+        <h3>Ostatnie połowy</h3>
         <div id="last-entry" class="empty-box">
           Brak zapisanych połowów.
         </div>
       </article>
 
       <article class="panel-card">
-        <h3>🚀 Szybki podgląd</h3>
+        <h3>Na wyjeździe</h3>
         <div class="quick-links">
-          <a href="pages/polowy.html">Przejdź do połowów</a>
-          <a href="pages/pogoda.html">Przejdź do pogody</a>
-          <a href="pages/checklisty.html">Przejdź do checklist</a>
-          <a href="pages/mapa.html">Przejdź do mapy spotów</a>
+          <a href="pages/polowy.html">Połowy</a>
+          <a href="pages/pogoda.html">Pogoda i prognoza</a>
+          <a href="pages/checklisty.html">Checklista</a>
+          <a href="pages/mapa.html">Mapa spotów</a>
         </div>
       </article>
     </section>
 
     <section class="panel-card chart-panel">
       <div class="section-head">
-        <h3>📊 Połowy według dni i uczestników</h3>
+        <h3>Połowy według dni i uczestników</h3>
         <span class="section-chip">wybrany wyjazd</span>
       </div>
 

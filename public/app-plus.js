@@ -324,6 +324,9 @@
       const bestBait = getMode(baits, "Brak danych");
       const bestSpot = getMode(spotNames, "Brak danych");
       const openChecklist = checklistItems.filter((item) => !item.done).length;
+      const doneChecklist=checklistItems.length-openChecklist;
+      setText('dashboard-check-progress',checklistItems.length?`${doneChecklist}/${checklistItems.length}`:'Pusta lista');
+      if($('dashboard-check-bar'))$('dashboard-check-bar').style.width=checklistItems.length?`${doneChecklist/checklistItems.length*100}%`:'0%';
       setText("dashboard-last-fish", latestCatch ? `${Number(latestCatch.weight).toFixed(1)} kg` : "Brak");
       setText("dashboard-best-day", bestDay);
       setText("dashboard-best-hour", bestHour);
@@ -340,12 +343,15 @@
 
       let bestBiteWindow = "Brak danych";
       let tomorrowWind = "Brak danych";
+      let currentWeather = "Brak prognozy";
       let dashboardWarning = openChecklist > 0
         ? `Brakuje jeszcze ${openChecklist} rzeczy z checklist.`
         : "Checklisty wyglądają dobrze.";
 
       try {
         const weather = await fetchDashboardWeatherAlerts();
+        const temp=Number(weather.current?.temperature_2m),wind=Number(weather.current?.wind_speed_10m);
+        if(Number.isFinite(temp)&&Number.isFinite(wind))currentWeather=`${temp.toFixed(0)}°C · wiatr ${wind.toFixed(0)} km/h`;
         const localNow = Dream.dateInput(new Date().toISOString(), weather.timezone || Dream.zone());
         const nowIndex = Math.max(0, weather.hourly.time.findIndex(t => t >= localNow.slice(0,13)+':00'));
         const limit = Math.min(weather.hourly.time.length, nowIndex + 24);
@@ -389,6 +395,11 @@
       } catch (_) {}
 
       renderAlertCards([
+        {
+          title: "Teraz nad wodą",
+          value: currentWeather,
+          status: currentWeather === "Brak prognozy" ? "info" : "success"
+        },
         {
           title: "🎣 Najbliższe 24 h · orientacyjne warunki",
           value: bestBiteWindow,

@@ -194,24 +194,25 @@ async function getSpotNameById(spotId) {
 function updateCountdown() {
   const countdownEl = $("countdown");
   if (!countdownEl) return;
+  const show=value=>{countdownEl.textContent=value;if($("dashboard-countdown"))$("dashboard-countdown").textContent=value;};
 
-  if (!TRIP_START) { countdownEl.textContent = window.DREAM_TRIP?.status === 'archived' ? 'Status: archiwum · termin nieustalony' : 'Status: termin do ustalenia'; return; }
+  if (!TRIP_START) { show(window.DREAM_TRIP?.status === 'archived' ? 'Archiwum · termin nieustalony' : 'Termin do ustalenia'); return; }
   const now = new Date();
   if (now < TRIP_START) {
     const diff = TRIP_START - now;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    countdownEl.textContent = `Do wyjazdu: ${days} dni, ${hours} godz., ${minutes} min.`;
+    show(`Do wyjazdu: ${days} dni, ${hours} godz., ${minutes} min.`);
     return;
   }
 
   if (now >= TRIP_START && (!TRIP_END || now <= TRIP_END)) {
-    countdownEl.textContent = "Status: wyjazd trwa";
+    show("Wyjazd trwa");
     return;
   }
 
-  countdownEl.textContent = "Status: wyjazd zakończony";
+  show("Wyjazd zakończony");
 }
 
 function setupMobileMenu() {
@@ -1060,7 +1061,8 @@ function updateDashboard(catches, spots = [], checklist = []) {
     clearNode(lastEntryBox);
     lastEntryBox.classList.remove("last-entry-list");
     if (!catches.length) {
-      lastEntryBox.textContent = "Brak zapisanych połowów.";
+      lastEntryBox.textContent = "Nie ma jeszcze połowów na tym wyjeździe. ";
+      const link=el('a','dashboard-mini-link','Dodaj pierwszy połów →');link.href='/pages/polowy.html';lastEntryBox.append(link);
     } else {
       lastEntryBox.classList.add("last-entry-list");
       const sorted = [...catches].sort((a, b) => new Date(b.caught_at) - new Date(a.caught_at)).slice(0, 3);
