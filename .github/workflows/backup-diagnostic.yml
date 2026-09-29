@@ -1,0 +1,22 @@
+name: Diagnose D1 backup Workflow
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/backup-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Inspect backup instance status and errors without step output
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler workflows instances describe dream-team-d1-backup-daily cf_48f793ed9d782fdc04469f6c4b0190c7cc0372e4f057458546f7d3ce06072301 --config backup/wrangler.jsonc --step-output=false
