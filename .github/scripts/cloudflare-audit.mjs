@@ -29,8 +29,14 @@ if(!d1||d1.name!=='dream-team-db'||d1.uuid!==database){
   process.exit(1);
 }
 console.log(`D1 identity: PASS; version: ${d1.version==='production'?'production':'other/unknown'}`);
+console.log(`D1 created: ${typeof d1.created_at==='string'?d1.created_at.slice(0,10):'unknown'}`);
 const bookmark=await get('Time Travel',`/d1/database/${database}/time_travel/bookmark`);
 console.log(`Time Travel bookmark: ${typeof bookmark?.bookmark==='string'?'PASS':'FAIL/unknown'}`);
+for(const days of [6,8]){
+  const timestamp=new Date(Date.now()-days*86400000).toISOString();
+  const historical=await get(`Time Travel ${days}d`,`/d1/database/${database}/time_travel/bookmark?timestamp=${encodeURIComponent(timestamp)}`);
+  console.log(`Time Travel ${days}d historical bookmark: ${typeof historical?.bookmark==='string'?'PASS':'FAIL/unknown'}`);
+}
 const r2=await get('R2 bucket',`/r2/buckets/${bucket}`);
 console.log(`R2 bucket exists: ${r2?.name===bucket?'YES':'NO/unknown'}`);
 if(r2?.name===bucket){
