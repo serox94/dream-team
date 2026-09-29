@@ -22,12 +22,12 @@ jobs:
           for name in CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID D1_EXPORT_TOKEN; do
             if [ -z "${!name}" ]; then echo "Missing required secret: $name"; exit 1; fi
           done
-      - name: Verify production D1 and export token's D1 Read permission
+      - name: Verify production D1 identity and token account scope
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.D1_EXPORT_TOKEN }}
         run: node scripts/check-cloudflare-account.mjs
-      - name: Verify the limited token can actually start a D1 export
+      - name: Require a successful D1 export with the limited runtime token
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           D1_EXPORT_TOKEN: ${{ secrets.D1_EXPORT_TOKEN }}

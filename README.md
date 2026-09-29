@@ -33,6 +33,6 @@ Node.js 24, `npm ci`, `npm test`, `npm run build`.
 - Migracja `0017` dodaje uczestników wyjazdu, podstawę PB i odzyskiwanie wpisów; nie usuwa oryginalnych rekordów.
 - GitHub Actions sprawdza testy, migracje i build. Wdrożenie wykonuje istniejące połączenie Cloudflare z gałęzią `main`.
 - Przed ręcznymi migracjami zewnętrznymi zawsze pobierz eksport i zweryfikuj kopię. Nie uruchamiaj ponownie starego importera Supabase z opcją wymuszonego czyszczenia.
-- Ochrona zapisów i osobny codzienny eksport D1 do R2 są przygotowane. Wymagają skonfigurowania sekretów i zasobnika w Cloudflare; szczegóły: [backup i dostęp](docs/BACKUP-AND-ACCESS.md). Samo wdrożenie kodu nie aktywuje ochrony ani harmonogramu.
+- Aplikacja i API są chronione sesją Workera. Prywatny R2 i harmonogram 03:17 UTC są wdrożone, a pierwszą kopię D1 sprawdzono przez odtworzenie do osobnej bazy. Codzienny eksport czeka na token runtime, któremu Cloudflare pozwoli wykonać `POST /export`; szczegóły: [backup i dostęp](docs/BACKUP-AND-ACCESS.md).
 
 Szczegóły: [architektura](ARCHITECTURE.md), [audyt](docs/AUDIT-2026-09-28.md).
