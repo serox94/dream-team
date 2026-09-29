@@ -120,7 +120,7 @@ test('spot form CRUD retains optional values and renders user notes as text, nev
   fill(p,'spot-name','Testowy spot');fill(p,'spot-depth','4.5');fill(p,'spot-obstacles',markup);submit(p,'spot-form');
   await waitFor(()=>p.d.querySelector('.spot-card'));assert.equal(p.d.querySelector('img[src="x"]'),null);assert.ok(p.d.querySelector('.spot-meta-grid').textContent.includes(markup));
   p.d.querySelector('.spot-card .edit-btn').click();await waitFor(()=>p.d.getElementById('edit-spot-id').value);fill(p,'spot-depth','');fill(p,'spot-obstacles','');submit(p,'spot-form');
-  await waitFor(()=>p.d.getElementById('spot-message').textContent==='Zmiany zapisane.');assert.equal(s.DB.sqlite.prepare('SELECT depth_m FROM spots').get().depth_m,null);
+  await waitFor(()=>p.d.getElementById('spot-message').textContent==='Zmiany zapisane.'&&p.d.querySelector('.spot-card .catch-badges')?.textContent.includes('Głębokość: brak'));assert.equal(s.DB.sqlite.prepare('SELECT depth_m FROM spots').get().depth_m,null);
   p.d.querySelector('.spot-card .danger-btn').click();await waitFor(()=>p.d.querySelector('#app-notice button'));p.d.querySelector('#app-notice button').click();await waitFor(()=>p.d.getElementById('app-notice').textContent==='Wpis przywrócony.');assert.equal(s.DB.sqlite.prepare('SELECT count(*) n FROM spots WHERE deleted_at IS NULL').get().n,1);
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}

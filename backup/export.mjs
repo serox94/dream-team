@@ -8,7 +8,8 @@ export async function exportD1(env,step,fetcher=fetch,now=()=>new Date()){
     const response=await fetcher(url,{method:'POST',headers,body:JSON.stringify(payload)});
     if(!response.ok)throw new Error(`D1 export API returned ${response.status}.`);
     const data=await response.json();
-    if(!data.success||!data.result)throw new Error('D1 export API did not confirm success.');
+    if(!data.success||!data.result||data.result.success===false)throw new Error('D1 export API did not confirm success.');
+    if(data.result.status==='error')throw new Error('D1 export failed.');
     return data.result;
   }
   const bookmark=await step.do('Start D1 export',async()=>{
@@ -18,10 +19,13 @@ export async function exportD1(env,step,fetcher=fetch,now=()=>new Date()){
   });
   return step.do('Store SQL in private R2',async()=>{
     const result=await poll({current_bookmark:bookmark});
-    if(!result.signed_url)throw new Error('D1 export is still being prepared.');
-    const source=new URL(result.signed_url);
+    // Cloudflare's API schema nests the completed file under result.result;
+    // its Workflow example shows the same fields directly under result.
+    const signedUrl=result.result?.signed_url||result.signed_url;
+    if(!signedUrl)throw new Error('D1 export is still being prepared.');
+    const source=new URL(signedUrl);
     if(source.protocol!=='https:')throw new Error('Invalid D1 export URL.');
-    const download=await fetcher(result.signed_url);
+    const download=await fetcher(signedUrl);
     if(!download.ok||!download.body)throw new Error(`D1 export download returned ${download.status}.`);
     const key=`dream-team-db/${now().toISOString().replace(/[:.]/g,'-')}-${crypto.randomUUID()}.sql`;
     const object=await env.BACKUP_BUCKET.put(key,download.body,{
