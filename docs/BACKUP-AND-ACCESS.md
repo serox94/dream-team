@@ -2,7 +2,9 @@
 
 ## Stan wdrożenia
 
-Produkcja korzysta wyłącznie z Cloudflare D1 `dream-team-db`. Wersja kodu przygotowuje kontrolę dostępu, ale do chwili dodania sekretu `RYBY_API_WRITE_TOKEN` zapisy i pełny eksport nadal są publiczne. Oddzielny Worker w katalogu `backup/` **nie jest wdrożony**: nie zakłada istnienia zasobnika R2 ani poświadczeń Cloudflare. Sam `npm run build` nie uruchamia harmonogramu. Żadna z tych zmian nie zapisuje, nie odtwarza i nie czyści danych produkcyjnych.
+Produkcja korzysta wyłącznie z Cloudflare D1 `dream-team-db`. Audyt GitHub Actions z 29.09.2026 potwierdził właściwe konto, produkcyjną wersję D1 i działające bookmarki Time Travel, również sprzed 20 dni. Nie odczytaliśmy abonamentu (API wymaga `Billing Read`), lecz historyczny bookmark starszy niż 7 dni wskazuje na 30-dniowe okno dostępne na planie Paid. Produkcyjny `/api/health` działa. W Workerze `dream-team` nie ma sekretu `RYBY_API_WRITE_TOKEN`, więc zapisy i pełny eksport nadal są publiczne.
+
+Oddzielny Worker w katalogu `backup/` **nie jest wdrożony**. API R2 zwróciło 403, kod `10042` (`NotEntitled`): na koncie trzeba aktywować usługę/subskrypcję R2 przed utworzeniem bucketu. Nie jest to błąd nazwy bucketu. Audyt Cloudflare Access zwrócił 403, kod `9999`; przed wyborem tej metody trzeba potwierdzić Zero Trust i uprawnienie `Access: Apps and Policies Read/Edit`. Szerszy token GitHub Actions służy wyłącznie do administracji i nie może być instalowany jako sekret runtime backupu. Tymczasowy, tylko odczytowy workflow audytu nie zapisuje pełnych odpowiedzi API ani wartości sekretów.
 
 ## Aktywacja ochrony zapisów
 
@@ -28,7 +30,7 @@ Do aktywacji potrzebne są na koncie Cloudflare:
 2. identyfikator konta jako sekret `CLOUDFLARE_ACCOUNT_ID` i token API uprawniony do eksportu wskazanej D1 jako sekret `D1_EXPORT_TOKEN` Workera `dream-team-d1-backup`,
 3. uprawnienie do wdrożenia osobnego Workera z `backup/wrangler.jsonc` oraz sprawdzenie jego pierwszego zaplanowanego wykonania i obecności niepustego obiektu w R2.
 
-Kod jest sprawdzany przez `npm test` i `npx wrangler deploy --dry-run --config backup/wrangler.jsonc`. Wdrożenie i uruchomienie harmonogramu wymagają autoryzacji konta Cloudflare; obecne środowisko nie ma takiego dostępu. Po pierwszym udanym eksporcie trzeba przetestować odtworzenie na **osobnej testowej D1**, porównać liczbę rekordów i ustawić okres przechowywania R2. Nigdy nie wykonuj odtwarzania testowego na produkcyjnej D1.
+Kod jest sprawdzany przez `npm test` i `npx wrangler deploy --dry-run --config backup/wrangler.jsonc`. GitHub Actions ma dostęp do D1, lecz wdrożenie backupu czeka na aktywację R2 oraz osobny token runtime z minimalnym zakresem `Account → D1 → Read`, ograniczony do właściwego konta. API eksportu D1 należy potwierdzić tym tokenem przed zapisem do Workera. Po pierwszym udanym eksporcie trzeba przetestować odtworzenie na **osobnej testowej D1**, porównać liczbę rekordów i ustawić okres przechowywania R2. Nigdy nie wykonuj odtwarzania testowego na produkcyjnej D1.
 
 Docelowa reguła R2: przechowuj **30 dni** kopii dla prefiksu `dream-team-db/`, czyli przy jednym udanym eksporcie dziennie około 30 kopii; przed włączeniem reguły upewnij się, że pierwszy eksport istnieje i można go odczytać. Sam Worker nie usuwa wcześniejszych kopii. Liczba kopii jest faktyczną liczbą udanych wykonań, nie gwarancją przy awarii harmonogramu.
 
