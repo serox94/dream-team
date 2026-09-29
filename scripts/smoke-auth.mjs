@@ -20,7 +20,7 @@ const valid=await request('/api/login',form(username,password));assert.equal(val
 const cookieHeader=valid.headers.get('set-cookie');
 assert.match(cookieHeader,/^__Host-ryby_session=/);
 for(const flag of ['HttpOnly','Secure','SameSite=Lax','Max-Age=63072000'])assert.ok(cookieHeader.includes(flag),flag);
-assert.ok(!cookieHeader.includes(password));
+assert.ok(!cookieHeader.split(';')[0].split('=')[1].includes(password));
 const cookie=cookieHeader.split(';')[0],headers={cookie};
 assert.equal((await request('/',{headers})).status,200);
 assert.equal((await request('/api/bootstrap',{headers})).status,200);

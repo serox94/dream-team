@@ -2,7 +2,7 @@ name: Deploy private RYBY
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/deploy-private.yml]
+    paths: [.github/workflows/deploy-private.yml, scripts/smoke-auth.mjs]
   workflow_dispatch:
 permissions:
   contents: read
