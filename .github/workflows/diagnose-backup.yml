@@ -2,7 +2,7 @@ name: Inspect first backup execution
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/diagnose-backup.yml, scripts/diagnose-backup.mjs, scripts/check-d1-export.mjs]
+    paths: [.github/workflows/diagnose-backup.yml, scripts/diagnose-backup.mjs, scripts/check-d1-export.mjs, scripts/check-token-scope.mjs]
   workflow_dispatch:
 permissions:
   contents: read
@@ -31,3 +31,10 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           D1_EXPORT_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: node scripts/check-d1-export.mjs
+      - name: Inspect permission names and account scope without reading token value
+        if: always()
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          D1_EXPORT_TOKEN: ${{ secrets.D1_EXPORT_TOKEN }}
+        run: node scripts/check-token-scope.mjs
