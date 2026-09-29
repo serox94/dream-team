@@ -19,4 +19,23 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler workflows instances describe dream-team-d1-backup-daily cf_48f793ed9d782fdc04469f6c4b0190c7cc0372e4f057458546f7d3ce06072301 --config backup/wrangler.jsonc --step-output=false
+        run: |
+          npx wrangler workflows instances describe dream-team-d1-backup-daily cf_48f793ed9d782fdc04469f6c4b0190c7cc0372e4f057458546f7d3ce06072301 --config backup/wrangler.jsonc --json > /tmp/ryby-instance.json
+          node <<'EOF'
+          const fs=require('node:fs');
+          const data=JSON.parse(fs.readFileSync('/tmp/ryby-instance.json','utf8'));
+          const errors=[];
+          function visit(x,path='root'){
+            if(!x||typeof x!=='object')return;
+            for(const [k,v] of Object.entries(x)){
+              if(k.toLowerCase().includes('error')&&typeof v==='string'){
+                const safe=v.match(/D1 export API returned \d+|Missing backup configuration|D1 export API did not confirm success|D1 export bookmark not ready|D1 export failed|D1 export is still being prepared|Empty or incomplete R2 backup|Missing `at_bookmark`/i);
+                errors.push(`${path}.${k}: ${safe?.[0]||'unclassified error'}`);
+              }
+              if(v&&typeof v==='object')visit(v,`${path}.${k}`);
+            }
+          }
+          visit(data);
+          console.log('Workflow status:',data.status||data.result?.status||'unknown');
+          console.log('Error categories:',errors.length?errors.join('; '):'none yet');
+          EOF
