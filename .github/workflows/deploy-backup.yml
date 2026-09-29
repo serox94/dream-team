@@ -1,6 +1,9 @@
 name: Deploy and verify D1 backup
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/deploy-backup.yml]
 permissions:
   contents: read
 jobs:
@@ -13,7 +16,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Require separate read-only D1 export token
+      - name: Require separate scoped D1 export token
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -79,11 +82,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           test_db="dream-team-restore-check-${GITHUB_RUN_ID}"
-          cleanup() { rm -f /tmp/ryby-restore-test.sql; npx wrangler d1 delete "$test_db" --skip-confirmation || true; }
+          cleanup() { rm -f /tmp/ryby-restore-test.sql /tmp/ryby-prod-counts.json /tmp/ryby-restore-counts.json; npx wrangler d1 delete "$test_db" --skip-confirmation || true; }
           trap cleanup EXIT
           npx wrangler d1 create "$test_db"
           if ! npx wrangler d1 execute "$test_db" --remote --file=/tmp/ryby-restore-test.sql --yes > /dev/null 2>&1; then
             echo 'Temporary D1 restore failed; SQL and private data were not logged.'
             exit 1
           fi
-          npx wrangler d1 execute "$test_db" --remote --command="SELECT (SELECT COUNT(*) FROM trips) AS trips, (SELECT COUNT(*) FROM checklist_items) AS checklist, (SELECT COUNT(*) FROM catches) AS catches" --json | node -e 'let s="";process.stdin.on("data",x=>s+=x);process.stdin.on("end",()=>{const d=JSON.parse(s);const r=d[0]?.results?.[0];if(!r||r.trips<1||r.checklist<1)process.exit(1);console.log("Temporary D1 restore: PASS (counts checked, production untouched).");})'
+          query="SELECT (SELECT COUNT(*) FROM anglers) AS anglers, (SELECT COUNT(*) FROM lakes) AS lakes, (SELECT COUNT(*) FROM trips) AS trips, (SELECT COUNT(*) FROM trip_participants) AS participants, (SELECT COUNT(*) FROM catches) AS catches, (SELECT COUNT(*) FROM spots) AS spots, (SELECT COUNT(*) FROM checklist_items) AS checklist, (SELECT COUNT(*) FROM trip_documents) AS documents, (SELECT COUNT(*) FROM trip_notes) AS notes"
+          npx wrangler d1 execute dream-team-db --remote --command="$query" --json > /tmp/ryby-prod-counts.json
+          npx wrangler d1 execute "$test_db" --remote --command="$query" --json > /tmp/ryby-restore-counts.json
+          node -e 'const fs=require("node:fs");const row=f=>JSON.parse(fs.readFileSync(f,"utf8"))[0]?.results?.[0];const production=row("/tmp/ryby-prod-counts.json"),restored=row("/tmp/ryby-restore-counts.json");if(!production||production.trips<1||production.checklist<1||JSON.stringify(production)!==JSON.stringify(restored))throw Error("Production and isolated restore counts differ");console.log("Isolated D1 restore: PASS (nine table counts match production; production untouched).");'
