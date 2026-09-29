@@ -24,6 +24,9 @@ assert.equal((await request('/api/catches',{method:'POST',headers:{'content-type
 const invalid=await request('/api/login',form(username,password+'-invalid'));
 assert.equal(invalid.status,303);assert.match(invalid.headers.get('location'),/error=credentials/);
 assert.equal(invalid.headers.get('set-cookie'),null);
+const mobile=await request('/api/login',{...form(username,password),headers:{'content-type':'application/x-www-form-urlencoded',origin:'null','sec-fetch-site':'cross-site'}});
+assert.equal(mobile.status,303,'mobile login form navigation must reach credential validation');
+assert.match(mobile.headers.get('set-cookie'),/^__Host-ryby_session=/);
 const valid=await request('/api/login',form(username,password));assert.equal(valid.status,303);
 const cookieHeader=valid.headers.get('set-cookie');
 assert.match(cookieHeader,/^__Host-ryby_session=/);

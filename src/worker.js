@@ -241,7 +241,10 @@ export default {
     }
     if(!authConfigured(env))return json({ok:false,error:'Logowanie nie jest jeszcze skonfigurowane.'},503);
     try{
-      if(['POST','PUT','PATCH','DELETE'].includes(method)){
+      // Login is public and checked by credentials and a rate limit. Some mobile
+      // browser entry paths mark its form navigation as cross-site; private
+      // mutations still require same-origin requests and a valid session.
+      if(path!=='/api/login'&&['POST','PUT','PATCH','DELETE'].includes(method)){
         const origin=request.headers.get('origin');
         if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return json({ok:false,error:'Cross-origin write blocked'},403);
       }

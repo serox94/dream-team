@@ -62,6 +62,9 @@ test('private app denies every read and write without a session; login, renewal 
   assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,0);
   const bad=await call('/api/login','POST',{'content-type':'application/x-www-form-urlencoded'},new URLSearchParams({username:s.env.RYBY_LOGIN_USERNAME,password:'bad'}));
   assert.equal(bad.status,303);assert.equal(bad.headers.get('location'),'/login?error=credentials');assert.equal(bad.headers.get('set-cookie'),null);
+  const mobile=await call('/api/login','POST',{'content-type':'application/x-www-form-urlencoded',origin:'null','sec-fetch-site':'cross-site'},new URLSearchParams({username:s.env.RYBY_LOGIN_USERNAME,password:s.env.RYBY_LOGIN_PASSWORD}));
+  assert.equal(mobile.status,303,'mobile form navigation can carry a cross-site fetch marker');
+  assert.match(mobile.headers.get('set-cookie'),/^__Host-ryby_session=/);
   const cookie=await s.signed();
   assert.match(cookie,/^__Host-ryby_session=v1\./);
   const issued=await call('/api/login','POST',{'content-type':'application/x-www-form-urlencoded'},new URLSearchParams({username:s.env.RYBY_LOGIN_USERNAME,password:s.env.RYBY_LOGIN_PASSWORD}));
@@ -79,6 +82,7 @@ test('private app denies every read and write without a session; login, renewal 
   const secretChanged={...s.env,RYBY_SESSION_SECRET:'rotated-secret-with-at-least-32-characters'};
   assert.equal((await worker.fetch(new Request('https://dream.test/api/bootstrap',{headers:{cookie}}),secretChanged)).status,401,'session secret rotation invalidates sessions');
   assert.equal((await call('/api/catches','POST',{cookie,'content-type':'application/json',origin:'https://evil.test'},JSON.stringify(catchData))).status,403);
+  assert.equal((await call('/api/catches','POST',{cookie,'content-type':'application/json','sec-fetch-site':'cross-site'},JSON.stringify(catchData))).status,403);
   assert.equal((await call('/api/catches','POST',{cookie,'content-type':'application/json'},JSON.stringify(catchData))).status,201);
   const out=await call('/api/logout','POST',{cookie});assert.equal(out.status,200);assert.match(out.headers.get('set-cookie'),/Max-Age=0/);
   assert.equal((await call('/api/bootstrap','GET',{cookie})).status,401,'copied cookie must be revoked server-side');
