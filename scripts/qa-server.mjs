@@ -7,8 +7,10 @@ import worker from '../src/worker.js';
 import {database} from '../tests/db.mjs';
 const publicDir=path.resolve(fileURLToPath(new URL('../public/',import.meta.url))); 
 const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.json':'application/json'};
-export async function serve({port=0,seed=false,weatherFetch,writeToken}={}){
+export async function serve({port=0,seed=false,weatherFetch,testSession=true}={}){
  const DB=database();
+ const env={DB,ASSETS:null,WEATHER_FETCH:weatherFetch,RYBY_LOGIN_USERNAME:'local-fixture-user',RYBY_LOGIN_PASSWORD:'local-fixture-password',RYBY_SESSION_SECRET:'local-fixture-session-secret-with-32-chars'};
+ let testCookie='';
  if(seed){
   DB.sqlite.exec("INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,bait) VALUES('next-trip','maciek','2026-09-03T10:00:00Z',18,'Karp','tuti'),('next-trip','patryk','2026-09-03T11:00:00Z',5,'Karp','coco');");
   DB.sqlite.exec("INSERT INTO checklist_items(trip_id,category,label,packed,quantity) VALUES('next-trip','sprzęt','Testowy podbierak',1,'1 szt.'),('next-trip','jedzenie / picie','Testowa woda',0,'5 litry');");
@@ -23,16 +25,24 @@ export async function serve({port=0,seed=false,weatherFetch,writeToken}={}){
   try{if(!(await stat(file)).isFile())throw Error();}catch{if(!path.extname(file)){file+='.html';}else return new Response('Not found',{status:404});}
   try{return new Response(await readFile(file),{headers:{'content-type':mime[path.extname(file)]||'application/octet-stream'}});}catch{return new Response('Not found',{status:404});}
  }};
+ env.ASSETS=ASSETS;
  const server=createServer(async(req,res)=>{
   try{
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
-   const request=new Request(`http://${req.headers.host}${req.url}`,{method:req.method,headers:req.headers,body:['GET','HEAD'].includes(req.method)?undefined:Buffer.concat(chunks)});
-   const response=await worker.fetch(request,{DB,ASSETS,WEATHER_FETCH:weatherFetch,RYBY_API_WRITE_TOKEN:writeToken});
+   const headers={...req.headers};if(testSession&&testCookie&&!headers.cookie)headers.cookie=testCookie;
+   const request=new Request(`http://${req.headers.host}${req.url}`,{method:req.method,headers,body:['GET','HEAD'].includes(req.method)?undefined:Buffer.concat(chunks)});
+   const response=await worker.fetch(request,env);
    requests.push({method:req.method,url:req.url,status:response.status});
    res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
   }catch(error){res.writeHead(500);res.end(error.message);}
  });
  await new Promise(resolve=>server.listen(port,'0.0.0.0',resolve));
+ if(testSession){
+  const form=new URLSearchParams({username:env.RYBY_LOGIN_USERNAME,password:env.RYBY_LOGIN_PASSWORD});
+  const signed=await worker.fetch(new Request(`http://127.0.0.1:${server.address().port}/api/login`,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:form}),env);
+  if(signed.status!==303)throw Error('Local QA login failed');
+  testCookie=signed.headers.get('set-cookie').split(';')[0];
+ }
  return {DB,requests,url:`http://127.0.0.1:${server.address().port}`,async close(){await new Promise(r=>server.close(r));DB.close();}};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){

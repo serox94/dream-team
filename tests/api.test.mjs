@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/worker.js';
 import {database} from './db.mjs';
-const setup=(WEATHER_FETCH,RYBY_API_WRITE_TOKEN)=>{const DB=database();return {DB,async req(path,method='GET',value,headers={}){const r=await worker.fetch(new Request('https://dream.test/api/'+path,{method,headers:{'content-type':'application/json',...headers},body:value===undefined?undefined:JSON.stringify(value)}),{DB,WEATHER_FETCH,RYBY_API_WRITE_TOKEN,ASSETS:{fetch:()=>new Response('asset')}});return {status:r.status,data:await r.json()};}};};
+const setup=(WEATHER_FETCH)=>{const DB=database(),env={DB,WEATHER_FETCH,RYBY_LOGIN_USERNAME:'test-angler',RYBY_LOGIN_PASSWORD:'test-password-for-local-only',RYBY_SESSION_SECRET:'test-session-secret-for-local-only-32-chars',ASSETS:{fetch:()=>new Response('asset')}};let loginPromise;
+ const signed=async()=>{const r=await worker.fetch(new Request('https://dream.test/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:env.RYBY_LOGIN_USERNAME,password:env.RYBY_LOGIN_PASSWORD})}),env);assert.equal(r.status,303);return r.headers.get('set-cookie').split(';')[0];};
+ return {DB,env,signed,async req(path,method='GET',value,headers={}){loginPromise||=signed();const cookie=await loginPromise;const r=await worker.fetch(new Request('https://dream.test/api/'+path,{method,headers:{'content-type':'application/json',cookie,...headers},body:value===undefined?undefined:JSON.stringify(value)}),env);return {status:r.status,data:await r.json()};}};};
 const scoped=(resource,id,trip='next-trip')=>`${resource}/${id}?tripId=${trip}`;
 const catchData={tripId:'next-trip',anglerId:'patryk',weightKg:14,bait:'test',caughtAt:'2026-09-01T10:00:00Z'};
 
@@ -27,7 +29,7 @@ test('all migrations, bootstrap, participants, original PB and legacy content su
  const s=setup(),b=(await s.req('bootstrap')).data;
  assert.equal(b.trips.length,4);assert.equal(b.lakes.length,3);assert.ok(b.trips.every(t=>t.participants.length===2));assert.ok(b.anglers.every(a=>a.pbKg===13));
  assert.equal(b.lakes.find(l=>l.id==='plaine2').facts.contentPack,'plaine2');
- assert.equal((await s.req('health')).data.schemaVersion,'17');s.DB.close();
+ assert.equal((await s.req('health')).data.schemaVersion,'18');s.DB.close();
 });
 test('create/edit/clear a catch; trip isolation; soft delete and restore; PB recalculates',async()=>{
  const s=setup(),r=await s.req('catches','POST',catchData);assert.equal(r.status,201);const id=r.data.id;
@@ -48,19 +50,47 @@ test('validates dates, participants, finite weight, content type and cross-site 
  assert.equal((await s.req('catches','POST',catchData,{origin:'https://evil.test'})).status,403);
  assert.equal((await s.req('catches','POST',catchData,{'sec-fetch-site':'cross-site'})).status,403);s.DB.close();
 });
-test('configured token protects every write and complete export without changing data for unauthenticated requests',async()=>{
- const token='abcdef1234567890abcdef1234567890abcdef1234567890',s=setup(undefined,token),header={authorization:`Bearer ${token}`};
+test('private app denies every read and write without a session; login, renewal and logout revoke it',async()=>{
+ const s=setup(),call=(path,method='GET',headers={},body)=>worker.fetch(new Request('https://dream.test'+path,{method,headers,body}),s.env);
  try{
-  assert.equal((await s.req('bootstrap')).status,200);
-  assert.equal((await s.req('catches','POST',catchData)).status,401);
-  assert.equal((await s.req('trips/next-trip/activate','POST',{})).status,401);
-  assert.equal((await s.req('export')).status,401);
+  assert.equal((await call('/')).status,302);
+  assert.equal((await call('/login')).status,200);
+  assert.equal((await call('/login.css')).status,200);
+  assert.equal((await call('/app.js')).status,302);
+  for(const path of ['/api/bootstrap','/api/catches?tripId=next-trip','/api/export','/api/health'])assert.equal((await call(path)).status,401,path);
+  for(const [path,method] of [['/api/catches','POST'],['/api/checklist','PATCH'],['/api/spots/1','DELETE'],['/api/catches/1/restore','POST'],['/api/trips/next-trip/activate','POST']])assert.equal((await call(path,method,{'content-type':'application/json'},'{}')).status,401,path);
   assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,0);
-  assert.equal((await s.req('catches','POST',catchData,{authorization:'Bearer wrong'})).status,401);
-  assert.equal((await s.req('catches','POST',catchData,{...header,origin:'https://evil.test'})).status,403);
-  assert.equal((await s.req('catches','POST',catchData,header)).status,201);
-  assert.equal((await s.req('export','GET',undefined,header)).data.tables.catches.length,1);
-  assert.equal((await s.req('catches?tripId=next-trip')).data.catches.length,1);
+  const bad=await call('/api/login','POST',{'content-type':'application/x-www-form-urlencoded'},new URLSearchParams({username:s.env.RYBY_LOGIN_USERNAME,password:'bad'}));
+  assert.equal(bad.status,303);assert.equal(bad.headers.get('location'),'/login?error=credentials');assert.equal(bad.headers.get('set-cookie'),null);
+  const cookie=await s.signed();
+  assert.match(cookie,/^__Host-ryby_session=v1\./);
+  const issued=await call('/api/login','POST',{'content-type':'application/x-www-form-urlencoded'},new URLSearchParams({username:s.env.RYBY_LOGIN_USERNAME,password:s.env.RYBY_LOGIN_PASSWORD}));
+  assert.match(issued.headers.get('set-cookie'),/; Path=\/; HttpOnly; Secure; SameSite=Lax; Max-Age=63072000$/);
+  assert.ok(!issued.headers.get('set-cookie').includes(s.env.RYBY_LOGIN_PASSWORD));
+  const raw=await call('/api/bootstrap','GET',{cookie});assert.equal(raw.status,200);
+  assert.equal((await call('/pages/wyjazdy.html','GET',{cookie})).status,200,'private assets require a signed session');
+  assert.equal((await call('/api/bootstrap','GET',{cookie})).status,200,'refresh and reopened app reuse the browser cookie');
+  assert.equal((await call('/api/export','GET',{cookie})).status,200);
+  const changed={...s.env,RYBY_LOGIN_PASSWORD:'rotated-password'};
+  assert.equal((await worker.fetch(new Request('https://dream.test/api/bootstrap',{headers:{cookie}}),changed)).status,401,'credential rotation invalidates sessions');
+  const secretChanged={...s.env,RYBY_SESSION_SECRET:'rotated-secret-with-at-least-32-characters'};
+  assert.equal((await worker.fetch(new Request('https://dream.test/api/bootstrap',{headers:{cookie}}),secretChanged)).status,401,'session secret rotation invalidates sessions');
+  assert.equal((await call('/api/catches','POST',{cookie,'content-type':'application/json',origin:'https://evil.test'},JSON.stringify(catchData))).status,403);
+  assert.equal((await call('/api/catches','POST',{cookie,'content-type':'application/json'},JSON.stringify(catchData))).status,201);
+  const out=await call('/api/logout','POST',{cookie});assert.equal(out.status,200);assert.match(out.headers.get('set-cookie'),/Max-Age=0/);
+  assert.equal((await call('/api/bootstrap','GET',{cookie})).status,401,'copied cookie must be revoked server-side');
+  assert.equal((await call('/api/export','GET',{cookie})).status,401);
+  assert.equal((await call('/')).status,302);
+ }finally{s.DB.close();}
+});
+test('login is throttled and missing runtime secrets fail closed',async()=>{
+ const s=setup(),url='https://dream.test/api/login';
+ try{
+  assert.equal((await worker.fetch(new Request('https://dream.test/api/export'),{...s.env,RYBY_SESSION_SECRET:undefined})).status,503);
+  for(let i=0;i<8;i++)assert.equal((await worker.fetch(new Request(url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','cf-connecting-ip':'203.0.113.10'},body:'username=x&password=x'}),s.env)).headers.get('location'),'/login?error=credentials');
+  const blocked=await worker.fetch(new Request(url,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','cf-connecting-ip':'203.0.113.10'},body:new URLSearchParams({username:s.env.RYBY_LOGIN_USERNAME,password:s.env.RYBY_LOGIN_PASSWORD})}),s.env);
+  assert.equal(blocked.headers.get('location'),'/login?error=limit');
+  assert.equal(blocked.headers.get('set-cookie'),null);
  }finally{s.DB.close();}
 });
 test('spot lifecycle preserves catch history and rejects spots from another trip',async()=>{

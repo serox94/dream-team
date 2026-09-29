@@ -1,6 +1,7 @@
 import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
 import { weatherForTrip } from './weather.js';
+import {authConfigured,session,login,logout,loginAssets} from './auth.js';
 
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
   status, headers: { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-store', 'x-content-type-options':'nosniff', ...extra }
@@ -11,19 +12,6 @@ const run = (env, sql, ...args) => env.DB.prepare(sql).bind(...args).run();
 const stmt = (env, sql, ...args) => env.DB.prepare(sql).bind(...args);
 const parseFacts = value => { try { return JSON.parse(value || '{}'); } catch { return {}; } };
 const tables = { catches:'catches', spots:'spots', checklist:'checklist_items' };
-
-async function authorized(request, secret) {
-  // The credential lives only in a Cloudflare Worker secret, never in source or D1.
-  if (!secret) return true; // Enable after provisioning the production secret.
-  if (typeof secret !== 'string' || secret.length < 32) return false;
-  const provided = request.headers.get('authorization') || '';
-  const token = provided.startsWith('Bearer ') ? provided.slice(7) : '';
-  const digest = async value => new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)));
-  const [expected,actual] = await Promise.all([digest(secret),digest(token)]);
-  let mismatch=0;
-  for(let i=0;i<expected.length;i++) mismatch|=expected[i]^actual[i];
-  return mismatch===0 && token.length>0;
-}
 
 async function tripExists(env, id) {
   const trip = await one(env,'SELECT * FROM trips WHERE id=?',id);
@@ -183,26 +171,16 @@ async function exportData(env){
   for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','trip_documents','trip_notes','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
   return json(data,200,{'content-disposition':`attachment; filename="dream-team-backup-${new Date().toISOString().slice(0,10)}.json"`});
 }
-export default {
-  async fetch(request,env){
+async function privateFetch(request,env){
     const url=new URL(request.url),method=request.method,path=url.pathname;
     try{
       if(!path.startsWith('/api/'))return env.ASSETS.fetch(request);
-      const write=['POST','PUT','PATCH','DELETE'].includes(method);
-      if(write||path==='/api/export'){
-        if(!await authorized(request,env.RYBY_API_WRITE_TOKEN))return json({ok:false,error:'Wymagane uprawnienie do zapisu lub pobrania kopii.'},401,{'www-authenticate':'Bearer realm="RYBY"'});
-      }
-      await ensureSchema(env);
-      if(write){
-        const origin=request.headers.get('origin');
-        if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return json({ok:false,error:'Cross-origin write blocked'},403);
-      }
       if(path==='/api/health'&&method==='GET'){
         const version=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
         return json({ok:true,app:'dream-team',version:'1.1.1',database:'connected',schemaVersion:version?.value||null});
       }
       if(path==='/api/bootstrap'&&method==='GET')return json(await bootstrap(env));
-      if(path==='/api/weather'&&method==='GET')return json(await weatherForTrip(env,url.searchParams.get('tripId')),200,{'cache-control':'public, max-age=300'});
+      if(path==='/api/weather'&&method==='GET')return json(await weatherForTrip(env,url.searchParams.get('tripId')));
       if(path==='/api/export'&&method==='GET')return await exportData(env);
       if(path==='/api/trash'&&method==='GET'){
         const tripId=url.searchParams.get('tripId');if(!tripId)fail('Wymagany tripId.');await tripExists(env,tripId);
@@ -237,6 +215,48 @@ export default {
     }catch(error){
       if(error instanceof InputError)return json({ok:false,error:error.message},error.status);
       console.error(error);return json({ok:false,error:'Błąd serwera. Spróbuj ponownie.'},500);
+    }
+}
+function protectedResponse(result,active){
+  const wrapped=new Response(result.body,result);
+  wrapped.headers.set('cache-control','private, no-store');
+  wrapped.headers.set('x-content-type-options','nosniff');
+  wrapped.headers.set('referrer-policy','no-referrer');
+  if(active?.refreshCookie)wrapped.headers.set('set-cookie',active.refreshCookie);
+  return wrapped;
+}
+export default {
+  async fetch(request,env){
+    const url=new URL(request.url),path=url.pathname,method=request.method;
+    if(loginAssets.has(path)&&method==='GET'){
+      if(authConfigured(env)){
+        await ensureSchema(env);
+        if(await session(request,env))return Response.redirect(url.origin+'/',302);
+      }
+      const assetPath=path==='/login'?'/login.html':path;
+      const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));
+      const result=protectedResponse(asset);
+      if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+      return result;
+    }
+    if(!authConfigured(env))return json({ok:false,error:'Logowanie nie jest jeszcze skonfigurowane.'},503);
+    try{
+      if(['POST','PUT','PATCH','DELETE'].includes(method)){
+        const origin=request.headers.get('origin');
+        if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return json({ok:false,error:'Cross-origin write blocked'},403);
+      }
+      await ensureSchema(env);
+      if(path==='/api/login'&&method==='POST')return await login(request,env);
+      const active=await session(request,env);
+      if(!active){
+        if(path.startsWith('/api/'))return json({ok:false,error:'Wymagane logowanie.'},401);
+        return protectedResponse(Response.redirect(url.origin+'/login',302));
+      }
+      if(path==='/api/logout'&&method==='POST')return await logout(env,active);
+      return protectedResponse(await privateFetch(request,env),active);
+    }catch(error){
+      console.error('Private request failed:',error);
+      return json({ok:false,error:'Błąd serwera. Spróbuj ponownie.'},500);
     }
   }
 };

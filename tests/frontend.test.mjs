@@ -61,18 +61,23 @@ test('catch form persists once on double submit, timezone and correction are pre
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
-test('protected save prompts for a token once and reuses it for later writes',async()=>{
- const token='abcdef1234567890abcdef1234567890abcdef1234567890';
- const s=await testServe({writeToken:token}),p=await page(s,'/pages/checklisty.html');
+test('signed session saves checklist without exposing credentials to frontend storage',async()=>{
+ const s=await testServe(),p=await page(s,'/pages/checklisty.html');
  try{
   fill(p,'check-name','Namiot chroniony');submit(p,'checklist-form');
-  await waitFor(()=>p.d.querySelector('.write-auth-dialog input'),'token dialog');
-  p.d.querySelector('.write-auth-dialog input').value=token;
-  p.d.querySelector('.write-auth-dialog form').dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
   await waitFor(()=>p.d.getElementById('checklist-message').textContent.includes('dodana'));
-  assert.equal(p.w.sessionStorage.getItem('ryby_write_token'),token);
+  assert.equal(p.w.sessionStorage.length,0);
   assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_items WHERE label=?').get('Namiot chroniony').n,1);
-  assert.equal(s.requests.filter(r=>r.method==='POST'&&r.url==='/api/checklist').map(r=>r.status).join(','),'401,201');
+  assert.equal(s.requests.filter(r=>r.method==='POST'&&r.url==='/api/checklist').map(r=>r.status).join(','),'201');
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('management screen offers logout and revokes the active device session',async()=>{
+ const s=await testServe(),p=await page(s,'/pages/wyjazdy.html');
+ try{
+  const button=p.d.getElementById('ryby-logout');assert.ok(button);button.click();
+  await waitFor(()=>s.requests.some(r=>r.url==='/api/logout'&&r.status===200),'logout request');
+  const denied=await fetch(s.url+'/api/export');assert.equal(denied.status,401);
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
