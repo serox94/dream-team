@@ -5,7 +5,7 @@ export async function exportD1(env,step,fetcher=fetch,now=()=>new Date()){
   const url=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/d1/database/${encodeURIComponent(db)}/export`;
   const headers={'content-type':'application/json',authorization:`Bearer ${env.D1_EXPORT_TOKEN}`};
   async function poll(payload){
-    const response=await fetcher(url,{method:'POST',headers,body:JSON.stringify(payload)});
+    const response=await fetcher(url,{method:'POST',headers,body:JSON.stringify({output_format:'polling',...payload})});
     if(!response.ok)throw new Error(`D1 export API returned ${response.status}.`);
     const data=await response.json();
     if(!data.success||!data.result||data.result.success===false)throw new Error('D1 export API did not confirm success.');

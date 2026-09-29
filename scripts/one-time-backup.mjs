@@ -8,7 +8,7 @@ const exportUrl=`https://api.cloudflare.com/client/v4/accounts/${encodeURICompon
 const r2base=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/r2/buckets/dream-team-d1-backups/objects`;
 const pause=()=>new Promise(done=>setTimeout(done,5000));
 async function poll(body){
- const r=await fetch(exportUrl,{method:'POST',headers,body:JSON.stringify(body)}),x=await r.json();
+ const r=await fetch(exportUrl,{method:'POST',headers,body:JSON.stringify({output_format:'polling',...body})}),x=await r.json();
  if(r.status!==200||!x.success){
   const details=(x.errors||[]).map(e=>`${e.code}: ${String(e.message||'').replace(/https?:\/\/\S+/g,'[URL]').replace(/[A-Za-z0-9_-]{24,}/g,'[redacted]').slice(0,130)}`);
   throw Error(`Production D1 export returned HTTP ${r.status}; errors ${details.join(' | ')||'none'}`);

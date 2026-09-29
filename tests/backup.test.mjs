@@ -10,11 +10,11 @@ for(const shape of ['documented schema','Workflow example'])test(`daily backup h
   calls.push({url,options});
   if(url==='https://download.example/export.sql')return new Response('CREATE TABLE catches(id INTEGER);');
   const body=JSON.parse(options.body);
-  return Response.json({success:true,result:body.output_format?{at_bookmark:'bookmark-1'}:shape==='documented schema'?{status:'complete',result:{signed_url:'https://download.example/export.sql'}}:{signed_url:'https://download.example/export.sql'}});
+  return Response.json({success:true,result:!body.current_bookmark?{at_bookmark:'bookmark-1'}:shape==='documented schema'?{status:'complete',result:{signed_url:'https://download.example/export.sql'}}:{signed_url:'https://download.example/export.sql'}});
  };
  const result=await exportD1(env,step,fetcher,()=>new Date('2026-09-28T03:17:00Z'));
  assert.equal(calls.length,3);
- assert.deepEqual(calls.slice(0,2).map(x=>JSON.parse(x.options.body)),[{output_format:'polling'},{current_bookmark:'bookmark-1'}]);
+ assert.deepEqual(calls.slice(0,2).map(x=>JSON.parse(x.options.body)),[{output_format:'polling'},{output_format:'polling',current_bookmark:'bookmark-1'}]);
  assert.ok(calls.slice(0,2).every(x=>x.options.headers.authorization==='Bearer test-secret'));
  assert.match(result.key,/^dream-team-db\/2026-09-28T03-17-00-000Z-.+\.sql$/);
  assert.equal(result.size,84);assert.equal(stored[0][0],result.key);
