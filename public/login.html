@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0b1017">
+  <meta name="theme-color" content="#0b100e">
   <title>Logowanie · RYBY Dream Team</title>
   <link rel="stylesheet" href="/login.css">
   <script src="/login.js" defer></script>
 </head>
 <body>
   <main class="login-card">
-    <div class="mark" aria-hidden="true">🎣</div>
+    <div class="mark" aria-hidden="true">◉</div>
     <p class="eyebrow">Patryk &amp; Maciek</p>
     <h1>RYBY <span>/ Dream Team</span></h1>
-    <p class="intro">Zaloguj się, aby otworzyć wyjazdy, połowy i checklisty.</p>
+    <p class="intro">Twoje wyjazdy, połowy i przygotowania w jednym miejscu.</p>
     <p id="login-error" class="error" role="alert" hidden></p>
     <form action="/api/login" method="post">
       <label for="username">Login</label>
@@ -22,6 +22,7 @@
       <input id="password" name="password" type="password" autocomplete="current-password" required>
       <button type="submit">Zaloguj</button>
     </form>
+    <p class="login-hint">To urządzenie pozostanie zalogowane.</p>
   </main>
 </body>
 </html>
