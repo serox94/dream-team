@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
 import {serve} from './qa-server.mjs';
+import {weatherFixture} from './qa-weather.mjs';
 
 const widths=[360,390,412,768,1280];
 const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html'];
-const preview=await serve({seed:true});
+const preview=await serve({seed:true,weatherFetch:async()=>Response.json(weatherFixture())});
 const loginPreview=await serve({testSession:false});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
 const screenshotDir='qa-screenshots';
@@ -17,10 +18,11 @@ try{
     for(const route of routes){
       const page=await context.newPage(),errors=[];
       page.on('pageerror',error=>errors.push(error.message));
-      page.on('response',response=>{if(response.status()>=400&&!response.url().includes('/api/weather'))errors.push(`${response.status()} ${new URL(response.url()).pathname}`);});
+      page.on('response',response=>{if(response.status()>=400)errors.push(`${response.status()} ${new URL(response.url()).pathname}`);});
       const response=await page.goto(preview.url+route,{waitUntil:'domcontentloaded'});
       assert.equal(response.status(),200,`${width} ${route}: HTTP`);
       await page.locator('html[data-ready="true"]').waitFor({timeout:15000});
+      if(route==='/')await page.waitForFunction(()=>document.getElementById('dashboard-weather-now')?.textContent.includes('15°C'));
       const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
       assert.ok(dimensions.scroll<=dimensions.viewport+1&&dimensions.body<=dimensions.viewport+1,`${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)}`);
       assert.deepEqual(errors,[],`${width} ${route}: console/network`);
@@ -34,6 +36,8 @@ try{
           const menu=page.locator('#main-nav.open'),menuBox=await menu.boundingBox();
           assert.ok(menuBox&&menuBox.y>=0&&menuBox.y+menuBox.height<=844-60,`${width}: menu is not within the usable viewport`);
           await page.locator('#bottom-more').click();
+          assert.equal(await page.locator('#bottom-more').getAttribute('aria-expanded'),'false');
+          await page.mouse.move(1,1);
         }
       }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html'].includes(route)){

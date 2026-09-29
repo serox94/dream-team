@@ -155,7 +155,7 @@ body[data-page="dashboard"] .hero-card { margin-bottom: 20px; }
   .bottom-nav a, .bottom-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 50px; padding: 2px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); font-size: .68rem; font-weight: 650; white-space: nowrap; }
   .bottom-nav .nav-icon { font-size: 1.3rem; line-height: 1; font-weight: 500; }
   .bottom-nav .active, .bottom-nav a:hover, .bottom-nav button[aria-expanded="true"] { color: var(--accent); background: rgba(191,211,147,.1); }
-  .bottom-nav button:hover { color: var(--accent); background: rgba(191,211,147,.1); }
+  @media (hover: hover) { .bottom-nav button:hover { color: var(--accent); background: rgba(191,211,147,.1); } }
   .page-content { padding-bottom: calc(106px + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 640px) {
