@@ -2,7 +2,7 @@ name: Inspect first backup execution
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/diagnose-backup.yml, scripts/diagnose-backup.mjs]
+    paths: [.github/workflows/diagnose-backup.yml, scripts/diagnose-backup.mjs, scripts/check-d1-export.mjs]
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,3 +20,8 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/diagnose-backup.mjs
+      - name: Check limited token against actual read-only D1 export API
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_EXPORT_TOKEN: ${{ secrets.D1_EXPORT_TOKEN }}
+        run: node scripts/check-d1-export.mjs
