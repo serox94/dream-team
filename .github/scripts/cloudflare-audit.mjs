@@ -32,7 +32,7 @@ console.log(`D1 identity: PASS; version: ${d1.version==='production'?'production
 console.log(`D1 created: ${typeof d1.created_at==='string'?d1.created_at.slice(0,10):'unknown'}`);
 const bookmark=await get('Time Travel',`/d1/database/${database}/time_travel/bookmark`);
 console.log(`Time Travel bookmark: ${typeof bookmark?.bookmark==='string'?'PASS':'FAIL/unknown'}`);
-for(const days of [6,8]){
+for(const days of [6,8,20]){
   const timestamp=new Date(Date.now()-days*86400000).toISOString();
   const historical=await get(`Time Travel ${days}d`,`/d1/database/${database}/time_travel/bookmark?timestamp=${encodeURIComponent(timestamp)}`);
   console.log(`Time Travel ${days}d historical bookmark: ${typeof historical?.bookmark==='string'?'PASS':'FAIL/unknown'}`);
@@ -50,6 +50,8 @@ if(Array.isArray(subscriptions)){
 }else console.log('Workers subscription: unavailable; Billing Read may be required to determine 7/30 day retention.');
 const bindings=await get('Production Worker secret names','/workers/scripts/dream-team/secrets');
 console.log(`Production write credential configured: ${Array.isArray(bindings)?bindings.some(x=>x.name==='RYBY_API_WRITE_TOKEN')?'YES':'NO':'unknown'}`);
+const access=await get('Cloudflare Access applications','/access/apps?per_page=100');
+console.log(`Cloudflare Access readable: ${Array.isArray(access)?'YES':'NO/unknown'}`);
 try{
   const health=await fetch('https://dream-team.sewerynski00.workers.dev/api/health',{signal:AbortSignal.timeout(15000)});
   const json=await health.json();
