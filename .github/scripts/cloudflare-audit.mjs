@@ -48,3 +48,10 @@ if(Array.isArray(subscriptions)){
   const workers=subscriptions.filter(x=>JSON.stringify(x?.rate_plan||{}).toLowerCase().includes('worker'));
   console.log(`Workers subscription: ${workers.map(x=>x.rate_plan?.public_name||x.rate_plan?.id||'unknown').join(',')||'not identified'}`);
 }else console.log('Workers subscription: unavailable; Billing Read may be required to determine 7/30 day retention.');
+const bindings=await get('Production Worker secret names','/workers/scripts/dream-team/secrets');
+console.log(`Production write credential configured: ${Array.isArray(bindings)?bindings.some(x=>x.name==='RYBY_API_WRITE_TOKEN')?'YES':'NO':'unknown'}`);
+try{
+  const health=await fetch('https://dream-team.sewerynski00.workers.dev/api/health',{signal:AbortSignal.timeout(15000)});
+  const json=await health.json();
+  console.log(`Production health: ${health.ok&&json.ok===true&&json.database==='connected'?'PASS':'FAIL'}`);
+}catch{console.log('Production health: FAIL');}
