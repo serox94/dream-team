@@ -68,6 +68,9 @@ test('private app denies every read and write without a session; login, renewal 
   assert.match(issued.headers.get('set-cookie'),/; Path=\/; HttpOnly; Secure; SameSite=Lax; Max-Age=63072000$/);
   assert.ok(!issued.headers.get('set-cookie').includes(s.env.RYBY_LOGIN_PASSWORD));
   const raw=await call('/api/bootstrap','GET',{cookie});assert.equal(raw.status,200);
+  const assetPaths=[];s.env.ASSETS={fetch:request=>{assetPaths.push(new URL(request.url).pathname);return new Response('asset')}};
+  assert.equal((await call('/','GET',{cookie})).status,200);
+  assert.deepEqual(assetPaths,['/index.html'],'protected root resolves to the physical HTML asset');
   assert.equal((await call('/pages/wyjazdy.html','GET',{cookie})).status,200,'private assets require a signed session');
   assert.equal((await call('/api/bootstrap','GET',{cookie})).status,200,'refresh and reopened app reuse the browser cookie');
   assert.equal((await call('/api/export','GET',{cookie})).status,200);
