@@ -7,6 +7,14 @@ assert.ok(username&&password,'Missing login configuration');
 const request=(path,options={})=>fetch(new URL(path,base),{redirect:'manual',cache:'no-store',...options});
 const form=(username,password)=>({method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password})});
 
+// A deploy can briefly coexist with the previous asset-first Worker at the edge.
+const deadline=Date.now()+120000;
+while(true){
+  const [home,api]=await Promise.all([request('/?auth-smoke='+Date.now()),request('/api/bootstrap?auth-smoke='+Date.now())]);
+  if(home.status===302&&api.status===401)break;
+  if(Date.now()>deadline)throw Error(`Protected deployment did not propagate: home ${home.status}, API ${api.status}`);
+  await new Promise(resolve=>setTimeout(resolve,3000));
+}
 assert.equal((await request('/')).status,302);
 const entry=await request('/login');assert.equal(entry.status,200);assert.match(await entry.text(),/Zaloguj/);
 assert.equal((await request('/login.css')).status,200);
