@@ -1,0 +1,33 @@
+name: Responsive UI QA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/responsive-qa.yml]
+permissions:
+  contents: read
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install disposable browser test tooling
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Check 11 screens and login at five viewport widths
+        run: node scripts/responsive-qa.mjs
+      - name: Keep screenshots of fixture data for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ryby-responsive-fixture
+          path: qa-screenshots/
+          if-no-files-found: ignore
+          retention-days: 3
