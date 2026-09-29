@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+const account=process.env.CLOUDFLARE_ACCOUNT_ID;
+const token=process.env.CLOUDFLARE_API_TOKEN;
+assert.ok(account&&token,'Cloudflare deployment credentials missing');
+const id='b64c7a2c-8694-41c6-b54a-857b88bf2c96';
+const response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/d1/database/${id}`,{headers:{Authorization:`Bearer ${token}`}});
+const result=await response.json();
+assert.equal(response.status,200,'Cannot verify production D1 with configured account/token');
+assert.equal(result.success,true,'Cloudflare D1 verification failed');
+assert.equal(result.result.uuid,id,'Wrong D1 database');
+assert.equal(result.result.name,'dream-team-db','Wrong D1 database name');
+console.log('Cloudflare account and dream-team-db identity: PASS.');
