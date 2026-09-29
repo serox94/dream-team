@@ -207,7 +207,34 @@ async function privateFetch(request,env){
         if((!id&&method==='POST')||(id&&!m[3]&&method===(kind==='checklist'?'PATCH':'PUT')))return await ({catches:saveCatch,spots:saveSpot,checklist:saveChecklist}[kind])(request,env,id);
         if(id&&((!m[3]&&method==='DELETE')||(m[3]&&method==='POST')))return await removeOrRestore(request,env,kind,id,Boolean(m[3]));
       }
-    …360 tokens truncated… const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));
+      if(path==='/api/documents'&&method==='GET'){
+        const id=url.searchParams.get('tripId');if(!id)fail('Wymagany tripId.');await tripExists(env,id);
+        return json({ok:true,documents:await all(env,'SELECT id,kind,title,content,source_url sourceUrl,sort_order sortOrder FROM trip_documents WHERE trip_id=? ORDER BY sort_order,id',id)});
+      }
+      return json({ok:false,error:'Nie znaleziono endpointu.'},404);
+    }catch(error){
+      if(error instanceof InputError)return json({ok:false,error:error.message},error.status);
+      console.error(error);return json({ok:false,error:'Błąd serwera. Spróbuj ponownie.'},500);
+    }
+}
+function protectedResponse(result,active){
+  const wrapped=new Response(result.body,result);
+  wrapped.headers.set('cache-control','private, no-store');
+  wrapped.headers.set('x-content-type-options','nosniff');
+  wrapped.headers.set('referrer-policy','no-referrer');
+  if(active?.refreshCookie)wrapped.headers.set('set-cookie',active.refreshCookie);
+  return wrapped;
+}
+export default {
+  async fetch(request,env){
+    const url=new URL(request.url),path=url.pathname,method=request.method;
+    if(loginAssets.has(path)&&method==='GET'){
+      if(authConfigured(env)){
+        await ensureSchema(env);
+        if(await session(request,env))return Response.redirect(url.origin+'/',302);
+      }
+      const assetPath=path==='/login'?'/login.html':path;
+      const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));
       const result=protectedResponse(asset);
       if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
       return result;
