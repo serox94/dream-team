@@ -57,6 +57,9 @@
   }
   function renderHeader(){
     const model=window.DREAM_MODEL,trip=window.DREAM_TRIP;
+    const page=location.pathname.split('/').pop().replace(/\.html$/,'')||'index';
+    document.body.dataset.page=page==='index'?'dashboard':page;
+    document.querySelector('.header-top h1').textContent='RYBY';
   document.querySelector('.subtitle').textContent=trip.lakeProfile?.name||trip.lake;
     document.getElementById('dream-trip-select')?.remove();
     const select=document.createElement('select');select.id='dream-trip-select';select.className='dream-trip-select';select.setAttribute('aria-label','Wybierz wyjazd');
@@ -72,6 +75,12 @@
     select.addEventListener('change',()=>{Dream.rememberTrip(select.value);location.reload();});
     document.querySelector('.header-top > div:first-child').append(select);
     document.querySelector('.trip-box').innerHTML=`<div><strong>Wyjazd:</strong> ${Dream.esc(Dream.format(trip.start))}</div><div><strong>Powrót:</strong> ${Dream.esc(Dream.format(trip.end))}</div><div id="countdown"></div><small>${Dream.esc(Dream.zone())} · ${trip.status==='archived'?'Archiwum':trip.isActive?'★ Aktywny wyjazd':'Podgląd wyjazdu'}</small>`;
+    if(!document.querySelector('.bottom-nav')){
+      const nav=document.createElement('nav');nav.className='bottom-nav';nav.setAttribute('aria-label','Szybka nawigacja');
+      nav.innerHTML=`<a href="/" data-page="dashboard"><span class="nav-icon" aria-hidden="true">⌂</span>Start</a><a href="/pages/polowy.html" data-page="polowy"><span class="nav-icon" aria-hidden="true">◉</span>Połowy</a><a href="/pages/checklisty.html" data-page="checklisty"><span class="nav-icon" aria-hidden="true">✓</span>Lista</a><a href="/pages/pogoda.html" data-page="pogoda"><span class="nav-icon" aria-hidden="true">☀</span>Pogoda</a><button type="button" id="bottom-more" aria-controls="main-nav" aria-expanded="false"><span class="nav-icon" aria-hidden="true">☰</span>Więcej</button>`;
+      document.body.append(nav);
+    }
+    document.querySelectorAll('.bottom-nav a').forEach(a=>{const active=a.dataset.page===document.body.dataset.page;a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   }
   async function refreshModel(){
     const model=await api('/api/bootstrap');

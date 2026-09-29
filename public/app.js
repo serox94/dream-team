@@ -224,13 +224,16 @@ function setupMobileMenu() {
   const closeMenu = () => {
     nav.classList.remove("open");
     toggleBtn.setAttribute("aria-expanded", "false");
+    $("bottom-more")?.setAttribute("aria-expanded", "false");
   };
 
   toggleBtn.addEventListener("click", () => {
     nav.classList.toggle("open");
     const expanded = nav.classList.contains("open");
     toggleBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+    $("bottom-more")?.setAttribute("aria-expanded", expanded ? "true" : "false");
   });
+  $("bottom-more")?.addEventListener("click", () => toggleBtn.click());
 
   nav.querySelectorAll("a").forEach(link => {
     link.addEventListener("click", closeMenu);
@@ -238,7 +241,7 @@ function setupMobileMenu() {
 
   document.addEventListener("click", event => {
     if (!nav.classList.contains("open")) return;
-    if (nav.contains(event.target) || toggleBtn.contains(event.target)) return;
+    if (nav.contains(event.target) || toggleBtn.contains(event.target) || $("bottom-more")?.contains(event.target)) return;
     closeMenu();
   });
 

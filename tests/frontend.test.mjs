@@ -34,6 +34,17 @@ test('every route boots, preserves legacy knowledge, sends no duplicate initial 
   }finally{p.close();}
  }}finally{await s.close();}
 });
+test('shared mobile navigation opens the full menu and follows the current screen',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/checklisty.html');
+ try{
+  assert.equal(p.d.querySelector('.bottom-nav [aria-current="page"]')?.dataset.page,'checklisty');
+  const more=p.d.getElementById('bottom-more'),menu=p.d.getElementById('main-nav');
+  more.click();assert.equal(more.getAttribute('aria-expanded'),'true');assert.ok(menu.classList.contains('open'));
+  p.d.dispatchEvent(new p.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
+  assert.equal(more.getAttribute('aria-expanded'),'false');assert.ok(!menu.classList.contains('open'));
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
 test('checklist edit preserves packed state, filters, quantity clear and undo persist',async()=>{
  const s=await testServe({seed:true}),p=await page(s,'/pages/checklisty.html');
  try{
