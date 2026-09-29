@@ -17,6 +17,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Bundle local Chart.js asset
+        run: node scripts/build.mjs
       - name: Install disposable browser test tooling
         run: |
           npm install --no-save playwright@1.63.0
