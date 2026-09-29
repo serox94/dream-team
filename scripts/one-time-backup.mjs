@@ -7,7 +7,14 @@ const headers={Authorization:`Bearer ${token}`,'content-type':'application/json'
 const exportUrl=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/d1/database/b64c7a2c-8694-41c6-b54a-857b88bf2c96/export`;
 const r2base=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}/r2/buckets/dream-team-d1-backups/objects`;
 const pause=()=>new Promise(done=>setTimeout(done,5000));
-async function poll(body){const r=await fetch(exportUrl,{method:'POST',headers,body:JSON.stringify(body)});assert.equal(r.status,200,`Production D1 read-only export returned HTTP ${r.status}`);const x=await r.json();assert.equal(x.success,true,'D1 export failed');return x.result;}
+async function poll(body){
+ const r=await fetch(exportUrl,{method:'POST',headers,body:JSON.stringify(body)}),x=await r.json();
+ if(r.status!==200||!x.success){
+  const details=(x.errors||[]).map(e=>`${e.code}: ${String(e.message||'').replace(/https?:\/\/\S+/g,'[URL]').replace(/[A-Za-z0-9_-]{24,}/g,'[redacted]').slice(0,130)}`);
+  throw Error(`Production D1 export returned HTTP ${r.status}; errors ${details.join(' | ')||'none'}`);
+ }
+ return x.result;
+}
 const deadline=Date.now()+180000;
 let bookmark;
 while(Date.now()<deadline&&!bookmark){const result=await poll({output_format:'polling'});bookmark=result?.at_bookmark;if(!bookmark)await pause();}

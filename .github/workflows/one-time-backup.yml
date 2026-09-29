@@ -2,7 +2,7 @@ name: First D1 backup and isolated restore
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/one-time-backup.yml]
+    paths: [.github/workflows/one-time-backup.yml, scripts/one-time-backup.mjs]
   workflow_dispatch:
 permissions:
   contents: read
