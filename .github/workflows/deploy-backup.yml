@@ -1,9 +1,6 @@
 name: Deploy and verify D1 backup
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths: [.github/workflows/deploy-backup.yml]
 permissions:
   contents: read
 jobs:
