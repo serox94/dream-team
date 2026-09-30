@@ -126,9 +126,9 @@ try{
           assert.equal(preview.requests.filter(r=>r.method==='POST'&&r.url.includes('knowledge')).length,0,'screenshot never uploaded');
         }
       }
-      if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html'].includes(route)){
+      if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/encyklopedia.html','/pages/sonar.html'].includes(route)||width===1280&&['/pages/encyklopedia.html','/pages/sonar.html'].includes(route)){
         const label=route==='/'?'dashboard':route.split('/').pop().replace('.html','');
-        await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`,fullPage:route!=='/'});
+        await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`,fullPage:route!=='/'&&!['encyklopedia','sonar'].includes(label)});
       }
       await page.close();
     }
