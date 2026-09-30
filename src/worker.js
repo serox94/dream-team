@@ -231,7 +231,7 @@ export default {
     if(loginAssets.has(path)&&method==='GET'){
       if(authConfigured(env)){
         await ensureSchema(env);
-        if(await session(request,env))return Response.redirect(url.origin+'/',302);
+        if((path==='/login'||path==='/login.html')&&await session(request,env))return Response.redirect(url.origin+'/',302);
       }
       const assetPath=path==='/login'?'/login.html':path;
       const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));

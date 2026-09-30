@@ -2,14 +2,19 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Dream Team | Dashboard</title>
   
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="ui-plus.css" />
   <link rel="stylesheet" href="media-plus.css" />
   <link rel="stylesheet" href="/audit.css" />
-  <link rel="stylesheet" href="/refresh.css?v=20260929-2" />
+  <link rel="stylesheet" href="/refresh.css?v=20260930-1" />
+  <meta name="theme-color" content="#0b100e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="/icons/ryby-192.png" />
+  <link rel="apple-touch-icon" href="/icons/ryby-192.png" />
 </head>
 <body>
   <header class="site-header">
@@ -54,7 +59,7 @@
         <div>
           <span class="dashboard-eyebrow" id="dashboard-status">Wybrany wyjazd</span>
           <h2 id="dashboard-trip-name">Wczytywanie wyjazdu…</h2>
-          <p class="dashboard-lake" id="dashboard-lake">Łowisko</p>
+          <a class="dashboard-lake" href="pages/mapa.html" aria-label="Otwórz mapę łowiska"><span id="dashboard-lake">Łowisko</span> <span aria-hidden="true">↗</span></a>
           <div class="trip-facts">
             <span>Stanowisko · <strong id="dashboard-peg">—</strong></span>
             <span>Termin · <strong id="dashboard-dates">—</strong></span>
@@ -66,9 +71,9 @@
             <div><span>Checklista</span><strong id="dashboard-check-inline">Ładowanie…</strong></div>
           </div>
           <div class="hero-actions">
-            <a href="pages/polowy.html">+ Dodaj połów</a>
+            <a href="pages/polowy.html#catch-form">+ Dodaj połów</a>
             <a href="pages/checklisty.html">Otwórz checklistę</a>
-            <a href="pages/wyjazdy.html">Wyjazdy</a>
+            <a href="pages/mapa.html">Mapa i stanowisko</a>
           </div>
         </div>
 
@@ -165,6 +170,6 @@
     </section>
   </main>
 
-  <script src="/vendor/chart.umd.js"></script>  <script src="/dream-loader-v2.js?v=20260929-2"></script>
+  <script src="/vendor/chart.umd.js"></script>  <script src="/dream-loader-v2.js?v=20260930-1"></script>
 </body>
 </html>

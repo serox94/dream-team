@@ -32,12 +32,35 @@ try{
           const box=await link.boundingBox();assert.ok(box&&box.height>=44&&box.width>=44,`${width} ${route}: small bottom navigation target`);
         }
         if(route==='/'){
+          if(width===390){
+            const navTop=(await page.locator('.bottom-nav').boundingBox()).y;
+            for(const selector of ['#dashboard-trip-name','#dashboard-lake','#dashboard-peg','#dashboard-dates','#dashboard-weather-now','#dashboard-check-inline','.hero-actions a:first-child']){
+              const box=await page.locator(selector).boundingBox();
+              assert.ok(box&&box.y+box.height<navTop,`390px dashboard first fold: ${selector} is below navigation`);
+            }
+          }
           await page.locator('#bottom-more').click();
           const menu=page.locator('#main-nav.open'),menuBox=await menu.boundingBox();
           assert.ok(menuBox&&menuBox.y>=0&&menuBox.y+menuBox.height<=844-60,`${width}: menu is not within the usable viewport`);
           await page.locator('#bottom-more').click();
           assert.equal(await page.locator('#bottom-more').getAttribute('aria-expanded'),'false');
           await page.mouse.move(1,1);
+        }
+        if(width===390&&route==='/pages/checklisty.html'){
+          const search=page.locator('#check-search');
+          await search.fill('podbierak');
+          assert.equal(await page.locator('.check-item-row').count(),1,'checklist search narrows the rows');
+          const checkbox=page.locator('.check-item-row input[type="checkbox"]');
+          assert.equal(await checkbox.isChecked(),true);
+          await page.locator('.check-item-left .check-item-title').click();
+          await page.waitForFunction(()=>document.querySelector('.check-item-row input[type="checkbox"]')?.checked===false);
+          await search.fill('');
+        }
+        if(width===390&&route==='/pages/polowy.html'){
+          assert.equal(await page.locator('#weight').getAttribute('inputmode'),'decimal');
+          assert.match(await page.locator('#caught_at').inputValue(),/^\d{4}-\d\d-\d\dT\d\d:\d\d$/);
+          const options=await page.locator('#person option').allTextContents();
+          assert.ok(options.includes('Patryk')&&options.includes('Maciek'));
         }
       }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html'].includes(route)){
@@ -50,6 +73,10 @@ try{
     assert.equal(loginResponse.status(),200);
     const loginDimensions=await login.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
     assert.ok(loginDimensions.scroll<=loginDimensions.viewport+1,`${width} login: horizontal overflow`);
+    const manifestResponse=await login.request.get(loginPreview.url+'/manifest.webmanifest');
+    assert.equal(manifestResponse.status(),200,'manifest is public for login and installation');
+    const manifest=await manifestResponse.json();
+    assert.equal(manifest.name,'RYBY');assert.equal(manifest.display,'standalone');
     const submit=await login.locator('button[type="submit"]').boundingBox();assert.ok(submit&&submit.height>=44,`${width} login: small submit`);
     await login.screenshot({path:`${screenshotDir}/login-${width}.png`});
     await context.close();

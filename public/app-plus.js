@@ -447,12 +447,18 @@
     toolbar.id = "check-toolbar";
     toolbar.className = "check-toolbar";
     toolbar.innerHTML = `
+      <div id="check-progress" class="check-progress" role="status">Wczytywanie postępu…</div>
       <div class="filter-bar">
         <button type="button" class="filter-btn active" data-filter="all">Wszystkie</button>
         <button type="button" class="filter-btn" data-filter="open">Do zrobienia</button>
         <button type="button" class="filter-btn" data-filter="done">Zrobione</button>
       </div>
 
+      <label class="check-search-label" for="check-search">Szukaj na liście</label>
+      <input id="check-search" type="search" placeholder="Szukaj rzeczy…" autocomplete="off" />
+
+      <details class="check-options">
+      <summary>Sortowanie i inne opcje</summary>
       <select id="check-sort-select" aria-label="Sortowanie checklisty">
         <option value="category">Sortuj: kategoria</option>
         <option value="name">Sortuj: nazwa</option>
@@ -465,6 +471,7 @@
       </div>
 
       <div id="check-toolbar-status" class="status-chip status-info">Tryb standardowy</div>
+      </details>
     `;
 
     sectionHead.insertAdjacentElement("afterend", toolbar);
@@ -514,6 +521,11 @@
       });
     });
 
+    $("check-search")?.addEventListener("input", (event) => {
+      APP_STATE.checklistSearch = event.target.value.trim().toLocaleLowerCase('pl');
+      renderChecklistGroupsPlus(filterChecklistItems(APP_STATE.checklistItems || []));
+    });
+
     $("check-sort-select")?.addEventListener("change", (e) => {
       APP_STATE.checklistSort = e.target.value;
       renderChecklistPagePlus();
@@ -555,6 +567,7 @@
     setText("check-equipment-open-count", String(equipmentOpen));
     setText("check-shopping-open-count", String(shoppingOpen));
     setText("check-food-open-count", String(foodOpen));
+    setText("check-progress", `Spakowane ${done} z ${all} · pozostało ${open}`);
 
     applyStatus($("check-all-count")?.closest(".mini-stats div"), all ? "info" : "warn");
     applyStatus($("check-done-count")?.closest(".mini-stats div"), done ? "success" : "warn");
@@ -594,6 +607,10 @@
   function filterChecklistItems(items) {
     let list = [...items];
 
+    if (APP_STATE.checklistSearch) {
+      list = list.filter((item) => `${item.item_name} ${item.category} ${item.quantity ?? ''} ${item.unit ?? ''}`.toLocaleLowerCase('pl').includes(APP_STATE.checklistSearch));
+    }
+
     if (APP_STATE.checklistFilter === "done") {
       list = list.filter((item) => item.done);
     } else if (APP_STATE.checklistFilter === "open") {
@@ -629,17 +646,21 @@
         .forEach((item) => {
           const row = createNode("div", `check-item-row ${item.done ? "is-done" : "is-open"}`);
 
-          const left = createNode("div", "check-item-left");
+          const left = createNode("label", "check-item-left");
           const checkbox = document.createElement("input");
+          checkbox.id = `check-item-${item.id}`;
+          left.htmlFor = checkbox.id;
           checkbox.setAttribute("aria-label", `Spakowane: ${item.item_name}`);
           checkbox.type = "checkbox";
           checkbox.checked = Boolean(item.done);
           checkbox.addEventListener("change", async () => {
             if (!window.d1Client) return;
+            checkbox.disabled = true;
             const { error } = await d1Client.from("checklist_items").update({ done: checkbox.checked }).eq("id", item.id);
             if (error) {
               checkbox.checked = Boolean(item.done);
-              window.alert("Nie udało się zaktualizować pozycji.");
+              checkbox.disabled = false;
+              Dream.notice('Nie udało się zapisać zmiany. Sprawdź internet i spróbuj ponownie.',true);
               return;
             }
             await renderChecklistPagePlus();
@@ -693,6 +714,7 @@
     container.innerHTML = '<div class="empty-box">Ładowanie checklist...</div>';
 
     const items = await loadChecklistFromD1();
+    APP_STATE.checklistItems = items;
     renderChecklistSummaryPlus(items);
     renderChecklistGroupsPlus(filterChecklistItems(items));
   }

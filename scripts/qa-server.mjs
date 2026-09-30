@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import worker from '../src/worker.js';
 import {database} from '../tests/db.mjs';
 const publicDir=path.resolve(fileURLToPath(new URL('../public/',import.meta.url))); 
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.json':'application/json'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json'};
 export async function serve({port=0,seed=false,weatherFetch,testSession=true}={}){
  const DB=database();
  const env={DB,ASSETS:null,WEATHER_FETCH:weatherFetch,RYBY_LOGIN_USERNAME:'local-fixture-user',RYBY_LOGIN_PASSWORD:'local-fixture-password',RYBY_SESSION_SECRET:'local-fixture-session-secret-with-32-chars'};

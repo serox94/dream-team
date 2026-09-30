@@ -514,15 +514,15 @@ async function handleCatchSubmit(event) {
 
   if (error) {
     console.error("Błąd zapisu połowu:", error.message);
-    setMessage("form-message", editId ? "Nie udało się zapisać zmian." : "Nie udało się dodać połowu.", "error");
+    setMessage("form-message", `Nie udało się zapisać połowu. ${error.message} Dane w formularzu pozostały.`, "error");
     return;
   }
 
   if (savedCatch) celebrateCatchIfNeeded(savedCatch, { play: true });
   resetCatchForm();
   setMessage("form-message", editId ? "Zmiany zapisane." : "Połów został dodany.", "success");
-  await Dream.refreshModel();
-  await renderCatchesPage();
+  try { await Dream.refreshModel(); await renderCatchesPage(); }
+  catch (error) { Dream.notice(`Połów zapisany. Nie udało się odświeżyć listy: ${error.message}`,true); }
 }
 
 async function deleteCatch(id) {
@@ -710,7 +710,7 @@ async function handleChecklistSubmit(event) {
 
   if (error) {
     console.error("Błąd zapisu checklisty:", error.message);
-    setMessage("checklist-message", editId ? "Nie udało się zapisać zmian." : "Nie udało się dodać pozycji.", "error");
+    setMessage("checklist-message", `Nie udało się zapisać pozycji. ${error.message} Dane w formularzu pozostały.`, "error");
     return;
   }
 
@@ -1106,7 +1106,7 @@ function setupRealtime() {
     } catch(error) { Dream.notice('Nie udało się odświeżyć danych. '+error.message,true); }
     finally {running=false;}
   };
-  setInterval(refresh,30000);
+  setInterval(refresh,120000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
 }
 

@@ -2,13 +2,18 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Dream Team | Checklisty</title>
   
   <link rel="stylesheet" href="../style.css" />
   <link rel="stylesheet" href="../ui-plus.css" />
   <link rel="stylesheet" href="/audit.css" />
-  <link rel="stylesheet" href="/refresh.css?v=20260929-2" />
+  <link rel="stylesheet" href="/refresh.css?v=20260930-1" />
+  <meta name="theme-color" content="#0b100e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" type="image/png" href="/icons/ryby-192.png" />
+  <link rel="apple-touch-icon" href="/icons/ryby-192.png" />
 </head>
 <body>
   <header class="site-header">
@@ -95,7 +100,7 @@
           <div class="form-row">
             <div>
               <label for="check-quantity">Ilość</label>
-              <input type="number" id="check-quantity" min="0" step="0.1" placeholder="np. 5" />
+              <input type="number" inputmode="decimal" id="check-quantity" min="0" step="0.1" placeholder="np. 5" />
             </div>
 
             <div>
@@ -129,6 +134,6 @@
     </section>
 
 
-  </main>  <script src="/dream-loader-v2.js?v=20260929-2"></script>
+  </main>  <script src="/dream-loader-v2.js?v=20260930-1"></script>
 </body>
 </html>
