@@ -38,7 +38,10 @@ try{
         console.log(`Dashboard ${width}px disposable fixture: ready ${readyMs} ms, ${requests} requests after chart load.`);
       }
       const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
-      assert.ok(dimensions.scroll<=dimensions.viewport+1&&dimensions.body<=dimensions.viewport+1,`${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)}`);
+      if(dimensions.scroll>dimensions.viewport+1||dimensions.body>dimensions.viewport+1){
+        const offenders=await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(el=>el.getBoundingClientRect().right>document.documentElement.clientWidth+2).slice(0,12).map(el=>({tag:el.tagName,id:el.id,className:String(el.className).slice(0,70),right:Math.round(el.getBoundingClientRect().right)})));
+        assert.fail(`${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)} ${JSON.stringify(offenders)}`);
+      }
       assert.deepEqual(errors,[],`${width} ${route}: console/network`);
       if(route==='/pages/teren.html'){
         assert.match(await page.locator('main').innerText(),/Najważniejsze nad wodą/);

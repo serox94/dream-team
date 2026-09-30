@@ -1,5 +1,5 @@
 // Only static application files live here. API responses and writes never enter this cache.
-const shell='ryby-shell-20260930-4';
+const shell='ryby-shell-20260930-5';
 const warm=['/','/index.html','/pages/checklisty.html','/pages/teren.html','/pages/mapa.html','/pages/regulamin.html','/pages/pogoda.html',
   '/pages/encyklopedia.html','/pages/sonar.html','/knowledge.js','/knowledge.css',
   '/data/knowledge/sources.json','/data/knowledge/encyclopedia.json','/data/knowledge/sonar.json','/data/knowledge/tools.json',

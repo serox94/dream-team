@@ -1,5 +1,6 @@
 /* Additive knowledge modules; existing field UI and legacy advice are untouched. */
-.knowledge-page { display:grid; gap:16px; }
+.knowledge-page { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+.knowledge-page > *, .knowledge-browser > *, .knowledge-tool > * { min-width:0; }
 .knowledge-hero { margin:0; }
 .knowledge-hero h2 { margin:0 0 8px; }
 .knowledge-hero p { max-width:70ch; }
@@ -11,7 +12,7 @@
 .knowledge-browser label { font-weight:700; }
 .knowledge-browser input,.knowledge-browser select { width:100%; }
 .knowledge-browser p { margin:0; color:var(--muted); }
-.knowledge-chips { overflow-x:auto; flex-wrap:nowrap; padding:3px 0 9px; scrollbar-width:thin; }
+.knowledge-chips { width:100%; max-width:100%; overflow-x:auto; flex-wrap:nowrap; padding:3px 0 9px; scrollbar-width:thin; }
 .knowledge-chips button { flex:0 0 auto; min-height:46px; padding:8px 14px; white-space:nowrap; background:#25372a; color:var(--text); border:1px solid var(--border-strong); }
 .knowledge-chips button.selected { background:var(--accent); color:#17241b; }
 .knowledge-results { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:start; }
