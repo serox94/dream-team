@@ -16,12 +16,13 @@ if(data){
 const [sources,encyclopedia,sonarData,tools]=data, catalog=sonar?sonarData:encyclopedia;
 const index=new Map([...encyclopedia.articles,...sonarData.articles].map(a=>[a.id,a]));
 const sourceIndex=new Map(sources.sources.map(s=>[s.id,s]));
-const diagramNames={cone:'Stożek wiązki',hardsoft:'Twarde i miękkie dno',gravel:'Żwir',silt:'Muł',weed:'Zielsko',clearing:'Czyste oczko',plateau:'Plateau',slope:'Spadek',trench:'Rów',fish:'Łuk ryby',school:'Stado',thermocline:'Możliwa termoklina'};
-const bottoms={cone:'M18 148 L300 148',hardsoft:'M18 143 L150 143 L158 154 L300 154',gravel:'M18 140 L38 137 L56 140 L73 134 L94 139 L112 135 L130 140 L150 136 L170 140 L190 136 L211 139 L230 134 L250 139 L272 136 L300 140',silt:'M18 143 Q80 147 140 146 T300 148',weed:'M18 147 L300 147',clearing:'M18 147 L300 147',plateau:'M18 155 L70 155 L110 95 L215 95 L260 155 L300 155',slope:'M18 89 L88 89 L210 155 L300 155',trench:'M18 100 L92 100 L130 153 L220 153 L264 100 L300 100',fish:'M18 151 L300 151',school:'M18 151 L300 151',thermocline:'M18 153 L300 153'};
+const diagramNames={cone:'Stożek wiązki',hardsoft:'Twarde i miękkie dno',gravel:'Żwir',silt:'Muł',weed:'Zielsko',clearing:'Czyste oczko',plateau:'Plateau',slope:'Spadek',trench:'Rów',fish:'Łuk ryby',school:'Stado',thermocline:'Możliwa termoklina',transects:'Równoległe tory skanowania'};
+const bottoms={cone:'M18 148 L300 148',hardsoft:'M18 143 L150 143 L158 154 L300 154',gravel:'M18 140 L38 137 L56 140 L73 134 L94 139 L112 135 L130 140 L150 136 L170 140 L190 136 L211 139 L230 134 L250 139 L272 136 L300 140',silt:'M18 143 Q80 147 140 146 T300 148',weed:'M18 147 L300 147',clearing:'M18 147 L300 147',plateau:'M18 155 L70 155 L110 95 L215 95 L260 155 L300 155',slope:'M18 89 L88 89 L210 155 L300 155',trench:'M18 100 L92 100 L130 153 L220 153 L264 100 L300 100',fish:'M18 151 L300 151',school:'M18 151 L300 151',thermocline:'M18 153 L300 153',transects:'M18 149 L300 149'};
 const weedAt=(x,y=147)=>`<path d="M${x} ${y} q-9 -20 0 -40 q8 20 0 40 m0 0 q13 -32 7 -56" fill="none" stroke="#8cc477" stroke-width="3"/>`;
 function diagram(type){
   if(!bottoms[type])return '';
   let extras='';
+  if(type==='transects')extras='<path d="M40 90 L280 90 M280 102 L40 102 M40 114 L280 114" fill="none" stroke="#edc375" stroke-width="3" stroke-dasharray="7 5"/><path d="M278 90 l-8 -5 m8 5 l-8 5 M42 102 l8 -5 m-8 5 l8 5 M278 114 l-8 -5 m8 5 l-8 5" fill="none" stroke="#edc375" stroke-width="2"/>';
   if(type==='cone')extras='<path d="M160 25 L78 148 L242 148 Z" fill="#a4bb9a" fill-opacity=".12" stroke="#d8d6a2" stroke-dasharray="5 5"/><circle cx="160" cy="25" r="8" fill="#d5dba5"/><circle cx="205" cy="112" r="5" fill="#eeb783"/>';
   if(type==='hardsoft')extras='<path d="M18 134 L150 134" stroke="#eec774" stroke-width="9"/><path d="M157 151 L300 151" stroke="#8babc0" stroke-width="3"/><path d="M18 163 L150 163" stroke="#eec774" stroke-width="3" stroke-dasharray="8 6"/>';
   if(type==='gravel')extras='<path d="M18 145 L300 145" stroke="#edc375" stroke-width="8" opacity=".75"/><path d="M40 161 L258 161" stroke="#edc375" stroke-width="2" stroke-dasharray="12 11"/>';
