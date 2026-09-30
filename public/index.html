@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="ui-plus.css" />
   <link rel="stylesheet" href="media-plus.css" />
   <link rel="stylesheet" href="/audit.css" />
-  <link rel="stylesheet" href="/refresh.css?v=20260930-1" />
+  <link rel="stylesheet" href="/refresh.css?v=20260930-2" />
   <meta name="theme-color" content="#0b100e" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="/manifest.webmanifest" />
@@ -41,6 +41,7 @@
           <a href="index.html" class="active">Dashboard</a>
           <a href="pages/polowy.html">Połowy</a>
           <a href="pages/pogoda.html">Pogoda PRO</a>
+          <a href="pages/teren.html">Najważniejsze nad wodą</a>
           <a href="pages/dojazd.html">Dojazd / okolica</a>
           <a href="pages/regulamin.html">Regulamin</a>
           <a href="pages/wezly.html">Węzły</a>
@@ -78,14 +79,16 @@
         </div>
 
         <div class="hero-side-card">
-          <img src="assets/img/lowisko.jpg" alt="Widok łowiska" loading="lazy" />
+          <img src="assets/img/patryk-maciek.jpeg" alt="Patryk i Maciek nad wodą" loading="lazy" width="817" height="816" />
           <div class="hero-side-body">
-            <strong>RYBY / Dream Team</strong>
-            <span id="dashboard-photo-caption">Wspomnienia z wyjazdu</span>
+            <strong>Patryk + Maciek</strong>
+            <span>Dream Team nad wodą</span>
           </div>
         </div>
       </div>
     </section>
+
+    <section id="field-readiness" class="panel-card field-readiness" hidden></section>
 
     <section class="stats-grid dashboard-primary-stats" aria-label="Najważniejsze liczby wyjazdu">
       <article class="stat-card">
@@ -158,18 +161,16 @@
       </article>
     </section>
 
-    <section class="panel-card chart-panel">
+    <section class="panel-card chart-panel" aria-label="Wynik wyjazdu">
       <div class="section-head">
-        <h3>Połowy według dni i uczestników</h3>
+        <h3>Wynik wyjazdu</h3>
         <span class="section-chip">wybrany wyjazd</span>
       </div>
-
-      <div class="chart-wrap">
-        <canvas id="fishChart"></canvas>
-      </div>
+      <p id="trip-score-total" class="trip-score-total">Razem: — ryb · — kg</p>
+      <div id="trip-score-charts" class="trip-score-charts" aria-live="polite"></div>
     </section>
   </main>
 
-  <script src="/dream-loader-v2.js?v=20260930-1"></script>
+  <script src="/dream-loader-v2.js?v=20260930-2"></script>
 </body>
 </html>

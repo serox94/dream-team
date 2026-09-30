@@ -6,7 +6,7 @@ import {serve} from './qa-server.mjs';
 import {weatherFixture} from './qa-weather.mjs';
 
 const widths=[360,390,412,768,1280];
-const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html'];
+const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html'];
 const preview=await serve({seed:true,weatherFetch:async()=>Response.json(weatherFixture())});
 const loginPreview=await serve({testSession:false});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
@@ -28,11 +28,21 @@ try{
         const readyMs=await page.evaluate(()=>Math.round(performance.now()));
         await page.waitForFunction(()=>document.getElementById('dashboard-weather-now')?.textContent.includes('15°C'));
         await page.waitForFunction(()=>typeof window.renderDreamChart==='function');
+        assert.match(await page.locator('.hero-side-card img').getAttribute('src'),/patryk-maciek\.jpeg$/);
+        assert.equal(await page.locator('.score-chart').count(),2);
+        assert.equal(await page.locator('.score-row').count(),4);
+        assert.match(await page.locator('#trip-score-total').innerText(),/2 ryb.*23,0 kg/);
+        assert.equal(await page.locator('body').getAttribute('data-field-mode'),'before');
+        assert.match(await page.locator('#field-readiness').innerText(),/Gotowość do wyjazdu/);
         console.log(`Dashboard ${width}px disposable fixture: ready ${readyMs} ms, ${requests} requests after chart load.`);
       }
       const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
       assert.ok(dimensions.scroll<=dimensions.viewport+1&&dimensions.body<=dimensions.viewport+1,`${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)}`);
       assert.deepEqual(errors,[],`${width} ${route}: console/network`);
+      if(route==='/pages/teren.html'){
+        assert.match(await page.locator('main').innerText(),/Najważniejsze nad wodą/);
+        assert.ok(await page.locator('main a[href^="https://www.google.com/maps/search/"]').count());
+      }
       if(width<=412){
         const links=page.locator('.bottom-nav a, .bottom-nav button');
         for(const link of await links.all()){
@@ -45,6 +55,8 @@ try{
               const box=await page.locator(selector).boundingBox();
               assert.ok(box&&box.y+box.height<navTop,`390px dashboard first fold: ${selector} is below navigation`);
             }
+            const photo=await page.locator('.hero-side-card img').boundingBox(),facts=await page.locator('.trip-facts').boundingBox();
+            assert.ok(photo.y>=facts.y+facts.height,'mobile portrait follows the essential trip facts');
           }
           await page.locator('#bottom-more').click();
           const menu=page.locator('#main-nav.open'),menuBox=await menu.boundingBox();
@@ -86,7 +98,37 @@ try{
     assert.equal(manifest.name,'RYBY');assert.equal(manifest.display,'standalone');
     const submit=await login.locator('button[type="submit"]').boundingBox();assert.ok(submit&&submit.height>=44,`${width} login: small submit`);
     await login.screenshot({path:`${screenshotDir}/login-${width}.png`});
+    if(width===390){
+      const offline=await context.newPage();
+      await offline.goto(preview.url+'/pages/checklisty.html');
+      await offline.locator('html[data-ready="true"]').waitFor();
+      await offline.waitForFunction(async()=>Boolean(await caches.match('/index.html')),{timeout:20000});
+      const before=preview.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_items').get().n;
+      await context.setOffline(true);
+      await offline.goto(preview.url+'/',{waitUntil:'domcontentloaded'});
+      await offline.locator('html[data-ready="true"]').waitFor({timeout:20000});
+      assert.match(await offline.locator('#offline-banner').innerText(),/Dane offline \/ ostatnia synchronizacja/);
+      assert.equal(await offline.locator('.score-row').count(),4);
+      const denied=await offline.evaluate(()=>window.Dream.api('/api/checklist',{method:'POST',body:'{}'}).then(()=>false,()=>true));
+      assert.ok(denied,'offline writes fail instead of queuing');
+      assert.equal(preview.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_items').get().n,before);
+      await context.setOffline(false);
+      await offline.reload();
+      await offline.locator('html[data-ready="true"]').waitFor();
+      assert.equal(await offline.locator('#offline-banner').count(),0,'online reads replace stale banner');
+      await offline.close();
+      console.log('390px offline: static shell, private read cache, visible timestamp and write refusal PASS.');
+    }
     await context.close();
     console.log(`Responsive QA ${width}px: PASS (${routes.length} screens + login, no overflow or browser errors).`);
   }
+  preview.DB.sqlite.prepare("UPDATE trips SET start_at=?,end_at=? WHERE id='next-trip'").run(new Date(Date.now()-3600000).toISOString(),new Date(Date.now()+86400000).toISOString());
+  const field=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  await field.goto(preview.url+'/');await field.locator('html[data-ready="true"]').waitFor();
+  assert.equal(await field.locator('body').getAttribute('data-field-mode'),'field');
+  assert.ok(await field.locator('.hero-actions a[href="/pages/teren.html"]').count());
+  assert.match(await field.locator('#field-readiness').innerText(),/Checklista na łowisku/);
+  await field.screenshot({path:`${screenshotDir}/dashboard-field-390.png`});
+  await field.close();
+  console.log('390px active trip field mode PASS.');
 }finally{await browser.close();await preview.close();await loginPreview.close();}

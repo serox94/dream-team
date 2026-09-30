@@ -634,6 +634,7 @@ function validateChecklistPayload(raw) {
   const category = normalizeText(raw.category, 40);
   const itemName = normalizeText(raw.item_name, 80);
   const unit = normalizeText(raw.unit, 20) || "szt.";
+  const assigned_to = normalizeText(raw.assigned_to, 60) || null;
   const quantity = parseNumber(raw.quantity, { min: 0, max: 99999, allowNull: true });
 
   const allowedCategories = ["sprzęt", "zakupy", "jedzenie / picie"];
@@ -651,6 +652,7 @@ function validateChecklistPayload(raw) {
       item_name: itemName,
       quantity,
       unit,
+      assigned_to,
       done: false
     }
   };
@@ -666,6 +668,13 @@ function fillChecklistFormForEdit(item) {
   $("check-name").value = item.item_name;
   $("check-quantity").value = item.quantity ?? "";
   $("check-unit").value = item.unit || "szt.";
+  const assigned=$("check-assigned");
+  if(assigned){
+    if(item.assigned_to&&![...assigned.options].some(option=>option.value===item.assigned_to)){
+      const option=document.createElement('option');option.value=item.assigned_to;option.textContent=item.assigned_to;assigned.append(option);
+    }
+    assigned.value=item.assigned_to||'';
+  }
   $("checklist-form-title").textContent = "Edytuj pozycję";
   $("save-check-btn").textContent = "Zapisz zmiany";
   $("cancel-edit-check-btn").classList.remove("hidden");
@@ -689,7 +698,8 @@ async function handleChecklistSubmit(event) {
     category: $("check-category")?.value,
     item_name: $("check-name")?.value,
     quantity: $("check-quantity")?.value,
-    unit: $("check-unit")?.value
+    unit: $("check-unit")?.value,
+    assigned_to: $("check-assigned")?.value
   });
 
   if (!validation.ok) {
@@ -1088,6 +1098,7 @@ function updateDashboard(catches, spots = [], checklist = []) {
   maybeCelebratePbMilestone(catches);
 
   if (typeof window.renderDashboardExtras === 'function') window.renderDashboardExtras(catches,spots,checklist);
+  window.DreamField?.renderDashboard(window.DREAM_TRIP,checklist);
   window.renderDreamChart?.(catches);
 }
 

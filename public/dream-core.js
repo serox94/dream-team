@@ -18,20 +18,58 @@
     try {const u=new URL(value,location.origin);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}
   }
   const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json',...options.headers},signal});
+  const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
+  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|documents)(?:\?|$)/;
+  const offlineEntries=new Map();
+  function clearReadCache(){try{localStorage.removeItem(readCacheKey);localStorage.removeItem(authMarkerKey);}catch{}offlineEntries.clear();showOfflineState();}
+  function readEntries(){try{return JSON.parse(localStorage.getItem(readCacheKey)||'{}')||{};}catch{return {};}}
+  function saveReadCache(path,data){
+    if(!offlinePaths.test(path))return;
+    try{
+      const entries=readEntries();entries[path]={at:Date.now(),data};
+      const recent=Object.entries(entries).filter(([,entry])=>entry?.at>Date.now()-maxAge).sort((a,b)=>b[1].at-a[1].at).slice(0,25);
+      localStorage.setItem(readCacheKey,JSON.stringify(Object.fromEntries(recent)));
+      if(path==='/api/bootstrap')localStorage.setItem(authMarkerKey,String(Date.now()));
+    }catch{}
+    offlineEntries.delete(path);showOfflineState();
+  }
+  function readOffline(path){
+    if(!offlinePaths.test(path))return null;
+    try{
+      const marker=Number(localStorage.getItem(authMarkerKey));
+      const entry=readEntries()[path];
+      if(!marker||Date.now()-marker>maxAge||!entry?.at||Date.now()-entry.at>maxAge)return null;
+      offlineEntries.set(path,entry.at);showOfflineState();
+      return entry.data;
+    }catch{return null;}
+  }
+  function showOfflineState(){
+    let banner=document.getElementById('offline-banner');
+    if(!offlineEntries.size){banner?.remove();return;}
+    if(!banner){banner=document.createElement('div');banner.id='offline-banner';banner.className='offline-banner';banner.setAttribute('role','status');document.body.prepend(banner);}
+    const oldest=Math.min(...offlineEntries.values());
+    banner.textContent=`Dane offline / ostatnia synchronizacja ${new Date(oldest).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. Zapisy wymagają internetu.`;
+  }
   async function api(path,options={}){
     const get=!options.method||options.method==='GET';
     if(get&&pending.has(path))return pending.get(path);
     const task=(async()=>{
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+      let eligibleFallback=false;
       try{
         const response=await authorizedFetch(path,options,controller.signal);
-        if(response.status===401){location.assign('/login');throw new Error('Sesja wygasła. Zaloguj się ponownie.');}
+        if(response.status===401){clearReadCache();location.assign('/login');throw new Error('Sesja wygasła. Zaloguj się ponownie.');}
         const data=await response.json();
+        eligibleFallback=response.status>=500;
         if(!response.ok||data.ok===false)throw new Error(data.error||`HTTP ${response.status}`);
+        if(get)saveReadCache(path,data);
         return data;
       }catch(error){
+        if(get&&(eligibleFallback||error.name==='AbortError'||error.name==='TypeError')){
+          const cached=readOffline(path);if(cached)return cached;
+        }
         if(error.name==='AbortError')throw new Error('Połączenie trwa zbyt długo. Sprawdź zasięg i spróbuj ponownie.');
-        if(error instanceof TypeError)throw new Error('Brak połączenia z internetem. Wpisane dane pozostały w formularzu. Spróbuj ponownie.');
+        if(error.name==='TypeError')throw new Error('Brak połączenia z internetem. Wpisane dane pozostały w formularzu. Spróbuj ponownie.');
         throw error;
       }finally{clearTimeout(timeout);}
     })();
@@ -52,7 +90,16 @@
   async function logout(){
     const response=await authorizedFetch('/api/logout',{method:'POST',body:'{}'});
     if(!response.ok)throw new Error('Nie udało się wylogować. Spróbuj ponownie.');
+    clearReadCache();
     location.assign('/login');
+  }
+  async function registerShell(){
+    if(!('serviceWorker' in navigator))return;
+    try{
+      await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+      const registration=await navigator.serviceWorker.ready;
+      if(navigator.onLine!==false)registration.active?.postMessage({type:'WARM_SHELL'});
+    }catch(error){console.warn('Offline shell unavailable:',error);}
   }
   function notice(message,error=false){
     let box=document.getElementById('app-notice');
@@ -100,7 +147,7 @@
     b.addEventListener('click',async()=>{b.disabled=true;try{await api(`/api/${kind}/${id}/restore?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`,{method:'POST',body:'{}'});await refreshModel();await refresh();notice('Wpis przywrócony.');}catch(e){notice(e.message,true);b.disabled=false;}});
     document.getElementById('app-notice')?.append(b);
   }
-  window.Dream={renderHeader,api,downloadBackup,logout,esc,zone,dateInput,fromInput,format,safeUrl,notice,refreshModel,rememberTrip,readTrip,undo,
+  window.Dream={renderHeader,api,downloadBackup,logout,clearReadCache,registerShell,esc,zone,dateInput,fromInput,format,safeUrl,notice,refreshModel,rememberTrip,readTrip,undo,
     hour:value=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:zone(),hour:'2-digit',hourCycle:'h23'}).format(new Date(value))),
     day:value=>new Date(value).toLocaleDateString('pl-PL',{timeZone:zone()})};
 })();

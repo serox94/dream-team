@@ -1,5 +1,5 @@
 (async () => {
-  const VERSION='20260930-1';
+  const VERSION='20260930-2';
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
@@ -10,6 +10,8 @@
     Dream.renderHeader();
     const person=document.getElementById('person');
     if(person){person.replaceChildren(...trip.participants.map(a=>{const o=document.createElement('option');o.value=a.name;o.textContent=a.name;return o;}));}
+    const assigned=document.getElementById('check-assigned');
+    if(assigned){for(const member of trip.participants){const option=document.createElement('option');option.value=member.name;option.textContent=member.name;assigned.append(option);}}
     document.querySelectorAll('.main-nav a').forEach(a=>{
       const normalize=p=>p.replace(/\/index(?:\.html)?$/,'/').replace(/\.html$/,'').replace(/\/$/,'');
       const active=normalize(new URL(a.href).pathname)===normalize(location.pathname);a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');
@@ -17,20 +19,19 @@
     await loadScript('d1-api-compat.js');
     await loadScript('app.js');
     await loadScript('app-plus.js');
+    await loadScript('field-mode.js');
+    if(document.getElementById('trip-score-charts'))await loadScript('dashboard-chart.js');
     await loadScript('trip-renderer-v2.js');
     const documents=await Dream.api(`/api/documents?tripId=${encodeURIComponent(trip.id)}`).then(d=>d.documents);
+    window.DREAM_DOCUMENTS=documents;
     await window.DreamTripRenderer.render({model,trip,documents});
     window.initDreamPlus();
     if(document.getElementById('weather-current-temp'))await loadScript('fixes.js');
     if(document.getElementById('trip-manager'))await loadScript('trip-manager.js');
     await window.initDreamApp();
-    if(document.getElementById('fishChart')){
-      loadScript('vendor/chart.umd.js').then(()=>loadScript('dashboard-chart.js'))
-        .then(()=>window.renderDreamChart(window.DREAM_LAST_CATCHES||[]))
-        .catch(error=>Dream.notice(`Wykres jest chwilowo niedostępny: ${error.message}`,true));
-    }
     if(document.querySelector('.location-photo-card'))await loadScript('trip-peg-enhancer.js');
     document.documentElement.dataset.ready='true';
+    Dream.registerShell();
     document.dispatchEvent(new Event('dream:ready'));
   }catch(error){
     console.error('Dream Team bootstrap failed:',error);

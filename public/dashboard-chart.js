@@ -1,17 +1,34 @@
 (() => {
-  let chart;
+  const formatWeight = value => Number(value).toLocaleString('pl-PL',{minimumFractionDigits:1,maximumFractionDigits:1});
+
   window.renderDreamChart = catches => {
-    const canvas=document.getElementById('fishChart');if(!canvas)return;
-    if(!window.Chart){Dream.notice('Wykres jest niedostępny; statystyki liczbowe pozostają widoczne.',true);return;}
-    const dates=[...new Set(catches.map(c=>Dream.dateInput(c.caught_at).slice(0,10)))].sort();
-    const palette=['#53b2ff','#3ddc97','#b699ff','#f7c45f','#ff8a96'];
-    const datasets=window.DREAM_TRIP.participants.flatMap((a,index)=>{
-      const counts=dates.map(day=>catches.filter(c=>c.person===a.name&&Dream.dateInput(c.caught_at).startsWith(day)).length);
-      const weights=dates.map(day=>catches.filter(c=>c.person===a.name&&Dream.dateInput(c.caught_at).startsWith(day)).reduce((sum,c)=>sum+Number(c.weight),0));
-      const color=palette[index%palette.length];
-      return [{label:a.name+' · liczba ryb',data:counts,backgroundColor:color,borderRadius:5,yAxisID:'y'},{type:'line',label:a.name+' · kg',data:weights,borderColor:color,backgroundColor:color,tension:0.2,yAxisID:'y1'}];
+    const host=document.getElementById('trip-score-charts'),total=document.getElementById('trip-score-total');
+    if(!host||!total)return;
+    const people=window.DREAM_TRIP.participants;
+    const values=people.map(person=>{
+      const own=catches.filter(item=>item.person===person.name);
+      return {name:person.name,count:own.length,weight:own.reduce((sum,item)=>sum+Number(item.weight||0),0)};
     });
-    chart?.destroy();
-    chart=new Chart(canvas,{type:'bar',data:{labels:dates.map(d=>d.slice(8)+'.'+d.slice(5,7)),datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#dfe7f2'}}},scales:{x:{ticks:{color:'#aeb9c9'}},y:{beginAtZero:true,ticks:{precision:0,color:'#aeb9c9'},title:{display:true,text:'Liczba ryb',color:'#dfe7f2'}},y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#aeb9c9'},title:{display:true,text:'kg',color:'#dfe7f2'}}}}});
+    const fish=values.reduce((sum,item)=>sum+item.count,0);
+    const weight=values.reduce((sum,item)=>sum+item.weight,0);
+    total.textContent=`Razem: ${fish} ryb · ${formatWeight(weight)} kg`;
+    host.replaceChildren();
+
+    for(const [title,key] of [['Liczba ryb','count'],['Łączna waga','weight']]){
+      const section=document.createElement('section');section.className='score-chart';
+      const heading=document.createElement('h4');heading.textContent=title;section.append(heading);
+      const max=Math.max(...values.map(item=>item[key]),0);
+      for(const person of values){
+        const row=document.createElement('div');row.className='score-row';
+        const name=document.createElement('span');name.className='score-name';name.textContent=person.name;
+        const track=document.createElement('div');track.className='score-track';
+        const bar=document.createElement('span');bar.className='score-bar';bar.style.width=max?`${Math.max(4,person[key]/max*100)}%`:'0%';
+        track.append(bar);
+        const value=document.createElement('strong');value.className='score-value';value.textContent=key==='count'?String(person.count):`${formatWeight(person.weight)} kg`;
+        row.setAttribute('aria-label',`${person.name}: ${value.textContent}${key==='count'?' ryb':''}`);
+        row.append(name,track,value);section.append(row);
+      }
+      host.append(section);
+    }
   };
 })();

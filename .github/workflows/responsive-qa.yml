@@ -23,7 +23,7 @@ jobs:
         run: |
           npm install --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
-      - name: Check 11 screens and login at five viewport widths
+      - name: Check 12 screens, field mode and offline at five viewport widths
         run: node scripts/responsive-qa.mjs
       - name: Keep screenshots of fixture data for visual review
         if: always()

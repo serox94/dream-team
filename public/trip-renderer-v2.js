@@ -63,11 +63,6 @@
     set('dashboard-peg',trip.peg||'do ustalenia');
     set('dashboard-dates',trip.start?`${date(trip.start)} – ${date(trip.end)}`:'do ustalenia');
     set('dashboard-crew',trip.participants.map(a=>a.name).join(' · ')||'do ustalenia');
-    set('dashboard-photo-caption',p.name||trip.lake);
-    const crew=hero.querySelector('.hero-side-body strong');
-    if(crew)crew.textContent=trip.name;
-    const photo=hero.querySelector('.hero-side-card img');
-    if(photo){photo.src=Dream.safeUrl(p.imageUrl)||'/assets/img/lowisko.jpg';photo.alt=p.imageUrl?p.name:'Zdjęcie z archiwum Dream Team';}
     const stats=document.querySelector('main .dashboard-secondary-stats');
     if(stats&&!document.getElementById('dream-team-alltime-value'))stats.insertAdjacentHTML('beforeend','<article class="stat-card status-success"><span class="label">👑 Rekord z zapisanych połowów — wszystkie wyjazdy</span><strong id="dream-team-alltime-value">—</strong></article>');
     const target=document.getElementById('angler-stats');
@@ -193,6 +188,7 @@
     if (!trip) return;
     const path = route();
     if (path === '' || path === '/' || path.endsWith('/index')) renderDashboard(trip);
+    if (path.endsWith('/pages/teren')) window.DreamField?.renderGuide(trip, documents || []);
     if (path.endsWith('/pages/mapa')) renderMap(trip);
     const profile=profileOf(trip),pack=profile.facts?.contentPack;
     const topic=path.endsWith('/pages/regulamin')?'rules':path.endsWith('/pages/dojazd')?'logistics':path.endsWith('/pages/porady')?'advice':null;

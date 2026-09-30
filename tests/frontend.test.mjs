@@ -19,7 +19,7 @@ const submit=(p,id)=>p.d.getElementById(id).dispatchEvent(new p.w.Event('submit'
 const fill=(p,id,value)=>{const el=p.d.getElementById(id);el.value=value;el.dispatchEvent(new p.w.Event('input',{bubbles:true}));};
 test('every route boots, preserves legacy knowledge, sends no duplicate initial data requests',async()=>{
  const s=await testServe({seed:true});
- try{for(const path of ['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html']){
+ try{for(const path of ['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html']){
   const p=await page(s,path);try{assert.equal(p.d.documentElement.dataset.ready,'true',path+': '+p.errors.join(';'));assert.deepEqual(p.errors,[],path);assert.ok(p.d.querySelector('main').textContent.length>80);assert.equal(p.calls.filter(x=>x.url==='/api/bootstrap').length,1);
    if(path==='/'){assert.equal(p.d.getElementById('total-fish').textContent,'2');assert.equal(p.d.getElementById('angler-maciek-pb-text').textContent,'18.0 kg');}
    if(path.includes('checklisty'))assert.equal(p.d.getElementById('check-all-count').textContent,'2');
@@ -54,6 +54,59 @@ test('dashboard leads with the selected trip, live weather and checklist progres
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
+test('trip score uses two independent scales, a personal photo, readiness and stored assignments',async()=>{
+ const s=await testServe({seed:true});
+ s.DB.sqlite.exec("UPDATE checklist_items SET assigned_to='Maciek' WHERE label='Testowy podbierak'");
+ const p=await page(s,'/');
+ try{
+  assert.match(p.d.querySelector('.hero-side-card img').src,/patryk-maciek\.jpeg$/);
+  assert.equal(p.d.querySelectorAll('.score-chart').length,2);
+  assert.equal(p.d.querySelectorAll('.score-row').length,4);
+  assert.match(p.d.getElementById('trip-score-total').textContent,/2 ryb.*23,0 kg/);
+  assert.deepEqual([...p.d.querySelectorAll('.score-chart h4')].map(x=>x.textContent),['Liczba ryb','Łączna waga']);
+  assert.equal(p.d.body.dataset.fieldMode,'before');
+  assert.match(p.d.getElementById('field-readiness').textContent,/50%/);
+  assert.match(p.d.getElementById('field-readiness').textContent,/Maciek.*1\/1/);
+  assert.match(p.d.getElementById('field-readiness').textContent,/Wspólne.*0\/1/);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('field mode follows active trip dates and guide reads the selected lake facts',async()=>{
+ const s=await testServe({seed:true});
+ s.DB.sqlite.prepare("UPDATE trips SET start_at=?,end_at=? WHERE id='next-trip'").run(new Date(Date.now()-86400000).toISOString(),new Date(Date.now()+86400000).toISOString());
+ const dashboard=await page(s,'/');
+ try{
+  assert.equal(dashboard.d.body.dataset.fieldMode,'field');
+  assert.match(dashboard.d.getElementById('dashboard-status').textContent,/Na łowisku/);
+  assert.ok(dashboard.d.querySelector('.hero-actions a[href="/pages/teren.html"]'));
+  assert.match(dashboard.d.getElementById('field-readiness').textContent,/Checklista na łowisku/);
+  assert.deepEqual(dashboard.errors,[]);
+ }finally{dashboard.close();}
+ const guide=await page(s,'/pages/teren.html');
+ try{
+  assert.match(guide.d.querySelector('main').textContent,/Najważniejsze nad wodą/);
+  assert.match(guide.d.querySelector('main').textContent,/Dozwolone wędki|Łódka zanętowa/);
+  assert.ok(guide.d.querySelector('a[href^="https://www.google.com/maps/search/"]'));
+  assert.deepEqual(guide.errors,[]);
+ }finally{guide.close();await s.close();}
+});
+test('private read cache marks stale data, never queues writes and clears locally',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/');
+ try{
+  const before=s.DB.sqlite.prepare('SELECT count(*) n FROM checklist_items').get().n;
+  assert.ok(p.w.localStorage.getItem('ryby_read_cache_v1'));
+  p.w.fetch=async()=>{throw new TypeError('network offline');};
+  const model=await p.w.Dream.api('/api/bootstrap');assert.equal(model.app.activeTripId,'next-trip');
+  const checklist=await p.w.Dream.api('/api/checklist?tripId=next-trip');assert.equal(checklist.items.length,2);
+  assert.match(p.d.getElementById('offline-banner').textContent,/Dane offline \/ ostatnia synchronizacja/);
+  await assert.rejects(p.w.Dream.api('/api/checklist',{method:'POST',body:'{}'}),/Brak połączenia/);
+  assert.equal(s.DB.sqlite.prepare('SELECT count(*) n FROM checklist_items').get().n,before);
+  p.w.Dream.clearReadCache();
+  assert.equal(p.w.localStorage.getItem('ryby_read_cache_v1'),null);
+  await assert.rejects(p.w.Dream.api('/api/bootstrap'),/Brak połączenia/);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
 test('trip management reveals the editor on demand and checklist opens with the list',async()=>{
  const s=await testServe({seed:true});
  try{
@@ -74,9 +127,9 @@ test('checklist edit preserves packed state, filters, quantity clear and undo pe
  try{
   p.d.querySelector('[data-filter="done"]').click();await waitFor(()=>p.d.querySelectorAll('.check-item-row').length===1,'done filter');
   p.d.querySelector('.check-item-row .edit-btn').click();await waitFor(()=>p.d.getElementById('edit-check-id').value);
-  fill(p,'check-name','Nowa nazwa');fill(p,'check-quantity','');submit(p,'checklist-form');
+  fill(p,'check-name','Nowa nazwa');fill(p,'check-quantity','');fill(p,'check-assigned','Maciek');submit(p,'checklist-form');
   await waitFor(()=>p.d.getElementById('checklist-message').textContent==='Zmiany zapisane.');
-  const row=s.DB.sqlite.prepare('SELECT * FROM checklist_items WHERE label=?').get('Nowa nazwa');assert.equal(row.packed,1);assert.equal(row.quantity,null);
+  const row=s.DB.sqlite.prepare('SELECT * FROM checklist_items WHERE label=?').get('Nowa nazwa');assert.equal(row.packed,1);assert.equal(row.quantity,null);assert.equal(row.assigned_to,'Maciek');
   await waitFor(()=>p.d.querySelector('.check-item-title')?.textContent==='Nowa nazwa');p.d.querySelector('.check-item-row .danger-btn').click();
   await waitFor(()=>p.d.querySelector('#app-notice button'));assert.ok(s.DB.sqlite.prepare('SELECT deleted_at FROM checklist_items WHERE id=?').get(row.id).deleted_at);
   p.d.querySelector('#app-notice button').click();await waitFor(()=>p.d.getElementById('app-notice').textContent==='Wpis przywrócony.');assert.equal(s.DB.sqlite.prepare('SELECT deleted_at FROM checklist_items WHERE id=?').get(row.id).deleted_at,null);

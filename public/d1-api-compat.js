@@ -65,6 +65,8 @@
       quantity: qty.quantity,
       unit: qty.unit,
       done: Boolean(x.packed),
+      assigned_to: x.assignedTo || '',
+      sort_order: x.sortOrder ?? 0,
       created_at: x.createdAt || null
     };
   }
@@ -152,6 +154,7 @@
                 category: row.category || 'Inne',
                 label: row.item_name,
                 packed: Boolean(row.done),
+                assignedTo: row.assigned_to || null,
                 quantity: row.quantity == null ? null : `${row.quantity}${row.unit ? ` ${row.unit}` : ''}`
               }) });
               saved.push({ ...row, id: out.id });
@@ -193,6 +196,7 @@
             if ('category' in this.payload) patch.category = this.payload.category;
             if ('item_name' in this.payload) patch.label = this.payload.item_name;
             if ('done' in this.payload) patch.packed = Boolean(this.payload.done);
+            if ('assigned_to' in this.payload) patch.assignedTo = this.payload.assigned_to || null;
             if ('quantity' in this.payload || 'unit' in this.payload) patch.quantity = this.payload.quantity == null ? null : `${this.payload.quantity}${this.payload.unit ? ` ${this.payload.unit}` : ''}`;
             if (ids.length) {
               for (const oneId of ids) await api(`/api/checklist/${oneId}`, { method: 'PATCH', body: JSON.stringify(patch) });

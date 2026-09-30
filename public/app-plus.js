@@ -674,6 +674,7 @@
             metaParts.push(`${Number(item.quantity)} ${item.unit}`);
           }
           metaParts.push(item.done ? "Spakowane / gotowe" : "Do ogarnięcia");
+          if(item.assigned_to)metaParts.push(`Dla: ${item.assigned_to}`);
 
           const meta = createNode("div", "check-item-meta", metaParts.join(" • "));
           const badges = createNode("div", "check-item-badges");
