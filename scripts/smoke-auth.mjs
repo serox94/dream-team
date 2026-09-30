@@ -21,7 +21,7 @@ assert.equal((await request('/login.css')).status,200);
 const manifestResponse=await request('/manifest.webmanifest');assert.equal(manifestResponse.status,200);
 const manifest=await manifestResponse.json();assert.equal(manifest.name,'RYBY');assert.equal(manifest.display,'standalone');
 for(const icon of manifest.icons)assert.equal((await request(icon.src)).status,200,icon.src);
-for(const path of ['/dream-core.js','/sw.js','/assets/img/patryk-maciek.jpeg','/pages/teren.html'])assert.equal((await request(path)).status,302,path);
+for(const path of ['/dream-core.js','/sw.js','/assets/img/patryk-maciek.jpeg','/pages/teren.html','/pages/encyklopedia.html','/pages/sonar.html','/data/knowledge/sources.json'])assert.equal((await request(path)).status,302,path);
 for(const path of ['/api/bootstrap','/api/export','/api/health'])assert.equal((await request(path)).status,401,path);
 assert.equal((await request('/api/catches',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).status,401);
 const invalid=await request('/api/login',form(username,password+'-invalid'));
@@ -38,10 +38,14 @@ for(const flag of ['HttpOnly','Secure','SameSite=Lax','Max-Age=63072000'])assert
 assert.ok(!cookieHeader.split(';')[0].split('=')[1].includes(password));
 const cookie=cookieHeader.split(';')[0],headers={cookie};
 assert.equal((await request('/',{headers})).status,200);
-for(const page of ['/pages/polowy.html','/pages/checklisty.html','/pages/pogoda.html','/pages/mapa.html','/pages/teren.html'])assert.equal((await request(page,{headers})).status,200,page);
+for(const page of ['/pages/polowy.html','/pages/checklisty.html','/pages/pogoda.html','/pages/mapa.html','/pages/teren.html','/pages/encyklopedia.html','/pages/sonar.html'])assert.equal((await request(page,{headers})).status,200,page);
+for(const name of ['sources','encyclopedia','sonar','tools']){
+  const response=await request(`/data/knowledge/${name}.json`,{headers});assert.equal(response.status,200,name);
+  const data=await response.json();assert.ok(data.version,`${name} version`);
+}
 const dashboard=await request('/',{headers});assert.match(await dashboard.text(),/patryk-maciek\.jpeg|patryk-maciek/);
 const shell=await request('/sw.js',{headers});assert.equal(shell.status,200);
-assert.match(await shell.text(),/ryby-shell-20260930-3/);
+assert.match(await shell.text(),/ryby-shell-20260930-5/);
 const photo=await request('/assets/img/patryk-maciek.jpeg',{headers});assert.equal(photo.status,200);
 assert.ok((await photo.arrayBuffer()).byteLength>10000,'personal photo is nonempty');
 assert.equal((await request('/manifest.webmanifest',{headers})).status,200);
