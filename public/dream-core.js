@@ -21,6 +21,10 @@
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
   const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|documents)(?:\?|$)/;
   const offlineEntries=new Map();
+  async function clearShell(){
+    if(!('caches' in window))return;
+    try{for(const key of await caches.keys())if(key.startsWith('ryby-shell-'))await caches.delete(key);}catch{}
+  }
   function clearReadCache(){try{localStorage.removeItem(readCacheKey);localStorage.removeItem(authMarkerKey);}catch{}offlineEntries.clear();showOfflineState();}
   function readEntries(){try{return JSON.parse(localStorage.getItem(readCacheKey)||'{}')||{};}catch{return {};}}
   function saveReadCache(path,data){
@@ -58,7 +62,7 @@
       let eligibleFallback=false;
       try{
         const response=await authorizedFetch(path,options,controller.signal);
-        if(response.status===401){clearReadCache();location.assign('/login');throw new Error('Sesja wygasła. Zaloguj się ponownie.');}
+        if(response.status===401){clearReadCache();await clearShell();location.assign('/login');throw new Error('Sesja wygasła. Zaloguj się ponownie.');}
         const data=await response.json();
         eligibleFallback=response.status>=500;
         if(!response.ok||data.ok===false)throw new Error(data.error||`HTTP ${response.status}`);
@@ -80,7 +84,7 @@
     const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),30000);
     try{
       const response=await authorizedFetch('/api/export',{method:'GET'},controller.signal);
-      if(response.status===401){location.assign('/login');throw new Error('Sesja wygasła. Zaloguj się ponownie.');}
+      if(response.status===401){clearReadCache();await clearShell();location.assign('/login');throw new Error('Sesja wygasła. Zaloguj się ponownie.');}
       if(!response.ok){const data=await response.json();throw new Error(data.error||`HTTP ${response.status}`);}
       const href=URL.createObjectURL(await response.blob()),a=document.createElement('a');
       a.href=href;a.download=`dream-team-backup-${new Date().toISOString().slice(0,10)}.json`;
@@ -91,6 +95,7 @@
     const response=await authorizedFetch('/api/logout',{method:'POST',body:'{}'});
     if(!response.ok)throw new Error('Nie udało się wylogować. Spróbuj ponownie.');
     clearReadCache();
+    await clearShell();
     location.assign('/login');
   }
   async function registerShell(){

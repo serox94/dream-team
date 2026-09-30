@@ -163,8 +163,12 @@ test('signed session saves checklist without exposing credentials to frontend st
 test('management screen offers logout and revokes the active device session',async()=>{
  const s=await testServe(),p=await page(s,'/pages/wyjazdy.html');
  try{
+  const deleted=[];p.w.caches={keys:async()=>['ryby-shell-old','unrelated'],delete:async key=>{deleted.push(key);return true;}};
   const button=p.d.getElementById('ryby-logout');assert.ok(button);button.click();
   await waitFor(()=>s.requests.some(r=>r.url==='/api/logout'&&r.status===200),'logout request');
+  await waitFor(()=>deleted.includes('ryby-shell-old'),'offline shell removal');
+  assert.deepEqual(deleted,['ryby-shell-old']);
+  assert.equal(p.w.localStorage.getItem('ryby_read_cache_v1'),null);
   const denied=await fetch(s.url+'/api/export');assert.equal(denied.status,401);
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
