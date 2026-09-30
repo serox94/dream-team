@@ -165,6 +165,20 @@ try{
         await offline.goto(preview.url+knowledgeRoute,{waitUntil:'domcontentloaded'});
         await offline.locator('.knowledge-entry').first().waitFor({timeout:20000});
         assert.ok(await offline.locator('.knowledge-entry').count()>=14,`${knowledgeRoute}: offline editorial data`);
+        if(knowledgeRoute.includes('encyklopedia')){
+          await offline.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+          assert.match(await offline.locator('#tactic-result').innerText(),/Dobry punkt startowy/,'offline tactic result');
+        }else{
+          await offline.locator('#spot-form').evaluate(form=>form.requestSubmit());
+          assert.match(await offline.locator('#spot-result').innerText(),/Trzy punkty/,'offline spot advice');
+          await offline.locator('#quiz-stage [data-quiz="0"]').click();
+          assert.match(await offline.locator('#quiz-feedback').innerText(),/potwierdzenia ciężarkiem/,'offline quiz feedback');
+          const offlineShot=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/kVsAAAAASUVORK5CYII=','base64');
+          await offline.locator('#shot-file').setInputFiles({name:'offline.png',mimeType:'image/png',buffer:offlineShot});
+          await offline.locator('#shot-q1').selectOption('yes');
+          await offline.locator('#shot-analyze').click();
+          assert.match(await offline.locator('#shot-result').innerText(),/Twoich odpowiedzi/,'offline screenshot guidance');
+        }
       }
       await context.setOffline(false);
       await offline.close();
