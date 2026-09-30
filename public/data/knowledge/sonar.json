@@ -1,34 +1,770 @@
 {
-  "version":"2026-09-30.1",
-  "articles":[
-    {"id":"sonar-podstawy","title":"Co mierzy sonar i czym jest stożek","category":"Podstawy","tags":["wiązka","częstotliwość","głębokość"],"lead":"Echosonda mierzy czas i siłę powrotu impulsu akustycznego. Ekran jest historią kolejnych impulsów, a nie zdjęciem dna.","sections":[{"h":"Stożek i środek","p":"Szeroka wiązka obejmuje większą plamę na dnie i szybciej znajduje zmianę, lecz może jednocześnie zbierać echa z różnych głębokości. Wąska lepiej izoluje mały obiekt. Głębokość odnosi się do pierwszego silnego powrotu; obiekt pokazany w stożku nie musi leżeć dokładnie pod środkiem sondy. Przy 10 m głębokości szerokość plamy rośnie z kątem wiązki."},{"h":"Czas, nie metry","p":"Oś pozioma pokazuje czas. Jeśli zatrzymasz łódkę lub zwijanie, dno na ekranie może wyglądać na płaskie mimo spadku w terenie. Utrzymuj równy ruch i porównaj skan z GPS/batymetrią; pojedyncza kreska nie jest mapą."},{"h":"Częstotliwość","p":"Model decyduje, jakie wiązki i częstotliwości są dostępne. Wyższa częstotliwość i węższy stożek zwykle dają więcej szczegółu w użytecznym zasięgu; szeroka wiązka służy rekonesansowi. Nie przenoś dokładnych kątów z CHIRP+ na START lub odwrotnie."}],"sourceIds":["s19","s20","s22","s23","s34"],"diagram":"cone","related":["sonar-ustawienia","sonar-mapa"]},
-    {"id":"sonar-dno","title":"Twardość: linia dna i drugie echo","category":"Interpretacja","tags":["hardness","second return","żwir","muł"],"lead":"Mocniejszy, jaśniejszy i często grubszy powrót sugeruje twardszy obiekt; drugie echo wzmacnia tę wskazówkę. Paleta i ustawienia zmieniają kolor.","sections":[{"h":"Jak porównywać","p":"Skanuj to samo miejsce z podobną czułością i wiązką. Mocny pas lub drugie odbicie może oznaczać twarde dno, ale kamienie, glina i żwir bywają podobne. Słaby, cienki lub rozmyty sygnał pasuje do miękkiego osadu. Zmień wąską wiązkę, a potem sprawdź ciężarkiem: twardy stuk/chrobot, miękki głuchy opad i osad na ciężarku."},{"h":"Pułapki","p":"Kolor nie jest uniwersalną legendą: Classic, Day i Night pokazują echo inaczej. Zbyt wysoka czułość podbija szum, zbyt niska ukrywa miękkie przejścia. Szeroka wiązka miesza dno po obu stronach krawędzi. Sam sonar nie rozstrzyga, czy muł jest żyzny czy beztlenowy."}],"sourceIds":["s19","s25","s26","s35","s16"],"diagram":"hardsoft","related":["sonar-potwierdzenie","sonar-ustawienia","dno"]},
-    {"id":"sonar-materialy","title":"Żwir, piasek, glina, kamienie i osad","category":"Interpretacja","tags":["żwir","piasek","glina","detrytus"],"lead":"Sonar rozpoznaje różnice akustyczne i kształt; etykietę materiału nadaj dopiero po potwierdzeniu.","sections":[{"h":"Twarde warianty","p":"Żwir i kamienie mogą dawać mocny, nierówny pas oraz drugie echo; piasek lub glina mogą wyglądać równo i także odbijać silnie. Marker daje chrobot na żwirze, „stuk” na glinie, inny opór na piasku. Pojedynczy duży kamień i twarda płaszczyzna nie są tym samym miejscem pod zestaw."},{"h":"Miękkie warianty","p":"Muł, głęboki muł, liście i detrytus dają słabszy lub rozmyty sygnał. Sprawdź głębokość zapadania, zapach, resztki roślin i czy istnieje czysta warstwa wierzchnia. Przy dużej warstwie obok często leży lepsza krawędź, lecz karpie mogą żerować także w żyznym mule."}],"sourceIds":["s19","s21","s25","s16","s17"],"diagram":"gravel","related":["sonar-dno","sonar-potwierdzenie","dno"]},
-    {"id":"sonar-struktury","title":"Struktura: nie tylko szczyt górki","category":"Wybór miejsca","tags":["plateau","spadek","rów","półka"],"lead":"Górka, uskok i rów są wskazówkami. Zestaw może leżeć lepiej na boku, przejściu albo podstawie niż na szczycie.","sections":[{"h":"Odczyt przekroju","p":"Powtarzaj skan w poprzek i wzdłuż struktury. Plateau to obszar, nie kreska; garb rośnie i opada, rów obniża się i wraca, półka tworzy lokalny stopień. Sprawdź, czy zmiana nie wynika ze zwolnienia sondy albo szerokiej wiązki."},{"h":"Punkt A/B/C","p":"A: oczywista czysta krawędź lub szczyt, jeśli są ryby i prezentacja jest pewna. B: podstawa spadku, bok górki, półka lub wejście do rowu, gdzie może zbierać się pokarm. C: spokojniejsze przejście twarde–miękkie lub nietypowa strona struktury na presyjnej wodzie. Każdy wybór sprawdź pod kątem tlenu, roślin i możliwości bezpiecznego holu."}],"sourceIds":["s19","s15","s16","s34"],"diagram":"plateau","related":["sonar-polozenie","sonar-mapa","lokalizacja"]},
-    {"id":"sonar-polozenie","title":"Gdzie położyć zestaw: zalety i koszty punktów","category":"Wybór miejsca","tags":["krawędź","podstawa","granica","presja"],"lead":"Nie szukaj jednej „najlepszej” liczby głębokości. Wybierz kilka bezpiecznych punktów i określ, co musiałoby się wydarzyć, aby zmienić plan.","sections":[{"h":"Szczyt, górna krawędź, bok","p":"Szczyt plateau bywa czysty i łatwy do położenia, lecz może być najbardziej obławiany. Górna krawędź łączy płytką strefę z drogą na głębię, ale zestaw nie może zsunąć się po pochyłości. Bok struktury jest mniej oczywisty i może osłaniać ryby od wiatru lub zakłóceń."},{"h":"Podstawa, rów, granica","p":"Podstawa spadku i wejście do rowu mogą zbierać pokarm, ale sprawdź grubość mułu i tlen. Przejście dna lub zewnętrzna krawędź zielska daje dwa siedliska blisko siebie. Czyste oczko jest świetne tylko wtedy, gdy jest wystarczająco duże dla zestawu i bezpiecznego holu."},{"h":"Nieoczywista trasa","p":"Podwodny cypel, brzeg wyspy, kanał między zielskiem i wejście do zatoki mogą być trasą, lecz ruch ryb trzeba zobaczyć. Zestaw połóż na potwierdzonej plamie przy trasie, nie dokładnie w miejscu pojedynczego łuku na sonarze."}],"sourceIds":["s15","s16","s19","s14"],"diagram":"slope","related":["sonar-struktury","sonar-zielsko","sonar-potwierdzenie"]},
-    {"id":"sonar-potwierdzenie","title":"Sonar + ciężarek + obserwacja + mapa","category":"Wybór miejsca","tags":["marker","lead","waypoint"],"lead":"Cztery uzupełniające się pomiary ograniczają błędy pojedynczego obrazu.","sections":[{"h":"Procedura","p":"Sonar: znajdź głębokość, krawędź, intensywność echa i rośliny. Mapa: zobacz, czy zmiana jest obszarem i gdzie przebiega. Marker/ciężarek: potwierdź twardość, osad i wysokość zielska na tej samej trasie; tylko gdy łowisko pozwala. Obserwacja: szukaj spławów, mulenia, ryb przy brzegu i wpływu wiatru."},{"h":"Dokładność","p":"Waypoint oznacza pozycję sondy z błędem GPS i geometrii stożka. Nie zakładaj centymetrowej dokładności zrzutu ani automatycznego wyrównania miejsca zestawu z ekranowym łukiem. Powtórz przejazd, a punkt położenia sprawdź na żyłce i podczas opuszczania ciężarka."}],"sourceIds":["s19","s28","s15","s16","s17"],"diagram":"hardsoft","related":["sonar-dno","sonar-mapa","sonar-polozenie"]},
-    {"id":"sonar-zielsko","title":"Zielsko: wysokość, gęstość, oczka","category":"Interpretacja","tags":["zielsko","oczko","korytarz","krawędź"],"lead":"Roślinność daje echo nad dnem, lecz nie każdy pionowy ślad jest zielem. Porównaj kilka przejazdów i potwierdź fragmentem na ciężarku.","sections":[{"h":"Niskie i wysokie","p":"Niskie zielsko to nierówny pas blisko dna; wysokie wypełnia większą część słupa wody. Gęsty łan zakrywa dno, rozproszony daje przerwy. Czyste oczko albo korytarz pojawiają się jako powtarzalne luki na kilku torach, nie jako jedna kreska."},{"h":"Zewnętrzna i wewnętrzna krawędź","p":"Zewnętrzna krawędź może łączyć osłonę i otwartą wodę; wewnętrzna przy brzegu bywa cieplejsza lub spokojniejsza. Położenie na czystej stronie ułatwia prezentację. Oceniaj też bezpieczną drogę holu; zestaw w gęstwinie nie jest dobrą „miejscówką” tylko dlatego, że sonar widział ryby."},{"h":"Pułapki","p":"Baitfish, miękkie gałęzie lub szum mogą wyglądać podobnie. Nie rozpoznasz pewnie rdestnicy albo moczarki wyłącznie z sonaru. W CHIRP+ 4 mapa roślinności jest algorytmiczna; sam producent wskazuje ograniczenia przy falowaniu i niestabilnej sondzie."}],"sourceIds":["s19","s21","s26","s30","s14"],"diagram":"weed","related":["sonar-czyste-oczko","sonar-ryby","dno"]},
-    {"id":"sonar-czyste-oczko","title":"Czyste oczko i korytarz w zielsku","category":"Wybór miejsca","tags":["oczko","korytarz","GPS"],"lead":"Luka ma wartość tylko, jeśli zestaw naprawdę może w niej wylądować i rybę da się bezpiecznie wyholować.","sections":[{"h":"Potwierdzenie","p":"Skanuj z dwóch kierunków, zapisz granice, sprawdź markerem i oszacuj szerokość względem błędu GPS oraz stożka. Na małej plamie skupione nęcenie i kontrolowane opuszczenie zestawu mogą być lepsze niż rozrzut."},{"h":"Alternatywa","p":"Gdy oczko jest zbyt małe, wybierz zewnętrzną krawędź lub sąsiednią czystą plamę; w gęstym zielsku najpierw oceń bezpieczeństwo holu, lokalny regulamin i montaż."}],"sourceIds":["s19","s26","s30","s14"],"diagram":"clearing","related":["sonar-zielsko","sonar-polozenie"]},
-    {"id":"sonar-ryby","title":"Łuki ryb, kreski i stada","category":"Interpretacja","tags":["łuk","fish icons","stado","ton"],"lead":"Łuk powstaje, gdy ryba przechodzi przez wiązkę przy ruchu względnym. Kreska też może być rybą. Z samego łuku nie identyfikuj gatunku.","sections":[{"h":"Geometria ruchu","p":"Ryba wchodzi przez skraj stożka, jest bliżej środka i wychodzi: odległość echa zmienia się, tworząc łuk. Półłuk to nie automatycznie mniejsza ryba. Stojąca ryba przy nieruchomej sondzie może rysować linię, a szybkość sondy zmienia szerokość śladu. Grubość sygnału zależy też od orientacji i czułości."},{"h":"Baitfish, zielsko i karp","p":"Skupiska małych ryb bywają chmurą zawieszoną nad dnem; roślinność wyrasta z dna i utrzymuje pozycję na kolejnych przejazdach. Ryba nad dnem może być trudna do rozdzielenia od linii dna, a łuk w toni nie mówi, czy to karp, leszcz czy drapieżnik. Łącz obraz z obserwacją powierzchni i gatunkami obecnymi w wodzie."}],"sourceIds":["s19","s26","s34","s36"],"diagram":"fish","related":["sonar-raw","sonar-zielsko"]},
-    {"id":"sonar-termoklina","title":"Termoklina i tlen","category":"Interpretacja","tags":["termoklina","tlen","lato"],"lead":"W warstwowym jeziorze nagły gradient temperatury może współwystępować ze zmianą tlenu. Pas echa jest wskazówką, nie termometrem ani tlenomierzem.","sections":[{"h":"Kiedy szukać","p":"W głębszych wodach latem po dłuższym okresie stabilnej pogody mogą powstać warstwy. Cienka pozioma smuga w słupie wody może wiązać się z granicą warstw, ale także z zawiesiną, glonami lub szumem. Powtórz skany przy różnych ustawieniach i zmierz temperaturę/tlen na kilku głębokościach, jeśli masz sprzęt."},{"h":"Decyzja dla karpia","p":"Nie łów automatycznie poniżej widocznej smugi ani wyłącznie nad nią. Zimniejsza głębia może mieć mało tlenu; tlen i pokarm zależą od konkretnej wody. Porównaj aktywność ryb, zielsko i krawędzie odpowiedniej głębokości."}],"sourceIds":["s04","s09","s19","s25"],"diagram":"thermocline","related":["sonar-ryby","temperatura","sonar-polozenie"]},
-    {"id":"sonar-mapa","title":"Nieznana woda: 10 kroków mapowania","category":"Procedury","tags":["mapa","batymetria","waypoint","GPS"],"lead":"Najpierw zrób mapę obszarów, później precyzyjnie wybierz małe punkty. Nie jedź losowymi zygzakami.","sections":[{"h":"Kroki 1–5","p":"1. Sprawdź regulamin, bezpieczny dostęp i stan wody. 2. Przejdź kilka regularnych torów skanu. 3. Znajdź główne zmiany głębokości. 4. Zaznacz plateau, spadki, rowy, brzegi wysp i zatoki. 5. Porównaj intensywność dna przy stałych ustawieniach."},{"h":"Kroki 6–10","p":"6. Zmapuj wysokość zielska i czyste luki. 7. Zapisz przejścia twarde–miękkie. 8. Powtórz węższą wiązką najciekawsze tory. 9. Zapisz waypointy wraz z marginesem błędu GPS. 10. Potwierdź ciężarkiem/markerem i obserwacją ryb, po czym wybierz A/B/C z bezpieczną drogą holu."}],"sourceIds":["s19","s28","s29","s38","s39"],"diagram":"transects","related":["sonar-brzeg","sonar-lodka","sonar-potwierdzenie"]},
-    {"id":"sonar-lodka","title":"Łódka zanętowa + Deeper","category":"Procedury","tags":["łódka","przejazd","GPS","waypoint"],"lead":"Stabilny montaż i równoległe przejazdy są ważniejsze niż szybki objazd całej wody. Najpierw sprawdź, czy regulamin pozwala używać łódki i sonaru.","sections":[{"h":"Przejazdy","p":"Zamocuj sondę tak, by pracowała pionowo i nie zanurzała się przy falowaniu. Utrzymuj spokojną, równą prędkość; przejedź równoległe tory, potem poprzeczny tor kontrolny. Zbyt szybki przejazd rozciąga odstępy próbek, zbyt wolny lub postój nie daje wiarygodnej odległości na osi czasu."},{"h":"Powrót do punktu","p":"Zapisz waypoint i jego kontekst: głębokość, krawędź, twardość, kierunek skanu. Wróć z innego kierunku i potwierdź kształt. GPS oraz wiatr mają błędy; położenie zestawu kontroluj podczas opuszczania. Funkcje autopilota Quest/Spark są modelowo zależne, a nie funkcją każdej łódki z Deeperem."}],"sourceIds":["s24","s28","s33","s39"],"diagram":"transects","related":["sonar-mapa","sonar-ustawienia"]},
-    {"id":"sonar-brzeg","title":"Deeper z brzegu","category":"Procedury","tags":["rzut","zwijanie","mapa"],"lead":"Powtarzaj podobny tor rzutów i zwijaj równo. Zmiana prędkości sprawia, że ekranowa długość odcinka myli.","sections":[{"h":"Skan","p":"Użyj odpowiedniego mocowania i mocnej linki, rzuć w bezpieczny obszar, zaczekaj na stabilną pozycję sondy. Zwijaj spokojnie bez zatrzymywania, porównaj sąsiednie równoległe rzuty i powtórz najciekawszy fragment. Unikaj zaczepek, ruchu łodzi i obszarów zakazanych."},{"h":"GPS i dokładność","p":"Mapowanie z brzegu wymaga modelu/funkcji GPS obsługującej tę metodę; inne modele mogą dawać tylko bieżący sonar. Mapy wcześniej pobrane w Fish Deeper mogą działać bez internetu, lecz GPS nadal musi mieć sygnał. Dokładność punktu pogarszają wiatr, łuk żyłki i szerokość stożka."}],"sourceIds":["s19","s28","s29","s38"],"diagram":"slope","related":["sonar-mapa","sonar-ustawienia"]},
-    {"id":"sonar-ustawienia","title":"Ustawienia Fish Deeper — sprawdź swój model","category":"Sprzęt","tags":["czułość","beam","Raw","paleta","GPS"],"lead":"Nazwy i dostępność funkcji zależą od modelu oraz wersji aplikacji. Oficjalne menu Fish Deeper opisuje Fishing Mode, Raw/Basic, Beam Angle, Sensitivity, Fish Icons, Color Palette i GPS/mapy.","sections":[{"h":"Dobry punkt startowy","p":"Wybierz tryb Onshore, Boat, Bait Boat lub Scan Only zgodnie z montażem. Szeroka wiązka: szybki rekonesans. Wąska/średnia: sprawdzenie krawędzi, ryby przy dnie i twardości. Zacznij od czytelnej czułości i zmniejszaj, gdy ekran jest zaszumiony; producent sugeruje start wysoko i regulację. Nie przenoś wartości procentowej bez uwzględnienia głębokości, klarowności i modelu."},{"h":"Widok","p":"Raw pokazuje szczegółowe echo, Basic filtruje. Fish Icons to klasyfikacja algorytmiczna. Palety Classic/Day/Night zmieniają mapowanie barw, więc nie mów „żółty zawsze oznacza żwir” bez wskazania palety. Depth range i ustawienia płytkiej wody są zależne od modelu. Waypointy i batymetrię zapisuj z GPS oraz kontroluj tryb mapowania."},{"h":"Modele 2026","p":"START ma prostszy zestaw ustawień niż PRO/PRO+ 2 i CHIRP+ 2/3. CHIRP+ 4 oferuje nowe mapy roślinności/dna i AI Fish Detection według producenta; również te algorytmy mogą się mylić. QUEST/Spark to osobne platformy łódek z autopilotem. Przed wyjazdem sprawdź aktualną instrukcję swojego modelu i aplikacji."}],"sourceIds":["s24","s27","s30","s31","s32","s33"],"related":["sonar-raw","sonar-podstawy","sonar-lodka"]},
-    {"id":"sonar-raw","title":"Raw sonar vs Fish Icons","category":"Sprzęt","tags":["raw sonar","fish icons","AI"],"lead":"Ikona oznacza decyzję algorytmu, nie potwierdzonego karpia. Raw daje sygnał, tło i strukturę do samodzielnego porównania.","sections":[{"h":"Fałszywe tropy","p":"Pionowe zielsko, gałąź, stado drobnicy, szum, pęcherze gazu czy echo przy dnie mogą dostać ikonę ryby albo wyglądać jak łuk. Ryba częściowo w stożku może dać kreskę bez ikony. Wyłącz ikony, powtórz skan i sprawdź, czy ślad porusza się niezależnie od dna."},{"h":"Nowe AI w CHIRP+ 4","p":"Producent opisuje AI Fish Detection jako dokładniejszą klasyfikację, lecz sam wskazuje możliwe pomyłki zależne od fal, stabilności i montażu. Nie przenoś tej funkcji na starsze modele i nie identyfikuj gatunku z ikony."}],"sourceIds":["s19","s24","s26","s30","s34"],"diagram":"fish","related":["sonar-ryby","sonar-ustawienia"]},
-    {"id":"sonar-bledy","title":"Najczęstsze błędy początkujących","category":"Procedury","tags":["błędy","szybkość","czułość","powtórny skan"],"lead":"Interpretacja powinna przeżyć drugi skan z innego kierunku. Jeśli nie, nie wybieraj jeszcze punktu zestawu.","sections":[{"h":"Ruch i ustawienia","p":"Za szybki przejazd daje mało próbek; zatrzymanie lub ciągłe zmiany kierunku psują relację czasu do odległości. Zbyt wysoka czułość nasyca ekran, zbyt niska ukrywa ryby i miękkie przejścia. Szeroka wiązka nie służy do centymetrowego wyboru oczka."},{"h":"Myślenie o miejscu","p":"Nie bierz każdej kreski za rybę ani każdego łuku za karpia. Nie szukaj tylko najgłębszego miejsca lub samego szczytu. Nie ignoruj krawędzi zielska i przejścia dna. Nie kładź zestawu automatycznie dokładnie pod ikoną ryby. Zawsze powtórz skan i potwierdź punkt."}],"sourceIds":["s19","s24","s26","s34","s15"],"related":["sonar-mapa","sonar-potwierdzenie","sonar-raw"]},
-    {"id":"sonar-checklista","title":"Przed położeniem zestawu: lista skanowania","category":"Procedury","tags":["checklista","waypoint","marker"],"lead":"Krótka kontrola terenowa. Nie trzeba znaleźć idealnego dna, ale trzeba wiedzieć, gdzie i jak leży zestaw.","sections":[{"h":"Kontrola","p":"Struktura i kierunek toru; głębokość; twardość i przejście dna; wysokość zielska oraz droga holu; powtarzalna aktywność ryb; wiatr i warunki; drugi skan; zapis waypointu; potwierdzenie markerem/ciężarkiem, jeśli możliwe i dozwolone; kontrola rzeczywistego opadu zestawu."}],"sourceIds":["s19","s24","s28","s15","s16"],"related":["sonar-mapa","sonar-polozenie"]}
+  "version": "2026-09-30.2",
+  "articles": [
+    {
+      "id": "sonar-podstawy",
+      "title": "Co mierzy sonar i czym jest stożek",
+      "category": "Podstawy",
+      "tags": [
+        "wiązka",
+        "częstotliwość",
+        "głębokość"
+      ],
+      "lead": "Echosonda mierzy czas i siłę powrotu impulsu akustycznego. Ekran jest historią kolejnych impulsów, a nie zdjęciem dna.",
+      "sections": [
+        {
+          "h": "Stożek i środek",
+          "p": "Szeroka wiązka obejmuje większą plamę na dnie i szybciej znajduje zmianę, lecz może jednocześnie zbierać echa z różnych głębokości. Wąska lepiej izoluje mały obiekt. Głębokość odnosi się do pierwszego silnego powrotu; obiekt pokazany w stożku nie musi leżeć dokładnie pod środkiem sondy. Przy 10 m głębokości szerokość plamy rośnie z kątem wiązki."
+        },
+        {
+          "h": "Czas, nie metry",
+          "p": "Oś pozioma pokazuje czas. Jeśli zatrzymasz łódkę lub zwijanie, dno na ekranie może wyglądać na płaskie mimo spadku w terenie. Utrzymuj równy ruch i porównaj skan z GPS/batymetrią; pojedyncza kreska nie jest mapą."
+        },
+        {
+          "h": "Częstotliwość",
+          "p": "Model decyduje, jakie wiązki i częstotliwości są dostępne. Wyższa częstotliwość i węższy stożek zwykle dają więcej szczegółu w użytecznym zasięgu; szeroka wiązka służy rekonesansowi. Nie przenoś dokładnych kątów z CHIRP+ na START lub odwrotnie."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s20",
+        "s22",
+        "s23",
+        "s34"
+      ],
+      "diagram": "cone",
+      "related": [
+        "sonar-ustawienia",
+        "sonar-mapa"
+      ]
+    },
+    {
+      "id": "sonar-dno",
+      "title": "Twardość: linia dna i drugie echo",
+      "category": "Interpretacja",
+      "tags": [
+        "hardness",
+        "second return",
+        "żwir",
+        "muł"
+      ],
+      "lead": "Mocniejszy, jaśniejszy i często grubszy powrót sugeruje twardszy obiekt; drugie echo wzmacnia tę wskazówkę. Paleta i ustawienia zmieniają kolor.",
+      "sections": [
+        {
+          "h": "Jak porównywać",
+          "p": "Skanuj to samo miejsce z podobną czułością i wiązką. Mocny pas lub drugie odbicie może oznaczać twarde dno, ale kamienie, glina i żwir bywają podobne. Słaby, cienki lub rozmyty sygnał pasuje do miękkiego osadu. Zmień wąską wiązkę, a potem sprawdź ciężarkiem: twardy stuk/chrobot, miękki głuchy opad i osad na ciężarku."
+        },
+        {
+          "h": "Pułapki",
+          "p": "Kolor nie jest uniwersalną legendą: Classic, Day i Night pokazują echo inaczej. Zbyt wysoka czułość podbija szum, zbyt niska ukrywa miękkie przejścia. Szeroka wiązka miesza dno po obu stronach krawędzi. Sam sonar nie rozstrzyga, czy muł jest żyzny czy beztlenowy."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s25",
+        "s26",
+        "s35",
+        "s16"
+      ],
+      "diagram": "hardsoft",
+      "related": [
+        "sonar-potwierdzenie",
+        "sonar-ustawienia",
+        "dno"
+      ]
+    },
+    {
+      "id": "sonar-materialy",
+      "title": "Żwir, piasek, glina, kamienie i osad",
+      "category": "Interpretacja",
+      "tags": [
+        "żwir",
+        "piasek",
+        "glina",
+        "detrytus"
+      ],
+      "lead": "Sonar rozpoznaje różnice akustyczne i kształt; etykietę materiału nadaj dopiero po potwierdzeniu.",
+      "sections": [
+        {
+          "h": "Twarde warianty",
+          "p": "Żwir i kamienie mogą dawać mocny, nierówny pas oraz drugie echo; piasek lub glina mogą wyglądać równo i także odbijać silnie. Marker daje chrobot na żwirze, „stuk” na glinie, inny opór na piasku. Pojedynczy duży kamień i twarda płaszczyzna nie są tym samym miejscem pod zestaw."
+        },
+        {
+          "h": "Miękkie warianty",
+          "p": "Muł, głęboki muł, liście i detrytus dają słabszy lub rozmyty sygnał. Sprawdź głębokość zapadania, zapach, resztki roślin i czy istnieje czysta warstwa wierzchnia. Przy dużej warstwie obok często leży lepsza krawędź, lecz karpie mogą żerować także w żyznym mule."
+        },
+        {
+          "h": "Miejsce żyzne a miejsce łatwe do położenia",
+          "p": "Doświadczeni karpiarze opisują zarówno twarde, jałowe fragmenty, jak i miększe plamy pełne organizmów dennych. Echo wskazuje zmianę materiału, lecz samo nie mierzy pokarmu. Porównaj dwie sąsiednie plamy, oceń bezpieczeństwo holu i sprawdź ciężarkiem, czy zestaw leży ponad osadem."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s21",
+        "s25",
+        "s16",
+        "s17",
+        "s42"
+      ],
+      "diagram": "gravel",
+      "related": [
+        "sonar-dno",
+        "sonar-potwierdzenie",
+        "dno"
+      ]
+    },
+    {
+      "id": "sonar-struktury",
+      "title": "Struktura: nie tylko szczyt górki",
+      "category": "Wybór miejsca",
+      "tags": [
+        "plateau",
+        "spadek",
+        "rów",
+        "półka"
+      ],
+      "lead": "Górka, uskok i rów są wskazówkami. Zestaw może leżeć lepiej na boku, przejściu albo podstawie niż na szczycie.",
+      "sections": [
+        {
+          "h": "Odczyt przekroju",
+          "p": "Powtarzaj skan w poprzek i wzdłuż struktury. Plateau to obszar, nie kreska; garb rośnie i opada, rów obniża się i wraca, półka tworzy lokalny stopień. Sprawdź, czy zmiana nie wynika ze zwolnienia sondy albo szerokiej wiązki."
+        },
+        {
+          "h": "Punkt A/B/C",
+          "p": "A: oczywista czysta krawędź lub szczyt, jeśli są ryby i prezentacja jest pewna. B: podstawa spadku, bok górki, półka lub wejście do rowu, gdzie może zbierać się pokarm. C: spokojniejsze przejście twarde–miękkie lub nietypowa strona struktury na presyjnej wodzie. Każdy wybór sprawdź pod kątem tlenu, roślin i możliwości bezpiecznego holu."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s15",
+        "s16",
+        "s34"
+      ],
+      "diagram": "plateau",
+      "related": [
+        "sonar-polozenie",
+        "sonar-mapa",
+        "lokalizacja"
+      ]
+    },
+    {
+      "id": "sonar-polozenie",
+      "title": "Gdzie położyć zestaw: zalety i koszty punktów",
+      "category": "Wybór miejsca",
+      "tags": [
+        "krawędź",
+        "podstawa",
+        "granica",
+        "presja"
+      ],
+      "lead": "Nie szukaj jednej „najlepszej” liczby głębokości. Wybierz kilka bezpiecznych punktów i określ, co musiałoby się wydarzyć, aby zmienić plan.",
+      "sections": [
+        {
+          "h": "Szczyt, górna krawędź, bok",
+          "p": "Szczyt plateau bywa czysty i łatwy do położenia, lecz może być najbardziej obławiany. Górna krawędź łączy płytką strefę z drogą na głębię, ale zestaw nie może zsunąć się po pochyłości. Bok struktury jest mniej oczywisty i może osłaniać ryby od wiatru lub zakłóceń."
+        },
+        {
+          "h": "Podstawa, rów, granica",
+          "p": "Podstawa spadku i wejście do rowu mogą zbierać pokarm, ale sprawdź grubość mułu i tlen. Przejście dna lub zewnętrzna krawędź zielska daje dwa siedliska blisko siebie. Czyste oczko jest świetne tylko wtedy, gdy jest wystarczająco duże dla zestawu i bezpiecznego holu."
+        },
+        {
+          "h": "Nieoczywista trasa",
+          "p": "Podwodny cypel, brzeg wyspy, kanał między zielskiem i wejście do zatoki mogą być trasą, lecz ruch ryb trzeba zobaczyć. Zestaw połóż na potwierdzonej plamie przy trasie, nie dokładnie w miejscu pojedynczego łuku na sonarze."
+        }
+      ],
+      "sourceIds": [
+        "s15",
+        "s16",
+        "s19",
+        "s14",
+        "s41",
+        "s42"
+      ],
+      "diagram": "slope",
+      "related": [
+        "sonar-struktury",
+        "sonar-zielsko",
+        "sonar-potwierdzenie"
+      ]
+    },
+    {
+      "id": "sonar-potwierdzenie",
+      "title": "Sonar + ciężarek + obserwacja + mapa",
+      "category": "Wybór miejsca",
+      "tags": [
+        "marker",
+        "lead",
+        "waypoint"
+      ],
+      "lead": "Cztery uzupełniające się pomiary ograniczają błędy pojedynczego obrazu.",
+      "sections": [
+        {
+          "h": "Procedura",
+          "p": "Sonar: znajdź głębokość, krawędź, intensywność echa i rośliny. Mapa: zobacz, czy zmiana jest obszarem i gdzie przebiega. Marker/ciężarek: potwierdź twardość, osad i wysokość zielska na tej samej trasie; tylko gdy łowisko pozwala. Obserwacja: szukaj spławów, mulenia, ryb przy brzegu i wpływu wiatru."
+        },
+        {
+          "h": "Dokładność",
+          "p": "Waypoint oznacza pozycję sondy z błędem GPS i geometrii stożka. Nie zakładaj centymetrowej dokładności zrzutu ani automatycznego wyrównania miejsca zestawu z ekranowym łukiem. Powtórz przejazd, a punkt położenia sprawdź na żyłce i podczas opuszczania ciężarka."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s28",
+        "s15",
+        "s16",
+        "s17"
+      ],
+      "diagram": "hardsoft",
+      "related": [
+        "sonar-dno",
+        "sonar-mapa",
+        "sonar-polozenie"
+      ]
+    },
+    {
+      "id": "sonar-zielsko",
+      "title": "Zielsko: wysokość, gęstość, oczka",
+      "category": "Interpretacja",
+      "tags": [
+        "zielsko",
+        "oczko",
+        "korytarz",
+        "krawędź"
+      ],
+      "lead": "Roślinność daje echo nad dnem, lecz nie każdy pionowy ślad jest zielem. Porównaj kilka przejazdów i potwierdź fragmentem na ciężarku.",
+      "sections": [
+        {
+          "h": "Niskie i wysokie",
+          "p": "Niskie zielsko to nierówny pas blisko dna; wysokie wypełnia większą część słupa wody. Gęsty łan zakrywa dno, rozproszony daje przerwy. Czyste oczko albo korytarz pojawiają się jako powtarzalne luki na kilku torach, nie jako jedna kreska."
+        },
+        {
+          "h": "Zewnętrzna i wewnętrzna krawędź",
+          "p": "Zewnętrzna krawędź może łączyć osłonę i otwartą wodę; wewnętrzna przy brzegu bywa cieplejsza lub spokojniejsza. Położenie na czystej stronie ułatwia prezentację. Oceniaj też bezpieczną drogę holu; zestaw w gęstwinie nie jest dobrą „miejscówką” tylko dlatego, że sonar widział ryby."
+        },
+        {
+          "h": "Pułapki",
+          "p": "Baitfish, miękkie gałęzie lub szum mogą wyglądać podobnie. Nie rozpoznasz pewnie rdestnicy albo moczarki wyłącznie z sonaru. W CHIRP+ 4 mapa roślinności jest algorytmiczna; sam producent wskazuje ograniczenia przy falowaniu i niestabilnej sondzie."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s21",
+        "s26",
+        "s30",
+        "s14"
+      ],
+      "diagram": "weed",
+      "related": [
+        "sonar-czyste-oczko",
+        "sonar-ryby",
+        "dno"
+      ]
+    },
+    {
+      "id": "sonar-czyste-oczko",
+      "title": "Czyste oczko i korytarz w zielsku",
+      "category": "Wybór miejsca",
+      "tags": [
+        "oczko",
+        "korytarz",
+        "GPS"
+      ],
+      "lead": "Luka ma wartość tylko, jeśli zestaw naprawdę może w niej wylądować i rybę da się bezpiecznie wyholować.",
+      "sections": [
+        {
+          "h": "Potwierdzenie",
+          "p": "Skanuj z dwóch kierunków, zapisz granice, sprawdź markerem i oszacuj szerokość względem błędu GPS oraz stożka. Na małej plamie skupione nęcenie i kontrolowane opuszczenie zestawu mogą być lepsze niż rozrzut."
+        },
+        {
+          "h": "Alternatywa",
+          "p": "Gdy oczko jest zbyt małe, wybierz zewnętrzną krawędź lub sąsiednią czystą plamę; w gęstym zielsku najpierw oceń bezpieczeństwo holu, lokalny regulamin i montaż."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s26",
+        "s30",
+        "s14"
+      ],
+      "diagram": "clearing",
+      "related": [
+        "sonar-zielsko",
+        "sonar-polozenie"
+      ]
+    },
+    {
+      "id": "sonar-ryby",
+      "title": "Łuki ryb, kreski i stada",
+      "category": "Interpretacja",
+      "tags": [
+        "łuk",
+        "fish icons",
+        "stado",
+        "ton"
+      ],
+      "lead": "Łuk powstaje, gdy ryba przechodzi przez wiązkę przy ruchu względnym. Kreska też może być rybą. Z samego łuku nie identyfikuj gatunku.",
+      "sections": [
+        {
+          "h": "Geometria ruchu",
+          "p": "Ryba wchodzi przez skraj stożka, jest bliżej środka i wychodzi: odległość echa zmienia się, tworząc łuk. Półłuk to nie automatycznie mniejsza ryba. Stojąca ryba przy nieruchomej sondzie może rysować linię, a szybkość sondy zmienia szerokość śladu. Grubość sygnału zależy też od orientacji i czułości."
+        },
+        {
+          "h": "Baitfish, zielsko i karp",
+          "p": "Skupiska małych ryb bywają chmurą zawieszoną nad dnem; roślinność wyrasta z dna i utrzymuje pozycję na kolejnych przejazdach. Ryba nad dnem może być trudna do rozdzielenia od linii dna, a łuk w toni nie mówi, czy to karp, leszcz czy drapieżnik. Łącz obraz z obserwacją powierzchni i gatunkami obecnymi w wodzie."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s26",
+        "s34",
+        "s36"
+      ],
+      "diagram": "fish",
+      "related": [
+        "sonar-raw",
+        "sonar-zielsko"
+      ]
+    },
+    {
+      "id": "sonar-termoklina",
+      "title": "Termoklina i tlen",
+      "category": "Interpretacja",
+      "tags": [
+        "termoklina",
+        "tlen",
+        "lato"
+      ],
+      "lead": "W warstwowym jeziorze nagły gradient temperatury może współwystępować ze zmianą tlenu. Pas echa jest wskazówką, nie termometrem ani tlenomierzem.",
+      "sections": [
+        {
+          "h": "Kiedy szukać",
+          "p": "W głębszych wodach latem po dłuższym okresie stabilnej pogody mogą powstać warstwy. Cienka pozioma smuga w słupie wody może wiązać się z granicą warstw, ale także z zawiesiną, glonami lub szumem. Powtórz skany przy różnych ustawieniach i zmierz temperaturę/tlen na kilku głębokościach, jeśli masz sprzęt."
+        },
+        {
+          "h": "Decyzja dla karpia",
+          "p": "Nie łów automatycznie poniżej widocznej smugi ani wyłącznie nad nią. Zimniejsza głębia może mieć mało tlenu; tlen i pokarm zależą od konkretnej wody. Porównaj aktywność ryb, zielsko i krawędzie odpowiedniej głębokości."
+        }
+      ],
+      "sourceIds": [
+        "s04",
+        "s09",
+        "s19",
+        "s25"
+      ],
+      "diagram": "thermocline",
+      "related": [
+        "sonar-ryby",
+        "temperatura",
+        "sonar-polozenie"
+      ]
+    },
+    {
+      "id": "sonar-mapa",
+      "title": "Nieznana woda: 10 kroków mapowania",
+      "category": "Procedury",
+      "tags": [
+        "mapa",
+        "batymetria",
+        "waypoint",
+        "GPS"
+      ],
+      "lead": "Najpierw zrób mapę obszarów, później precyzyjnie wybierz małe punkty. Nie jedź losowymi zygzakami.",
+      "sections": [
+        {
+          "h": "Kroki 1–5",
+          "p": "1. Sprawdź regulamin, bezpieczny dostęp i stan wody. 2. Przejdź kilka regularnych torów skanu. 3. Znajdź główne zmiany głębokości. 4. Zaznacz plateau, spadki, rowy, brzegi wysp i zatoki. 5. Porównaj intensywność dna przy stałych ustawieniach."
+        },
+        {
+          "h": "Kroki 6–10",
+          "p": "6. Zmapuj wysokość zielska i czyste luki. 7. Zapisz przejścia twarde–miękkie. 8. Powtórz węższą wiązką najciekawsze tory. 9. Zapisz waypointy wraz z marginesem błędu GPS. 10. Potwierdź ciężarkiem/markerem i obserwacją ryb, po czym wybierz A/B/C z bezpieczną drogą holu."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s28",
+        "s29",
+        "s38",
+        "s39"
+      ],
+      "diagram": "transects",
+      "related": [
+        "sonar-brzeg",
+        "sonar-lodka",
+        "sonar-potwierdzenie"
+      ]
+    },
+    {
+      "id": "sonar-lodka",
+      "title": "Łódka zanętowa + Deeper",
+      "category": "Procedury",
+      "tags": [
+        "łódka",
+        "przejazd",
+        "GPS",
+        "waypoint"
+      ],
+      "lead": "Stabilny montaż i równoległe przejazdy są ważniejsze niż szybki objazd całej wody. Najpierw sprawdź, czy regulamin pozwala używać łódki i sonaru.",
+      "sections": [
+        {
+          "h": "Przejazdy",
+          "p": "Zamocuj sondę tak, by pracowała pionowo i nie zanurzała się przy falowaniu. Utrzymuj spokojną, równą prędkość; przejedź równoległe tory, potem poprzeczny tor kontrolny. Zbyt szybki przejazd rozciąga odstępy próbek, zbyt wolny lub postój nie daje wiarygodnej odległości na osi czasu."
+        },
+        {
+          "h": "Powrót do punktu",
+          "p": "Zapisz waypoint i jego kontekst: głębokość, krawędź, twardość, kierunek skanu. Wróć z innego kierunku i potwierdź kształt. GPS oraz wiatr mają błędy; położenie zestawu kontroluj podczas opuszczania. Funkcje autopilota Quest/Spark są modelowo zależne, a nie funkcją każdej łódki z Deeperem."
+        }
+      ],
+      "sourceIds": [
+        "s24",
+        "s28",
+        "s33",
+        "s39"
+      ],
+      "diagram": "transects",
+      "related": [
+        "sonar-mapa",
+        "sonar-ustawienia"
+      ]
+    },
+    {
+      "id": "sonar-brzeg",
+      "title": "Deeper z brzegu",
+      "category": "Procedury",
+      "tags": [
+        "rzut",
+        "zwijanie",
+        "mapa"
+      ],
+      "lead": "Powtarzaj podobny tor rzutów i zwijaj równo. Zmiana prędkości sprawia, że ekranowa długość odcinka myli.",
+      "sections": [
+        {
+          "h": "Skan",
+          "p": "Użyj odpowiedniego mocowania i mocnej linki, rzuć w bezpieczny obszar, zaczekaj na stabilną pozycję sondy. Zwijaj spokojnie bez zatrzymywania, porównaj sąsiednie równoległe rzuty i powtórz najciekawszy fragment. Unikaj zaczepek, ruchu łodzi i obszarów zakazanych."
+        },
+        {
+          "h": "GPS i dokładność",
+          "p": "Mapowanie z brzegu wymaga modelu/funkcji GPS obsługującej tę metodę; inne modele mogą dawać tylko bieżący sonar. Mapy wcześniej pobrane w Fish Deeper mogą działać bez internetu, lecz GPS nadal musi mieć sygnał. Dokładność punktu pogarszają wiatr, łuk żyłki i szerokość stożka."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s28",
+        "s29",
+        "s38",
+        "s41"
+      ],
+      "diagram": "slope",
+      "related": [
+        "sonar-mapa",
+        "sonar-ustawienia"
+      ]
+    },
+    {
+      "id": "sonar-ustawienia",
+      "title": "Ustawienia Fish Deeper — sprawdź swój model",
+      "category": "Sprzęt",
+      "tags": [
+        "czułość",
+        "beam",
+        "Raw",
+        "paleta",
+        "GPS"
+      ],
+      "lead": "Nazwy i dostępność funkcji zależą od modelu oraz wersji aplikacji. Oficjalne menu Fish Deeper opisuje Fishing Mode, Raw/Basic, Beam Angle, Sensitivity, Fish Icons, Color Palette i GPS/mapy.",
+      "sections": [
+        {
+          "h": "Dobry punkt startowy",
+          "p": "Wybierz tryb Onshore, Boat, Bait Boat lub Scan Only zgodnie z montażem. Szeroka wiązka: szybki rekonesans. Wąska/średnia: sprawdzenie krawędzi, ryby przy dnie i twardości. Zacznij od czytelnej czułości i zmniejszaj, gdy ekran jest zaszumiony; producent sugeruje start wysoko i regulację. Nie przenoś wartości procentowej bez uwzględnienia głębokości, klarowności i modelu."
+        },
+        {
+          "h": "Widok",
+          "p": "Raw pokazuje szczegółowe echo, Basic filtruje. Fish Icons to klasyfikacja algorytmiczna. Palety Classic/Day/Night zmieniają mapowanie barw, więc nie mów „żółty zawsze oznacza żwir” bez wskazania palety. Depth range i ustawienia płytkiej wody są zależne od modelu. Waypointy i batymetrię zapisuj z GPS oraz kontroluj tryb mapowania."
+        },
+        {
+          "h": "Modele 2026",
+          "p": "START ma prostszy zestaw ustawień niż PRO/PRO+ 2 i CHIRP+ 2/3. CHIRP+ 4 oferuje nowe mapy roślinności/dna i AI Fish Detection według producenta; również te algorytmy mogą się mylić. QUEST/Spark to osobne platformy łódek z autopilotem. Przed wyjazdem sprawdź aktualną instrukcję swojego modelu i aplikacji."
+        }
+      ],
+      "sourceIds": [
+        "s24",
+        "s27",
+        "s30",
+        "s31",
+        "s32",
+        "s33"
+      ],
+      "related": [
+        "sonar-raw",
+        "sonar-podstawy",
+        "sonar-lodka"
+      ]
+    },
+    {
+      "id": "sonar-raw",
+      "title": "Raw sonar vs Fish Icons",
+      "category": "Sprzęt",
+      "tags": [
+        "raw sonar",
+        "fish icons",
+        "AI"
+      ],
+      "lead": "Ikona oznacza decyzję algorytmu, nie potwierdzonego karpia. Raw daje sygnał, tło i strukturę do samodzielnego porównania.",
+      "sections": [
+        {
+          "h": "Fałszywe tropy",
+          "p": "Pionowe zielsko, gałąź, stado drobnicy, szum, pęcherze gazu czy echo przy dnie mogą dostać ikonę ryby albo wyglądać jak łuk. Ryba częściowo w stożku może dać kreskę bez ikony. Wyłącz ikony, powtórz skan i sprawdź, czy ślad porusza się niezależnie od dna."
+        },
+        {
+          "h": "Nowe AI w CHIRP+ 4",
+          "p": "Producent opisuje AI Fish Detection jako dokładniejszą klasyfikację, lecz sam wskazuje możliwe pomyłki zależne od fal, stabilności i montażu. Nie przenoś tej funkcji na starsze modele i nie identyfikuj gatunku z ikony."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s24",
+        "s26",
+        "s30",
+        "s34"
+      ],
+      "diagram": "fish",
+      "related": [
+        "sonar-ryby",
+        "sonar-ustawienia"
+      ]
+    },
+    {
+      "id": "sonar-bledy",
+      "title": "Najczęstsze błędy początkujących",
+      "category": "Procedury",
+      "tags": [
+        "błędy",
+        "szybkość",
+        "czułość",
+        "powtórny skan"
+      ],
+      "lead": "Interpretacja powinna przeżyć drugi skan z innego kierunku. Jeśli nie, nie wybieraj jeszcze punktu zestawu.",
+      "sections": [
+        {
+          "h": "Ruch i ustawienia",
+          "p": "Za szybki przejazd daje mało próbek; zatrzymanie lub ciągłe zmiany kierunku psują relację czasu do odległości. Zbyt wysoka czułość nasyca ekran, zbyt niska ukrywa ryby i miękkie przejścia. Szeroka wiązka nie służy do centymetrowego wyboru oczka."
+        },
+        {
+          "h": "Myślenie o miejscu",
+          "p": "Nie bierz każdej kreski za rybę ani każdego łuku za karpia. Nie szukaj tylko najgłębszego miejsca lub samego szczytu. Nie ignoruj krawędzi zielska i przejścia dna. Nie kładź zestawu automatycznie dokładnie pod ikoną ryby. Zawsze powtórz skan i potwierdź punkt."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s24",
+        "s26",
+        "s34",
+        "s15"
+      ],
+      "related": [
+        "sonar-mapa",
+        "sonar-potwierdzenie",
+        "sonar-raw"
+      ]
+    },
+    {
+      "id": "sonar-checklista",
+      "title": "Przed położeniem zestawu: lista skanowania",
+      "category": "Procedury",
+      "tags": [
+        "checklista",
+        "waypoint",
+        "marker"
+      ],
+      "lead": "Krótka kontrola terenowa. Nie trzeba znaleźć idealnego dna, ale trzeba wiedzieć, gdzie i jak leży zestaw.",
+      "sections": [
+        {
+          "h": "Kontrola",
+          "p": "Struktura i kierunek toru; głębokość; twardość i przejście dna; wysokość zielska oraz droga holu; powtarzalna aktywność ryb; wiatr i warunki; drugi skan; zapis waypointu; potwierdzenie markerem/ciężarkiem, jeśli możliwe i dozwolone; kontrola rzeczywistego opadu zestawu."
+        }
+      ],
+      "sourceIds": [
+        "s19",
+        "s24",
+        "s28",
+        "s15",
+        "s16"
+      ],
+      "related": [
+        "sonar-mapa",
+        "sonar-polozenie"
+      ]
+    }
   ],
-  "quiz":[
-    {"level":1,"diagram":"gravel","question":"Mocniejsza, nierówna linia dna i drugie echo. Co sprawdzisz najpierw?","options":["Żwir lub inne twarde dno","Głęboki muł","To na pewno karp","Nie wiem"],"correct":0,"explanation":"Silny powrót sugeruje twardą powierzchnię, ale żwir, kamienie i glina wymagają potwierdzenia ciężarkiem.","sourceIds":["s19","s25"]},
-    {"level":1,"diagram":"silt","question":"Linia dna jest słaba i rozmyta. Co jest rozsądną hipotezą?","options":["Twarda skała","Miękki osad","Stado karpi","Nie wiem"],"correct":1,"explanation":"Miękki osad daje słabszy powrót; sprawdź zapadanie ciężarka i jakość osadu.","sourceIds":["s19","s25"]},
-    {"level":1,"diagram":"weed","question":"Pionowe echa wyrastają z dna. Co porównasz?","options":["Wysokość zielska na kolejnych skanach","Fazę księżyca","Sam kolor ryb","Nie wiem"],"correct":0,"explanation":"Powtarzalne pasma od dna pasują do roślin; potwierdź fragmentem na ciężarku.","sourceIds":["s21","s26"]},
-    {"level":2,"diagram":"clearing","question":"Między kępami zielska jest luka. Gdzie położyć zestaw?","options":["W sprawdzonym oczku lub przy czystej krawędzi","W najgęstszym zielsku","W dowolnej kresce","Nie wiem"],"correct":0,"explanation":"Sprawdź wielkość oczka i błąd GPS, a także bezpieczny hol.","sourceIds":["s19","s30"]},
-    {"level":2,"diagram":"plateau","question":"Po wspięciu na plateau ekran robi się płaski. Co jeszcze musisz sprawdzić?","options":["Powtórny skan w ruchu i boki struktury","Nic, szczyt jest zawsze najlepszy","Tylko ikonę ryby","Nie wiem"],"correct":0,"explanation":"Oś pozioma to czas; zatrzymanie sondy może udawać płaski odcinek.","sourceIds":["s19","s34"]},
-    {"level":2,"diagram":"slope","question":"Widać stromy spadek. Który punkt jest jedyny poprawny?","options":["Wyłącznie szczyt","Wyłącznie dno","Żaden: porównaj górę, bok i podstawę","Nie wiem"],"correct":2,"explanation":"Położenie wybierz na podstawie ryb, twardości, osadu i bezpieczeństwa.","sourceIds":["s15","s16"]},
-    {"level":3,"diagram":"trench","question":"Rów ma miękkie dno i twardszy bok. Co testować?","options":["Tylko najgłębsze dno","Bok i wejście, potem ewentualnie dno","Zawsze środek wody","Nie wiem"],"correct":1,"explanation":"Twardy bok może dać lepszą prezentację; rów trzeba ocenić także pod kątem tlenu.","sourceIds":["s16","s19"]},
-    {"level":3,"diagram":"fish","question":"W toni widać półłuk i kilka kropek. Co wiemy?","options":["To na pewno karp","Mogą być ryby, ale gatunek nie jest pewny","To zawsze zielsko","Nie wiem"],"correct":1,"explanation":"Kształt zależy od ruchu i stożka; porównaj raw sonar oraz kolejne skany.","sourceIds":["s19","s34"]},
-    {"level":3,"diagram":"thermocline","question":"Pozioma smuga w głębokiej wodzie latem. Co oznacza?","options":["Na pewno granica tlenu","Możliwa warstwa, zawiesina lub szum — potwierdź","Wyłącznie stado karpi","Nie wiem"],"correct":1,"explanation":"Sonar nie mierzy bezpośrednio temperatury ani tlenu; potrzeba dodatkowego pomiaru.","sourceIds":["s04","s25"]},
-    {"level":3,"diagram":"hardsoft","question":"Na jednym torze dno zmienia kolor. Co dalej?","options":["Powtórz skan przy tych samych ustawieniach i potwierdź ciężarkiem","Zmień jednocześnie paletę i czułość","To na pewno żwir","Nie wiem"],"correct":0,"explanation":"Porównanie echa ma sens przy stałej palecie, czułości i wiązce.","sourceIds":["s24","s25"]}
+  "quiz": [
+    {
+      "level": 1,
+      "diagram": "gravel",
+      "question": "Mocniejsza, nierówna linia dna i drugie echo. Co sprawdzisz najpierw?",
+      "options": [
+        "Żwir lub inne twarde dno",
+        "Głęboki muł",
+        "To na pewno karp",
+        "Nie wiem"
+      ],
+      "correct": 0,
+      "explanation": "Silny powrót sugeruje twardą powierzchnię, ale żwir, kamienie i glina wymagają potwierdzenia ciężarkiem.",
+      "sourceIds": [
+        "s19",
+        "s25"
+      ]
+    },
+    {
+      "level": 1,
+      "diagram": "silt",
+      "question": "Linia dna jest słaba i rozmyta. Co jest rozsądną hipotezą?",
+      "options": [
+        "Twarda skała",
+        "Miękki osad",
+        "Stado karpi",
+        "Nie wiem"
+      ],
+      "correct": 1,
+      "explanation": "Miękki osad daje słabszy powrót; sprawdź zapadanie ciężarka i jakość osadu.",
+      "sourceIds": [
+        "s19",
+        "s25"
+      ]
+    },
+    {
+      "level": 1,
+      "diagram": "weed",
+      "question": "Pionowe echa wyrastają z dna. Co porównasz?",
+      "options": [
+        "Wysokość zielska na kolejnych skanach",
+        "Fazę księżyca",
+        "Sam kolor ryb",
+        "Nie wiem"
+      ],
+      "correct": 0,
+      "explanation": "Powtarzalne pasma od dna pasują do roślin; potwierdź fragmentem na ciężarku.",
+      "sourceIds": [
+        "s21",
+        "s26"
+      ]
+    },
+    {
+      "level": 2,
+      "diagram": "clearing",
+      "question": "Między kępami zielska jest luka. Gdzie położyć zestaw?",
+      "options": [
+        "W sprawdzonym oczku lub przy czystej krawędzi",
+        "W najgęstszym zielsku",
+        "W dowolnej kresce",
+        "Nie wiem"
+      ],
+      "correct": 0,
+      "explanation": "Sprawdź wielkość oczka i błąd GPS, a także bezpieczny hol.",
+      "sourceIds": [
+        "s19",
+        "s30"
+      ]
+    },
+    {
+      "level": 2,
+      "diagram": "plateau",
+      "question": "Po wspięciu na plateau ekran robi się płaski. Co jeszcze musisz sprawdzić?",
+      "options": [
+        "Powtórny skan w ruchu i boki struktury",
+        "Nic, szczyt jest zawsze najlepszy",
+        "Tylko ikonę ryby",
+        "Nie wiem"
+      ],
+      "correct": 0,
+      "explanation": "Oś pozioma to czas; zatrzymanie sondy może udawać płaski odcinek.",
+      "sourceIds": [
+        "s19",
+        "s34"
+      ]
+    },
+    {
+      "level": 2,
+      "diagram": "slope",
+      "question": "Widać stromy spadek. Który punkt jest jedyny poprawny?",
+      "options": [
+        "Wyłącznie szczyt",
+        "Wyłącznie dno",
+        "Żaden: porównaj górę, bok i podstawę",
+        "Nie wiem"
+      ],
+      "correct": 2,
+      "explanation": "Położenie wybierz na podstawie ryb, twardości, osadu i bezpieczeństwa.",
+      "sourceIds": [
+        "s15",
+        "s16"
+      ]
+    },
+    {
+      "level": 3,
+      "diagram": "trench",
+      "question": "Rów ma miękkie dno i twardszy bok. Co testować?",
+      "options": [
+        "Tylko najgłębsze dno",
+        "Bok i wejście, potem ewentualnie dno",
+        "Zawsze środek wody",
+        "Nie wiem"
+      ],
+      "correct": 1,
+      "explanation": "Twardy bok może dać lepszą prezentację; rów trzeba ocenić także pod kątem tlenu.",
+      "sourceIds": [
+        "s16",
+        "s19"
+      ]
+    },
+    {
+      "level": 3,
+      "diagram": "fish",
+      "question": "W toni widać półłuk i kilka kropek. Co wiemy?",
+      "options": [
+        "To na pewno karp",
+        "Mogą być ryby, ale gatunek nie jest pewny",
+        "To zawsze zielsko",
+        "Nie wiem"
+      ],
+      "correct": 1,
+      "explanation": "Kształt zależy od ruchu i stożka; porównaj raw sonar oraz kolejne skany.",
+      "sourceIds": [
+        "s19",
+        "s34"
+      ]
+    },
+    {
+      "level": 3,
+      "diagram": "thermocline",
+      "question": "Pozioma smuga w głębokiej wodzie latem. Co oznacza?",
+      "options": [
+        "Na pewno granica tlenu",
+        "Możliwa warstwa, zawiesina lub szum — potwierdź",
+        "Wyłącznie stado karpi",
+        "Nie wiem"
+      ],
+      "correct": 1,
+      "explanation": "Sonar nie mierzy bezpośrednio temperatury ani tlenu; potrzeba dodatkowego pomiaru.",
+      "sourceIds": [
+        "s04",
+        "s25"
+      ]
+    },
+    {
+      "level": 3,
+      "diagram": "hardsoft",
+      "question": "Na jednym torze dno zmienia kolor. Co dalej?",
+      "options": [
+        "Powtórz skan przy tych samych ustawieniach i potwierdź ciężarkiem",
+        "Zmień jednocześnie paletę i czułość",
+        "To na pewno żwir",
+        "Nie wiem"
+      ],
+      "correct": 0,
+      "explanation": "Porównanie echa ma sens przy stałej palecie, czułości i wiązce.",
+      "sourceIds": [
+        "s24",
+        "s25"
+      ]
+    }
   ]
 }
