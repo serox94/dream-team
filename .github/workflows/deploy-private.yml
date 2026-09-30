@@ -18,6 +18,9 @@ on:
         description: Git ref to deploy (main or the stable rollback tag)
         required: false
         default: main
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
 permissions:
   contents: read
 jobs:
