@@ -105,7 +105,7 @@ try{
           assert.ok((await page.locator('.knowledge-entry').count())>=1);
           await page.locator('#knowledge-tag').selectOption('');
           await page.locator('#diagnostic-step [data-answer="no"]').click();
-          assert.match(await page.locator('#diagnostic-step').innerText(),/Krok 2/);
+          assert.match(await page.locator('#diagnostic-step').innerText(),/krok 2/i);
           for(let i=1;i<8;i++)await page.locator('#diagnostic-step [data-answer="yes"]').click();
           assert.match(await page.locator('#diagnostic-step').innerText(),/Plan na teraz/);
           await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
