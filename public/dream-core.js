@@ -115,6 +115,14 @@
     const model=window.DREAM_MODEL,trip=window.DREAM_TRIP;
     const page=location.pathname.split('/').pop().replace(/\.html$/,'')||'index';
     document.body.dataset.page=page==='index'?'dashboard':page;
+    const menu=document.getElementById('main-nav');
+    if(menu&&!menu.querySelector('[data-knowledge-link]')){
+      const before=[...menu.querySelectorAll('a')].find(a=>/porady\.html/.test(a.getAttribute('href')));
+      for(const [path,label] of [['encyklopedia.html','📚 Encyklopedia'],['sonar.html','📡 Deeper / Sonar']]){
+        const link=document.createElement('a');link.href=`/pages/${path}`;link.textContent=label;link.dataset.knowledgeLink='true';
+        menu.insertBefore(link,before||null);
+      }
+    }
     document.querySelector('.header-top h1').textContent='RYBY';
   document.querySelector('.subtitle').textContent=trip.lakeProfile?.name||trip.lake;
     document.getElementById('dream-trip-select')?.remove();

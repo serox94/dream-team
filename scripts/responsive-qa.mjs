@@ -6,7 +6,7 @@ import {serve} from './qa-server.mjs';
 import {weatherFixture} from './qa-weather.mjs';
 
 const widths=[360,390,412,768,1280];
-const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html'];
+const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html'];
 const preview=await serve({seed:true,weatherFetch:async()=>Response.json(weatherFixture())});
 const loginPreview=await serve({testSession:false});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
@@ -24,6 +24,7 @@ try{
       const response=await page.goto(preview.url+route,{waitUntil:'domcontentloaded'});
       assert.equal(response.status(),200,`${width} ${route}: HTTP`);
       await page.locator('html[data-ready="true"]').waitFor({timeout:15000});
+      if(route.includes('encyklopedia')||route.includes('sonar.html'))await page.locator('.knowledge-entry').first().waitFor({timeout:15000});
       if(route==='/'){
         const readyMs=await page.evaluate(()=>Math.round(performance.now()));
         await page.waitForFunction(()=>document.getElementById('dashboard-weather-now')?.textContent.includes('15°C'));
@@ -42,6 +43,15 @@ try{
       if(route==='/pages/teren.html'){
         assert.match(await page.locator('main').innerText(),/Najważniejsze nad wodą/);
         assert.ok(await page.locator('main a[href^="https://www.google.com/maps/search/"]').count());
+      }
+      if(route==='/pages/encyklopedia.html'){
+        assert.equal(await page.locator('.knowledge-entry').count(),14);
+        assert.ok(await page.locator('a[href="/pages/rigi.html"]').count());
+        assert.ok(await page.locator('a[href="/pages/wezly.html"]').count());
+      }
+      if(route==='/pages/sonar.html'){
+        assert.equal(await page.locator('.knowledge-entry').count(),17);
+        assert.equal(await page.locator('.sonar-gallery .sonar-diagram').count(),11);
       }
       if(width<=412){
         const links=page.locator('.bottom-nav a, .bottom-nav button');
@@ -81,6 +91,37 @@ try{
           const options=await page.locator('#person option').allTextContents();
           assert.ok(options.includes('Patryk')&&options.includes('Maciek'));
         }
+        if(width===390&&route==='/pages/encyklopedia.html'){
+          const search=page.locator('#knowledge-search');await search.fill('termoklina');
+          assert.ok(await page.locator('.knowledge-entry').count()>=1);
+          await search.fill('');
+          await page.locator('[data-category="Przynęty"]').click();
+          assert.ok((await page.locator('.knowledge-entry').count())>=3);
+          await page.locator('[data-category="Wszystkie"]').click();
+          await page.locator('#knowledge-tag').selectOption('PVA');
+          assert.ok((await page.locator('.knowledge-entry').count())>=1);
+          await page.locator('#knowledge-tag').selectOption('');
+          await page.locator('#diagnostic-step [data-answer="no"]').click();
+          assert.match(await page.locator('#diagnostic-step').innerText(),/Krok 2/);
+          for(let i=1;i<8;i++)await page.locator('#diagnostic-step [data-answer="yes"]').click();
+          assert.match(await page.locator('#diagnostic-step').innerText(),/Plan na teraz/);
+          await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+          assert.match(await page.locator('#tactic-result').innerText(),/Dobry punkt startowy/);
+          assert.ok(await page.locator('.article-sources').count()>=1);
+        }
+        if(width===390&&route==='/pages/sonar.html'){
+          await page.locator('#spot-form').evaluate(form=>form.requestSubmit());
+          assert.match(await page.locator('#spot-result').innerText(),/Trzy punkty/);
+          await page.locator('#quiz-stage [data-quiz="0"]').click();
+          assert.match(await page.locator('#quiz-feedback').innerText(),/potwierdzenia ciężarkiem/);
+          const tiny=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/kVsAAAAASUVORK5CYII=','base64');
+          await page.locator('#shot-file').setInputFiles({name:'deeper.png',mimeType:'image/png',buffer:tiny});
+          assert.equal(await page.locator('#shot-controls').isVisible(),true);
+          await page.locator('#shot-q1').selectOption('yes');
+          await page.locator('#shot-analyze').click();
+          assert.match(await page.locator('#shot-result').innerText(),/Twoich odpowiedzi/);
+          assert.equal(preview.requests.filter(r=>r.method==='POST'&&r.url.includes('knowledge')).length,0,'screenshot never uploaded');
+        }
       }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html'].includes(route)){
         const label=route==='/'?'dashboard':route.split('/').pop().replace('.html','');
@@ -116,8 +157,15 @@ try{
       await offline.reload();
       await offline.locator('html[data-ready="true"]').waitFor();
       assert.equal(await offline.locator('#offline-banner').count(),0,'online reads replace stale banner');
+      await context.setOffline(true);
+      for(const knowledgeRoute of ['/pages/encyklopedia.html','/pages/sonar.html']){
+        await offline.goto(preview.url+knowledgeRoute,{waitUntil:'domcontentloaded'});
+        await offline.locator('.knowledge-entry').first().waitFor({timeout:20000});
+        assert.ok(await offline.locator('.knowledge-entry').count()>=14,`${knowledgeRoute}: offline editorial data`);
+      }
+      await context.setOffline(false);
       await offline.close();
-      console.log('390px offline: static shell, private read cache, visible timestamp and write refusal PASS.');
+      console.log('390px offline: static shell, encyclopedia, sonar, private read cache, visible timestamp and write refusal PASS.');
     }
     await context.close();
     console.log(`Responsive QA ${width}px: PASS (${routes.length} screens + login, no overflow or browser errors).`);

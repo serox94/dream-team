@@ -19,7 +19,7 @@ const submit=(p,id)=>p.d.getElementById(id).dispatchEvent(new p.w.Event('submit'
 const fill=(p,id,value)=>{const el=p.d.getElementById(id);el.value=value;el.dispatchEvent(new p.w.Event('input',{bubbles:true}));};
 test('every route boots, preserves legacy knowledge, sends no duplicate initial data requests',async()=>{
  const s=await testServe({seed:true});
- try{for(const path of ['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html']){
+ try{for(const path of ['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html']){
   const p=await page(s,path);try{assert.equal(p.d.documentElement.dataset.ready,'true',path+': '+p.errors.join(';'));assert.deepEqual(p.errors,[],path);assert.ok(p.d.querySelector('main').textContent.length>80);assert.equal(p.calls.filter(x=>x.url==='/api/bootstrap').length,1);
    if(path==='/'){assert.equal(p.d.getElementById('total-fish').textContent,'2');assert.equal(p.d.getElementById('angler-maciek-pb-text').textContent,'18.0 kg');}
    if(path.includes('checklisty'))assert.equal(p.d.getElementById('check-all-count').textContent,'2');

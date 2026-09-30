@@ -1,0 +1,42 @@
+{
+  "version":"2026-09-30.1",
+  "diagnostic":[
+    {"q":"Czy widziałeś ryby lub powtarzalne oznaki żerowania w zasięgu?","no":"Zanim zmienisz przynętę, poświęć czas na obserwację wody, brzegu, zatok i krawędzi. Rozważ zmianę miejsca.","unknown":"Obserwuj świt, zmierzch i spokojne okna; pojedyncze bąble nie wystarczą.","yes":"Ryby są w pobliżu — sprawdź prezentację, zanim zmienisz aromat.","link":"lokalizacja"},
+    {"q":"Czy po kontroli masz pewność, że haczyk i przypon leżą czysto?","no":"Zwiń zestaw, sprawdź zielsko i osad, zmień długość/prezentację lub poszukaj czystego oczka.","unknown":"Podnieś jeden zestaw i sprawdź ciężarek, haczyk oraz materiał na przyponie.","yes":"Prezentacja jest prawdopodobna. Przejdź do głębokości i twardości.","link":"dno"},
+    {"q":"Czy dno i głębokość potwierdzono powtórnym skanem lub ciężarkiem?","no":"Sprawdź krawędź, wysokość zielska i zapadanie ciężarka; wybierz punkt bezpieczny do holu.","unknown":"Powtórz tor skanu i porównaj kontakt ciężarka przy tej samej odległości.","yes":"Miejscówka jest lepiej rozpoznana. Sprawdź aktualność warunków.","link":"sonar-potwierdzenie"},
+    {"q":"Czy pogoda, wiatr i temperatura wody pozostają podobne do początku sesji?","no":"Zaktualizuj hipotezę: porównaj strefy tlenu, głębokości i brzegi pod wpływem wiatru.","unknown":"Zapisz trend wody i wiatru; nie wyciągaj wniosku tylko z ciśnienia.","yes":"Warunki są stabilne. Oceń ilość pokarmu.","link":"pogoda"},
+    {"q":"Czy porcja zanęty jest adekwatna do aktywności i populacji?","no":"Przy przełowieniu przerwij dokładanie zanęty i sprawdź pojedynczą przynętę obok. Przy realnym żerowaniu donęcaj stopniowo.","unknown":"Skontroluj, czy zanęta znika; drobnica może konsumować ją zamiast karpi.","yes":"Porcja wygląda sensownie. Dopiero teraz porównaj hakowy.","link":"necenie"},
+    {"q":"Czy przetestowano jeden kontrast przynęty lub koloru bez zmiany innych warunków?","no":"Porównaj naturalny wafter z widocznym pop-upem/topperem albo rozmiar hakowego, nie wszystkie zmienne naraz.","unknown":"Zapisz co jest na każdym zestawie i zmień jedną rzecz.","yes":"Po uczciwym porównaniu rozważ rig albo sąsiedni spot.","link":"kolory"},
+    {"q":"Czy obecny rig jest bezpieczny i dobrany do dna oraz zielska?","no":"Przejdź do Rigów, skontroluj uwalnianie ciężarka i dopasuj prezentację; nie wiąż na ślepo trudnego montażu.","unknown":"Sprawdź leżący zestaw i bezpieczeństwo po zerwaniu, zanim zarzucisz ponownie.","yes":"Rig jest w porządku. Możesz dać miejscu czas lub testować inną głębokość.","link":"dno"},
+    {"q":"Czy po wystarczającej obserwacji ten punkt nadal ma oznaki ryb?","no":"Przenieś jeden zestaw na inny bok struktury, głębokość lub spokojniejszą trasę ryb.","unknown":"Ustal okno obserwacji i plan B, zamiast przerzucać co chwilę.","yes":"Daj miejscu czas i ogranicz zakłócenia; zanotuj co się zmieniło.","link":"lokalizacja"}
+  ],
+  "tactics":{
+    "temperature":{
+      "cold":{"title":"<8°C","bait":"mały, łatwy do skontrolowania hakowy: wafter albo neutralny bottom","flavour":"dobrze uwalniający sygnał, np. słodki lub umiarkowany fishmeal; sprawdź skład i olej","feed":"mały PVA lub kilka przynęt; nie dokładaj bez oznak żerowania","backup":"Jeśli cisza, najpierw szukaj ryb na innej głębokości."},
+      "cool":{"title":"8–16°C","bait":"bottom lub wafter na pewnej plamie, pop-up przy osadzie","flavour":"fishmeal + garlic albo subtelny cream/fruit jako kontrast","feed":"mała porcja startowa, zwiększana dopiero po reakcji","backup":"Porównaj miejsce ogrzewające się z sąsiednią głębią."},
+      "warm":{"title":"16–24°C","bait":"bottom/wafter, ewentualnie topper na wyraźny punkt","flavour":"fishmeal, krill/spice lub kontrast owocowy jako test","feed":"dostosuj do liczby żerujących ryb i drobnicy","backup":"Jeśli ryby nie żerują, sprawdź osłonę i tlen zamiast większej porcji."},
+      "hot":{"title":">24°C","bait":"niewielki, łatwy do kontroli hakowy","flavour":"nie ma aromatu zastępującego tlen i lokalizację","feed":"ostrożna porcja, oceniaj dobrostan ryby","backup":"Przy słabym tlenie zrezygnuj z łowienia lub zmień bezpieczne miejsce."}
+    },
+    "bottom":{
+      "hard":{"presentation":"bottom lub wafter na czystym dnie","rig":"krótki do średniego przypon; sprawdź bezpieczny lead clip","length":"zacznij ok. 15–25 cm, zweryfikuj opad i zachowanie ryb","feed":"skupiona lub lekko rozproszona porcja"},
+      "silt":{"presentation":"wafter lub niski pop-up nad osadem","rig":"bezpieczny montaż, lżejszy ciężarek i przypon nieściągany w muł","length":"dobierz po pomiarze zapadania; często dłuższy niż na twardym","feed":"mała, sprawdzona plama, unikaj zatopienia drobnicy"},
+      "weed":{"presentation":"pop-up/wafter nad niskim zielem albo bottom w czystym oczku","rig":"montaż umożliwiający bezpieczny hol i uwolnienie ciężarka","length":"dobierz do wysokości zielska i rzeczywistej plamy","feed":"precyzyjnie w oczko lub na czystą krawędź"},
+      "transition":{"presentation":"porównaj bottom na twardej i wafter na miękkiej stronie","rig":"najpierw potwierdź, po której stronie faktycznie leży ciężarek","length":"według osadu i sposobu lądowania","feed":"mała porcja po obu stronach jako kontrolowany test"}
+    },
+    "pressure":{"high":"Ogranicz hałas i częste rzuty; spróbuj pojedynczego/naturalnego hakowego na spokojniejszej stronie.","low":"Możesz testować szerszy obszar, lecz nie zakładaj automatycznego dużego nęcenia."},
+    "visibility":{"clear":"Porównaj naturalny/washed-out z jednym jasnym sygnałem.","murky":"Sprawdź, czy hakowy jest blisko ryb; biały/żółty lub zapach to test, nie gwarancja."},
+    "activity":{"seen":"Połóż zestaw bezpiecznie blisko oznak ryb i ogranicz zakłócenia.","not-seen":"Najpierw obserwacja i skan; rekomendacja przynęty ma niską pewność."},
+    "season":{"winter":"Zimowa etykieta nie zastępuje pomiaru temperatury wody.","spring":"Porównaj ocieplające się strefy i chłodniejszą wodę.","spawning":"Nie łów ryb podczas tarła i przestrzegaj lokalnych ograniczeń.","summer":"Monitoruj tlen i bezpieczeństwo w upał.","autumn":"Sprawdź trend kilku dni, nie sam miesiąc."},
+    "weather":{"stable":"Przy stabilnej pogodzie daj potwierdzonej miejscówce sensowny czas.","changing":"Przy zmianie frontu obserwuj ryby i weryfikuj głębokość; nie wyciągaj wniosków wyłącznie z hPa."},
+    "wind":{"toward":"Sprawdź nawietrzny brzeg, ale uwzględnij temperaturę i bezpieczne warunki.","away":"Sprawdź spokojniejszą stronę i dopływy; unikaj automatycznej reguły kierunku."},
+    "depth":{"shallow":"Płytkość może się szybko ogrzać lub odtlenić; porównaj z pobliską głębią.","deep":"Głębia nie gwarantuje tlenu ani ryb; sprawdź warstwy wody."}
+  },
+  "spots":{
+    "plateau":["A: czysty szczyt, jeśli widać aktywność i zestaw leży pewnie","B: bok lub górna krawędź na trasie ryb","C: mniej obławiana podstawa lub przejście dna"],
+    "slope":["A: potwierdzona czysta górna krawędź","B: podstawa spadku, jeśli nie ma grubego mułu","C: boczna półka poza głównym torem łódek"],
+    "trench":["A: wejście do rowu lub twardszy bok","B: dno rowu po sprawdzeniu tlenu i osadu","C: mniej oczywiste wyjście z rowu"],
+    "weed":["A: duże, potwierdzone czyste oczko","B: zewnętrzna krawędź zielska","C: spokojniejszy korytarz lub wewnętrzna krawędź"],
+    "transition":["A: potwierdzona twarda strona granicy","B: miększa strona z prezentacją nad osadem","C: sąsiednia, mniej obławiana część przejścia"]
+  },
+  "scanChecklist":["Regulamin i bezpieczeństwo łódki/sonaru","Struktura oraz tor skanu","Głębokość i trend","Twardość i przejście dna","Zielsko i droga holu","Oznaki aktywności ryb","Wiatr i tlen","Powtórny skan z innego kierunku","Waypoint z marginesem błędu","Potwierdzenie markerem/ciężarkiem, jeśli możliwe"]
+}
