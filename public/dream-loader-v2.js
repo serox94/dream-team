@@ -22,9 +22,13 @@
     await window.DreamTripRenderer.render({model,trip,documents});
     window.initDreamPlus();
     if(document.getElementById('weather-current-temp'))await loadScript('fixes.js');
-    if(document.getElementById('fishChart'))await loadScript('dashboard-chart.js');
     if(document.getElementById('trip-manager'))await loadScript('trip-manager.js');
     await window.initDreamApp();
+    if(document.getElementById('fishChart')){
+      loadScript('vendor/chart.umd.js').then(()=>loadScript('dashboard-chart.js'))
+        .then(()=>window.renderDreamChart(window.DREAM_LAST_CATCHES||[]))
+        .catch(error=>Dream.notice(`Wykres jest chwilowo niedostępny: ${error.message}`,true));
+    }
     if(document.querySelector('.location-photo-card'))await loadScript('trip-peg-enhancer.js');
     document.documentElement.dataset.ready='true';
     document.dispatchEvent(new Event('dream:ready'));

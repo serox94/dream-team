@@ -17,12 +17,19 @@ try{
     const context=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1,isMobile:width<=412,hasTouch:width<=412});
     for(const route of routes){
       const page=await context.newPage(),errors=[];
+      let requests=0;
+      page.on('request',()=>requests++);
       page.on('pageerror',error=>errors.push(error.message));
       page.on('response',response=>{if(response.status()>=400)errors.push(`${response.status()} ${new URL(response.url()).pathname}`);});
       const response=await page.goto(preview.url+route,{waitUntil:'domcontentloaded'});
       assert.equal(response.status(),200,`${width} ${route}: HTTP`);
       await page.locator('html[data-ready="true"]').waitFor({timeout:15000});
-      if(route==='/')await page.waitForFunction(()=>document.getElementById('dashboard-weather-now')?.textContent.includes('15°C'));
+      if(route==='/'){
+        const readyMs=await page.evaluate(()=>Math.round(performance.now()));
+        await page.waitForFunction(()=>document.getElementById('dashboard-weather-now')?.textContent.includes('15°C'));
+        await page.waitForFunction(()=>typeof window.renderDreamChart==='function');
+        console.log(`Dashboard ${width}px disposable fixture: ready ${readyMs} ms, ${requests} requests after chart load.`);
+      }
       const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
       assert.ok(dimensions.scroll<=dimensions.viewport+1&&dimensions.body<=dimensions.viewport+1,`${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)}`);
       assert.deepEqual(errors,[],`${width} ${route}: console/network`);

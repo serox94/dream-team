@@ -18,6 +18,9 @@ while(true){
 assert.equal((await request('/')).status,302);
 const entry=await request('/login');assert.equal(entry.status,200);assert.match(await entry.text(),/Zaloguj/);
 assert.equal((await request('/login.css')).status,200);
+const manifestResponse=await request('/manifest.webmanifest');assert.equal(manifestResponse.status,200);
+const manifest=await manifestResponse.json();assert.equal(manifest.name,'RYBY');assert.equal(manifest.display,'standalone');
+for(const icon of manifest.icons)assert.equal((await request(icon.src)).status,200,icon.src);
 assert.equal((await request('/dream-core.js')).status,302);
 for(const path of ['/api/bootstrap','/api/export','/api/health'])assert.equal((await request(path)).status,401,path);
 assert.equal((await request('/api/catches',{method:'POST',headers:{'content-type':'application/json'},body:'{}'})).status,401);
@@ -35,6 +38,8 @@ for(const flag of ['HttpOnly','Secure','SameSite=Lax','Max-Age=63072000'])assert
 assert.ok(!cookieHeader.split(';')[0].split('=')[1].includes(password));
 const cookie=cookieHeader.split(';')[0],headers={cookie};
 assert.equal((await request('/',{headers})).status,200);
+for(const page of ['/pages/polowy.html','/pages/checklisty.html','/pages/pogoda.html','/pages/mapa.html'])assert.equal((await request(page,{headers})).status,200,page);
+assert.equal((await request('/manifest.webmanifest',{headers})).status,200);
 assert.equal((await request('/api/bootstrap',{headers})).status,200);
 assert.equal((await request('/api/bootstrap',{headers})).status,200,'reused cookie after reopening');
 const exportResponse=await request('/api/export',{headers});assert.equal(exportResponse.status,200);

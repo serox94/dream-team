@@ -4,7 +4,9 @@ const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API
 assert.ok(account&&token,'Cloudflare deployment credentials missing');
 const headers={Authorization:`Bearer ${token}`};
 const root=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}`;
-const since=Date.parse(process.env.MIN_BACKUP_TIMESTAMP||'2026-09-30T03:00:00Z');
+const now=new Date(),today=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate(),3,0));
+const expected=Date.now()<today.getTime()+45*60000?new Date(today.getTime()-86400000):today;
+const since=Date.parse(process.env.MIN_BACKUP_TIMESTAMP||expected.toISOString());
 
 const listing=await fetch(`${root}/r2/buckets/dream-team-d1-backups/objects?prefix=dream-team-db%2F&per_page=100`,{headers});
 assert.equal(listing.status,200,`R2 listing returned ${listing.status}`);
@@ -25,5 +27,5 @@ const schedule=await fetch(`${root}/workers/scripts/dream-team-d1-backup/schedul
 assert.equal(schedule.status,200,`Backup schedule check returned ${schedule.status}`);
 const schedules=await schedule.json();
 assert.equal(schedules.success,true,'Backup schedule check failed');
-assert.ok(schedules.result?.some(item=>item.cron==='17 3 * * *'),'03:17 UTC cron is missing');
+assert.ok(schedules.result?.schedules?.some(item=>item.cron==='17 3 * * *'),'03:17 UTC cron is missing');
 console.log(`Scheduled backup verified: ${backup.key}, ${backup.size} bytes, ${backup.uploaded||backup.last_modified||backup.lastModified}. Cron 03:17 UTC active.`);

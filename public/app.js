@@ -1034,6 +1034,7 @@ function bindSpotsPageEvents() {
 }
 
 function updateDashboard(catches, spots = [], checklist = []) {
+  window.DREAM_LAST_CATCHES = catches;
   if (!$("total-weight")) return;
   const stats = getStats(catches, spots);
   $("total-weight").textContent = `${stats.totalWeight.toFixed(1)} kg`;

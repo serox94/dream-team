@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths: [.github/workflows/backup-health.yml, scripts/check-backup-health.mjs]
   workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * *'
 permissions:
   contents: read
 jobs:
