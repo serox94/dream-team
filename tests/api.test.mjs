@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/worker.js';
 import {database} from './db.mjs';
+import {extractFacts,suggestions} from '../src/lake-research.js';
 const setup=(WEATHER_FETCH)=>{const DB=database(),env={DB,WEATHER_FETCH,RYBY_LOGIN_USERNAME:'test-angler',RYBY_LOGIN_PASSWORD:'test-password-for-local-only',RYBY_SESSION_SECRET:'test-session-secret-for-local-only-32-chars',ASSETS:{fetch:()=>new Response('asset')}};let loginPromise;
  const signed=async()=>{const r=await worker.fetch(new Request('https://dream.test/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:env.RYBY_LOGIN_USERNAME,password:env.RYBY_LOGIN_PASSWORD})}),env);assert.equal(r.status,303);return r.headers.get('set-cookie').split(';')[0];};
  return {DB,env,signed,async req(path,method='GET',value,headers={}){loginPromise||=signed();const cookie=await loginPromise;const r=await worker.fetch(new Request('https://dream.test/api/'+path,{method,headers:{'content-type':'application/json',cookie,...headers},body:value===undefined?undefined:JSON.stringify(value)}),env);return {status:r.status,data:await r.json()};}};};
@@ -187,6 +188,12 @@ test('fixture research identifies candidates, extracts cited facts, detects chan
   assert.equal((await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules'})).status,429);
   assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM lake_sources WHERE lake_id=?').get(lake).n,1);
  }finally{globalThis.fetch=originalFetch;s.DB.close();}
+});
+test('unlabeled regulation requirements are cited but negated requirements never become checklist suggestions',()=>{
+ const found=extractFacts('Kołyska jest wymagana na każdym stanowisku.\nPodbierak nie jest wymagany.');
+ assert.equal(found.length,2);
+ const facts=found.map(f=>({...f,status:'potwierdzone',url:'https://lake.example/rules',source_type:'regulation'}));
+ assert.deepEqual(suggestions(facts).map(x=>x.label),['Kołyska / mata do odhaczania']);
 });
 test('new year, lake, participants, checklist copy, activation and archive without deleting data',async()=>{
  const s=setup(),angler=(await s.req('anglers','POST',{name:'Anna',baselinePbKg:9})).data.id;

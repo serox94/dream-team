@@ -57,6 +57,10 @@ try{
         assert.equal(await page.locator('#sonar-gallery a[href^="https://support.deeper.eu/"]').count(),4);
         assert.match(await page.locator('.knowledge-hero').innerText(),/CHIRP\+ 2 \/ Fish Deeper/);
       }
+      if(width===390&&['/pages/encyklopedia.html','/pages/sonar.html'].includes(route)){
+        const label=route.includes('encyklopedia')?'encyklopedia':'sonar';
+        await page.screenshot({path:`${screenshotDir}/${label}-top-390.png`});
+      }
       if(route==='/pages/ustawienia.html'){
         await page.locator('#category-list input[aria-label="Nazwa kategorii"]').first().waitFor();
         const names=await page.locator('#category-list input[aria-label="Nazwa kategorii"]').evaluateAll(nodes=>nodes.map(n=>n.value));

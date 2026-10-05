@@ -27,10 +27,15 @@ export function extractFacts(content){
       out.push({field,value,evidence:row.slice(0,280),confidence:.7});break;
     }
   }
+  for(const field of Object.keys(ruleGear)){
+    if(out.some(f=>f.field===field))continue;
+    const row=rows.find(line=>line.length<=240&&fields[field].some(label=>line.toLocaleLowerCase().includes(label.toLocaleLowerCase()))&&/wymagan|obowiązkow|required|mandatory|obligat|pflicht|verplicht|must/i.test(line));
+    if(row)out.push({field,value:row.slice(0,240),evidence:row.slice(0,280),confidence:.6});
+  }
   return out;
 }
 export function suggestions(facts){
-  return facts.filter(f=>ruleGear[f.field]&&f.status==='potwierdzone'&&/wymagan|required|obligat|pflicht|verplicht|must|mandatory/i.test(f.value)).map(f=>({label:ruleGear[f.field],reason:f.value,sourceUrl:f.url,sourceType:f.source_type}));
+  return facts.filter(f=>ruleGear[f.field]&&f.status==='potwierdzone'&&/wymagan|required|obligat|pflicht|verplicht|must|mandatory/i.test(f.value)&&!/nie\s+(?:jest\s+)?wymagan|not\s+(?:be\s+)?required|non\s+obligat|nicht\s+(?:erforderlich|vorgeschrieben)|niet\s+verplicht/i.test(f.value)).map(f=>({label:ruleGear[f.field],reason:f.value,sourceUrl:f.url,sourceType:f.source_type}));
 }
 export function provider(env){
   if(!env.TAVILY_API_KEY)return null;
@@ -42,7 +47,7 @@ export function provider(env){
   };
   return {
     name:'Tavily',
-    async candidates(name,country,preferences={}){const labels={PL:'łowisko',EN:'carp lake',FR:'étang carpe',DE:'Karpfensee',NL:'karpervijver'},terms=(preferences.languages||'PL,EN,FR,DE,NL').split(',').map(lang=>labels[lang]).filter(Boolean).join(' ');const data=await call('search',{query:`${name} ${country} ${terms} ${preferences.official==='off'?'fishing information':'official website regulations'}`,search_depth:'basic',max_results:5,include_answer:false,include_raw_content:false,include_usage:true});return (data.results||[]).map(x=>({name:x.title?.slice(0,150)||name,region:x.content?.slice(0,150)||'',country,url:x.url,location:null})).filter(x=>{try{safeSourceUrl(x.url);return true;}catch{return false;}});},
+    async candidates(name,country,preferences={}){const labels={PL:'łowisko',EN:'carp lake',FR:'étang carpe',DE:'Karpfensee',NL:'karpervijver'},terms=(preferences.languages||'PL,EN,FR,DE,NL').split(',').map(lang=>labels[lang]).filter(Boolean).join(' ');const data=await call('search',{query:`${name} ${country} ${terms} ${preferences.official==='off'?'fishing information':'official website regulations'}`,search_depth:'basic',max_results:5,include_answer:false,include_raw_content:false,include_usage:true});return (data.results||[]).map(x=>({name:x.title?.slice(0,150)||name,region:(x.content||'').match(/(?:region|miejscowość|locality|commune|ort|plaats)\s*[:–-]\s*([^.,;\n]{2,80})/i)?.[1]||'Nieustalony region',country,url:x.url,location:null})).filter(x=>{try{safeSourceUrl(x.url);return true;}catch{return false;}});},
     async extract(url){const data=await call('extract',{urls:[url],extract_depth:'basic',format:'markdown',include_usage:true});return String(data.results?.[0]?.raw_content||'').slice(0,160000);}
   };
 }
