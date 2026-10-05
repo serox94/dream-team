@@ -149,7 +149,7 @@ test('lake profile stores cited facts, flags conflicts and adds only approved ch
   assert.equal((await s.req('lakes','POST',{name:'Wygonin',country:'Polska'})).status,409);
   const lake='wygonin',url='https://example.org/rules';
   assert.equal((await s.req(`lakes/${lake}/sources`,'POST',{url:'https://example.org/home',sourceType:'official'})).status,201);
-  assert.equal((await s.req(`lakes/${lake}/facts`,'POST',{url,field:'cradle',value:'Wymagana kołyska',sourceType:'official'})).status,201);
+  assert.equal((await s.req(`lakes/${lake}/facts`,'POST',{url,field:'cradle',value:'Kołyska jest wymagana',sourceType:'official'})).status,201);
   const p=(await s.req(`lakes/${lake}/profile`)).data;assert.equal(p.facts[0].status,'potwierdzone');assert.ok(p.sources.some(source=>source.url===url));
   const trip='poland-2027',suggested=(await s.req(`trips/${trip}/suggestions`)).data.items;assert.equal(suggested.length,1);
   const existing=(await s.req(`checklist?tripId=${trip}`)).data.items.length;
@@ -161,6 +161,10 @@ test('lake profile stores cited facts, flags conflicts and adds only approved ch
   await s.req(`lakes/${lake}/facts`,'POST',{url:'https://example.net/rules',field:'cradle',value:'Kołyska nie jest wymagana',sourceType:'operator'});
   const conflict=(await s.req(`lakes/${lake}/profile`)).data;assert.equal(conflict.status,'konflikt źródeł');
   assert.equal((await s.req(`trips/${trip}/suggestions`)).data.items.length,0,'conflicted rule cannot produce a new suggestion');
+  await s.req(`lakes/${lake}/facts`,'POST',{url:'https://example.org/official-rules',field:'cradle',value:'Kołyska jest wymagana',sourceType:'official'});
+  assert.equal((await s.req(`lakes/${lake}/profile`)).data.status,'konflikt źródeł','higher-ranked new source still reveals the disagreement');
+  await s.req(`lakes/${lake}/facts`,'POST',{url:'https://example.net/rules',field:'cradle',value:'Kołyska jest wymagana',sourceType:'operator'});
+  assert.equal((await s.req(`lakes/${lake}/profile`)).data.status==='konflikt źródeł',false,'resolved values clear stale conflicts');
   assert.equal((await s.req(`lakes/${lake}/facts`,'POST',{url:'https://127.0.0.1/rules',field:'rods',value:'2'})).status,400);
  }finally{s.DB.close();}
 });

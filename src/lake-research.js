@@ -71,20 +71,20 @@ async function saveSource(db,lakeId,url,title,type){
 }
 async function saveFact(db,lakeId,sourceId,fact){
   const existing=await one(db,'SELECT id FROM lake_facts WHERE lake_id=? AND field=? AND source_id=?',lakeId,fact.field,sourceId);
-  const others=await all(db,`SELECT f.id,f.value,s.source_type FROM lake_facts f JOIN lake_sources s ON f.source_id=s.id WHERE f.lake_id=? AND f.field=? AND f.source_id<>?`,lakeId,fact.field,sourceId);
-  const conflict=others.some(o=>o.value!==fact.value&&sourcePriority[o.source_type]<=sourcePriority[fact.sourceType]);
   if(existing){
     const old=await one(db,'SELECT value FROM lake_facts WHERE id=?',existing.id);
     if(old?.value!==fact.value)await run(db,'INSERT INTO lake_fact_changes(id,lake_id,field,old_value,new_value,source_id) VALUES(?,?,?,?,?,?)',crypto.randomUUID(),lakeId,fact.field,old.value,fact.value,sourceId);
-    await run(db,'UPDATE lake_facts SET value=?,evidence=?,confidence=?,status=?,checked_at=CURRENT_TIMESTAMP WHERE id=?',fact.value,fact.evidence||null,fact.confidence||.5,conflict?'sprzeczne':'potwierdzone',existing.id);
+    await run(db,'UPDATE lake_facts SET value=?,evidence=?,confidence=?,checked_at=CURRENT_TIMESTAMP WHERE id=?',fact.value,fact.evidence||null,fact.confidence||.5,existing.id);
   }
-  else await run(db,'INSERT INTO lake_facts(id,lake_id,field,value,source_id,evidence,confidence,status) VALUES(?,?,?,?,?,?,?,?)',crypto.randomUUID(),lakeId,fact.field,fact.value,sourceId,fact.evidence||null,fact.confidence||.5,conflict?'sprzeczne':'potwierdzone');
-  if(conflict)for(const other of others)if(other.value!==fact.value)await run(db,"UPDATE lake_facts SET status='sprzeczne' WHERE id=?",other.id);
+  else await run(db,'INSERT INTO lake_facts(id,lake_id,field,value,source_id,evidence,confidence,status) VALUES(?,?,?,?,?,?,?,?)',crypto.randomUUID(),lakeId,fact.field,fact.value,sourceId,fact.evidence||null,fact.confidence||.5,'potwierdzone');
+  const values=await all(db,'SELECT DISTINCT value FROM lake_facts WHERE lake_id=? AND field=?',lakeId,fact.field);
+  await run(db,'UPDATE lake_facts SET status=? WHERE lake_id=? AND field=?',values.length>1?'sprzeczne':'potwierdzone',lakeId,fact.field);
 }
 export async function profile(env,lakeId){
   const db=env.DB,lake=await one(db,'SELECT id,name,country,latitude,longitude,source_url sourceUrl,facts_json factsJson FROM lakes WHERE id=?',lakeId);
   if(!lake)fail('Nie znaleziono łowiska.',404);
-  const facts=await all(db,`SELECT f.id,f.field,f.value,f.evidence,f.confidence,f.status,f.checked_at checkedAt,s.url,s.title sourceName,s.source_type FROM lake_facts f LEFT JOIN lake_sources s ON f.source_id=s.id WHERE f.lake_id=? ORDER BY f.field,s.source_type`,lakeId);
+  const facts=await all(db,`SELECT f.id,f.field,f.value,f.evidence,f.confidence,f.status,f.checked_at checkedAt,s.url,s.title sourceName,s.source_type FROM lake_facts f LEFT JOIN lake_sources s ON f.source_id=s.id WHERE f.lake_id=? ORDER BY f.field`,lakeId);
+  facts.sort((a,b)=>a.field.localeCompare(b.field)||(sourcePriority[a.source_type]||9)-(sourcePriority[b.source_type]||9));
   const sources=await all(db,'SELECT id,url,title,source_type sourceType,checked_at checkedAt FROM lake_sources WHERE lake_id=? ORDER BY checked_at DESC',lakeId);
   const last=await one(db,"SELECT status,completed_at completedAt,message FROM lake_research_runs WHERE lake_id=? AND status<>'reserved' ORDER BY started_at DESC LIMIT 1",lakeId);
   const changes=await all(db,'SELECT field,old_value oldValue,new_value newValue,changed_at changedAt FROM lake_fact_changes WHERE lake_id=? ORDER BY changed_at DESC LIMIT 20',lakeId);
