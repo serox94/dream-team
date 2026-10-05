@@ -296,6 +296,8 @@ body[data-page="ustawienia"] input[type="checkbox"] { width:auto; }
 .check-add-in-category{margin:6px 0 12px;width:100%;min-height:46px}
 .trip-wizard[hidden],#wizard-existing[hidden],#wizard-new[hidden]{display:none}
 .trip-wizard{scroll-margin-top:130px}.trip-wizard fieldset{display:flex;gap:14px;flex-wrap:wrap}
+.trip-wizard fieldset:first-of-type label{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin:0}.trip-wizard input[type="radio"]{width:22px;height:22px;min-height:22px;flex:0 0 22px;accent-color:var(--accent)}
+.settings-category-details>summary{cursor:pointer;min-height:48px;padding:12px 0;font-weight:700}.settings-category-details[open]>summary{margin-bottom:12px}
 .wizard-candidate{display:flex;gap:12px;align-items:start;padding:12px;margin:8px 0;border:1px solid var(--border);border-radius:12px;background:#203529;cursor:pointer}
 .wizard-candidate input{flex:0 0 22px;width:22px;height:22px}.wizard-candidate span{min-width:0;overflow-wrap:anywhere}
 .wizard-result ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 18px;padding-left:20px}

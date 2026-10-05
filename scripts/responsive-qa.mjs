@@ -78,9 +78,20 @@ try{
         assert.ok(await page.locator('input[aria-label="Nazwa kategorii Zanęta"]').count(),'A: category management stays on checklist');
       }
       if(route==='/pages/ustawienia.html'){
-        await page.locator('#category-list input[aria-label="Nazwa kategorii"]').first().waitFor();
+        await page.locator('#category-list input[aria-label="Nazwa kategorii"]').first().waitFor({state:'attached'});
         const names=await page.locator('#category-list input[aria-label="Nazwa kategorii"]').evaluateAll(nodes=>nodes.map(n=>n.value));
         for(const name of ['sprzęt','zakupy','jedzenie / picie'])assert.ok(names.includes(name),`default category ${name}`);
+        if(width===390){
+          await page.locator('#trip-time-zone').selectOption('Europe/Warsaw');
+          await page.locator('#research-auto').uncheck();
+          await page.locator('#research-languages input[value="FR"]').uncheck();
+          await page.locator('#settings-form button[type="submit"]').click();
+          await page.waitForFunction(()=>document.querySelector('#research-auto')?.checked===false);
+          await page.reload();await page.locator('html[data-ready="true"]').waitFor();
+          assert.equal(await page.locator('#trip-time-zone').inputValue(),'Europe/Warsaw');
+          assert.equal(await page.locator('#research-auto').isChecked(),false);
+          assert.equal(await page.locator('#research-languages input[value="FR"]').isChecked(),false,'settings persist after restart');
+        }
       }
       if(width<=412){
         const links=page.locator('.bottom-nav a, .bottom-nav button');
@@ -181,7 +192,7 @@ try{
       }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)||width===1280&&['/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)){
         const label=route==='/'?'dashboard':route.split('/').pop().replace('.html','');
-        if(label==='ustawienia')await page.locator('main').screenshot({path:`${screenshotDir}/${label}-${width}.png`});
+        if(label==='ustawienia'){await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`});}
         else await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`,fullPage:route!=='/'&&!['encyklopedia','sonar'].includes(label)});
       }
       await page.close();
