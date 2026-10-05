@@ -38,11 +38,18 @@ for(const flag of ['HttpOnly','Secure','SameSite=Lax','Max-Age=63072000'])assert
 assert.ok(!cookieHeader.split(';')[0].split('=')[1].includes(password));
 const cookie=cookieHeader.split(';')[0],headers={cookie};
 assert.equal((await request('/',{headers})).status,200);
-for(const page of ['/pages/polowy.html','/pages/checklisty.html','/pages/pogoda.html','/pages/mapa.html','/pages/teren.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'])assert.equal((await request(page,{headers})).status,200,page);
-for(const name of ['sources','encyclopedia','sonar','tools']){
+for(const page of ['/pages/polowy.html','/pages/checklisty.html','/pages/pogoda.html','/pages/mapa.html','/pages/teren.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html','/pages/porady.html','/pages/rigi.html','/pages/wezly.html'])assert.equal((await request(page,{headers})).status,200,page);
+for(const name of ['sources','encyclopedia','sonar','tools','field-guides','chirp2-practice']){
   const response=await request(`/data/knowledge/${name}.json`,{headers});assert.equal(response.status,200,name);
   const data=await response.json();assert.ok(data.version,`${name} version`);
+  if(name==='sources')assert.equal(data.sources.length,48);
+  if(name==='encyclopedia')assert.equal(data.articles.length,14);
+  if(name==='sonar')assert.equal(data.articles.length,17);
+  if(name==='field-guides')assert.equal(data.guides.length,14);
+  if(name==='chirp2-practice')assert.equal(Object.keys(data.practice).length,17);
 }
+const atlasResponse=await request('/assets/deeper/chirp2/index.json',{headers});assert.equal(atlasResponse.status,200);
+assert.equal((await atlasResponse.json()).screenshots.length,5);
 const dashboard=await request('/',{headers});assert.match(await dashboard.text(),/patryk-maciek\.jpeg|patryk-maciek/);
 const shell=await request('/sw.js',{headers});assert.equal(shell.status,200);
 assert.match(await shell.text(),/ryby-shell-20261005-2/);
