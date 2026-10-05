@@ -170,6 +170,8 @@ body[data-page="dashboard"] .hero-card { margin-bottom: 20px; }
 .settings-category-row { display:grid; grid-template-columns:minmax(110px,1fr) 5em auto auto auto; gap:8px; align-items:center; }
 .settings-category-row input { min-width:0; max-width:100%; }
 .settings-category-row label { white-space:nowrap; }
+body[data-page="ustawienia"] .two-column > *, body[data-page="ustawienia"] fieldset, body[data-page="ustawienia"] .form-grid > * { min-width:0; max-width:100%; }
+body[data-page="ustawienia"] input[type="checkbox"] { width:auto; }
 @media (max-width:600px) { .settings-category-row { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .settings-category-row input:first-child { grid-column:1 / -1; } }
 #trip-manager .two-column { margin-bottom: 0; }
 #trip-manager > section > h2 { margin: 0 0 15px; }

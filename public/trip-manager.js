@@ -5,6 +5,7 @@
   const area=(id,label,value='')=>`<div><label for="${id}">${label}</label><textarea id="${id}" name="${id}" rows="4" maxlength="10000">${E(value||'')}</textarea></div>`;
   const values=form=>Object.fromEntries(new FormData(form));
   const empty=value=>value===''?null:value;
+  const chosenZone=lake=>(window.DREAM_MODEL?.app?.timeZonePreference==='auto'?null:window.DREAM_MODEL?.app?.timeZonePreference)||lake?.facts?.timeZone||'Europe/Paris';
   function bind(form,fn){form.addEventListener('submit',async e=>{
     e.preventDefault();if(form.dataset.saving)return;form.dataset.saving='true';
     const button=form.querySelector('[type="submit"]');button.disabled=true;
@@ -15,7 +16,7 @@
   async function refresh(){await Dream.refreshModel();render();}
   function tripEditor(trip=null){
     const m=window.DREAM_MODEL,lake=m.lakes.find(l=>l.id===(trip?.lakeId||window.DREAM_TRIP?.lakeId||m.lakes[0]?.id));
-    const zone=lake?.facts?.timeZone||'Europe/Paris';
+    const zone=chosenZone(lake);
     return `<form id="trip-edit" class="form-grid"><input type="hidden" name="id" value="${E(trip?.id||'')}">
       <h3>${trip?'Edytuj wyjazd':'Nowy wyjazd'}</h3><div class="form-row">
       ${field('trip-name','Nazwa','text',trip?.name||'','required maxlength="150"')}
@@ -48,9 +49,9 @@
   function wireTrip(trip=null){
     document.getElementById('trip-editor').innerHTML=tripEditor(trip);
     document.getElementById('trip-new').onclick=()=>wireTrip();
-    document.getElementById('trip-lake').onchange=e=>{const lake=window.DREAM_MODEL.lakes.find(l=>l.id===e.target.value);document.getElementById('trip-zone').textContent='Godziny łowiska: '+(lake.facts.timeZone||'Europe/Paris');};
+    document.getElementById('trip-lake').onchange=e=>{const lake=window.DREAM_MODEL.lakes.find(l=>l.id===e.target.value);document.getElementById('trip-zone').textContent='Godziny łowiska: '+chosenZone(lake);};
     bind(document.getElementById('trip-edit'),async(x,form)=>{
-      const lakeId=trip?.lakeId||x.lakeId,zone=window.DREAM_MODEL.lakes.find(l=>l.id===lakeId)?.facts.timeZone||'Europe/Paris';
+      const lakeId=trip?.lakeId||x.lakeId,zone=chosenZone(window.DREAM_MODEL.lakes.find(l=>l.id===lakeId));
       const payload={name:x['trip-name'],year:Number(x['trip-year']),lakeId,start:Dream.fromInput(x['trip-start'],zone),end:Dream.fromInput(x['trip-end'],zone),peg:empty(x['trip-peg']),status:x.status,participantIds:[...form.querySelectorAll('[name="participants"]:checked')].map(el=>el.value)};
       if(x.copyChecklistFrom)payload.copyChecklistFrom=x.copyChecklistFrom;
       await Dream.api('/api/trips'+(x.id?'/'+encodeURIComponent(x.id):''),{method:x.id?'PUT':'POST',body:JSON.stringify(payload)});
@@ -91,7 +92,7 @@
   async function research(lakeId,url,sourceType){try{const result=await Dream.api(`/api/lakes/${encodeURIComponent(lakeId)}/research`,{method:'POST',body:JSON.stringify({url,sourceType})});Dream.notice(`Sprawdzono źródło. Zapisano ${result.count} jawnie oznaczonych faktów.`);await lakeProfile(lakeId);}catch(error){Dream.notice(error.message,true);}}
   function render(){
     const m=window.DREAM_MODEL;
-    const cards=archived=>m.trips.filter(t=>(t.status==='archived')===archived).map(t=>`<article class="panel-card trip-card"><div class="section-head"><h3>${E(t.name)}</h3><span class="section-chip">${t.isActive?'● AKTYWNY':archived?'ARCHIWUM':t.year}</span></div><p class="trip-card-lake">${E(t.lakeProfile?.name||t.lake)}${t.peg?` · stanowisko ${E(t.peg)}`:''}</p><p class="trip-card-meta">${t.start?E(Dream.dateInput(t.start,t.lakeProfile?.facts?.timeZone||'Europe/Paris').replace('T',' · ')):'Termin do ustalenia'} · ${E(t.participants.map(a=>a.name).join(' i ')||'Uczestnicy do ustalenia')}</p><div class="trip-card-foot"><strong>${t.stats.fishCount} ryb · ${Number(t.stats.totalWeightKg).toFixed(1)} kg</strong><div class="form-actions"><button type="button" data-open="${E(t.id)}">Otwórz</button><button type="button" data-edit="${E(t.id)}" class="secondary-btn">Edytuj</button>${!archived&&!t.isActive?`<button type="button" data-activate="${E(t.id)}" class="secondary-btn">Ustaw aktywny</button>`:''}</div></div></article>`).join('')||'<p class="empty-box">Brak wyjazdów w tej sekcji.</p>';
+    const cards=archived=>m.trips.filter(t=>(t.status==='archived')===archived).map(t=>`<article class="panel-card trip-card"><div class="section-head"><h3>${E(t.name)}</h3><span class="section-chip">${t.isActive?'● AKTYWNY':archived?'ARCHIWUM':t.year}</span></div><p class="trip-card-lake">${E(t.lakeProfile?.name||t.lake)}${t.peg?` · stanowisko ${E(t.peg)}`:''}</p><p class="trip-card-meta">${t.start?E(Dream.dateInput(t.start,chosenZone(t.lakeProfile)).replace('T',' · ')):'Termin do ustalenia'} · ${E(t.participants.map(a=>a.name).join(' i ')||'Uczestnicy do ustalenia')}</p><div class="trip-card-foot"><strong>${t.stats.fishCount} ryb · ${Number(t.stats.totalWeightKg).toFixed(1)} kg</strong><div class="form-actions"><button type="button" data-open="${E(t.id)}">Otwórz</button><button type="button" data-edit="${E(t.id)}" class="secondary-btn">Edytuj</button>${!archived&&!t.isActive?`<button type="button" data-activate="${E(t.id)}" class="secondary-btn">Ustaw aktywny</button>`:''}</div></div></article>`).join('')||'<p class="empty-box">Brak wyjazdów w tej sekcji.</p>';
     root.innerHTML=`<section><div class="section-head trip-section-head"><h2>Wyjazdy</h2><button type="button" id="create-trip">+ Nowy wyjazd</button></div><div class="two-column">${cards(false)}</div></section>
       <section><h2>Archiwum</h2><div class="two-column">${cards(true)}</div></section>
       <details class="panel-card management-details" id="trip-editor-panel"><summary>Utwórz lub edytuj wyjazd</summary><section id="trip-editor"></section></details>

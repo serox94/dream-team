@@ -27,6 +27,7 @@ async function scopedRow(request, env, table, id, includeDeleted = false) {
   return row;
 }
 async function bootstrap(env) {
+  const timeZone=await one(env,"SELECT value FROM app_settings WHERE key='trip_time_zone'");
   const anglers = await all(env,`SELECT a.id,a.name,COALESCE(a.baseline_pb_kg,a.pb_kg) baselinePbKg,
     MAX(COALESCE(a.baseline_pb_kg,a.pb_kg),COALESCE(MAX(c.weight_kg),0)) pbKg
     FROM anglers a LEFT JOIN catches c ON c.angler_id=a.id AND c.deleted_at IS NULL GROUP BY a.id ORDER BY a.name`);
@@ -43,7 +44,7 @@ async function bootstrap(env) {
     stats:{fishCount:0,totalWeightKg:0,biggestFishKg:0,...stats.find(s=>s.tripId===t.id),biggestFishAngler:leaders.find(s=>s.tripId===t.id)?.anglerName||null,bestSpot:topSpots.find(s=>s.tripId===t.id)?.spot||null}
   }));
   const record = await one(env,`SELECT c.id,c.trip_id tripId,c.weight_kg weightKg,c.caught_at caughtAt,c.species,a.id anglerId,a.name anglerName,t.lake,t.year FROM catches c JOIN anglers a ON a.id=c.angler_id JOIN trips t ON t.id=c.trip_id WHERE c.deleted_at IS NULL ORDER BY c.weight_kg DESC,c.caught_at,c.id LIMIT 1`);
-  return {app:{name:'DreamTeam',version:'1.2.0',activeTripId:trips.find(t=>t.isActive)?.id||null},anglers,lakes,trips,
+  return {app:{name:'DreamTeam',version:'1.2.0',activeTripId:trips.find(t=>t.isActive)?.id||null,timeZonePreference:timeZone?.value||'auto'},anglers,lakes,trips,
     allTime:{anglers,dreamTeamRecord:record||null}};
 }
 async function participantsFor(env, ids) {

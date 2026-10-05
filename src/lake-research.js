@@ -42,7 +42,7 @@ export function provider(env){
   };
   return {
     name:'Tavily',
-    async candidates(name,country){const data=await call('search',{query:`${name} ${country} łowisko carp fishing official site`,search_depth:'basic',max_results:5,include_answer:false,include_raw_content:false,include_usage:true});return (data.results||[]).map(x=>({name:x.title?.slice(0,150)||name,region:x.content?.slice(0,150)||'',country,url:x.url,location:null})).filter(x=>{try{safeSourceUrl(x.url);return true;}catch{return false;}});},
+    async candidates(name,country,preferences={}){const labels={PL:'łowisko',EN:'carp lake',FR:'étang carpe',DE:'Karpfensee',NL:'karpervijver'},terms=(preferences.languages||'PL,EN,FR,DE,NL').split(',').map(lang=>labels[lang]).filter(Boolean).join(' ');const data=await call('search',{query:`${name} ${country} ${terms} ${preferences.official==='off'?'fishing information':'official website regulations'}`,search_depth:'basic',max_results:5,include_answer:false,include_raw_content:false,include_usage:true});return (data.results||[]).map(x=>({name:x.title?.slice(0,150)||name,region:x.content?.slice(0,150)||'',country,url:x.url,location:null})).filter(x=>{try{safeSourceUrl(x.url);return true;}catch{return false;}});},
     async extract(url){const data=await call('extract',{urls:[url],extract_depth:'basic',format:'markdown',include_usage:true});return String(data.results?.[0]?.raw_content||'').slice(0,160000);}
   };
 }
@@ -94,7 +94,7 @@ export async function handleLakeResearch(request,env,lakeId,action){
   if(action==='candidates'){
     if(!web)return reply({ok:true,candidates:[],message:'Automatyczny research wymaga konfiguracji dostawcy. Możesz dodać oficjalny URL ręcznie.'});
     const id=await reserve(db,lakeId,'candidates',1);
-    try{const candidates=await web.candidates(lake.name,lake.country||'');await finish(db,id,'completed',`${candidates.length} kandydatów`);return reply({ok:true,candidates});}
+    try{const rows=await all(db,"SELECT key,value FROM app_settings WHERE key IN ('research_languages','research_official_first')"),values=Object.fromEntries(rows.map(r=>[r.key,r.value]));const candidates=await web.candidates(lake.name,lake.country||'',{languages:values.research_languages,official:values.research_official_first});await finish(db,id,'completed',`${candidates.length} kandydatów`);return reply({ok:true,candidates});}
     catch(error){await finish(db,id,'failed',error.message);throw error;}
   }
   if(action==='research'){
