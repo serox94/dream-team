@@ -5,6 +5,12 @@ document.addEventListener('dream:ready',async()=>{
   $('settings-version').textContent=saved.version;
   $('settings-schema').textContent=saved.schemaVersion;
   $('research-last').textContent=saved.lastResearchAt?new Date(saved.lastResearchAt).toLocaleString('pl-PL'):'brak';
+  const profile=$('settings-version').closest('section');
+  profile.querySelector('p:nth-of-type(2)').insertAdjacentHTML('beforeend',' <small>(profil informacyjny; instrukcje Deeper są napisane dla tego zestawu)</small>');
+  const providerStatus=document.createElement('p');providerStatus.id='research-provider-status';providerStatus.textContent=saved.researchProviderConfigured?'Automatyczny research: dostawca skonfigurowany.':'AUTOMATYCZNY RESEARCH: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.';
+  $('research-auto').closest('label').before(providerStatus);
+  $('research-official').closest('label').lastChild.textContent=' Preferuj oficjalne strony w wyszukiwaniu';
+  $('settings-schema').closest('p').append(document.createTextNode(' Status backupu: informacja infrastruktury, nie odczyt na żywo.'));
   $('trip-time-zone').value=saved.settings.trip_time_zone||'auto';
   $('research-auto').checked=saved.settings.research_auto!=='off';
   $('research-official').checked=saved.settings.research_official_first!=='off';

@@ -2,7 +2,7 @@ name: Responsive UI QA
 on:
   workflow_dispatch:
   push:
-    branches: [main, feat/dreamteam-finalize]
+    branches: [main, feat/dreamteam-finalize, "fix/**"]
     paths: [.github/workflows/responsive-qa.yml, public/**, scripts/responsive-qa.mjs, src/**, migrations/**]
 permissions:
   contents: read

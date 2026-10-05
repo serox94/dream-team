@@ -2,7 +2,7 @@ import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
 import { weatherForTrip } from './weather.js';
 import {authConfigured,session,login,logout,loginAssets} from './auth.js';
-import {handleLakeResearch,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
+import {handleLakeResearch,handleLakeCandidates,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
 
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
   status, headers: { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-store', 'x-content-type-options':'nosniff', ...extra }
@@ -91,7 +91,7 @@ async function saveTrip(request,env,id,ctx) {
     statements.push(stmt(env,`INSERT INTO checklist_items(trip_id,category,label,assigned_to,packed,quantity,notes,sort_order) SELECT ?,category,label,assigned_to,0,quantity,notes,sort_order FROM checklist_items WHERE trip_id=? AND deleted_at IS NULL`,id,x.copyChecklistFrom));
   }
   await env.DB.batch(statements);
-  if(!Object.keys(current).length&&provider(env)){
+  if(!Object.keys(current).length&&provider(env)&&x.researchNow!==true){
     const setting=await one(env,"SELECT value FROM app_settings WHERE key='research_auto'");
     const recent=await one(env,"SELECT completed_at FROM lake_research_runs WHERE lake_id=? AND status='completed' ORDER BY completed_at DESC LIMIT 1",lakeId);
     const regulation=await one(env,"SELECT url FROM lake_sources WHERE lake_id=? AND source_type='regulation' ORDER BY checked_at DESC LIMIT 1",lakeId);
@@ -178,7 +178,6 @@ async function categories(request,env,id){
     const order=number(pick(x,'sortOrder',current.sort_order),'Kolejność',0,100000,false);
     const active=has(x,'active')?Boolean(x.active):Boolean(current.active);
     if(has(x,'active')&&typeof x.active!=='boolean')fail('active musi być wartością true/false.');
-    if(!active&&!x.moveToId&&await one(env,'SELECT id FROM checklist_items WHERE category=? LIMIT 1',current.name))fail('Przenieś istniejące pozycje przed ukryciem kategorii.',409);
     if(await one(env,'SELECT id FROM checklist_categories WHERE name=? AND id<>?',name,id))fail('Kategoria już istnieje.',409);
     const target=x.moveToId?await one(env,'SELECT name FROM checklist_categories WHERE id=? AND active=1',x.moveToId):null;
     if(x.moveToId&&(!target||x.moveToId===id))fail('Wybierz inną aktywną kategorię do przeniesienia.');
@@ -196,7 +195,7 @@ async function settings(request,env){
   if(request.method==='GET'){
     const rows=await all(env,"SELECT key,value,updated_at FROM app_settings WHERE key IN ('research_auto','research_languages','research_official_first','trip_time_zone')");
     const lastRun=await one(env,'SELECT completed_at FROM lake_research_runs WHERE status=? ORDER BY completed_at DESC LIMIT 1','completed');
-    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,version:'1.2.0',schemaVersion:19});
+    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),version:'1.2.0',schemaVersion:20});
   }
   const x=await body(request),statements=[];
   for(const [key,value] of Object.entries(x)){
@@ -227,7 +226,7 @@ async function removeOrRestore(request,env,kind,id,restore){
 }
 async function exportData(env){
   const data={format:'dream-team-backup-v1',exportedAt:new Date().toISOString(),tables:{}};
-  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','trip_documents','trip_notes','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
+  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','trip_documents','trip_notes','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
   return json(data,200,{'content-disposition':`attachment; filename="dream-team-backup-${new Date().toISOString().slice(0,10)}.json"`});
 }
 async function privateFetch(request,env,ctx){
@@ -242,6 +241,7 @@ async function privateFetch(request,env,ctx){
       if(path==='/api/weather'&&method==='GET')return json(await weatherForTrip(env,url.searchParams.get('tripId')));
       if(path==='/api/export'&&method==='GET')return await exportData(env);
       if(path==='/api/checklist-categories'&&['GET','POST'].includes(method))return await categories(request,env);
+      if(path==='/api/lake-candidates'&&method==='POST')return await handleLakeCandidates(request,env);
       if(path==='/api/settings'&&['GET','PATCH'].includes(method))return await settings(request,env);
       let researchMatch=path.match(/^\/api\/lakes\/([^/]+)\/(profile|candidates|research|facts|sources)$/);
       if(researchMatch)return await handleLakeResearch(request,env,decodeURIComponent(researchMatch[1]),researchMatch[2]);

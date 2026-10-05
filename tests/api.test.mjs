@@ -30,7 +30,7 @@ test('all migrations, bootstrap, participants, original PB and legacy content su
  const s=setup(),b=(await s.req('bootstrap')).data;
  assert.equal(b.trips.length,4);assert.equal(b.lakes.length,3);assert.ok(b.trips.every(t=>t.participants.length===2));assert.ok(b.anglers.every(a=>a.pbKg===13));
  assert.equal(b.lakes.find(l=>l.id==='plaine2').facts.contentPack,'plaine2');
- assert.equal((await s.req('health')).data.schemaVersion,'19');s.DB.close();
+ assert.equal((await s.req('health')).data.schemaVersion,'20');s.DB.close();
 });
 test('create/edit/clear a catch; trip isolation; soft delete and restore; PB recalculates',async()=>{
  const s=setup(),r=await s.req('catches','POST',catchData);assert.equal(r.status,201);const id=r.data.id;
@@ -128,7 +128,9 @@ test('category migration, rename, order and safe move retain packed rows',async(
   assert.equal((await s.req(`checklist-categories/${id}`,'DELETE',{})).status,409);
   assert.equal((await s.req(`checklist-categories/${id}`,'PATCH',{name:'Biwak',sortOrder:4,active:true})).status,200);
   assert.equal((await s.req('checklist?tripId=next-trip')).data.items.find(x=>x.id===item).category,'Biwak');
-  assert.equal((await s.req(`checklist-categories/${id}`,'PATCH',{active:false})).status,409);
+  assert.equal((await s.req(`checklist-categories/${id}`,'PATCH',{active:false})).status,200);
+  assert.equal((await s.req('checklist?tripId=next-trip')).data.items.find(x=>x.id===item).packed,true);
+  assert.equal(Boolean((await s.req('checklist-categories')).data.categories.find(x=>x.id===id).active),false);
   assert.equal((await s.req(`checklist-categories/${id}`,'PATCH',{moveToId:other.id,active:false})).status,200);
   assert.equal((await s.req(`checklist-categories/${id}`,'DELETE',{})).status,200);
   const after=(await s.req('checklist?tripId=next-trip')).data.items;
@@ -137,11 +139,30 @@ test('category migration, rename, order and safe move retain packed rows',async(
 });
 test('settings persist allowed preferences without accepting secrets',async()=>{
  const s=setup();try{
-  const original=await s.req('settings');assert.equal(original.data.schemaVersion,19);
+  const original=await s.req('settings');assert.equal(original.data.schemaVersion,20);
   assert.equal((await s.req('settings','PATCH',{research_auto:'off',research_languages:'PL,EN,FR,DE,NL',trip_time_zone:'Europe/Warsaw'})).status,200);
   const current=(await s.req('settings')).data.settings;assert.equal(current.research_auto,'off');assert.equal(current.research_languages,'PL,EN,FR,DE,NL');
   assert.equal((await s.req('settings','PATCH',{api_key:'unsafe'})).status,400);
   assert.equal((await s.req('settings','PATCH',{research_languages:'PL,XX'})).status,400);
+ }finally{s.DB.close();}
+});
+test('new-trip candidate search needs a provider, keeps lake creation separate and enforces cooldown',async()=>{
+ const s=setup(),before=s.DB.sqlite.prepare('SELECT COUNT(*) n FROM lakes').get().n;
+ try{
+  const pending=await s.req('lake-candidates','POST',{name:'Kamień',country:'Polska'});
+  assert.equal(pending.status,200);assert.equal(pending.data.providerConfigured,false);
+  assert.match(pending.data.message,/OCZEKUJE NA TAVILY_API_KEY/);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM lakes').get().n,before);
+  const originalFetch=globalThis.fetch;let calls=0;
+  try{
+   s.env.TAVILY_API_KEY='fixture-only';
+   globalThis.fetch=async(_url,options)=>{calls++;assert.equal(options.headers.authorization,'Bearer fixture-only');return Response.json({results:[{title:'Kamień A',url:'https://example.org/lake-a',content:'region: Mazowieckie'},{title:'Kamień B',url:'https://example.org/lake-b',content:'region: Dolnośląskie'}]});};
+   const found=await s.req('lake-candidates','POST',{name:'Kamień',country:'Polska'});
+   assert.equal(found.status,200);assert.equal(found.data.candidates.length,2);assert.equal(calls,1);
+   assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM lakes').get().n,before,'candidate search cannot silently create a lake');
+   assert.equal((await s.req('lake-candidates','POST',{name:'Kamień',country:'Polska'})).status,429);
+   assert.equal(calls,1,'cooldown stops another billable provider request');
+  }finally{globalThis.fetch=originalFetch;}
  }finally{s.DB.close();}
 });
 test('lake profile stores cited facts, flags conflicts and adds only approved checklist proposals',async()=>{

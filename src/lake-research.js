@@ -7,6 +7,9 @@ const all=async(db,sql,...args)=>(await db.prepare(sql).bind(...args).all()).res
 const run=(db,sql,...args)=>db.prepare(sql).bind(...args).run();
 const limitMessage='Limit automatycznego researchu wykorzystany — spróbuj później lub dodaj źródło ręcznie.';
 const fields={official_name:['nazwa łowiska','official name','nom du lac','name des sees','naam van het meer'],address:['adres','address','adresse','anschrift'],phone:['telefon','phone','telephone','téléphone','tel','kontakt'],email:['e-mail','email'],area:['powierzchnia','area','surface','fläche','oppervlakte'],depth:['głębokość','depth','profondeur','tiefe','diepte'],bottom:['dno','bottom','fond','grund','bodem'],weed:['zielsko','weed','herbiers','kraut','waterplanten'],pegs:['stanowiska','pegs','swims','postes','plätze','stekken'],carp:['karpie','carp stock','carpes','karpfen','karpers'],record:['rekord','record','rekorde'],species:['gatunki','species','espèces','arten','soorten'],rods:['liczba wędek','rods allowed','cannes autorisées','ruten erlaubt','hengels toegestaan'],bait_boats:['łódki zanętowe','bait boats','bateaux amorceurs','futterboote','voerboten'],boats:['pontony','boats','bateaux','boote'],leadcore:['leadcore'],leaders:['leadery','leaders','vorfach'],hooks:['haczyki','hooks','hameçons','haken'],cradle:['kołyska','cradle','matelas de réception','ab hakmatte','onthaakmat'],landing_net:['podbierak','landing net','épuisette','kescher','schepnet'],sling:['sling','worek do ważenia','weigh sling'],disinfectant:['środek do dezynfekcji','disinfectant','antiseptique','desinfektionsmittel'],fish_storage:['przechowywanie ryb','retention','conservation des poissons','hältern'],arrival:['godziny przyjazdu','arrival','arrivée','anreise','aankomst'],departure:['godziny wyjazdu','departure','départ','abreise','vertrek'],parking:['parking','stationnement','parkplatz'],electricity:['prąd','electricity','électricité','strom','elektriciteit'],toilets:['wc','toilets','toilettes'],showers:['prysznic','shower','douche','dusche'],drinking_water:['woda pitna','drinking water','eau potable','trinkwasser'],freezer:['zamrażarka','freezer','congélateur','gefriertruhe'],shops:['sklep','shop','magasin','geschäft','winkel'],access:['dojazd','access','accès','zufahrt','toegang']};
+fields.rules=['regulamin','rules','règlement','regeln','regels'];
+fields.map=['mapa łowiska','lake map','carte du lac','gewässerkarte','kaart'];
+fields.fridge=['lodówka','fridge','réfrigérateur','kühlschrank','koelkast'];
 const ruleGear={cradle:'Kołyska / mata do odhaczania',landing_net:'Duży podbierak',sling:'Worek do ważenia (sling)',disinfectant:'Środek do dezynfekcji ran ryb'};
 
 export function safeSourceUrl(value){
@@ -55,9 +58,9 @@ async function reserve(db,lakeId,type,credits){
   const id=crypto.randomUUID(),month=new Date().toISOString().slice(0,7),since=new Date(Date.now()-10*60*1000).toISOString();
   const result=await run(db,`INSERT INTO lake_research_runs(id,lake_id,status,provider,credits_used,message)
     SELECT ?,?,'reserved','Tavily',?,? WHERE
-    (SELECT COALESCE(SUM(credits_used),0) FROM lake_research_runs WHERE substr(started_at,1,7)=?) + ? <= 900
+    (SELECT COALESCE(SUM(credits_used),0) FROM lake_research_runs WHERE substr(started_at,1,7)=?) + (SELECT COALESCE(SUM(credits_used),0) FROM lake_candidate_searches WHERE substr(started_at,1,7)=?) + ? <= 900
     AND (SELECT COALESCE(SUM(credits_used),0) FROM lake_research_runs WHERE lake_id=? AND substr(started_at,1,7)=?) + ? <= 8
-    AND NOT EXISTS(SELECT 1 FROM lake_research_runs WHERE lake_id=? AND datetime(started_at)>=datetime(?))`,id,lakeId,credits,type,month,credits,lakeId,month,credits,lakeId,since);
+    AND NOT EXISTS(SELECT 1 FROM lake_research_runs WHERE lake_id=? AND datetime(started_at)>=datetime(?))`,id,lakeId,credits,type,month,month,credits,lakeId,month,credits,lakeId,since);
   if(!result.meta.changes)fail(limitMessage,429);
   return id;
 }
@@ -89,7 +92,22 @@ export async function profile(env,lakeId){
   const last=await one(db,"SELECT status,completed_at completedAt,message FROM lake_research_runs WHERE lake_id=? AND status<>'reserved' ORDER BY started_at DESC LIMIT 1",lakeId);
   const changes=await all(db,'SELECT field,old_value oldValue,new_value newValue,changed_at changedAt FROM lake_fact_changes WHERE lake_id=? ORDER BY changed_at DESC LIMIT 20',lakeId);
   const days=last?.completedAt?(Date.now()-Date.parse(last.completedAt))/86400000:Infinity;
-  return {ok:true,lake:{...lake,factsJson:undefined,facts:JSON.parse(lake.factsJson||'{}')},facts,sources,changes,missingFields:Object.keys(fields).filter(field=>!facts.some(f=>f.field===field)),lastResearch:last,status:facts.some(f=>f.status==='sprzeczne')?'konflikt źródeł':days>30?'wymaga odświeżenia':'aktualne'};
+  const checks=[...Object.keys(fields).map(field=>({field,found:facts.some(f=>f.field===field&&f.status==='potwierdzone')})),{field:'country',found:Boolean(lake.country)},{field:'gps',found:lake.latitude!=null&&lake.longitude!=null}];
+  return {ok:true,lake:{...lake,factsJson:undefined,facts:JSON.parse(lake.factsJson||'{}')},facts,sources,changes,coverage:{found:checks.filter(c=>c.found).length,total:checks.length,checks},missingFields:checks.filter(c=>!c.found).map(c=>c.field),lastResearch:last,status:facts.some(f=>f.status==='sprzeczne')?'konflikt źródeł':days>30?'wymaga odświeżenia':'aktualne'};
+}
+export async function handleLakeCandidates(request,env){
+  const x=await request.json(),name=String(x.name||'').trim(),country=String(x.country||'').trim();
+  if(name.length<2||name.length>150||country.length<2||country.length>100)fail('Wpisz nazwę łowiska i kraj.');
+  const web=provider(env);
+  if(!web)return reply({ok:true,candidates:[],providerConfigured:false,message:'AUTOMATYCZNY RESEARCH: OCZEKUJE NA TAVILY_API_KEY. Możesz utworzyć wyjazd i uzupełnić źródło później.'});
+  const key=(name+'|'+country).toLocaleLowerCase('pl').normalize('NFKC'),month=new Date().toISOString().slice(0,7),since=new Date(Date.now()-10*60*1000).toISOString(),id=crypto.randomUUID();
+  const reserved=await run(env.DB,`INSERT INTO lake_candidate_searches(id,query_key,status,credits_used) SELECT ?,?,'reserved',1 WHERE
+    (SELECT COALESCE(SUM(credits_used),0) FROM lake_candidate_searches WHERE substr(started_at,1,7)=?) < 100
+    AND (SELECT COALESCE(SUM(credits_used),0) FROM lake_candidate_searches WHERE substr(started_at,1,7)=?) + (SELECT COALESCE(SUM(credits_used),0) FROM lake_research_runs WHERE substr(started_at,1,7)=?) < 900
+    AND NOT EXISTS(SELECT 1 FROM lake_candidate_searches WHERE query_key=? AND datetime(started_at)>=datetime(?))`,id,key,month,month,month,key,since);
+  if(!reserved.meta.changes)fail(limitMessage,429);
+  try{const rows=await all(env.DB,"SELECT key,value FROM app_settings WHERE key IN ('research_languages','research_official_first')"),values=Object.fromEntries(rows.map(r=>[r.key,r.value]));const candidates=await web.candidates(name,country,{languages:values.research_languages,official:values.research_official_first});await run(env.DB,"UPDATE lake_candidate_searches SET status='completed',completed_at=CURRENT_TIMESTAMP WHERE id=?",id);return reply({ok:true,candidates,providerConfigured:true});}
+  catch(error){await run(env.DB,"UPDATE lake_candidate_searches SET status='failed',completed_at=CURRENT_TIMESTAMP WHERE id=?",id);throw error;}
 }
 export async function handleLakeResearch(request,env,lakeId,action){
   const db=env.DB,lake=await one(db,'SELECT id,name,country,source_url FROM lakes WHERE id=?',lakeId);if(!lake)fail('Nie znaleziono łowiska.',404);
