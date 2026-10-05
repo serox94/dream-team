@@ -448,6 +448,9 @@
     toolbar.className = "check-toolbar";
     toolbar.innerHTML = `
       <div id="check-progress" class="check-progress" role="status">Wczytywanie postępu…</div>
+      <div class="check-category-tools"><button type="button" id="check-add-category" class="secondary-btn">+ Kategoria</button><button type="button" id="check-show-hidden" class="secondary-btn">Pokaż ukryte</button></div>
+      <form id="check-category-create" class="check-category-create hidden"><label for="check-category-name">Nazwa nowej kategorii</label><input id="check-category-name" maxlength="100" required><button type="submit">Dodaj kategorię</button></form>
+      <details class="check-category-manager"><summary>Zarządzaj kategoriami</summary><div id="check-category-manager-list"></div></details>
       <div class="filter-bar">
         <button type="button" class="filter-btn active" data-filter="all">Wszystkie</button>
         <button type="button" class="filter-btn" data-filter="open">Do zrobienia</button>
@@ -511,6 +514,9 @@
     const toolbar = $("check-toolbar");
     if (!toolbar || toolbar.dataset.bound === "1") return;
     toolbar.dataset.bound = "1";
+    $('check-add-category').onclick=()=>{$('check-category-create').classList.toggle('hidden');$('check-category-name').focus();};
+    $('check-category-create').onsubmit=async event=>{event.preventDefault();try{await Dream.api('/api/checklist-categories',{method:'POST',body:JSON.stringify({name:$('check-category-name').value})});$('check-category-create').reset();$('check-category-create').classList.add('hidden');await refreshChecklistCategories();Dream.notice('Dodano kategorię.');}catch(error){Dream.notice(error.message,true);}};
+    $('check-show-hidden').onclick=()=>{APP_STATE.showHiddenCategories=!APP_STATE.showHiddenCategories;$('check-show-hidden').textContent=APP_STATE.showHiddenCategories?'Ukryj nieaktywne':'Pokaż ukryte';renderChecklistGroupsPlus(filterChecklistItems(APP_STATE.checklistItems||[]));};
 
     toolbar.querySelectorAll("[data-filter]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -550,6 +556,30 @@
       await renderChecklistPagePlus();
     });
   }
+
+  async function refreshChecklistCategories(){
+    const response=await Dream.api('/api/checklist-categories');window.DREAM_CATEGORIES=response.categories;
+    const select=$('check-category'),value=select?.value;
+    if(select){select.replaceChildren(...response.categories.filter(c=>c.active).map(c=>{const option=document.createElement('option');option.value=c.name;option.textContent=c.name;return option;}));if(response.categories.some(c=>c.active&&c.name===value))select.value=value;}
+    renderChecklistCategoryManager();renderChecklistGroupsPlus(filterChecklistItems(APP_STATE.checklistItems||[]));
+  }
+  function renderChecklistCategoryManager(){
+    const host=$('check-category-manager-list');if(!host)return;clearNode(host);
+    const categories=window.DREAM_CATEGORIES||[];
+    for(const [index,c] of categories.entries()){
+      const row=createNode('div','check-category-manage-row');
+      const name=document.createElement('input');name.value=c.name;name.maxLength=100;name.setAttribute('aria-label',`Nazwa kategorii ${c.name}`);
+      const save=createNode('button','secondary-btn','Zapisz nazwę');save.type='button';save.onclick=async()=>changeCategory(c,{name:name.value});
+      const up=createNode('button','secondary-btn','↑');up.type='button';up.setAttribute('aria-label',`Przenieś ${c.name} wyżej`);up.disabled=index===0;up.onclick=()=>moveCategory(c,categories[index-1]);
+      const down=createNode('button','secondary-btn','↓');down.type='button';down.setAttribute('aria-label',`Przenieś ${c.name} niżej`);down.disabled=index===categories.length-1;down.onclick=()=>moveCategory(c,categories[index+1]);
+      const hide=createNode('button','secondary-btn',c.active?'Ukryj':'Pokaż');hide.type='button';hide.onclick=()=>changeCategory(c,{active:!c.active});
+      const target=document.createElement('select');target.setAttribute('aria-label',`Przenieś pozycje z ${c.name} do`);target.innerHTML='<option value="">Kategoria docelowa przy usuwaniu</option>';for(const other of categories.filter(x=>x.id!==c.id&&x.active)){const option=document.createElement('option');option.value=other.id;option.textContent=other.name;target.append(option);}
+      const del=createNode('button','danger-btn','Usuń');del.type='button';del.onclick=async()=>{if(!confirm(`Usunąć kategorię ${c.name}? Pozycje pozostaną na liście tylko po przeniesieniu.`))return;try{if(target.value)await Dream.api(`/api/checklist-categories/${encodeURIComponent(c.id)}`,{method:'PATCH',body:JSON.stringify({moveToId:target.value})});await Dream.api(`/api/checklist-categories/${encodeURIComponent(c.id)}`,{method:'DELETE',body:'{}'});await refreshChecklistCategories();await renderChecklistPagePlus();Dream.notice('Usunięto kategorię, zachowując pozycje i statusy.');}catch(error){Dream.notice(error.message,true);}};
+      row.append(name,save,up,down,hide,target,del);host.append(row);
+    }
+  }
+  async function changeCategory(c,changes){try{await Dream.api(`/api/checklist-categories/${encodeURIComponent(c.id)}`,{method:'PATCH',body:JSON.stringify(changes)});await refreshChecklistCategories();await renderChecklistPagePlus();Dream.notice('Kategoria zapisana.');}catch(error){Dream.notice(error.message,true);}}
+  async function moveCategory(c,other){try{await Dream.api(`/api/checklist-categories/${encodeURIComponent(c.id)}`,{method:'PATCH',body:JSON.stringify({sortOrder:other.sortOrder})});await Dream.api(`/api/checklist-categories/${encodeURIComponent(other.id)}`,{method:'PATCH',body:JSON.stringify({sortOrder:c.sortOrder})});await refreshChecklistCategories();}catch(error){Dream.notice(error.message,true);}}
 
   function renderChecklistSummaryPlus(items) {
     const all = items.length;
@@ -629,17 +659,20 @@
     if (!container) return;
     clearNode(container);
 
-    if (!items.length) {
-      container.appendChild(createNode("div", "empty-box", "Brak pozycji dla wybranego filtra."));
-      return;
-    }
-
-    const categories = [...new Set(items.map((item) => item.category))];
-
-    categories.forEach((category) => {
-      const section = createNode("section", "checklist-group");
-      section.appendChild(createNode("h4", "", category));
+    const definitions=window.DREAM_CATEGORIES||[];
+    const categories=[...definitions.filter(c=>c.active||APP_STATE.showHiddenCategories).map(c=>c.name),...new Set(items.map(item=>item.category).filter(name=>!definitions.some(c=>c.name===name)))];
+    if(!categories.length){container.appendChild(createNode('div','empty-box','Brak kategorii. Dodaj pierwszą kategorię.'));return;}
+    const stateKey=`dream-check-collapsed-${window.DREAM_TRIP?.id||'default'}`;
+    let saved={};try{saved=JSON.parse(localStorage.getItem(stateKey)||'{}');}catch{}
+    categories.forEach((category,index) => {
+      const definition=definitions.find(c=>c.name===category),all=(APP_STATE.checklistItems||[]).filter(item=>item.category===category),done=all.filter(item=>item.done).length;
+      const section = createNode("details", "checklist-group");
+      section.dataset.category=category;
+      section.open=saved[definition?.id||category]??index===0;
+      const header=createNode('summary','check-category-summary',`${category}${definition&&!definition.active?' · ukryta':''}  ${done}/${all.length}`);
+      section.append(header);section.addEventListener('toggle',()=>{saved[definition?.id||category]=section.open;localStorage.setItem(stateKey,JSON.stringify(saved));});
       const wrap = createNode("div", "checklist-items");
+      if(definition?.active){const add=createNode('button','secondary-btn check-add-in-category','+ Dodaj pozycję');add.type='button';add.onclick=()=>{const select=$('check-category');select.value=category;$('checklist-form').scrollIntoView({behavior:'smooth',block:'start'});$('check-name').focus();};wrap.append(add);}
 
       items
         .filter((item) => item.category === category)
@@ -716,6 +749,7 @@
 
     const items = await loadChecklistFromD1();
     APP_STATE.checklistItems = items;
+    renderChecklistCategoryManager();
     renderChecklistSummaryPlus(items);
     renderChecklistGroupsPlus(filterChecklistItems(items));
   }

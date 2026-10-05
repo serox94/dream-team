@@ -35,6 +35,7 @@ Node.js 24, `npm ci`, `npm test`, `npm run build`.
 - `npm run deploy:production`: testy → przygotowanie assetów → deploy. Przy pierwszym żądaniu API nowy Worker przeprowadza addytywną migrację D1, zapisując również znacznik Wrangler.
 - Migracja `0017` dodaje uczestników wyjazdu, podstawę PB i odzyskiwanie wpisów; nie usuwa oryginalnych rekordów.
 - Migracja `0019` dodaje kategorie checklisty i źródła/fakty/historię researchu łowiska. Worker aktualizuje schemat przy pierwszym uwierzytelnionym żądaniu.
+- Migracja `0020` dodaje limitowany dziennik wyszukiwania kandydatów przed utworzeniem profilu łowiska.
 - Automatyczny provider Tavily jest opcjonalny. Bez sekretu `TAVILY_API_KEY` organizer i ręczne źródła działają normalnie. Klucz dodaje się wyłącznie jako Worker secret w darmowym planie z twardym limitem dostawcy; nie zapisuj go w repo, przeglądarce ani logach. Aplikacja rezerwuje najwyżej 8 kredytów na łowisko i 900 miesięcznie globalnie oraz odrzuca ponowienie przez 10 minut. Darmowy limit Tavily zależy od konfiguracji konta, więc przed dodaniem klucza trzeba potwierdzić brak płatnego overage. Cloudflare Workers AI nie jest włączone; ekstrakcja działa deterministycznie bez modelu.
 - Codzienny cron Workera sprawdza łowiska z nadchodzącym terminem około 30 i 7 dni przed wyjazdem, gdy provider jest skonfigurowany i research jest włączony. Porównuje zapisane wartości z aktualną ekstrakcją i zapisuje różnice.
 - GitHub Actions sprawdza testy, migracje i build. Wdrożenie wykonuje istniejące połączenie Cloudflare z gałęzią `main`.

@@ -113,7 +113,8 @@ test('trip management reveals the editor on demand and checklist opens with the 
   const p=await page(s,'/pages/wyjazdy.html');
   try{
    const panel=p.d.getElementById('trip-editor-panel');assert.equal(panel.open,false);
-   p.d.getElementById('create-trip').click();assert.equal(panel.open,true);
+   p.d.getElementById('create-trip').click();assert.equal(p.d.getElementById('trip-wizard').hidden,false);
+   assert.ok(p.d.getElementById('wizard-lake-name'),'new trip starts with the lake wizard');
    p.d.querySelector('[data-edit]').click();assert.equal(panel.open,true);
    assert.deepEqual(p.errors,[]);
   }finally{p.close();}

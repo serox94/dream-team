@@ -24,7 +24,7 @@ try{
       const response=await page.goto(preview.url+route,{waitUntil:'domcontentloaded'});
       assert.equal(response.status(),200,`${width} ${route}: HTTP`);
       await page.locator('html[data-ready="true"]').waitFor({timeout:15000});
-      if(route.includes('encyklopedia')||route.includes('sonar.html'))await page.locator('.knowledge-entry').first().waitFor({timeout:15000});
+      if(route.includes('encyklopedia')||route.includes('sonar.html'))await page.locator('.knowledge-entry').first().waitFor({state:'attached',timeout:15000});
       if(route==='/'){
         const readyMs=await page.evaluate(()=>Math.round(performance.now()));
         await page.waitForFunction(()=>document.getElementById('dashboard-weather-now')?.textContent.includes('15°C'));
@@ -55,16 +55,43 @@ try{
       if(route==='/pages/sonar.html'){
         assert.equal(await page.locator('.knowledge-entry').count(),17);
         assert.equal(await page.locator('#sonar-gallery a[href^="https://support.deeper.eu/"]').count(),4);
-        assert.match(await page.locator('.knowledge-hero').innerText(),/CHIRP\+ 2 \/ Fish Deeper/);
+        assert.match(await page.locator('.knowledge-hero').innerText(),/CHIRP\+ 2[\s\S]*Fish Deeper/);
       }
       if(width===390&&['/pages/encyklopedia.html','/pages/sonar.html'].includes(route)){
         const label=route.includes('encyklopedia')?'encyklopedia':'sonar';
         await page.screenshot({path:`${screenshotDir}/${label}-top-390.png`});
       }
+      if(width===390&&route==='/pages/checklisty.html'){
+        const groups=page.locator('.checklist-group');await groups.first().waitFor();
+        assert.ok(await groups.count()>=3,'A: separate checklist categories');
+        await groups.nth(0).evaluate(el=>el.open=true);
+        for(let n=1;n<await groups.count();n++)await groups.nth(n).evaluate(el=>el.open=false);
+        await page.waitForTimeout(100);
+        assert.equal(await groups.filter({hasText:'sprzęt'}).first().getAttribute('open'),'');
+        await page.locator('#checklist-groups').screenshot({path:`${screenshotDir}/checklist-categories-390.png`});
+        await page.reload();await page.locator('html[data-ready="true"]').waitFor();await page.locator('.checklist-group').first().waitFor();
+        assert.equal(await page.locator('.checklist-group').nth(1).getAttribute('open'),null,'A: category collapse persists');
+        await page.locator('#check-add-category').click();await page.locator('#check-category-name').fill('Zanęta');
+        await page.locator('#check-category-create button[type="submit"]').click();
+        await page.locator('.checklist-group').filter({hasText:'Zanęta'}).first().waitFor();
+        await page.locator('.check-category-manager > summary').click();
+        assert.ok(await page.locator('input[aria-label="Nazwa kategorii Zanęta"]').count(),'A: category management stays on checklist');
+      }
       if(route==='/pages/ustawienia.html'){
-        await page.locator('#category-list input[aria-label="Nazwa kategorii"]').first().waitFor();
+        await page.locator('#category-list input[aria-label="Nazwa kategorii"]').first().waitFor({state:'attached'});
         const names=await page.locator('#category-list input[aria-label="Nazwa kategorii"]').evaluateAll(nodes=>nodes.map(n=>n.value));
         for(const name of ['sprzęt','zakupy','jedzenie / picie'])assert.ok(names.includes(name),`default category ${name}`);
+        if(width===390){
+          await page.locator('#trip-time-zone').selectOption('Europe/Warsaw');
+          await page.locator('#research-auto').uncheck();
+          await page.locator('#research-languages input[value="FR"]').uncheck();
+          await page.locator('#settings-form button[type="submit"]').click();
+          await page.waitForFunction(()=>document.querySelector('#research-auto')?.checked===false);
+          await page.reload();await page.locator('html[data-ready="true"]').waitFor();
+          assert.equal(await page.locator('#trip-time-zone').inputValue(),'Europe/Warsaw');
+          assert.equal(await page.locator('#research-auto').isChecked(),false);
+          assert.equal(await page.locator('#research-languages input[value="FR"]').isChecked(),false,'settings persist after restart');
+        }
       }
       if(width<=412){
         const links=page.locator('.bottom-nav a, .bottom-nav button');
@@ -121,8 +148,20 @@ try{
           await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
           assert.match(await page.locator('#tactic-result').innerText(),/Dobry punkt startowy/);
           assert.ok(await page.locator('.article-sources').count()>=1);
+          await search.fill('10°C');
+          assert.ok(await page.locator('#guide-woda-8').isVisible(),'C: ten-degree starting point is findable');
+          await page.locator('#guide-woda-8 summary').click();
+          assert.match(await page.locator('#guide-woda-8').innerText(),/małe PVA/);
+          await search.fill('muł');
+          assert.ok(await page.locator('#guide-mul').isVisible(),'C: silt advice is findable');
+          await search.fill('12 godzin');
+          assert.ok(await page.locator('#guide-bez-brania-12').isVisible(),'C: no-bite diagnostic is findable');
         }
         if(width===390&&route==='/pages/sonar.html'){
+          await page.locator('a[href="#sonar-dno"]').first().click();
+          await page.waitForFunction(()=>document.querySelector('#sonar-dno > details')?.open,null,{timeout:10000});
+          assert.match(await page.locator('#sonar-dno .chirp-practice').innerText(),/Mid.*Narrow/s);
+          await page.locator('#sonar-dno').screenshot({path:`${screenshotDir}/chirp2-bottom-article-390.png`});
           await page.locator('#spot-form').evaluate(form=>form.requestSubmit());
           assert.match(await page.locator('#spot-result').innerText(),/Trzy punkty/);
           await page.locator('#quiz-stage [data-quiz="0"]').click();
@@ -136,9 +175,25 @@ try{
           assert.equal(preview.requests.filter(r=>r.method==='POST'&&r.url.includes('knowledge')).length,0,'screenshot never uploaded');
         }
       }
+      if(width===390&&route==='/pages/wyjazdy.html'){
+        await page.locator('#create-trip').click();
+        await page.locator('#wizard-lake-name').fill('Kamień');
+        await page.locator('#wizard-country').fill('Polska');
+        await page.locator('#wizard-start').fill('2027-06-12');
+        await page.locator('#wizard-end').fill('2027-06-19');
+        await page.locator('#trip-wizard').screenshot({path:`${screenshotDir}/new-lake-wizard-390.png`});
+        await page.locator('#wizard-search').click();
+        await page.locator('#wizard-candidates').getByText(/OCZEKUJE NA TAVILY_API_KEY/).waitFor();
+        await page.locator('#trip-wizard-form button[type="submit"]').click();
+        await page.locator('#wizard-result').waitFor();
+        assert.match(await page.locator('#wizard-result').innerText(),/Research: \d+\/38 pól znalezionych/,'D: visible coverage');
+        assert.match(await page.locator('#wizard-result').innerText(),/Regulamin.*brak danych/s,'D: missing facts shown');
+        await page.locator('#wizard-result').screenshot({path:`${screenshotDir}/new-lake-result-390.png`});
+      }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)||width===1280&&['/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)){
         const label=route==='/'?'dashboard':route.split('/').pop().replace('.html','');
-        await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`,fullPage:route!=='/'&&!['encyklopedia','sonar'].includes(label)});
+        if(label==='ustawienia'){await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`});}
+        else await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`,fullPage:route!=='/'&&!['encyklopedia','sonar'].includes(label)});
       }
       await page.close();
     }
@@ -173,7 +228,7 @@ try{
       await context.setOffline(true);
       for(const knowledgeRoute of ['/pages/encyklopedia.html','/pages/sonar.html']){
         await offline.goto(preview.url+knowledgeRoute,{waitUntil:'domcontentloaded'});
-        await offline.locator('.knowledge-entry').first().waitFor({timeout:20000});
+        await offline.locator('.knowledge-entry').first().waitFor({state:'attached',timeout:20000});
         assert.ok(await offline.locator('.knowledge-entry').count()>=14,`${knowledgeRoute}: offline editorial data`);
         if(knowledgeRoute.includes('encyklopedia')){
           await offline.locator('#tactic-form').evaluate(form=>form.requestSubmit());
