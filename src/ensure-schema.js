@@ -13,7 +13,7 @@ export async function ensureSchema(env){
 }
 async function applySchema(env){
   const version=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-  if(Number(version?.value)>=18)return;
+  if(Number(version?.value)>=19)return;
   if(Number(version?.value)<16)throw new Error('Wymagane wcześniejsze migracje D1 (do wersji 16).');
   const cols=async name=>(await env.DB.prepare(`PRAGMA table_info(${name})`).all()).results;
   const statements=[];
@@ -31,13 +31,25 @@ async function applySchema(env){
   }
   const migrationTable=await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='d1_migrations'").first();
   if(migrationTable&&Number(version?.value)<17)push('INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)',migrationName,migrationName);
-  push('CREATE TABLE IF NOT EXISTS auth_sessions (id_hash TEXT PRIMARY KEY,expires_at INTEGER NOT NULL)');
-  push('CREATE TABLE IF NOT EXISTS auth_login_limits (id_hash TEXT PRIMARY KEY,attempts INTEGER NOT NULL,reset_at INTEGER NOT NULL)');
-  if(migrationTable)push('INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)',sessionMigration,sessionMigration);
-  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','18',CURRENT_TIMESTAMP)");
+  if(Number(version?.value)<18){
+    push('CREATE TABLE IF NOT EXISTS auth_sessions (id_hash TEXT PRIMARY KEY,expires_at INTEGER NOT NULL)');
+    push('CREATE TABLE IF NOT EXISTS auth_login_limits (id_hash TEXT PRIMARY KEY,attempts INTEGER NOT NULL,reset_at INTEGER NOT NULL)');
+    if(migrationTable)push('INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)',sessionMigration,sessionMigration);
+  }
+  push('CREATE TABLE IF NOT EXISTS checklist_categories (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE, sort_order INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+  push("INSERT OR IGNORE INTO checklist_categories(id,name,sort_order) VALUES ('equipment','sprzęt',1),('shopping','zakupy',2),('food','jedzenie / picie',3)");
+  push('INSERT OR IGNORE INTO checklist_categories(id,name,sort_order) SELECT lower(hex(randomblob(16))),category,100 FROM checklist_items WHERE deleted_at IS NULL GROUP BY category');
+  push('CREATE TABLE IF NOT EXISTS lake_sources (id TEXT PRIMARY KEY,lake_id TEXT NOT NULL REFERENCES lakes(id),url TEXT NOT NULL,title TEXT NOT NULL,source_type TEXT NOT NULL,checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(lake_id,url))');
+  push("CREATE TABLE IF NOT EXISTS lake_facts (id TEXT PRIMARY KEY,lake_id TEXT NOT NULL REFERENCES lakes(id),field TEXT NOT NULL,value TEXT NOT NULL,source_id TEXT REFERENCES lake_sources(id),evidence TEXT,confidence REAL NOT NULL DEFAULT 0.5,status TEXT NOT NULL DEFAULT 'potwierdzone',checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(lake_id,field,source_id))");
+  push('CREATE TABLE IF NOT EXISTS lake_research_runs (id TEXT PRIMARY KEY,lake_id TEXT NOT NULL REFERENCES lakes(id),status TEXT NOT NULL,provider TEXT NOT NULL,started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,completed_at TEXT,message TEXT,credits_used INTEGER NOT NULL DEFAULT 0)');
+  push('CREATE TABLE IF NOT EXISTS lake_fact_changes (id TEXT PRIMARY KEY,lake_id TEXT NOT NULL REFERENCES lakes(id),field TEXT NOT NULL,old_value TEXT NOT NULL,new_value TEXT NOT NULL,source_id TEXT REFERENCES lake_sources(id),changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+  push('CREATE INDEX IF NOT EXISTS lake_facts_lake ON lake_facts(lake_id,field)');
+  push('CREATE INDEX IF NOT EXISTS lake_runs_lake ON lake_research_runs(lake_id,started_at)');
+  if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0019_lake_research_and_categories.sql','0019_lake_research_and_categories.sql');
+  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','19',CURRENT_TIMESTAMP)");
   try{await env.DB.batch(statements);}catch(error){
     // Two concurrent first requests can race; the other request may have won.
     const latest=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-    if(Number(latest?.value)<18)throw error;
+    if(Number(latest?.value)<19)throw error;
   }
 }

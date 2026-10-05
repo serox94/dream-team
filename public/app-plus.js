@@ -504,7 +504,7 @@
   }
 
   function getTripItems(items) {
-    return items.filter((item) => item.category === "sprzęt" || item.category === "jedzenie / picie");
+    return items.filter((item) => item.category !== "zakupy");
   }
 
   function bindChecklistPlusEvents() {
@@ -593,7 +593,7 @@
     } else if (APP_STATE.checklistSort === "created") {
       list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     } else {
-      const order = { "sprzęt": 1, "zakupy": 2, "jedzenie / picie": 3 };
+      const order = Object.fromEntries((window.DREAM_CATEGORIES||[]).map(c=>[c.name,c.sortOrder]));
       list.sort((a, b) => {
         const left = order[a.category] || 99;
         const right = order[b.category] || 99;

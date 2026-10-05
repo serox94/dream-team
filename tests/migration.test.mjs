@@ -24,9 +24,9 @@ test('Worker upgrades a real version-16 database on first API request, once, ret
  assert.equal(signed.status,303);const cookie=signed.headers.get('set-cookie').split(';')[0];
  const call=async()=>{const response=await worker.fetch(new Request('https://dream.test/api/bootstrap',{headers:{cookie}}),env);assert.equal(response.status,200);return response.json();};
  const before={fish:DB.sqlite.prepare('SELECT count(*) n FROM catches').get().n,packed:DB.sqlite.prepare('SELECT sum(packed) n FROM checklist_items').get().n};
- const model=await call();assert.equal(model.app.version,'1.1.1');assert.equal(model.anglers.find(a=>a.id==='maciek').pbKg,18);
+ const model=await call();assert.equal(model.app.version,'1.2.0');assert.equal(model.anglers.find(a=>a.id==='maciek').pbKg,18);
  assert.deepEqual({fish:DB.sqlite.prepare('SELECT count(*) n FROM catches').get().n,packed:DB.sqlite.prepare('SELECT sum(packed) n FROM checklist_items').get().n},before);
- assert.equal(DB.sqlite.prepare("SELECT value FROM app_settings WHERE key='schema_version'").get().value,'18');
+ assert.equal(DB.sqlite.prepare("SELECT value FROM app_settings WHERE key='schema_version'").get().value,'19');
  assert.equal(DB.sqlite.prepare('SELECT count(*) n FROM d1_migrations WHERE name=?').get('0017_trip_management_and_recovery.sql').n,1);
  assert.equal(DB.sqlite.prepare('SELECT count(*) n FROM d1_migrations WHERE name=?').get('0018_private_sessions.sql').n,1);
  assert.equal(DB.sqlite.prepare('SELECT count(*) n FROM trip_participants').get().n,8);

@@ -2,8 +2,8 @@ name: Responsive UI QA
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    paths: [.github/workflows/responsive-qa.yml, public/**, scripts/responsive-qa.mjs]
+    branches: [main, feat/dreamteam-finalize]
+    paths: [.github/workflows/responsive-qa.yml, public/**, scripts/responsive-qa.mjs, src/**, migrations/**]
 permissions:
   contents: read
 jobs:
@@ -23,7 +23,7 @@ jobs:
         run: |
           npm install --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
-      - name: Check 14 screens, knowledge tools and offline at five viewport widths
+      - name: Check 15 screens, knowledge tools and offline at five viewport widths
         run: node scripts/responsive-qa.mjs
       - name: Keep screenshots of fixture data for visual review
         if: always()

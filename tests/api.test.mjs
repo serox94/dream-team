@@ -29,7 +29,7 @@ test('all migrations, bootstrap, participants, original PB and legacy content su
  const s=setup(),b=(await s.req('bootstrap')).data;
  assert.equal(b.trips.length,4);assert.equal(b.lakes.length,3);assert.ok(b.trips.every(t=>t.participants.length===2));assert.ok(b.anglers.every(a=>a.pbKg===13));
  assert.equal(b.lakes.find(l=>l.id==='plaine2').facts.contentPack,'plaine2');
- assert.equal((await s.req('health')).data.schemaVersion,'18');s.DB.close();
+ assert.equal((await s.req('health')).data.schemaVersion,'19');s.DB.close();
 });
 test('create/edit/clear a catch; trip isolation; soft delete and restore; PB recalculates',async()=>{
  const s=setup(),r=await s.req('catches','POST',catchData);assert.equal(r.status,201);const id=r.data.id;
@@ -117,6 +117,76 @@ test('checklist edits preserve packed state, clear values and validate empty lab
  assert.equal((await s.req(scoped('checklist',id),'PATCH',{label:''})).status,400);
  assert.equal((await s.req(scoped('checklist',id),'PATCH',{packed:'false'})).status,400);
  assert.equal((await s.req(scoped('checklist',id,'poland-2027'),'DELETE')).status,404);s.DB.close();
+});
+test('category migration, rename, order and safe move retain packed rows',async()=>{
+ const s=setup();try{
+  const before=(await s.req('checklist?tripId=next-trip')).data.items;
+  const added=await s.req('checklist-categories','POST',{name:'Nocleg'});assert.equal(added.status,201);
+  const id=added.data.id,other=(await s.req('checklist-categories')).data.categories.find(c=>c.name==='sprzęt');
+  const item=(await s.req('checklist','POST',{tripId:'next-trip',category:'Nocleg',label:'Namiot',packed:true})).data.id;
+  assert.equal((await s.req(`checklist-categories/${id}`,'DELETE',{})).status,409);
+  assert.equal((await s.req(`checklist-categories/${id}`,'PATCH',{name:'Biwak',sortOrder:4,active:true})).status,200);
+  assert.equal((await s.req('checklist?tripId=next-trip')).data.items.find(x=>x.id===item).category,'Biwak');
+  assert.equal((await s.req(`checklist-categories/${id}`,'PATCH',{active:false})).status,409);
+  assert.equal((await s.req(`checklist-categories/${id}`,'PATCH',{moveToId:other.id,active:false})).status,200);
+  assert.equal((await s.req(`checklist-categories/${id}`,'DELETE',{})).status,200);
+  const after=(await s.req('checklist?tripId=next-trip')).data.items;
+  assert.equal(after.length,before.length+1);assert.equal(after.find(x=>x.id===item).packed,true);assert.equal(after.find(x=>x.id===item).category,'sprzęt');
+ }finally{s.DB.close();}
+});
+test('settings persist allowed preferences without accepting secrets',async()=>{
+ const s=setup();try{
+  const original=await s.req('settings');assert.equal(original.data.schemaVersion,19);
+  assert.equal((await s.req('settings','PATCH',{research_auto:'off',research_languages:'PL,EN,FR,DE,NL',trip_time_zone:'Europe/Warsaw'})).status,200);
+  const current=(await s.req('settings')).data.settings;assert.equal(current.research_auto,'off');assert.equal(current.research_languages,'PL,EN,FR,DE,NL');
+  assert.equal((await s.req('settings','PATCH',{api_key:'unsafe'})).status,400);
+  assert.equal((await s.req('settings','PATCH',{research_languages:'PL,XX'})).status,400);
+ }finally{s.DB.close();}
+});
+test('lake profile stores cited facts, flags conflicts and adds only approved checklist proposals',async()=>{
+ const s=setup();try{
+  assert.equal((await s.req('lakes','POST',{name:'Wygonin',country:'Polska'})).status,409);
+  const lake='wygonin',url='https://example.org/rules';
+  assert.equal((await s.req(`lakes/${lake}/sources`,'POST',{url:'https://example.org/home',sourceType:'official'})).status,201);
+  assert.equal((await s.req(`lakes/${lake}/facts`,'POST',{url,field:'cradle',value:'Wymagana kołyska',sourceType:'official'})).status,201);
+  const p=(await s.req(`lakes/${lake}/profile`)).data;assert.equal(p.facts[0].status,'potwierdzone');assert.ok(p.sources.some(source=>source.url===url));
+  const trip='poland-2027',suggested=(await s.req(`trips/${trip}/suggestions`)).data.items;assert.equal(suggested.length,1);
+  const existing=(await s.req(`checklist?tripId=${trip}`)).data.items.length;
+  assert.equal((await s.req(`trips/${trip}/suggestions`,'POST',{labels:['Wymyślone']})).status,400);
+  assert.equal((await s.req(`checklist?tripId=${trip}`)).data.items.length,existing);
+  assert.equal((await s.req(`trips/${trip}/suggestions`,'POST',{labels:[suggested[0].label]})).data.added,1);
+  assert.equal((await s.req(`checklist?tripId=${trip}`)).data.items.length,existing+1);
+  assert.equal((await s.req(`trips/${trip}/suggestions`,'POST',{labels:[suggested[0].label]})).data.added,0);
+  await s.req(`lakes/${lake}/facts`,'POST',{url:'https://example.net/rules',field:'cradle',value:'Kołyska nie jest wymagana',sourceType:'operator'});
+  const conflict=(await s.req(`lakes/${lake}/profile`)).data;assert.equal(conflict.status,'konflikt źródeł');
+  assert.equal((await s.req(`trips/${trip}/suggestions`)).data.items.length,0,'conflicted rule cannot produce a new suggestion');
+  assert.equal((await s.req(`lakes/${lake}/facts`,'POST',{url:'https://127.0.0.1/rules',field:'rods',value:'2'})).status,400);
+ }finally{s.DB.close();}
+});
+test('fixture research identifies candidates, extracts cited facts, detects changes and stops at quota',async()=>{
+ const s=setup(),originalFetch=globalThis.fetch;
+ try{
+  const lake=(await s.req('lakes','POST',{name:'Fikcyjne Jezioro',country:'Polska'})).data.id;
+  assert.match((await s.req(`lakes/${lake}/candidates`,'POST',{})).data.message,/konfiguracji/);
+  s.env.TAVILY_API_KEY='fixture-only';let rule='Wymagana kołyska';
+  globalThis.fetch=async(url,options)=>{
+   assert.equal(new URL(url).hostname,'api.tavily.com');assert.match(options.headers.authorization,/fixture-only/);
+   if(url.endsWith('/search'))return Response.json({results:[{title:'Fikcyjne Jezioro',url:'https://lake.example/rules',content:'Polska, region testowy'}]});
+   return Response.json({results:[{url:'https://lake.example/rules',raw_content:`Kołyska: ${rule}\nLiczba wędek: 2`}]});
+  };
+  const candidates=await s.req(`lakes/${lake}/candidates`,'POST',{});assert.equal(candidates.data.candidates.length,1);
+  s.DB.sqlite.prepare("UPDATE lake_research_runs SET started_at='2026-01-01' WHERE lake_id=?").run(lake);
+  const first=await s.req(`lakes/${lake}/research`,'POST',{url:candidates.data.candidates[0].url,title:'Regulamin',sourceType:'official'});
+  assert.equal(first.status,200);assert.equal(first.data.count,2);assert.equal(first.data.profile.sources.length,1);
+  assert.equal((await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules'})).status,429);
+  s.DB.sqlite.prepare("UPDATE lake_research_runs SET started_at='2026-01-01' WHERE lake_id=?").run(lake);
+  rule='Kołyska nie jest wymagana';
+  const second=await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules',sourceType:'official'});
+  assert.equal(second.data.profile.changes.length,1);assert.equal(second.data.profile.changes[0].oldValue,'Wymagana kołyska');
+  s.DB.sqlite.prepare("UPDATE lake_research_runs SET started_at=CURRENT_TIMESTAMP,credits_used=900 WHERE lake_id=?").run(lake);
+  assert.equal((await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules'})).status,429);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM lake_sources WHERE lake_id=?').get(lake).n,1);
+ }finally{globalThis.fetch=originalFetch;s.DB.close();}
 });
 test('new year, lake, participants, checklist copy, activation and archive without deleting data',async()=>{
  const s=setup(),angler=(await s.req('anglers','POST',{name:'Anna',baselinePbKg:9})).data.id;

@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS checklist_categories (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE COLLATE NOCASE, sort_order INTEGER NOT NULL DEFAULT 0, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+INSERT OR IGNORE INTO checklist_categories(id,name,sort_order) VALUES ('equipment','sprzęt',1),('shopping','zakupy',2),('food','jedzenie / picie',3);
+INSERT OR IGNORE INTO checklist_categories(id,name,sort_order) SELECT lower(hex(randomblob(16))), category, 100 FROM checklist_items WHERE deleted_at IS NULL GROUP BY category;
+CREATE TABLE IF NOT EXISTS lake_sources (id TEXT PRIMARY KEY, lake_id TEXT NOT NULL REFERENCES lakes(id), url TEXT NOT NULL, title TEXT NOT NULL, source_type TEXT NOT NULL, checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(lake_id,url));
+CREATE TABLE IF NOT EXISTS lake_facts (id TEXT PRIMARY KEY, lake_id TEXT NOT NULL REFERENCES lakes(id), field TEXT NOT NULL, value TEXT NOT NULL, source_id TEXT REFERENCES lake_sources(id), evidence TEXT, confidence REAL NOT NULL DEFAULT 0.5, status TEXT NOT NULL DEFAULT 'potwierdzone', checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, UNIQUE(lake_id,field,source_id));
+CREATE TABLE IF NOT EXISTS lake_research_runs (id TEXT PRIMARY KEY, lake_id TEXT NOT NULL REFERENCES lakes(id), status TEXT NOT NULL, provider TEXT NOT NULL, started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, completed_at TEXT, message TEXT, credits_used INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS lake_fact_changes (id TEXT PRIMARY KEY, lake_id TEXT NOT NULL REFERENCES lakes(id), field TEXT NOT NULL, old_value TEXT NOT NULL, new_value TEXT NOT NULL, source_id TEXT REFERENCES lake_sources(id), changed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE INDEX IF NOT EXISTS lake_facts_lake ON lake_facts(lake_id,field);
+CREATE INDEX IF NOT EXISTS lake_runs_lake ON lake_research_runs(lake_id,started_at);
+INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','19',CURRENT_TIMESTAMP);

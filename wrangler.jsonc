@@ -3,6 +3,7 @@
   "name": "dream-team",
   "main": "src/worker.js",
   "compatibility_date": "2026-09-03",
+  "triggers": { "crons": ["0 6 * * *"] },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",

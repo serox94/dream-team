@@ -19,7 +19,7 @@
   }
   const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json',...options.headers},signal});
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
-  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|documents)(?:\?|$)/;
+  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|settings)(?:\?|$)/;
   const offlineEntries=new Map();
   async function clearShell(){
     if(!('caches' in window))return;
@@ -118,12 +118,12 @@
     const menu=document.getElementById('main-nav');
     if(menu&&!menu.querySelector('[data-knowledge-link]')){
       const before=[...menu.querySelectorAll('a')].find(a=>/porady\.html/.test(a.getAttribute('href')));
-      for(const [path,label] of [['encyklopedia.html','📚 Encyklopedia'],['sonar.html','📡 Deeper / Sonar']]){
+      for(const [path,label] of [['encyklopedia.html','Encyklopedia'],['sonar.html','Deeper / Sonar'],['ustawienia.html','Ustawienia']]){
         const link=document.createElement('a');link.href=`/pages/${path}`;link.textContent=label;link.dataset.knowledgeLink='true';
         menu.insertBefore(link,before||null);
       }
     }
-    document.querySelector('.header-top h1').textContent='RYBY';
+    document.querySelector('.header-top h1').textContent='DreamTeam';
   document.querySelector('.subtitle').textContent=trip.lakeProfile?.name||trip.lake;
     document.getElementById('dream-trip-select')?.remove();
     const select=document.createElement('select');select.id='dream-trip-select';select.className='dream-trip-select';select.setAttribute('aria-label','Wybierz wyjazd');

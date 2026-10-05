@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-30.2",
+  "version": "2026-10-05.1",
   "articles": [
     {
       "id": "sonar-podstawy",
@@ -23,6 +23,10 @@
         {
           "h": "Częstotliwość",
           "p": "Model decyduje, jakie wiązki i częstotliwości są dostępne. Wyższa częstotliwość i węższy stożek zwykle dają więcej szczegółu w użytecznym zasięgu; szeroka wiązka służy rekonesansowi. Nie przenoś dokładnych kątów z CHIRP+ na START lub odwrotnie."
+        },
+        {
+          "h": "Własny CHIRP+ 2",
+          "p": "Wide 100 kHz / 47° obejmuje największy obszar, Mid 240 kHz / 20° sprawdza przejście, Narrow 675 kHz / 7° izoluje mały punkt. Na 10 m stożek Wide obejmuje znacznie szerszy ślad niż Narrow. Nie odczytuj poziomej osi jako odległości."
         }
       ],
       "sourceIds": [
@@ -30,7 +34,9 @@
         "s20",
         "s22",
         "s23",
-        "s34"
+        "s34",
+        "s45",
+        "s47"
       ],
       "diagram": "cone",
       "related": [
@@ -57,6 +63,10 @@
         {
           "h": "Pułapki",
           "p": "Kolor nie jest uniwersalną legendą: Classic, Day i Night pokazują echo inaczej. Zbyt wysoka czułość podbija szum, zbyt niska ukrywa miękkie przejścia. Szeroka wiązka miesza dno po obu stronach krawędzi. Sam sonar nie rozstrzyga, czy muł jest żyzny czy beztlenowy."
+        },
+        {
+          "h": "Fish Deeper: porównanie",
+          "p": "W Fish Deeper ustaw Raw, tę samą paletę i czułość, a następnie przeskanuj przejście Wide i Mid/Narrow. Oficjalne ekrany pokazują względną siłę echa; kolor bez palety i parametrów nie identyfikuje materiału."
         }
       ],
       "sourceIds": [
@@ -64,7 +74,11 @@
         "s25",
         "s26",
         "s35",
-        "s16"
+        "s16",
+        "s45",
+        "s46",
+        "s47",
+        "s48"
       ],
       "diagram": "hardsoft",
       "related": [
@@ -96,6 +110,10 @@
         {
           "h": "Miejsce żyzne a miejsce łatwe do położenia",
           "p": "Doświadczeni karpiarze opisują zarówno twarde, jałowe fragmenty, jak i miększe plamy pełne organizmów dennych. Echo wskazuje zmianę materiału, lecz samo nie mierzy pokarmu. Porównaj dwie sąsiednie plamy, oceń bezpieczeństwo holu i sprawdź ciężarkiem, czy zestaw leży ponad osadem."
+        },
+        {
+          "h": "CHIRP+ 2: granica materiałów",
+          "p": "Zaznacz punkt w osobistej mapie, przesuń sondę wzdłuż granicy i potwierdź ciężarkiem. Sonda pokazuje różnice echa, nie skład osadu."
         }
       ],
       "sourceIds": [
@@ -104,7 +122,9 @@
         "s25",
         "s16",
         "s17",
-        "s42"
+        "s42",
+        "s45",
+        "s47"
       ],
       "diagram": "gravel",
       "related": [
@@ -132,13 +152,19 @@
         {
           "h": "Punkt A/B/C",
           "p": "A: oczywista czysta krawędź lub szczyt, jeśli są ryby i prezentacja jest pewna. B: podstawa spadku, bok górki, półka lub wejście do rowu, gdzie może zbierać się pokarm. C: spokojniejsze przejście twarde–miękkie lub nietypowa strona struktury na presyjnej wodzie. Każdy wybór sprawdź pod kątem tlenu, roślin i możliwości bezpiecznego holu."
+        },
+        {
+          "h": "Skan struktury",
+          "p": "Boat Mode lub Bait Boat Mode z GPS pomaga porównać równoległe przejścia. Na brzegu Onshore GPS mapuje kolejne rzuty. Zaznacz krawędź, a potem sprawdź bezpieczny hol."
         }
       ],
       "sourceIds": [
         "s19",
         "s15",
         "s16",
-        "s34"
+        "s34",
+        "s45",
+        "s47"
       ],
       "diagram": "plateau",
       "related": [
@@ -170,6 +196,10 @@
         {
           "h": "Nieoczywista trasa",
           "p": "Podwodny cypel, brzeg wyspy, kanał między zielskiem i wejście do zatoki mogą być trasą, lecz ruch ryb trzeba zobaczyć. Zestaw połóż na potwierdzonej plamie przy trasie, nie dokładnie w miejscu pojedynczego łuku na sonarze."
+        },
+        {
+          "h": "Praktyka CHIRP+ 2",
+          "p": "Na CHIRP+ 2 porównaj Wide podczas rekonesansu, potem Mid/Narrow dla konkretnego punktu. Oznacz lokalizację w osobistej mapie Fish Deeper i oceniaj bezpieczny tor holu; algorytm nie wybiera miejsca za Ciebie."
         }
       ],
       "sourceIds": [
@@ -178,7 +208,9 @@
         "s19",
         "s14",
         "s41",
-        "s42"
+        "s42",
+        "s45",
+        "s47"
       ],
       "diagram": "slope",
       "related": [
@@ -205,6 +237,10 @@
         {
           "h": "Dokładność",
           "p": "Waypoint oznacza pozycję sondy z błędem GPS i geometrii stożka. Nie zakładaj centymetrowej dokładności zrzutu ani automatycznego wyrównania miejsca zestawu z ekranowym łukiem. Powtórz przejazd, a punkt położenia sprawdź na żyłce i podczas opuszczania ciężarka."
+        },
+        {
+          "h": "Praktyka CHIRP+ 2",
+          "p": "W Fish Deeper zachowaj tę samą wiązkę, paletę i czułość przy porównaniu dwóch skanów. Dopiero potem sprawdź ciężarkiem, czy dno jest twarde, miękkie czy porośnięte."
         }
       ],
       "sourceIds": [
@@ -212,7 +248,9 @@
         "s28",
         "s15",
         "s16",
-        "s17"
+        "s17",
+        "s45",
+        "s47"
       ],
       "diagram": "hardsoft",
       "related": [
@@ -244,14 +282,19 @@
         {
           "h": "Pułapki",
           "p": "Baitfish, miękkie gałęzie lub szum mogą wyglądać podobnie. Nie rozpoznasz pewnie rdestnicy albo moczarki wyłącznie z sonaru. W CHIRP+ 4 mapa roślinności jest algorytmiczna; sam producent wskazuje ograniczenia przy falowaniu i niestabilnej sondzie."
+        },
+        {
+          "h": "Zielsko na CHIRP+ 2",
+          "p": "W Raw porównuj pionowe powroty nad dnem, a następnie rzutem/ciężarkiem potwierdź czyste oczko. CHIRP+ 2 nie oferuje mapy roślinności CHIRP+ 4."
         }
       ],
       "sourceIds": [
         "s19",
         "s21",
         "s26",
-        "s30",
-        "s14"
+        "s14",
+        "s45",
+        "s47"
       ],
       "diagram": "weed",
       "related": [
@@ -278,13 +321,18 @@
         {
           "h": "Alternatywa",
           "p": "Gdy oczko jest zbyt małe, wybierz zewnętrzną krawędź lub sąsiednią czystą plamę; w gęstym zielsku najpierw oceń bezpieczeństwo holu, lokalny regulamin i montaż."
+        },
+        {
+          "h": "Weryfikacja CHIRP+ 2",
+          "p": "Mid 20° może wskazać krawędź, Narrow 7° uściśla punkt. Ponów skan pod innym kątem; rozmiar oczka na ekranie zależy od prędkości przesuwu."
         }
       ],
       "sourceIds": [
         "s19",
         "s26",
-        "s30",
-        "s14"
+        "s14",
+        "s45",
+        "s47"
       ],
       "diagram": "clearing",
       "related": [
@@ -311,13 +359,19 @@
         {
           "h": "Baitfish, zielsko i karp",
           "p": "Skupiska małych ryb bywają chmurą zawieszoną nad dnem; roślinność wyrasta z dna i utrzymuje pozycję na kolejnych przejazdach. Ryba nad dnem może być trudna do rozdzielenia od linii dna, a łuk w toni nie mówi, czy to karp, leszcz czy drapieżnik. Łącz obraz z obserwacją powierzchni i gatunkami obecnymi w wodzie."
+        },
+        {
+          "h": "Ryby w Fish Deeper",
+          "p": "Wyłącz Fish Icons, porównaj Raw i Basic, powtórz przejście. Ikona nie potwierdza karpia, a pojedynczy łuk nie wystarcza do oceny wielkości."
         }
       ],
       "sourceIds": [
         "s19",
         "s26",
         "s34",
-        "s36"
+        "s36",
+        "s45",
+        "s47"
       ],
       "diagram": "fish",
       "related": [
@@ -343,13 +397,19 @@
         {
           "h": "Decyzja dla karpia",
           "p": "Nie łów automatycznie poniżej widocznej smugi ani wyłącznie nad nią. Zimniejsza głębia może mieć mało tlenu; tlen i pokarm zależą od konkretnej wody. Porównaj aktywność ryb, zielsko i krawędzie odpowiedniej głębokości."
+        },
+        {
+          "h": "Warstwy",
+          "p": "CHIRP+ 2 może pokazać poziomy sygnał, ale nie mierzy tlenu. Zmień czułość, sprawdź artefakty i temperaturę; nie deklaruj termokliny z jednej kreski."
         }
       ],
       "sourceIds": [
         "s04",
         "s09",
         "s19",
-        "s25"
+        "s25",
+        "s45",
+        "s47"
       ],
       "diagram": "thermocline",
       "related": [
@@ -377,6 +437,10 @@
         {
           "h": "Kroki 6–10",
           "p": "6. Zmapuj wysokość zielska i czyste luki. 7. Zapisz przejścia twarde–miękkie. 8. Powtórz węższą wiązką najciekawsze tory. 9. Zapisz waypointy wraz z marginesem błędu GPS. 10. Potwierdź ciężarkiem/markerem i obserwacją ryb, po czym wybierz A/B/C z bezpieczną drogą holu."
+        },
+        {
+          "h": "Własne mapy i Premium",
+          "p": "Osobista batymetria powstaje z własnych skanów. Globalne mapy batymetryczne i ich pobieranie offline wymagają Fish Deeper Premium; dostępność map konkretnej wody może się różnić."
         }
       ],
       "sourceIds": [
@@ -384,7 +448,11 @@
         "s28",
         "s29",
         "s38",
-        "s39"
+        "s39",
+        "s45",
+        "s46",
+        "s47",
+        "s48"
       ],
       "diagram": "transects",
       "related": [
@@ -412,13 +480,18 @@
         {
           "h": "Powrót do punktu",
           "p": "Zapisz waypoint i jego kontekst: głębokość, krawędź, twardość, kierunek skanu. Wróć z innego kierunku i potwierdź kształt. GPS oraz wiatr mają błędy; położenie zestawu kontroluj podczas opuszczania. Funkcje autopilota Quest/Spark są modelowo zależne, a nie funkcją każdej łódki z Deeperem."
+        },
+        {
+          "h": "Boat i Bait Boat",
+          "p": "W Fish Deeper wybierz Boat Mode dla łodzi albo Bait Boat Mode dla łódki zanętowej. Utrzymuj łączność Wi-Fi, prędkość do 3 km/h i porównuj tor GPS z echem. Autopilot Quest/Spark nie jest funkcją CHIRP+ 2."
         }
       ],
       "sourceIds": [
         "s24",
         "s28",
-        "s33",
-        "s39"
+        "s39",
+        "s45",
+        "s47"
       ],
       "diagram": "transects",
       "related": [
@@ -444,6 +517,10 @@
         {
           "h": "GPS i dokładność",
           "p": "Mapowanie z brzegu wymaga modelu/funkcji GPS obsługującej tę metodę; inne modele mogą dawać tylko bieżący sonar. Mapy wcześniej pobrane w Fish Deeper mogą działać bez internetu, lecz GPS nadal musi mieć sygnał. Dokładność punktu pogarszają wiatr, łuk żyłki i szerokość stożka."
+        },
+        {
+          "h": "Onshore GPS",
+          "p": "CHIRP+ 2 ma własny GNSS (GPS, GLONASS, Galileo, BeiDou, QZSS). W trybie Onshore wykonuj zachodzące na siebie rzuty i zapisuj osobistą batymetrię; tryb Scan Only without GPS nie tworzy śladu GPS."
         }
       ],
       "sourceIds": [
@@ -451,7 +528,9 @@
         "s28",
         "s29",
         "s38",
-        "s41"
+        "s41",
+        "s45",
+        "s47"
       ],
       "diagram": "slope",
       "related": [
@@ -461,7 +540,7 @@
     },
     {
       "id": "sonar-ustawienia",
-      "title": "Ustawienia Fish Deeper — sprawdź swój model",
+      "title": "Ustawienia Deeper CHIRP+ 2 w Fish Deeper",
       "category": "Sprzęt",
       "tags": [
         "czułość",
@@ -470,7 +549,7 @@
         "paleta",
         "GPS"
       ],
-      "lead": "Nazwy i dostępność funkcji zależą od modelu oraz wersji aplikacji. Oficjalne menu Fish Deeper opisuje Fishing Mode, Raw/Basic, Beam Angle, Sensitivity, Fish Icons, Color Palette i GPS/mapy.",
+      "lead": "Instrukcja dla CHIRP+ 2: trzy wiązki CHIRP, tryby Onshore/Boat/Bait Boat, Raw/Basic, czułość, palety i GPS.",
       "sections": [
         {
           "h": "Dobry punkt startowy",
@@ -481,17 +560,17 @@
           "p": "Raw pokazuje szczegółowe echo, Basic filtruje. Fish Icons to klasyfikacja algorytmiczna. Palety Classic/Day/Night zmieniają mapowanie barw, więc nie mów „żółty zawsze oznacza żwir” bez wskazania palety. Depth range i ustawienia płytkiej wody są zależne od modelu. Waypointy i batymetrię zapisuj z GPS oraz kontroluj tryb mapowania."
         },
         {
-          "h": "Modele 2026",
-          "p": "START ma prostszy zestaw ustawień niż PRO/PRO+ 2 i CHIRP+ 2/3. CHIRP+ 4 oferuje nowe mapy roślinności/dna i AI Fish Detection według producenta; również te algorytmy mogą się mylić. QUEST/Spark to osobne platformy łódek z autopilotem. Przed wyjazdem sprawdź aktualną instrukcję swojego modelu i aplikacji."
+          "h": "Potwierdzone parametry CHIRP+ 2",
+          "p": "Wide 100 kHz / 47°, Mid 240 kHz / 20°, Narrow 675 kHz / 7°. Separacja celów: 1 cm Narrow, 2,4 cm Mid/Wide. Głębokość 0,15–100 m, do 15 skanów/s, stabilne Wi-Fi do 120 m. W Fish Deeper zacznij od Raw i wysokiej czułości, potem obniż ją, aby ograniczyć szum."
         }
       ],
       "sourceIds": [
         "s24",
         "s27",
-        "s30",
-        "s31",
-        "s32",
-        "s33"
+        "s45",
+        "s46",
+        "s47",
+        "s48"
       ],
       "related": [
         "sonar-raw",
@@ -515,16 +594,19 @@
           "p": "Pionowe zielsko, gałąź, stado drobnicy, szum, pęcherze gazu czy echo przy dnie mogą dostać ikonę ryby albo wyglądać jak łuk. Ryba częściowo w stożku może dać kreskę bez ikony. Wyłącz ikony, powtórz skan i sprawdź, czy ślad porusza się niezależnie od dna."
         },
         {
-          "h": "Nowe AI w CHIRP+ 4",
-          "p": "Producent opisuje AI Fish Detection jako dokładniejszą klasyfikację, lecz sam wskazuje możliwe pomyłki zależne od fal, stabilności i montażu. Nie przenoś tej funkcji na starsze modele i nie identyfikuj gatunku z ikony."
+          "h": "Dostępność",
+          "p": "Raw/Basic, ikony ryb, palety i osobista batymetria są opisane dla Fish Deeper i CHIRP+ 2. AI Fish Detection oraz mapowanie roślinności/dna z CHIRP+ 4 nie są funkcjami CHIRP+ 2."
         }
       ],
       "sourceIds": [
         "s19",
         "s24",
         "s26",
-        "s30",
-        "s34"
+        "s34",
+        "s45",
+        "s46",
+        "s47",
+        "s48"
       ],
       "diagram": "fish",
       "related": [
@@ -551,6 +633,10 @@
         {
           "h": "Myślenie o miejscu",
           "p": "Nie bierz każdej kreski za rybę ani każdego łuku za karpia. Nie szukaj tylko najgłębszego miejsca lub samego szczytu. Nie ignoruj krawędzi zielska i przejścia dna. Nie kładź zestawu automatycznie dokładnie pod ikoną ryby. Zawsze powtórz skan i potwierdź punkt."
+        },
+        {
+          "h": "Kontrola modelu",
+          "p": "Przed zastosowaniem porady sprawdź, czy dotyczy CHIRP+ 2 i aktualnego Fish Deeper. Nie utożsamiaj globalnych map Premium z własnymi skanami."
         }
       ],
       "sourceIds": [
@@ -558,7 +644,9 @@
         "s24",
         "s26",
         "s34",
-        "s15"
+        "s15",
+        "s45",
+        "s47"
       ],
       "related": [
         "sonar-mapa",
@@ -580,6 +668,10 @@
         {
           "h": "Kontrola",
           "p": "Struktura i kierunek toru; głębokość; twardość i przejście dna; wysokość zielska oraz droga holu; powtarzalna aktywność ryb; wiatr i warunki; drugi skan; zapis waypointu; potwierdzenie markerem/ciężarkiem, jeśli możliwe i dozwolone; kontrola rzeczywistego opadu zestawu."
+        },
+        {
+          "h": "Przed skanem",
+          "p": "Sprawdź baterię, montaż, połączenie Wi-Fi i tryb GPS w Fish Deeper. Pracuj poniżej 3 km/h. Zapisz paletę, wiązkę i czułość, aby kolejne skany były porównywalne."
         }
       ],
       "sourceIds": [
@@ -587,7 +679,9 @@
         "s24",
         "s28",
         "s15",
-        "s16"
+        "s16",
+        "s45",
+        "s47"
       ],
       "related": [
         "sonar-mapa",
