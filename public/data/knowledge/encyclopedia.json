@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-30.2",
+  "version": "2026-10-05.1",
   "articles": [
     {
       "id": "przynety",
@@ -538,121 +538,201 @@
       "Żwir",
       "Mocny, chropawy kontakt ciężarka; na sonarze mocniejszy, grubszy powrót, czasem drugi echo.",
       "Krótki lub średni przypon i bottom/wafter po kontroli opadu; rozproszona zanęta może leżeć czytelnie.",
-      "Nie każdy mocny powrót to żwir: kamienie i glina także mogą być twarde."
+      "Nie każdy mocny powrót to żwir: kamienie i glina także mogą być twarde.",
+      "Ciężarek powinien dać wyraźniejszy kontakt niż w mule; powtórz opad i sprawdź, czy kamienie lub szczeliny nie zakleszczają zestawu.",
+      "Bottom bait lub wafter; porównaj prosty bezpieczny rig z sekcji Rigi. Krótszy przypon może zachować kontrolę na równym twardym dnie, ale długość i materiał dobierz do nierówności; ciężarek bez ryzyka zakleszczenia.",
+      "Mała porcja rozproszona na start lub single przy presji; dokładkę dopiero po oznakach żerowania.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Piasek",
       "Równy, często twardszy od mułu, lecz bez charakterystycznego chrobotu żwiru; sonar pokazuje stabilną linię.",
       "Bottom lub wafter, mała porcja na próbę, długość przyponu według ukształtowania.",
-      "Prąd i wiatr mogą przesuwać lekki pokarm."
+      "Prąd i wiatr mogą przesuwać lekki pokarm.",
+      "Ciężarek powinien dać wyraźniejszy kontakt niż w mule; powtórz opad i sprawdź, czy kamienie lub szczeliny nie zakleszczają zestawu.",
+      "Bottom bait lub wafter; porównaj prosty bezpieczny rig z sekcji Rigi. Krótszy przypon może zachować kontrolę na równym twardym dnie, ale długość i materiał dobierz do nierówności; ciężarek bez ryzyka zakleszczenia.",
+      "Mała porcja rozproszona na start lub single przy presji; dokładkę dopiero po oznakach żerowania.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Glina",
       "Gładki, mocny „stuk”, na ciężarku czasem ślad gliny; wyraźny sonar nie określa chemii dna.",
       "Bottom/wafter i kontrolowany przypon; sprawdź śliskość i mocowanie ciężarka.",
-      "Śliska glina może dawać inny odczuwalny opór niż kamienie."
+      "Śliska glina może dawać inny odczuwalny opór niż kamienie.",
+      "Ciężarek powinien dać wyraźniejszy kontakt niż w mule; powtórz opad i sprawdź, czy kamienie lub szczeliny nie zakleszczają zestawu.",
+      "Bottom bait lub wafter; porównaj prosty bezpieczny rig z sekcji Rigi. Krótszy przypon może zachować kontrolę na równym twardym dnie, ale długość i materiał dobierz do nierówności; ciężarek bez ryzyka zakleszczenia.",
+      "Mała porcja rozproszona na start lub single przy presji; dokładkę dopiero po oznakach żerowania.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Twarde dno",
       "Powtarzalny silny powrót, krótkie twarde lądowanie i drgania przy przeciąganiu.",
       "Bottom, wafter lub nisko ustawiony pop-up; dobierz rig do ryb i przeszkód.",
-      "Szeroka wiązka uśrednia sąsiednie miękkie fragmenty."
+      "Szeroka wiązka uśrednia sąsiednie miękkie fragmenty.",
+      "Ciężarek powinien dać wyraźniejszy kontakt niż w mule; powtórz opad i sprawdź, czy kamienie lub szczeliny nie zakleszczają zestawu.",
+      "Bottom bait lub wafter; porównaj prosty bezpieczny rig z sekcji Rigi. Krótszy przypon może zachować kontrolę na równym twardym dnie, ale długość i materiał dobierz do nierówności; ciężarek bez ryzyka zakleszczenia.",
+      "Mała porcja rozproszona na start lub single przy presji; dokładkę dopiero po oznakach żerowania.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Lekki muł",
       "Słabszy/cieńszy powrót, głuchy opad, lekki osad na ciężarku.",
       "Wafter lub lżejszy ciężarek; długość przyponu dostosuj do zapadania; punktowa porcja.",
-      "Zestaw może być częściowo przykryty mimo widocznej przynęty."
+      "Zestaw może być częściowo przykryty mimo widocznej przynęty.",
+      "Ciężarek może wejść w osad, dać głuchy opad i przynieść zapach lub resztki; sprawdź markerem głębokość osadu. Ryzyko: przypon i haczyk zakryte.",
+      "Wafter lub kontrolowany pop-up; z istniejących Rigów sprawdź chod/hinged tylko po zgodności z regulaminem i bezpiecznym wypięciu ciężarka. Zacznij od dłuższego przyponu niż na twardym dnie, miękkiego materiału; długość ustal testem opadu, nie stałą liczbą.",
+      "Kilka punktów lub mała porcja na początek; unikaj zasypania haczyka. Kontroluj zapadanie kulek i odnawiaj po potwierdzonej aktywności.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Głęboki muł",
       "Słaby, rozmyty powrót; ciężarek zapada i wychodzi z oporem.",
       "Wybierz lżejszy ciężarek i prezentację nad osadem, ewentualnie pop-up; nęć w małych porcjach na sprawdzonym skraju.",
-      "Ciężarek może wciągnąć krótki przypon; nie zakładaj, że cały muł jest beztlenowy."
+      "Ciężarek może wciągnąć krótki przypon; nie zakładaj, że cały muł jest beztlenowy.",
+      "Ciężarek może wejść w osad, dać głuchy opad i przynieść zapach lub resztki; sprawdź markerem głębokość osadu. Ryzyko: przypon i haczyk zakryte.",
+      "Wafter lub kontrolowany pop-up; z istniejących Rigów sprawdź chod/hinged tylko po zgodności z regulaminem i bezpiecznym wypięciu ciężarka. Zacznij od dłuższego przyponu niż na twardym dnie, miękkiego materiału; długość ustal testem opadu, nie stałą liczbą.",
+      "Kilka punktów lub mała porcja na początek; unikaj zasypania haczyka. Kontroluj zapadanie kulek i odnawiaj po potwierdzonej aktywności.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Detrytus",
       "Liście i resztki na ciężarku, nierówny miękki sygnał, zmienna warstwa nad właściwym dnem.",
       "Pop-up lub zbalansowany hakowy nad warstwą; mała, precyzyjna porcja.",
-      "Haczyk może schować się w szczątkach."
+      "Haczyk może schować się w szczątkach.",
+      "Ciężarek może wejść w osad, dać głuchy opad i przynieść zapach lub resztki; sprawdź markerem głębokość osadu. Ryzyko: przypon i haczyk zakryte.",
+      "Wafter lub kontrolowany pop-up; z istniejących Rigów sprawdź chod/hinged tylko po zgodności z regulaminem i bezpiecznym wypięciu ciężarka. Zacznij od dłuższego przyponu niż na twardym dnie, miękkiego materiału; długość ustal testem opadu, nie stałą liczbą.",
+      "Kilka punktów lub mała porcja na początek; unikaj zasypania haczyka. Kontroluj zapadanie kulek i odnawiaj po potwierdzonej aktywności.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Liście",
       "Charakterystyczne resztki na ciężarku; sonar może pokazać tylko miękką warstwę.",
       "Zbalansowany hakowy/pop-up i potwierdzony opad obok czystej plamy.",
-      "Gruby dywan maskuje haczyk i przynętę."
+      "Gruby dywan maskuje haczyk i przynętę.",
+      "Ciężarek może wejść w osad, dać głuchy opad i przynieść zapach lub resztki; sprawdź markerem głębokość osadu. Ryzyko: przypon i haczyk zakryte.",
+      "Wafter lub kontrolowany pop-up; z istniejących Rigów sprawdź chod/hinged tylko po zgodności z regulaminem i bezpiecznym wypięciu ciężarka. Zacznij od dłuższego przyponu niż na twardym dnie, miękkiego materiału; długość ustal testem opadu, nie stałą liczbą.",
+      "Kilka punktów lub mała porcja na początek; unikaj zasypania haczyka. Kontroluj zapadanie kulek i odnawiaj po potwierdzonej aktywności.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Niskie zielsko",
       "Niski, nierówny pas nad linią dna; na ciężarku drobne rośliny.",
       "Pop-up/wafter z wysokością i długością dobraną po kontroli; celuj w lukę lub obrzeże.",
-      "Wyrwany pojedynczy fragment nie dowodzi gęstego zielska na całej plamie."
+      "Wyrwany pojedynczy fragment nie dowodzi gęstego zielska na całej plamie.",
+      "Ciężarek może zahaczać i wyciągać rośliny. Sonar pokaże pionowe echa, ale czystą plamę i bezpieczny tor holu potwierdź ciężarkiem.",
+      "Na potwierdzonym czystym oczku bottom/wafter, na krawędzi tylko przy bezpiecznym holu pop-up; dobierz rig z sekcji Rigi do wysokości roślin. Materiał odporny na kontakt, długość ustal po pomiarze roślin; ciężarek pozwalający na bezpieczne uwolnienie.",
+      "Mała precyzyjna porcja na czystym fragmencie, nie w gęstwinie; zwiększ dopiero po obserwacji brań.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Wysokie zielsko",
       "Rośliny w kolumnie wody, zmienna wysokość na kolejnych skanach.",
       "Szukaj czystych oczek i korytarzy; bezpieczny montaż i zestaw, który można wyholować.",
-      "Zestaw w gęstwinie może być niełowny i niebezpieczny dla ryby."
+      "Zestaw w gęstwinie może być niełowny i niebezpieczny dla ryby.",
+      "Ciężarek może zahaczać i wyciągać rośliny. Sonar pokaże pionowe echa, ale czystą plamę i bezpieczny tor holu potwierdź ciężarkiem.",
+      "Na potwierdzonym czystym oczku bottom/wafter, na krawędzi tylko przy bezpiecznym holu pop-up; dobierz rig z sekcji Rigi do wysokości roślin. Materiał odporny na kontakt, długość ustal po pomiarze roślin; ciężarek pozwalający na bezpieczne uwolnienie.",
+      "Mała precyzyjna porcja na czystym fragmencie, nie w gęstwinie; zwiększ dopiero po obserwacji brań.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Rdestnice",
       "Złożona, często wysoka roślinność; potwierdź fragmentem na ciężarku lub wzrokiem.",
       "Łów na sprawdzonej krawędzi lub czystym prześwicie, nie na domniemanym gatunku z sonaru.",
-      "Sonar nie rozpoznaje pewnie gatunku rośliny."
+      "Sonar nie rozpoznaje pewnie gatunku rośliny.",
+      "Ciężarek może zahaczać i wyciągać rośliny. Sonar pokaże pionowe echa, ale czystą plamę i bezpieczny tor holu potwierdź ciężarkiem.",
+      "Na potwierdzonym czystym oczku bottom/wafter, na krawędzi tylko przy bezpiecznym holu pop-up; dobierz rig z sekcji Rigi do wysokości roślin. Materiał odporny na kontakt, długość ustal po pomiarze roślin; ciężarek pozwalający na bezpieczne uwolnienie.",
+      "Mała precyzyjna porcja na czystym fragmencie, nie w gęstwinie; zwiększ dopiero po obserwacji brań.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Moczarka",
       "Drobna, gęsta roślinność; obraz podobny do innych ziół podwodnych.",
       "Precyzyjna czysta plama, pop-up tylko gdy wysokość zielska uzasadnia.",
-      "Łatwo pomylić z innym zielem lub chmurą drobnicy."
+      "Łatwo pomylić z innym zielem lub chmurą drobnicy.",
+      "Ciężarek może zahaczać i wyciągać rośliny. Sonar pokaże pionowe echa, ale czystą plamę i bezpieczny tor holu potwierdź ciężarkiem.",
+      "Na potwierdzonym czystym oczku bottom/wafter, na krawędzi tylko przy bezpiecznym holu pop-up; dobierz rig z sekcji Rigi do wysokości roślin. Materiał odporny na kontakt, długość ustal po pomiarze roślin; ciężarek pozwalający na bezpieczne uwolnienie.",
+      "Mała precyzyjna porcja na czystym fragmencie, nie w gęstwinie; zwiększ dopiero po obserwacji brań.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Chod / martwe zielsko",
       "Miękka, nieregularna warstwa, fragmenty na ciężarku.",
       "Pop-up nad warstwą z bezpiecznym montażem; przejdź do Rigów po konstrukcję choda.",
-      "Nie łów bez sprawdzenia, czy ołowiany element uwalnia się po zerwaniu."
+      "Nie łów bez sprawdzenia, czy ołowiany element uwalnia się po zerwaniu.",
+      "Ciężarek może wejść w osad, dać głuchy opad i przynieść zapach lub resztki; sprawdź markerem głębokość osadu. Ryzyko: przypon i haczyk zakryte.",
+      "Wafter lub kontrolowany pop-up; z istniejących Rigów sprawdź chod/hinged tylko po zgodności z regulaminem i bezpiecznym wypięciu ciężarka. Zacznij od dłuższego przyponu niż na twardym dnie, miękkiego materiału; długość ustal testem opadu, nie stałą liczbą.",
+      "Kilka punktów lub mała porcja na początek; unikaj zasypania haczyka. Kontroluj zapadanie kulek i odnawiaj po potwierdzonej aktywności.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Żwir → muł",
       "Powtarzalna zmiana intensywności sygnału i kontaktu ciężarka na krótkim odcinku.",
       "Testuj oba boki granicy; położenie zestawu potwierdź markerem.",
-      "Granica na ekranie jest rozmazana szerokością wiązki i ruchem sondy."
+      "Granica na ekranie jest rozmazana szerokością wiązki i ruchem sondy.",
+      "Ciężarek może wejść w osad, dać głuchy opad i przynieść zapach lub resztki; sprawdź markerem głębokość osadu. Ryzyko: przypon i haczyk zakryte.",
+      "Wafter lub kontrolowany pop-up; z istniejących Rigów sprawdź chod/hinged tylko po zgodności z regulaminem i bezpiecznym wypięciu ciężarka. Zacznij od dłuższego przyponu niż na twardym dnie, miękkiego materiału; długość ustal testem opadu, nie stałą liczbą.",
+      "Kilka punktów lub mała porcja na początek; unikaj zasypania haczyka. Kontroluj zapadanie kulek i odnawiaj po potwierdzonej aktywności.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Krawędź zielska",
       "Nagły spadek wysokości roślin na powtórnym równoległym skanie.",
       "Zestaw połóż na czystej stronie przy krawędzi lub w sprawdzonym oczku.",
-      "Nie zakładaj, że najgęstsza strona jest łowna."
+      "Nie zakładaj, że najgęstsza strona jest łowna.",
+      "Ciężarek może zahaczać i wyciągać rośliny. Sonar pokaże pionowe echa, ale czystą plamę i bezpieczny tor holu potwierdź ciężarkiem.",
+      "Na potwierdzonym czystym oczku bottom/wafter, na krawędzi tylko przy bezpiecznym holu pop-up; dobierz rig z sekcji Rigi do wysokości roślin. Materiał odporny na kontakt, długość ustal po pomiarze roślin; ciężarek pozwalający na bezpieczne uwolnienie.",
+      "Mała precyzyjna porcja na czystym fragmencie, nie w gęstwinie; zwiększ dopiero po obserwacji brań.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Czyste oczko",
       "Krótka luka w roślinach widoczna w kilku przejazdach; potwierdź markerem.",
       "Precyzyjny bottom/wafter lub mały PVA, jeżeli oczko jest dostatecznie duże.",
-      "GPS i stożek mają błąd; zestaw może wylądować na brzegu oczka."
+      "GPS i stożek mają błąd; zestaw może wylądować na brzegu oczka.",
+      "Ciężarek może zahaczać i wyciągać rośliny. Sonar pokaże pionowe echa, ale czystą plamę i bezpieczny tor holu potwierdź ciężarkiem.",
+      "Na potwierdzonym czystym oczku bottom/wafter, na krawędzi tylko przy bezpiecznym holu pop-up; dobierz rig z sekcji Rigi do wysokości roślin. Materiał odporny na kontakt, długość ustal po pomiarze roślin; ciężarek pozwalający na bezpieczne uwolnienie.",
+      "Mała precyzyjna porcja na czystym fragmencie, nie w gęstwinie; zwiększ dopiero po obserwacji brań.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Plateau",
       "Względnie płaski obszar po zmianie głębokości, niekoniecznie twardy.",
       "Porównaj szczyt z bokiem i podstawą; nęć po potwierdzeniu ryb.",
-      "Płaska kreska sonaru może być skutkiem zatrzymania sondy."
+      "Płaska kreska sonaru może być skutkiem zatrzymania sondy.",
+      "Ciężarek może się stoczyć lub zatrzymać na półce. Powtórz rzuty/scan po dwóch kierunkach i sprawdź opad; unikaj zaczepów i toru holu przez uskok.",
+      "Bottom/wafter na stabilnej półce; rig z sekcji Rigi i długość przyponu sprawdź po opadzie. Materiał zależy od zaczepów; ciężarek dobierz tak, by zestaw utrzymał pozycję i bezpiecznie się wypiął.",
+      "Punktowe małe nęcenie na stabilnej części, nie na stromym spadku. Ilość zwiększ dopiero po sprawdzeniu, gdzie pokarm rzeczywiście leży.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Spadek / uskok",
       "Powtarzalna zmiana głębokości na przeciwnych przejazdach.",
       "Górna albo dolna krawędź, zależnie od pokarmu, ryb i prezentacji; przypon nie może wisieć.",
-      "Szeroka wiązka może ukryć stromą ścianę."
+      "Szeroka wiązka może ukryć stromą ścianę.",
+      "Ciężarek może się stoczyć lub zatrzymać na półce. Powtórz rzuty/scan po dwóch kierunkach i sprawdź opad; unikaj zaczepów i toru holu przez uskok.",
+      "Bottom/wafter na stabilnej półce; rig z sekcji Rigi i długość przyponu sprawdź po opadzie. Materiał zależy od zaczepów; ciężarek dobierz tak, by zestaw utrzymał pozycję i bezpiecznie się wypiął.",
+      "Punktowe małe nęcenie na stabilnej części, nie na stromym spadku. Ilość zwiększ dopiero po sprawdzeniu, gdzie pokarm rzeczywiście leży.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Rów / koryto",
       "Lokalny dołek w przekroju powtórzony w kilku torach.",
       "Testuj wejście, bok i dno rowu; oceniaj tlen i osad.",
-      "Nie zakładaj, że dno rowu jest lepsze od jego obrzeża."
+      "Nie zakładaj, że dno rowu jest lepsze od jego obrzeża.",
+      "Ciężarek może się stoczyć lub zatrzymać na półce. Powtórz rzuty/scan po dwóch kierunkach i sprawdź opad; unikaj zaczepów i toru holu przez uskok.",
+      "Bottom/wafter na stabilnej półce; rig z sekcji Rigi i długość przyponu sprawdź po opadzie. Materiał zależy od zaczepów; ciężarek dobierz tak, by zestaw utrzymał pozycję i bezpiecznie się wypiął.",
+      "Punktowe małe nęcenie na stabilnej części, nie na stromym spadku. Ilość zwiększ dopiero po sprawdzeniu, gdzie pokarm rzeczywiście leży.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ],
     [
       "Górka podwodna",
       "Wzrost i spadek głębokości w kilku kierunkach.",
       "Wybierz szczyt, bok albo podstawę po obserwacji aktywności i wiatru.",
-      "Jedna linia nie mówi, czy to górka czy podłużny grzbiet."
+      "Jedna linia nie mówi, czy to górka czy podłużny grzbiet.",
+      "Ciężarek może się stoczyć lub zatrzymać na półce. Powtórz rzuty/scan po dwóch kierunkach i sprawdź opad; unikaj zaczepów i toru holu przez uskok.",
+      "Bottom/wafter na stabilnej półce; rig z sekcji Rigi i długość przyponu sprawdź po opadzie. Materiał zależy od zaczepów; ciężarek dobierz tak, by zestaw utrzymał pozycję i bezpiecznie się wypiął.",
+      "Punktowe małe nęcenie na stabilnej części, nie na stromym spadku. Ilość zwiększ dopiero po sprawdzeniu, gdzie pokarm rzeczywiście leży.",
+      "Jeżeli są rośliny, najpierw potwierdź czyste miejsce i drogę holu. Nie wyciągaj wniosku o rodzaju dna wyłącznie z koloru echa; dobór zestawu to punkt startowy."
     ]
   ],
   "temperatures": [
@@ -690,121 +770,201 @@
       "Fishmeal",
       "Baza pokarmowa; zależy od składników i oleju",
       "Garlic, spice, jasny topper",
-      "Nie utożsamiaj z jedną porą roku"
+      "Nie utożsamiaj z jedną porą roku",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Fishmeal”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Bogata baza pokarmowa. Prezentacja: bottom bait na czystym podłożu; neutralny wafter na lekkim osadzie, pop-up przy potrzebie uniesienia ponad zielsko. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: kilka hakowych jako single, dopiero po potwierdzeniu ryb mała porcja kulek o podobnej bazie; zwiększaj po braniach. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeżeli ryby są obecne, lecz nie pobierają, porównaj mały neutralny wafter i jedną przynętę kontrastową. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Krill",
       "Morski/mięsny profil",
       "Garlic, fishmeal, neutralny wafter",
-      "Skład produktu ważniejszy od nazwy"
+      "Skład produktu ważniejszy od nazwy",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Krill”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Wytrawny profil. Prezentacja: bottom bait na czystym podłożu; neutralny wafter na lekkim osadzie, pop-up przy potrzebie uniesienia ponad zielsko. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: kilka hakowych jako single, dopiero po potwierdzeniu ryb mała porcja kulek o podobnej bazie; zwiększaj po braniach. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeżeli ryby są obecne, lecz nie pobierają, porównaj mały neutralny wafter i jedną przynętę kontrastową. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Squid",
       "Profil morski",
       "Fruit topper, spice",
-      "Kontrast jest próbą, nie pewnością"
+      "Kontrast jest próbą, nie pewnością",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Squid”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Wytrawny profil. Prezentacja: bottom bait na czystym podłożu; neutralny wafter na lekkim osadzie, pop-up przy potrzebie uniesienia ponad zielsko. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: kilka hakowych jako single, dopiero po potwierdzeniu ryb mała porcja kulek o podobnej bazie; zwiększaj po braniach. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeżeli ryby są obecne, lecz nie pobierają, porównaj mały neutralny wafter i jedną przynętę kontrastową. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Crab",
       "Profil skorupiakowy",
       "Spice, fishmeal",
-      "Uważaj na agresywne zanęcenie bez ryb"
+      "Uważaj na agresywne zanęcenie bez ryb",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Crab”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Wytrawny profil. Prezentacja: bottom bait na czystym podłożu; neutralny wafter na lekkim osadzie, pop-up przy potrzebie uniesienia ponad zielsko. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: kilka hakowych jako single, dopiero po potwierdzeniu ryb mała porcja kulek o podobnej bazie; zwiększaj po braniach. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeżeli ryby są obecne, lecz nie pobierają, porównaj mały neutralny wafter i jedną przynętę kontrastową. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Liver",
       "Wytrawny/mięsny",
       "Garlic, nutty jako kontrast",
-      "Sprawdź trwałość hakowego"
+      "Sprawdź trwałość hakowego",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Liver”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Wytrawny profil. Prezentacja: bottom bait na czystym podłożu; neutralny wafter na lekkim osadzie, pop-up przy potrzebie uniesienia ponad zielsko. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: kilka hakowych jako single, dopiero po potwierdzeniu ryb mała porcja kulek o podobnej bazie; zwiększaj po braniach. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeżeli ryby są obecne, lecz nie pobierają, porównaj mały neutralny wafter i jedną przynętę kontrastową. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Garlic",
       "Wyraźny sygnał",
       "Fishmeal, krill",
-      "Nie „leczy” złej prezentacji"
+      "Nie „leczy” złej prezentacji",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Garlic”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Intensywny aromat/przyprawowy wariant. Prezentacja: testuj bottom i wafter na tym samym miejscu; pop-up dobieraj do wysokości roślin i mechaniki rigu. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: zacznij od pojedynczego hakowego lub kilku drobnych porcji, a ilość zwiększ dopiero po aktywności. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeśli aromat nie wnosi różnicy, przetestuj neutralny hakowy, rozmiar i położenie zestawu. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Spicy",
       "Pikantny sygnał",
       "Fishmeal, squid",
-      "Dawka zależy od produktu"
+      "Dawka zależy od produktu",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Spicy”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Intensywny aromat/przyprawowy wariant. Prezentacja: testuj bottom i wafter na tym samym miejscu; pop-up dobieraj do wysokości roślin i mechaniki rigu. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: zacznij od pojedynczego hakowego lub kilku drobnych porcji, a ilość zwiększ dopiero po aktywności. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeśli aromat nie wnosi różnicy, przetestuj neutralny hakowy, rozmiar i położenie zestawu. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Robin Red style",
       "Pikantno-zbożowy styl",
       "Fishmeal, garlic",
-      "To styl, nie jeden skład"
+      "To styl, nie jeden skład",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Robin Red style”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Intensywny aromat/przyprawowy wariant. Prezentacja: testuj bottom i wafter na tym samym miejscu; pop-up dobieraj do wysokości roślin i mechaniki rigu. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: zacznij od pojedynczego hakowego lub kilku drobnych porcji, a ilość zwiększ dopiero po aktywności. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeśli aromat nie wnosi różnicy, przetestuj neutralny hakowy, rozmiar i położenie zestawu. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Scopex",
       "Słodko-kremowy",
       "Nut, tiger nut",
-      "Testuj z ilością i kolorem"
+      "Testuj z ilością i kolorem",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Scopex”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Łagodniejszy słodki/orzechowy wariant. Prezentacja: bottom na pewnym dnie, wafter dla lekkiej prezentacji, pop-up gdy dno jest niepewne. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: single pod dużą presją; przy żerowaniu testuj mały dywan drobnego pokarmu zgodnego z regulaminem. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Po braku reakcji porównaj wersję neutralną, mniejszy rozmiar i mniej zanęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Creamy",
       "Łagodny/słodki",
       "Tiger nut, vanilla",
-      "Nie utożsamiaj z zimową gwarancją"
+      "Nie utożsamiaj z zimową gwarancją",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Creamy”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Łagodniejszy słodki/orzechowy wariant. Prezentacja: bottom na pewnym dnie, wafter dla lekkiej prezentacji, pop-up gdy dno jest niepewne. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: single pod dużą presją; przy żerowaniu testuj mały dywan drobnego pokarmu zgodnego z regulaminem. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Po braku reakcji porównaj wersję neutralną, mniejszy rozmiar i mniej zanęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Vanilla",
       "Słodki",
       "Nut, fruit",
-      "Porównaj z neutralnym hakowym"
+      "Porównaj z neutralnym hakowym",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Vanilla”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Łagodniejszy słodki/orzechowy wariant. Prezentacja: bottom na pewnym dnie, wafter dla lekkiej prezentacji, pop-up gdy dno jest niepewne. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: single pod dużą presją; przy żerowaniu testuj mały dywan drobnego pokarmu zgodnego z regulaminem. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Po braku reakcji porównaj wersję neutralną, mniejszy rozmiar i mniej zanęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Nutty",
       "Orzechowy",
       "Scopex, tiger nut",
-      "Sprawdź regulamin i alergeny produktu"
+      "Sprawdź regulamin i alergeny produktu",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Nutty”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Łagodniejszy słodki/orzechowy wariant. Prezentacja: bottom na pewnym dnie, wafter dla lekkiej prezentacji, pop-up gdy dno jest niepewne. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: single pod dużą presją; przy żerowaniu testuj mały dywan drobnego pokarmu zgodnego z regulaminem. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Po braku reakcji porównaj wersję neutralną, mniejszy rozmiar i mniej zanęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Tiger nut",
       "Orzechowo-słodki",
       "Creamy, konopie",
-      "Ziarna przygotuj prawidłowo"
+      "Ziarna przygotuj prawidłowo",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Tiger nut”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Łagodniejszy słodki/orzechowy wariant. Prezentacja: bottom na pewnym dnie, wafter dla lekkiej prezentacji, pop-up gdy dno jest niepewne. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: single pod dużą presją; przy żerowaniu testuj mały dywan drobnego pokarmu zgodnego z regulaminem. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Po braku reakcji porównaj wersję neutralną, mniejszy rozmiar i mniej zanęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Fruit",
       "Owocowy kontrast",
       "Squid, fishmeal",
-      "Kolor i wyporność mogą działać bardziej"
+      "Kolor i wyporność mogą działać bardziej",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Fruit”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Owocowy wariant często używany jako kontrast. Prezentacja: porównaj kolor i wyporność: bottom naturalny kontra mały wafter lub pop-up na osobnym kiju. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: najpierw single hookbait; przy potwierdzonej aktywności mała porcja bez założenia, że aromat musi pokrywać zanętę. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeśli kontrast odstrasza pod presją, wróć do naturalnego koloru i mniejszej przynęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Pineapple",
       "Owocowo-kwaśny",
       "Fishmeal, creamy",
-      "Często jaskrawy topper, testuj widoczność"
+      "Często jaskrawy topper, testuj widoczność",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Pineapple”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Owocowy wariant często używany jako kontrast. Prezentacja: porównaj kolor i wyporność: bottom naturalny kontra mały wafter lub pop-up na osobnym kiju. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: najpierw single hookbait; przy potwierdzonej aktywności mała porcja bez założenia, że aromat musi pokrywać zanętę. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeśli kontrast odstrasza pod presją, wróć do naturalnego koloru i mniejszej przynęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Citrus",
       "Świeży/kwaskowy",
       "Fishmeal, spice",
-      "Nie przypisuj skutku samej nazwie"
+      "Nie przypisuj skutku samej nazwie",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Citrus”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Owocowy wariant często używany jako kontrast. Prezentacja: porównaj kolor i wyporność: bottom naturalny kontra mały wafter lub pop-up na osobnym kiju. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: najpierw single hookbait; przy potwierdzonej aktywności mała porcja bez założenia, że aromat musi pokrywać zanętę. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeśli kontrast odstrasza pod presją, wróć do naturalnego koloru i mniejszej przynęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Plum",
       "Owocowy",
       "Squid, nutty",
-      "Porównaj z kolorem naturalnym"
+      "Porównaj z kolorem naturalnym",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Plum”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Owocowy wariant często używany jako kontrast. Prezentacja: porównaj kolor i wyporność: bottom naturalny kontra mały wafter lub pop-up na osobnym kiju. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: najpierw single hookbait; przy potwierdzonej aktywności mała porcja bez założenia, że aromat musi pokrywać zanętę. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeśli kontrast odstrasza pod presją, wróć do naturalnego koloru i mniejszej przynęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Strawberry",
       "Owocowy",
       "Creamy, fishmeal",
-      "Nie ma kalendarza truskawki"
+      "Nie ma kalendarza truskawki",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Strawberry”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Owocowy wariant często używany jako kontrast. Prezentacja: porównaj kolor i wyporność: bottom naturalny kontra mały wafter lub pop-up na osobnym kiju. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: najpierw single hookbait; przy potwierdzonej aktywności mała porcja bez założenia, że aromat musi pokrywać zanętę. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeśli kontrast odstrasza pod presją, wróć do naturalnego koloru i mniejszej przynęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Banana",
       "Owocowy/słodki",
       "Nutty, creamy",
-      "Sprawdź profil bazy"
+      "Sprawdź profil bazy",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Banana”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Owocowy wariant często używany jako kontrast. Prezentacja: porównaj kolor i wyporność: bottom naturalny kontra mały wafter lub pop-up na osobnym kiju. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: najpierw single hookbait; przy potwierdzonej aktywności mała porcja bez założenia, że aromat musi pokrywać zanętę. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Jeśli kontrast odstrasza pod presją, wróć do naturalnego koloru i mniejszej przynęty. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ],
     [
       "Inne / naturalne",
       "Robaki, larwy, bezaromatyczne ziarna",
       "Mały punkt z pokarmem naturalnym",
-      "Może ściągać gatunki uboczne"
+      "Może ściągać gatunki uboczne",
+      "Temperatura: brak wiarygodnego zakresu właściwego wyłącznie dla „Inne / naturalne”; w <8°C i 8–16°C zacznij od mniejszej ilości, w 16–24°C dostosuj do aktywności, w >24°C priorytetem jest tlen i dobrostan. Presja: porównaj mniejszy/neutralny hakowy. To hipoteza, nie sezonowa reguła.",
+      "Naturalny pokarm / bezaromatyczny punkt. Prezentacja: żywa przynęta lub ziarno tylko tam, gdzie dopuszcza regulamin; testuj przypon odporny na ryby uboczne. Dobierz długość i materiał przyponu do dna; zobacz Rigi.",
+      "Single kontra nęcenie: mała ilość poprawnie przygotowanego pokarmu; nie rozsypuj surowych ziaren. Kombinacje z tabeli są próbą porównawczą, a nie dowodem synergii.",
+      "Zmiana: Gdy drobnica dominuje, przejdź na selektywniejszy hakowy i ogranicz drobny pokarm. Nie da się przypisać skuteczności samemu smakowi bez kontrolowania miejsca, ilości, rozmiaru i koloru."
     ]
   ]
 }

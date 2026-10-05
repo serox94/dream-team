@@ -1,7 +1,7 @@
 // Only static application files live here. API responses and writes never enter this cache.
-const shell='ryby-shell-20260930-5';
+const shell='ryby-shell-20261005-1';
 const warm=['/','/index.html','/pages/checklisty.html','/pages/teren.html','/pages/mapa.html','/pages/regulamin.html','/pages/pogoda.html',
-  '/pages/encyklopedia.html','/pages/sonar.html','/knowledge.js','/knowledge.css',
+  '/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html','/settings.js','/knowledge.js','/knowledge.css',
   '/data/knowledge/sources.json','/data/knowledge/encyclopedia.json','/data/knowledge/sonar.json','/data/knowledge/tools.json',
   '/dream-loader-v2.js','/dream-core.js','/d1-api-compat.js','/app.js','/app-plus.js','/field-mode.js','/trip-renderer-v2.js','/dashboard-chart.js','/fixes.js',
   '/style.css','/ui-plus.css','/media-plus.css','/weather-plus.css','/audit.css','/refresh.css',

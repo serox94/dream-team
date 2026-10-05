@@ -1,5 +1,5 @@
 (async () => {
-  const VERSION='20260930-3';
+  const VERSION='20261005-1';
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
@@ -8,6 +8,12 @@
     if(!trip)throw new Error('Brak wyjazdów w bazie.');
     window.DREAM_MODEL=model;window.DREAM_TRIP=trip;window.DREAM_VIEWED_TRIP_ID=trip.id;
     Dream.renderHeader();
+    const categorySelect=document.getElementById('check-category');
+    if(categorySelect){
+      const {categories}=await Dream.api('/api/checklist-categories');
+      window.DREAM_CATEGORIES=categories;
+      categorySelect.replaceChildren(...categories.filter(c=>c.active).map(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=c.name;return o;}));
+    }
     const person=document.getElementById('person');
     if(person){person.replaceChildren(...trip.participants.map(a=>{const o=document.createElement('option');o.value=a.name;o.textContent=a.name;return o;}));}
     const assigned=document.getElementById('check-assigned');

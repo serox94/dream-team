@@ -1,6 +1,6 @@
 {
-  "version": "2026-09-30.2",
-  "accessed": "2026-09-30",
+  "version": "2026-10-05.1",
+  "accessed": "2026-10-05",
   "sources": [
     {
       "id": "s01",
@@ -323,6 +323,34 @@
       "lang": "PL / PL",
       "url": "https://komprachcice.pzw.pl/szczegoly-artykulu/wysokie-temperatury-a-dobrostan-ryb-apel-do-wszystkich-wedkarzy_BUhmmgRbUeYVFV3nQFV6",
       "published": "2026-06-28"
+    },
+    {
+      "id": "s45",
+      "type": "sonar",
+      "name": "Deeper CHIRP+ 2 — oficjalna specyfikacja",
+      "lang": "EN / LT",
+      "url": "https://deepersonar.com/pages/deeper-chirp-2-tech-specs"
+    },
+    {
+      "id": "s46",
+      "type": "sonar",
+      "name": "Fish Deeper Premium — globalne i własne mapy",
+      "lang": "EN / LT",
+      "url": "https://support.deeper.eu/896405-Fish-Deeper-Premium"
+    },
+    {
+      "id": "s47",
+      "type": "sonar",
+      "name": "Fish Deeper — ustawienia i przykłady ekranów",
+      "lang": "EN / LT",
+      "url": "https://support.deeper.eu/636573-Sonar-settings"
+    },
+    {
+      "id": "s48",
+      "type": "sonar",
+      "name": "Fish Deeper — palety i twardość na ekranie",
+      "lang": "EN / LT",
+      "url": "https://support.deeper.eu/760937-What-screen-color-modes-are-available-on-the-Deeper-App-and-how-to-use-them-Deeper-PRO--PRO--CHIRP"
     }
   ]
 }

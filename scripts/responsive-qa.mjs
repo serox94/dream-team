@@ -6,7 +6,7 @@ import {serve} from './qa-server.mjs';
 import {weatherFixture} from './qa-weather.mjs';
 
 const widths=[360,390,412,768,1280];
-const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html'];
+const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'];
 const preview=await serve({seed:true,weatherFetch:async()=>Response.json(weatherFixture())});
 const loginPreview=await serve({testSession:false});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
@@ -39,7 +39,7 @@ try{
       }
       const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
       if(dimensions.scroll>dimensions.viewport+1||dimensions.body>dimensions.viewport+1){
-        const offenders=await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(el=>el.getBoundingClientRect().right>document.documentElement.clientWidth+2).slice(0,12).map(el=>({tag:el.tagName,id:el.id,className:String(el.className).slice(0,70),right:Math.round(el.getBoundingClientRect().right)})));
+        const offenders=await page.evaluate(()=>[...document.querySelectorAll('body *')].filter(el=>el.getBoundingClientRect().right>document.documentElement.clientWidth+2||el.scrollWidth>el.clientWidth+2).slice(0,16).map(el=>({tag:el.tagName,id:el.id,className:String(el.className).slice(0,70),right:Math.round(el.getBoundingClientRect().right),scroll:el.scrollWidth,client:el.clientWidth})));
         assert.fail(`${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)} ${JSON.stringify(offenders)}`);
       }
       assert.deepEqual(errors,[],`${width} ${route}: console/network`);
@@ -54,7 +54,17 @@ try{
       }
       if(route==='/pages/sonar.html'){
         assert.equal(await page.locator('.knowledge-entry').count(),17);
-        assert.equal(await page.locator('.sonar-gallery .sonar-diagram').count(),11);
+        assert.equal(await page.locator('#sonar-gallery a[href^="https://support.deeper.eu/"]').count(),4);
+        assert.match(await page.locator('.knowledge-hero').innerText(),/CHIRP\+ 2 \/ Fish Deeper/);
+      }
+      if(width===390&&['/pages/encyklopedia.html','/pages/sonar.html'].includes(route)){
+        const label=route.includes('encyklopedia')?'encyklopedia':'sonar';
+        await page.screenshot({path:`${screenshotDir}/${label}-top-390.png`});
+      }
+      if(route==='/pages/ustawienia.html'){
+        await page.locator('#category-list input[aria-label="Nazwa kategorii"]').first().waitFor();
+        const names=await page.locator('#category-list input[aria-label="Nazwa kategorii"]').evaluateAll(nodes=>nodes.map(n=>n.value));
+        for(const name of ['sprzęt','zakupy','jedzenie / picie'])assert.ok(names.includes(name),`default category ${name}`);
       }
       if(width<=412){
         const links=page.locator('.bottom-nav a, .bottom-nav button');
@@ -126,7 +136,7 @@ try{
           assert.equal(preview.requests.filter(r=>r.method==='POST'&&r.url.includes('knowledge')).length,0,'screenshot never uploaded');
         }
       }
-      if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/encyklopedia.html','/pages/sonar.html'].includes(route)||width===1280&&['/pages/encyklopedia.html','/pages/sonar.html'].includes(route)){
+      if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)||width===1280&&['/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)){
         const label=route==='/'?'dashboard':route.split('/').pop().replace('.html','');
         await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`,fullPage:route!=='/'&&!['encyklopedia','sonar'].includes(label)});
       }
@@ -139,7 +149,7 @@ try{
     const manifestResponse=await login.request.get(loginPreview.url+'/manifest.webmanifest');
     assert.equal(manifestResponse.status(),200,'manifest is public for login and installation');
     const manifest=await manifestResponse.json();
-    assert.equal(manifest.name,'RYBY');assert.equal(manifest.display,'standalone');
+    assert.equal(manifest.name,'DreamTeam');assert.equal(manifest.display,'standalone');
     const submit=await login.locator('button[type="submit"]').boundingBox();assert.ok(submit&&submit.height>=44,`${width} login: small submit`);
     await login.screenshot({path:`${screenshotDir}/login-${width}.png`});
     if(width===390){
