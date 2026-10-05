@@ -59,7 +59,8 @@ try{
       }
       if(route==='/pages/ustawienia.html'){
         await page.locator('#category-list input[aria-label="Nazwa kategorii"]').first().waitFor();
-        assert.equal(await page.locator('#category-list input[aria-label="Nazwa kategorii"]').count(),3);
+        const names=await page.locator('#category-list input[aria-label="Nazwa kategorii"]').evaluateAll(nodes=>nodes.map(n=>n.value));
+        for(const name of ['sprzęt','zakupy','jedzenie / picie'])assert.ok(names.includes(name),`default category ${name}`);
       }
       if(width<=412){
         const links=page.locator('.bottom-nav a, .bottom-nav button');
