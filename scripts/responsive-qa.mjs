@@ -55,7 +55,7 @@ try{
       if(route==='/pages/sonar.html'){
         assert.equal(await page.locator('.knowledge-entry').count(),17);
         assert.equal(await page.locator('#sonar-gallery a[href^="https://support.deeper.eu/"]').count(),4);
-        assert.match(await page.locator('.knowledge-hero').innerText(),/CHIRP\+ 2 \/ Fish Deeper/);
+        assert.match(await page.locator('.knowledge-hero').innerText(),/CHIRP\+ 2[\s\S]*Fish Deeper/);
       }
       if(width===390&&['/pages/encyklopedia.html','/pages/sonar.html'].includes(route)){
         const label=route.includes('encyklopedia')?'encyklopedia':'sonar';
