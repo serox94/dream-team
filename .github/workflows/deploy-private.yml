@@ -5,13 +5,12 @@ on:
     paths:
       - .github/workflows/deploy-private.yml
       - scripts/smoke-auth.mjs
-      - src/worker.js
+      - src/**
       - wrangler.jsonc
-      - public/knowledge.js
-      - public/knowledge.css
-      - public/data/knowledge/**
-      - public/pages/encyklopedia.html
-      - public/pages/sonar.html
+      - public/**
+      - migrations/**
+      - package.json
+      - package-lock.json
   workflow_dispatch:
     inputs:
       ref:
