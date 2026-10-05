@@ -68,7 +68,7 @@ try{
         for(let n=1;n<await groups.count();n++)await groups.nth(n).evaluate(el=>el.open=false);
         await page.waitForTimeout(100);
         assert.equal(await groups.filter({hasText:'sprzęt'}).first().getAttribute('open'),'');
-        await page.screenshot({path:`${screenshotDir}/checklist-categories-390.png`,fullPage:true});
+        await page.locator('#checklist-groups').screenshot({path:`${screenshotDir}/checklist-categories-390.png`});
         await page.reload();await page.locator('html[data-ready="true"]').waitFor();await page.locator('.checklist-group').first().waitFor();
         assert.equal(await page.locator('.checklist-group').nth(1).getAttribute('open'),null,'A: category collapse persists');
         await page.locator('#check-add-category').click();await page.locator('#check-category-name').fill('Zanęta');
@@ -148,9 +148,9 @@ try{
         }
         if(width===390&&route==='/pages/sonar.html'){
           await page.locator('a[href="#sonar-dno"]').first().click();
-          assert.ok(await page.locator('#sonar-dno > details').evaluate(el=>el.open),'B: bottom article opens internally');
+          await page.waitForFunction(()=>document.querySelector('#sonar-dno > details')?.open,null,{timeout:10000});
           assert.match(await page.locator('#sonar-dno .chirp-practice').innerText(),/Mid.*Narrow/s);
-          await page.screenshot({path:`${screenshotDir}/chirp2-bottom-article-390.png`,fullPage:true});
+          await page.locator('#sonar-dno').screenshot({path:`${screenshotDir}/chirp2-bottom-article-390.png`});
           await page.locator('#spot-form').evaluate(form=>form.requestSubmit());
           assert.match(await page.locator('#spot-result').innerText(),/Trzy punkty/);
           await page.locator('#quiz-stage [data-quiz="0"]').click();
@@ -170,18 +170,19 @@ try{
         await page.locator('#wizard-country').fill('Polska');
         await page.locator('#wizard-start').fill('2027-06-12');
         await page.locator('#wizard-end').fill('2027-06-19');
-        await page.screenshot({path:`${screenshotDir}/new-lake-wizard-390.png`,fullPage:true});
+        await page.locator('#trip-wizard').screenshot({path:`${screenshotDir}/new-lake-wizard-390.png`});
         await page.locator('#wizard-search').click();
         await page.locator('#wizard-candidates').getByText(/OCZEKUJE NA TAVILY_API_KEY/).waitFor();
         await page.locator('#trip-wizard-form button[type="submit"]').click();
         await page.locator('#wizard-result').waitFor();
         assert.match(await page.locator('#wizard-result').innerText(),/Research: \d+\/38 pól znalezionych/,'D: visible coverage');
         assert.match(await page.locator('#wizard-result').innerText(),/Regulamin.*brak danych/s,'D: missing facts shown');
-        await page.screenshot({path:`${screenshotDir}/new-lake-result-390.png`,fullPage:true});
+        await page.locator('#wizard-result').screenshot({path:`${screenshotDir}/new-lake-result-390.png`});
       }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)||width===1280&&['/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)){
         const label=route==='/'?'dashboard':route.split('/').pop().replace('.html','');
-        await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`,fullPage:route!=='/'&&!['encyklopedia','sonar'].includes(label)});
+        if(label==='ustawienia')await page.locator('main').screenshot({path:`${screenshotDir}/${label}-${width}.png`});
+        else await page.screenshot({path:`${screenshotDir}/${label}-${width}.png`,fullPage:route!=='/'&&!['encyklopedia','sonar'].includes(label)});
       }
       await page.close();
     }

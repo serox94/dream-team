@@ -5,6 +5,7 @@
 .knowledge-hero h2 { margin:0 0 8px; }
 .knowledge-hero p { max-width:70ch; }
 .knowledge-home h3,.knowledge-field-guide h3{margin:0 0 12px}
+.knowledge-filter-panel h3{margin:0 0 12px}.knowledge-filter-panel label{display:block;margin:14px 0 7px}.knowledge-filter-panel select{width:100%}.knowledge-filter-panel p{margin:10px 0 0}
 .knowledge-home-grid,.field-guide-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .knowledge-home-grid a{display:grid;gap:6px;align-content:center;min-height:92px;padding:15px;border-radius:14px;border:1px solid var(--border-strong);background:#203529;color:var(--text);text-decoration:none}
 .knowledge-home-grid strong{font-size:1.04rem}.knowledge-home-grid span{color:var(--muted);font-size:.85rem}
