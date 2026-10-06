@@ -49,10 +49,10 @@ for(const name of ['sources','encyclopedia','sonar','tools','field-guides','chir
   if(name==='chirp2-practice')assert.equal(Object.keys(data.practice).length,17);
 }
 const atlasResponse=await request('/assets/deeper/chirp2/index.json',{headers});assert.equal(atlasResponse.status,200);
-assert.equal((await atlasResponse.json()).screenshots.length,5);
+assert.equal((await atlasResponse.json()).screenshots.length,17);
 const dashboard=await request('/',{headers});assert.match(await dashboard.text(),/patryk-maciek\.jpeg|patryk-maciek/);
 const shell=await request('/sw.js',{headers});assert.equal(shell.status,200);
-assert.match(await shell.text(),/ryby-shell-20261005-2/);
+assert.match(await shell.text(),/ryby-shell-20261006-5/);
 const photo=await request('/assets/img/patryk-maciek.jpeg',{headers});assert.equal(photo.status,200);
 assert.ok((await photo.arrayBuffer()).byteLength>10000,'personal photo is nonempty');
 assert.equal((await request('/manifest.webmanifest',{headers})).status,200);
@@ -64,7 +64,10 @@ assert.ok(Array.isArray((await checklist.json()).items),'D1 checklist read works
 const categories=await request('/api/checklist-categories',{headers});assert.equal(categories.status,200);
 assert.ok((await categories.json()).categories.length>=3,'migrated categories readable');
 const settings=await request('/api/settings',{headers});assert.equal(settings.status,200);
-assert.equal((await settings.json()).schemaVersion,20);
+const runtime=await settings.json();
+assert.equal(runtime.schemaVersion,26);
+assert.equal(typeof runtime.researchProviderConfigured,'boolean');
+assert.equal(typeof runtime.workersAiAvailable,'boolean');
 assert.equal((await request('/api/bootstrap',{headers})).status,200,'reused cookie after reopening');
 const exportResponse=await request('/api/export',{headers});assert.equal(exportResponse.status,200);
 // An invalid request checks the authorized write path without inserting a trial record.

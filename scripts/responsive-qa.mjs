@@ -14,7 +14,7 @@ const screenshotDir='qa-screenshots';
 await mkdir(screenshotDir,{recursive:true});
 try{
   for(const width of widths){
-    const context=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1,isMobile:width<=412,hasTouch:width<=412});
+    const context=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1,isMobile:width<=412,hasTouch:width<=412,locale:'pl-PL'});
     for(const route of routes){
       const page=await context.newPage(),errors=[];
       let requests=0;
@@ -212,18 +212,20 @@ try{
       await offline.goto(preview.url+'/pages/checklisty.html');
       await offline.locator('html[data-ready="true"]').waitFor();
       await offline.waitForFunction(async()=>Boolean(await caches.match('/index.html')),{timeout:20000});
-      const before=preview.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_items').get().n;
+      const row=preview.DB.sqlite.prepare("SELECT id,packed FROM checklist_items WHERE trip_id='next-trip' AND packed=0 LIMIT 1").get();
       await context.setOffline(true);
       await offline.goto(preview.url+'/',{waitUntil:'domcontentloaded'});
       await offline.locator('html[data-ready="true"]').waitFor({timeout:20000});
       assert.match(await offline.locator('#offline-banner').innerText(),/Dane offline \/ ostatnia synchronizacja/);
       assert.equal(await offline.locator('.score-row').count(),4);
-      const denied=await offline.evaluate(()=>window.Dream.api('/api/checklist',{method:'POST',body:'{}'}).then(()=>false,()=>true));
-      assert.ok(denied,'offline writes fail instead of queuing');
-      assert.equal(preview.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_items').get().n,before);
+      const queued=await offline.evaluate(id=>window.Dream.api(`/api/checklist/${id}?tripId=next-trip`,{method:'PATCH',body:JSON.stringify({packed:true})}),row.id);
+      assert.equal(queued.pendingSync,true,'offline checklist edit queued');
+      assert.equal(await offline.evaluate(()=>window.Dream.pendingCount()),1,'pending counter');
+      assert.equal(preview.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(row.id).packed,0,'no server write while offline');
       await context.setOffline(false);
-      await offline.reload();
-      await offline.locator('html[data-ready="true"]').waitFor();
+      await offline.waitForFunction(()=>window.Dream.pendingCount()===0,null,{timeout:20000});
+      assert.equal(preview.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(row.id).packed,1,'single synced update');
+      await offline.reload();await offline.locator('html[data-ready="true"]').waitFor();
       assert.equal(await offline.locator('#offline-banner').count(),0,'online reads replace stale banner');
       await context.setOffline(true);
       for(const knowledgeRoute of ['/pages/encyklopedia.html','/pages/sonar.html']){
@@ -247,11 +249,57 @@ try{
       }
       await context.setOffline(false);
       await offline.close();
-      console.log('390px offline: static shell, encyclopedia, sonar, private read cache, visible timestamp and write refusal PASS.');
+      console.log('390px offline: static shell, knowledge tools, queued checklist write and synchronization PASS.');
     }
     await context.close();
     console.log(`Responsive QA ${width}px: PASS (${routes.length} screens + login, no overflow or browser errors).`);
   }
+  for(const width of widths){
+    const context=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1,isMobile:width<=412,hasTouch:width<=412,locale:'en-GB'});
+    for(const route of routes){
+      const page=await context.newPage(),errors=[];
+      page.on('pageerror',error=>errors.push(error.message));
+      const response=await page.goto(preview.url+route,{waitUntil:'domcontentloaded'});
+      assert.equal(response.status(),200,`EN ${width} ${route}`);
+      await page.locator('html[data-ready="true"]').waitFor({timeout:20000});
+      await page.waitForFunction(()=>window.DreamI18n?.lang==='en');
+      assert.equal(await page.locator('html').getAttribute('lang'),'en');
+      assert.equal(await page.locator('.main-nav a[href$="wyjazdy.html"]').innerText(),'Trips and archive');
+      const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
+      assert.ok(dimensions.scroll<=dimensions.viewport+1&&dimensions.body<=dimensions.viewport+1,`EN ${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)}`);
+      if(route.endsWith('encyklopedia.html')){
+        await page.locator('.knowledge-entry').first().waitFor();
+        assert.match(await page.locator('.knowledge-entry').first().innerText(),/Baits: presentation before flavour|Flavour profiles are hypotheses/);
+      }
+      if(route.endsWith('sonar.html')){
+        await page.locator('.knowledge-entry').first().waitFor();
+        assert.equal(await page.locator('.knowledge-entry').count(),17);
+      }
+      if(route.endsWith('rigi.html'))assert.match(await page.locator('main h2').first().innerText(),/Carp rigs/);
+      if(route.endsWith('wezly.html'))assert.match(await page.locator('main h2').first().innerText(),/Knots, lead systems/);
+      assert.deepEqual(errors,[],`EN ${width} ${route}: browser errors`);
+      if(width===390&&['/pages/checklisty.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/rigi.html','/pages/wezly.html','/pages/ustawienia.html'].includes(route))await page.screenshot({path:`${screenshotDir}/en-${route.split('/').pop().replace('.html','')}-390.png`});
+      await page.close();
+    }
+    const login=await context.newPage();await login.goto(loginPreview.url+'/login');
+    await login.waitForFunction(()=>window.DreamI18n?.lang==='en');
+    assert.match(await login.locator('button[type="submit"]').innerText(),/Sign in/);
+    await login.close();await context.close();
+    console.log(`English responsive QA ${width}px: PASS (${routes.length} screens + login).`);
+  }
+  const polish=await browser.newContext({locale:'pl-PL'}),english=await browser.newContext({locale:'en-GB'});
+  const first=await polish.newPage(),second=await english.newPage();
+  await Promise.all([first.goto(preview.url+'/'),second.goto(preview.url+'/')]);
+  await Promise.all([first.waitForFunction(()=>window.DreamI18n?.lang==='pl'),second.waitForFunction(()=>window.DreamI18n?.lang==='en')]);
+  await first.locator('.language-selector select').first().selectOption('en');
+  await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
+  await first.reload();await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
+  assert.equal(await second.locator('html').getAttribute('lang'),'en','independent device preference');
+  await second.locator('.language-selector select').first().selectOption('pl');
+  await second.waitForFunction(()=>window.DreamI18n?.lang==='pl');
+  assert.equal(await first.locator('html').getAttribute('lang'),'en','device language is not global');
+  await Promise.all([polish.close(),english.close()]);
+  console.log('PL → EN → reload and independent EN → PL device PASS.');
   preview.DB.sqlite.prepare("UPDATE trips SET start_at=?,end_at=? WHERE id='next-trip'").run(new Date(Date.now()-3600000).toISOString(),new Date(Date.now()+86400000).toISOString());
   const field=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
   await field.goto(preview.url+'/');await field.locator('html[data-ready="true"]').waitFor();
