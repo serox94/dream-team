@@ -97,11 +97,15 @@
     box.scrollIntoView({behavior:'smooth',block:'start'});
     try{
       const data=await Dream.api(`/api/trips/${encodeURIComponent(tripId)}/advice`);
+      const english=(localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en'))==='en';
+      const words=english?await fetch('/locales/trip-advice.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})):{};
+      const t=value=>words[value]||value;
+      const restriction=value=>Object.entries(words).filter(([source])=>source.includes('niezweryfikowany:')||source.startsWith('Status łódki')||source.startsWith('Liczba wędek nie jest')).reduce((text,[source,target])=>text.replaceAll(source,target),value);
       const source=f=>f.url?` · <a href="${E(f.url)}" target="_blank" rel="noopener noreferrer">źródło</a>`:'';
       box.innerHTML=`<div class="section-head"><h2>Porady: ${E(data.tripName)}</h2><button type="button" class="secondary-btn" id="close-trip-advice">Zamknij</button></div>
-        ${data.incomplete?`<div class="weather-note status-warn"><strong>Brakuje danych do pełnej rekomendacji</strong><ul>${data.missing.map(x=>`<li>${E(x)}</li>`).join('')}</ul></div>`:''}
-        <div class="trip-advice-grid"><section><h3>Fakty z łowiska / regulaminu</h3><ul>${data.facts.map(f=>`<li><strong>${E(f.label||f.field)}:</strong> ${E(f.value)} <small>(${E(f.origin)}${f.confidence?' · '+E(f.confidence):''})${source(f)}</small></li>`).join('')}</ul></section>
-        <section><h3>Sugestie wędkarskie</h3><p>${E(data.disclaimer)}</p><dl>${data.suggestions.map(x=>`<div><dt><strong>${E(x.name)}</strong></dt><dd>${E(x.value)} <small>${E(x.basis)}${x.reference?` · <a href="${E(x.reference.url)}">Encyklopedia</a>`:''}</small></dd></div>`).join('')}</dl></section></div>`;
+        ${data.incomplete?`<div class="weather-note status-warn"><strong>Brakuje danych do pełnej rekomendacji</strong><ul>${data.missing.map(x=>`<li>${E(t(x))}</li>`).join('')}</ul></div>`:''}
+        <div class="trip-advice-grid"><section><h3>Fakty z łowiska / regulaminu</h3><ul>${data.facts.map(f=>`<li><strong>${E(t(f.label||f.field))}:</strong> <span data-user-content>${E(f.value)}</span> <small>(${E(t(f.origin))}${f.confidence?' · '+E(t(f.confidence)):''})${source(f)}</small></li>`).join('')}</ul></section>
+        <section><h3>Sugestie wędkarskie</h3><p>${E(t(data.disclaimer))}</p><dl>${data.suggestions.map(x=>`<div><dt><strong>${E(t(x.name))}</strong></dt><dd>${E(x.name==='Ograniczenia'?restriction(t(x.value)):t(x.value))} <small>${E(t(x.basis))}${x.reference?` · <a href="${E(x.reference.url)}">Encyklopedia</a>`:''}</small></dd></div>`).join('')}</dl></section></div>`;
       box.querySelector('#close-trip-advice').onclick=()=>{box.hidden=true;box.replaceChildren();};
     }catch(error){box.textContent=error.message;}
   }

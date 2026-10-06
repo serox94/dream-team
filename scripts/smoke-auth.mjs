@@ -52,7 +52,7 @@ const atlasResponse=await request('/assets/deeper/chirp2/index.json',{headers});
 assert.equal((await atlasResponse.json()).screenshots.length,17);
 const dashboard=await request('/',{headers});assert.match(await dashboard.text(),/patryk-maciek\.jpeg|patryk-maciek/);
 const shell=await request('/sw.js',{headers});assert.equal(shell.status,200);
-assert.match(await shell.text(),/ryby-shell-20261006-6/);
+assert.match(await shell.text(),/ryby-shell-20261006-7/);
 const photo=await request('/assets/img/patryk-maciek.jpeg',{headers});assert.equal(photo.status,200);
 assert.ok((await photo.arrayBuffer()).byteLength>10000,'personal photo is nonempty');
 assert.equal((await request('/manifest.webmanifest',{headers})).status,200);
