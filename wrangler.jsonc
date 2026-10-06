@@ -19,5 +19,8 @@
     }
   ],
   "ai": { "binding": "AI" },
-  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "dream-team-media" }]
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "dream-team-media" },
+    { "binding": "BACKUP_STATUS", "bucket_name": "dream-team-d1-backups" }
+  ]
 }

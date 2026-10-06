@@ -263,7 +263,15 @@ async function settings(request,env){
   if(request.method==='GET'){
     const rows=await all(env,"SELECT key,value,updated_at FROM app_settings WHERE key IN ('research_auto','research_languages','research_official_first','trip_time_zone')");
     const lastRun=await one(env,'SELECT completed_at FROM lake_research_runs WHERE status=? ORDER BY completed_at DESC LIMIT 1','completed');
-    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',version:'1.2.0',schemaVersion:26});
+    let lastBackupAt=null,backupStatus='unavailable';
+    if(env.BACKUP_STATUS){try{
+      // Only metadata is read. Never expose object keys or the backup contents to the browser.
+      const listing=await env.BACKUP_STATUS.list({prefix:'dream-team-db/',limit:100});
+      const valid=listing.objects.filter(o=>o.size>1000&&o.uploaded instanceof Date).sort((a,b)=>b.uploaded-a.uploaded);
+      lastBackupAt=valid[0]?.uploaded.toISOString()||null;backupStatus=lastBackupAt?'available':'missing';
+    }catch{backupStatus='unavailable';}}
+    const schema=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
+    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',lastBackupAt,backupStatus,version:'1.2.0',schemaVersion:Number(schema?.value)||null});
   }
   const x=await body(request),statements=[];
   for(const [key,value] of Object.entries(x)){

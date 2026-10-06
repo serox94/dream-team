@@ -10,7 +10,11 @@ document.addEventListener('dream:ready',async()=>{
   const providerStatus=document.createElement('p');providerStatus.id='research-provider-status';providerStatus.textContent=saved.researchProviderConfigured?'Automatyczny research: dostawca skonfigurowany.':'AUTOMATYCZNY RESEARCH: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.';
   $('research-auto').closest('label').before(providerStatus);
   $('research-official').closest('label').lastChild.textContent=' Preferuj oficjalne strony w wyszukiwaniu';
-  $('settings-schema').closest('p').append(document.createTextNode(' Status backupu: informacja infrastruktury, nie odczyt na żywo.'));
+  const system=document.createElement('section');system.className='panel-card';system.id='system-health';
+  const backup=saved.lastBackupAt?new Date(saved.lastBackupAt).toLocaleString(window.DreamI18n?.lang==='en'?'en-GB':'pl-PL'):saved.backupStatus==='missing'?'brak potwierdzonej kopii':'status niedostępny';
+  system.innerHTML='<h3>System</h3><dl class="system-health-list"><dt>Wersja DreamTeam</dt><dd></dd><dt>Schemat D1</dt><dd></dd><dt>Ostatnia udana kopia zapasowa</dt><dd></dd><dt>Research provider</dt><dd></dd><dt>Workers AI</dt><dd></dd><dt>Offline / cache</dt><dd id="system-cache"></dd><dt>Zmiany do synchronizacji</dt><dd id="system-pending"></dd></dl>';
+  const values=system.querySelectorAll('dd');[saved.version,saved.schemaVersion,backup,saved.researchProviderConfigured?'skonfigurowany':'niedostępny',saved.workersAiAvailable?'dostępny':'wyłączony'].forEach((value,i)=>values[i].textContent=String(value));
+  document.querySelector('.two-column').append(system);
   const participantsSection=document.createElement('section');participantsSection.className='panel-card';participantsSection.id='participant-profiles';participantsSection.innerHTML='<h3>Profile uczestników</h3><p>Język profilu jest przygotowany na przyszłe konta. Język interfejsu wybierasz osobno na każdym urządzeniu.</p><div id="participant-profile-list"></div>';
   profile.after(participantsSection);
   async function renderProfiles(){const host=$('participant-profile-list');host.replaceChildren();for(const person of window.DREAM_MODEL.anglers){
@@ -36,7 +40,7 @@ document.addEventListener('dream:ready',async()=>{
   $('category-add').onsubmit=async e=>{e.preventDefault();try{await Dream.api('/api/checklist-categories',{method:'POST',body:JSON.stringify({name:$('category-name').value})});$('category-add').reset();await categories();}catch(error){say(error.message,true);}};
   await categories();
   const cacheEntries=()=>{try{return JSON.parse(localStorage.getItem('ryby_read_cache_v1')||'{}');}catch{return {};}};
-  async function offlineStatus(){const entries=Object.values(cacheEntries());const latest=Math.max(0,...entries.map(x=>x.at||0));const keys='caches'in window?await caches.keys():[];const estimate=await navigator.storage?.estimate?.();$('offline-status').textContent=`Ostatnia synchronizacja: ${latest?new Date(latest).toLocaleString('pl-PL'):'brak'} · wpisy ${entries.length} · cache ${keys.length}${estimate?.usage?` · użycie około ${(estimate.usage/1048576).toFixed(1)} MB`:''}.`;}
+  async function offlineStatus(){const entries=Object.values(cacheEntries());const latest=Math.max(0,...entries.map(x=>x.at||0));const keys='caches'in window?await caches.keys():[];const estimate=await navigator.storage?.estimate?.();const usage=estimate?.usage?` · ${(estimate.usage/1048576).toFixed(1)} MB`:'';$('offline-status').textContent=`Ostatnia synchronizacja: ${latest?new Date(latest).toLocaleString('pl-PL'):'brak'} · wpisy ${entries.length} · cache ${keys.length}${usage}.`;$('system-cache').textContent=`${entries.length} wpisów · ${keys.length} cache${usage}`;$('system-pending').textContent=String(Dream.pendingCount());}
   $('clear-offline').onclick=async()=>{Dream.clearReadCache();if('caches'in window)for(const key of await caches.keys())if(key.startsWith('ryby-shell-'))await caches.delete(key);await offlineStatus();say('Wyczyszczono dane offline.');};
   $('settings-export').onclick=async()=>{try{await Dream.downloadBackup();}catch(e){say(e.message,true);}};
   await offlineStatus();
