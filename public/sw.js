@@ -2,7 +2,7 @@
 const shell='ryby-shell-20261006-4';
 const warm=['/','/index.html','/pages/checklisty.html','/pages/teren.html','/pages/mapa.html','/pages/regulamin.html','/pages/pogoda.html',
   '/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html','/settings.js','/knowledge.js','/knowledge.css','/i18n.js','/locales/pl.json','/locales/en.json','/deeper-media.js','/deeper-media.css',
-  '/data/knowledge/sources.json','/data/knowledge/encyclopedia.json','/data/knowledge/sonar.json','/data/knowledge/tools.json','/data/knowledge/field-guides.json','/data/knowledge/chirp2-practice.json','/data/knowledge/en/encyclopedia.json','/data/knowledge/en/sonar.json','/data/knowledge/en/field-guides.json','/assets/deeper/chirp2/index.json','/assets/deeper/chirp2/index.en.json',
+  '/data/knowledge/sources.json','/data/knowledge/encyclopedia.json','/data/knowledge/sonar.json','/data/knowledge/tools.json','/data/knowledge/field-guides.json','/data/knowledge/chirp2-practice.json','/data/knowledge/en/encyclopedia.json','/data/knowledge/en/sonar.json','/data/knowledge/en/field-guides.json','/data/knowledge/en/tools.json','/assets/deeper/chirp2/index.json','/assets/deeper/chirp2/index.en.json',
   '/dream-loader-v2.js','/dream-core.js','/trip-notes.js','/checklist-templates.js','/checklist-templates.css','/d1-api-compat.js','/app.js','/app-plus.js','/field-mode.js','/trip-renderer-v2.js','/dashboard-chart.js','/fixes.js',
   '/style.css','/ui-plus.css','/media-plus.css','/weather-plus.css','/audit.css','/refresh.css',
   '/assets/img/patryk-maciek.jpeg','/assets/img/lowisko.jpg',

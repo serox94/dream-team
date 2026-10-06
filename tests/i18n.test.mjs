@@ -56,3 +56,11 @@ test('English atlas preserves every actual user screenshot and cautious confiden
  assert.equal(Object.keys(en.screenshots).length,source.screenshots.length);
  for(const shot of source.screenshots){assert.match(shot.src,/^fish-deeper-/);assert.equal(en.screenshots[shot.id].length,3);assert.ok(en.confidence[shot.confidence]);}
 });
+test('English dynamic tools preserve diagnostic route IDs and complete decision matrices',async()=>{
+ const source=JSON.parse(await readFile('public/data/knowledge/tools.json'));
+ const en=JSON.parse(await readFile('public/data/knowledge/en/tools.json'));
+ assert.equal(en.diagnostic.length,source.diagnostic.length);
+ for(const [index,step] of en.diagnostic.entries()){assert.ok(source.diagnostic[index].link);assert.ok(['q','no','unknown','yes'].every(k=>step[k]?.length>10));}
+ for(const key of ['temperature','bottom','pressure','visibility','activity','season','weather','wind','depth'])assert.deepEqual(Object.keys(en.tactics[key]).sort(),Object.keys(source.tactics[key]).sort());
+ assert.deepEqual(Object.keys(en.spots).sort(),Object.keys(source.spots).sort());assert.equal(en.scanChecklist.length,source.scanChecklist.length);
+});

@@ -1,0 +1,42 @@
+{
+  "version":"2026-10-06.en.1",
+  "diagnostic":[
+    {"q":"Have you seen fish or repeated feeding signs within range?","no":"Before changing bait, observe the water, margins, bays and edges. Consider moving.","unknown":"Watch dawn, dusk and quiet periods; one bubble is insufficient.","yes":"Fish are nearby. Check presentation before changing flavour."},
+    {"q":"After checking, are you confident the hook and hooklink lie cleanly?","no":"Retrieve, check weed and silt, adjust length or presentation, or find a clear opening.","unknown":"Retrieve one rig and inspect lead, hook and material on the hooklink.","yes":"Presentation looks plausible. Check depth and firmness."},
+    {"q":"Have you confirmed bottom and depth with a repeat scan or a lead?","no":"Check the edge, weed height and how far the lead sinks. Choose a safe landing route.","unknown":"Repeat the scan track and compare lead contact at the same distance.","yes":"The spot is better understood. Check whether conditions have changed."},
+    {"q":"Are weather, wind and water temperature similar to the start of the session?","no":"Update your working idea: compare oxygenated areas, depths and banks affected by wind.","unknown":"Record the water and wind trend; do not infer feeding from pressure alone.","yes":"Conditions are stable. Assess the food amount."},
+    {"q":"Does the food amount match activity and the number of fish?","no":"If you may have overfed, stop topping up and try one hookbait nearby. If fish are clearly feeding, add food gradually.","unknown":"Check whether food disappears; other species may be consuming it.","yes":"The amount seems reasonable. Only now compare hookbaits."},
+    {"q":"Have you tested one bait or colour contrast without changing everything else?","no":"Compare a natural wafter with a visible pop-up or topper, or change hookbait size. Keep other variables stable.","unknown":"Record what is on each rig and change one thing.","yes":"After a fair comparison, consider the rig or a neighbouring spot."},
+    {"q":"Is the current rig safe and suited to bottom and weed?","no":"Check the Rigs section, safe lead release and presentation. Do not tie a complex rig blindly.","unknown":"Inspect the settled rig and its safety after a break before recasting.","yes":"The rig looks suitable. Give the spot time or test another depth."},
+    {"q":"After enough observation, are there still signs of fish at this spot?","no":"Move one rig to another side of the feature, another depth or a quieter route.","unknown":"Set an observation window and Plan B rather than recasting constantly.","yes":"Give the area time, limit disturbance and record what changed."}
+  ],
+  "tactics":{
+    "temperature":{
+      "cold":{"title":"<8°C","bait":"small, easy-to-check wafter or neutral bottom bait","flavour":"a bait that releases attractants in cold water, perhaps a sweet or moderate fishmeal profile; check ingredients and oils","feed":"small PVA bag or a few baits; no top-up without feeding signs","backup":"If quiet, locate fish at another depth before changing flavour."},
+      "cool":{"title":"8–16°C","bait":"bottom bait or wafter on verified ground; pop-up above sediment","flavour":"fishmeal with garlic or a subtle cream/fruit contrast","feed":"small starting amount, increased only after a response","backup":"Compare a warming spot with adjacent deeper water."},
+      "warm":{"title":"16–24°C","bait":"bottom bait or wafter, optionally a bright topper as one test","flavour":"fishmeal, krill/spice or fruit contrast as a comparison","feed":"adjust to feeding carp and other fish","backup":"If fish are not feeding, check cover and oxygen rather than adding more food."},
+      "hot":{"title":">24°C","bait":"small hookbait that is easy to check","flavour":"no flavour replaces oxygen and location","feed":"feed cautiously and put fish welfare first","backup":"If oxygen is poor, stop fishing or choose a safer area."}
+    },
+    "bottom":{
+      "hard":{"presentation":"bottom bait or wafter on clear bottom","rig":"short to medium hooklink; verify a safe lead clip","length":"try about 15–25 cm initially, then verify how the rig lands","feed":"small concentrated or lightly scattered portion"},
+      "silt":{"presentation":"wafter or low pop-up above sediment","rig":"safe lead release, lighter lead and hooklink not dragged into silt","length":"determine after measuring sinking depth; often longer than on firm bottom","feed":"small verified patch; avoid burying fine feed"},
+      "weed":{"presentation":"pop-up or wafter above low weed, or bottom bait in a clear hole","rig":"safe landing route and lead release","length":"match actual weed height and size of the clear patch","feed":"precisely into an opening or on a clean edge"},
+      "transition":{"presentation":"compare a bottom bait on the firm side with a wafter on the soft side","rig":"first confirm which side the lead actually reaches","length":"according to sediment and how the rig lands","feed":"small amounts on both sides as a controlled comparison"}
+    },
+    "pressure":{"high":"Reduce noise and recasting; try a single or natural hookbait on a quieter side.","low":"You can compare a wider area, but do not automatically feed heavily."},
+    "visibility":{"clear":"Compare natural or washed-out with one visible contrast.","murky":"First put the bait near fish; white, yellow or scent is a test, not a guarantee."},
+    "activity":{"seen":"Place a safe rig near confirmed signs and reduce disturbance.","not-seen":"Observe and scan first; bait recommendations have low confidence."},
+    "season":{"winter":"A winter label does not replace measuring water temperature.","spring":"Compare warming areas and cooler water.","spawning":"Do not target spawning fish; follow local restrictions.","summer":"Watch oxygen and fish welfare in heat.","autumn":"Check the trend over several days, not just the month."},
+    "weather":{"stable":"Give a confirmed spot enough time in stable weather.","changing":"When a front changes, watch fish and reconsider depth; do not rely on hPa alone."},
+    "wind":{"toward":"Check the windward bank, considering temperature and safety.","away":"Compare the sheltered side and inflows; avoid a universal wind-direction rule."},
+    "depth":{"shallow":"Shallows can warm or lose oxygen quickly; compare nearby deep water.","deep":"Deep water guarantees neither fish nor oxygen; check water layers."}
+  },
+  "spots":{
+    "plateau":["A: clean top if fish are active and the rig lands properly","B: side or upper edge along a fish route","C: less-fished base or bottom transition"],
+    "slope":["A: verified clean upper edge","B: base of the drop if silt is not too deep","C: side shelf away from the main boat track"],
+    "trench":["A: channel entrance or firmer side","B: channel bottom after checking oxygen and sediment","C: less obvious channel exit"],
+    "weed":["A: large, confirmed clean hole","B: outer weed edge","C: quieter corridor or inner edge"],
+    "transition":["A: confirmed firm side","B: soft side with the hookbait above sediment","C: adjacent, less-fished part of the transition"]
+  },
+  "scanChecklist":["Lake rules and boat/sonar safety","Structure and scan track","Depth and trend","Firmness and bottom transition","Weed and safe landing route","Signs of fish activity","Wind and oxygen","Repeat scan from another direction","Waypoint with error margin","Lead or marker confirmation where safe and permitted"]
+}

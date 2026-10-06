@@ -23,6 +23,8 @@ if(english){
   }
   const guideResponse=await fetch('/data/knowledge/en/field-guides.json',{credentials:'same-origin'});
   if(guideResponse.ok){const localized=await guideResponse.json();for(const guide of fieldGuides.guides){const tr=localized.guides[guide.id];if(!tr)continue;[guide.question,guide.start,guide.check,guide.change]=tr;guide.category=localized.categories[guide.category]||guide.category;}}
+  const toolResponse=await fetch('/data/knowledge/en/tools.json',{credentials:'same-origin'});
+  if(toolResponse.ok){const localized=await toolResponse.json();tools.diagnostic=tools.diagnostic.map((row,i)=>({...row,...localized.diagnostic[i]}));tools.tactics=localized.tactics;tools.spots=localized.spots;tools.scanChecklist=localized.scanChecklist;}
 }
 const catalog=sonar?sonarData:encyclopedia;
 const atlas=sonar?await fetch('/assets/deeper/chirp2/index.json',{credentials:'same-origin'}).then(r=>r.ok?r.json():{screenshots:[]}):{screenshots:[]};
