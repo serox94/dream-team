@@ -37,4 +37,9 @@ jobs:
             const ver=await fetch(root+'/versions/'+encodeURIComponent(versionId),{headers});
             if(ver.ok){const v=await ver.json();console.log('Active version binding name present:',Boolean(v.result?.resources?.bindings?.some(x=>x.name==='TAVILY_API_KEY')||v.result?.bindings?.some(x=>x.name==='TAVILY_API_KEY')));}
           }
+          const versions=await fetch(root+'/versions?per_page=5',{headers});
+          if(versions.ok){const list=await versions.json();const rows=Array.isArray(list.result)?list.result:list.result?.items||[];
+            for(const row of rows.slice(0,5)){const detail=await fetch(root+'/versions/'+encodeURIComponent(row.id),{headers});if(!detail.ok)continue;const v=await detail.json();const b=v.result?.resources?.bindings||v.result?.bindings||[];console.log('Version metadata:',row.id,'created:',row.created_on||row.metadata?.created_on||'unknown','secret binding:',b.some(x=>x.name==='TAVILY_API_KEY'),'binding count:',b.length);}
+          }
+          const accountInfo=await fetch('https://api.cloudflare.com/client/v4/accounts/'+encodeURIComponent(account),{headers});if(accountInfo.ok){const a=await accountInfo.json();console.log('Deployment account name:',a.result?.name||'unknown');}
           NODE
