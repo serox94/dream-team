@@ -173,6 +173,29 @@ try{
           await page.locator('#shot-analyze').click();
           assert.match(await page.locator('#shot-result').innerText(),/Twoich odpowiedzi/);
           assert.equal(preview.requests.filter(r=>r.method==='POST'&&r.url.includes('knowledge')).length,0,'screenshot never uploaded');
+          await page.locator('#media-file').setInputFiles({name:'fish-deeper.png',mimeType:'image/png',buffer:tiny});
+          await page.locator('#media-name').fill('Kontrolny screen CHIRP+ 2');
+          await page.locator('#media-trip').selectOption('next-trip');
+          await page.locator('#media-form button[type="submit"]').click();
+          await page.locator('.media-card').first().waitFor();
+          assert.equal(preview.mediaObjects.size,1,'disposable R2 stores uploaded image');
+          const imageUrl=await page.locator('.media-card img').first().getAttribute('src');
+          assert.equal((await page.request.get(preview.url+imageUrl)).status(),200,'private R2 read');
+          await page.locator('.media-card button').filter({hasText:'Edytuj opis'}).click();
+          await page.locator('#media-note').fill('Mój opis dna');
+          await page.locator('#media-form button[type="submit"]').click();
+          await page.getByText('Mój opis dna').waitFor();
+          await page.locator('.media-card button').filter({hasText:'Utwórz spot'}).click();
+          await page.locator('.media-card form input[name="name"]').fill('Mój spot sonarowy');
+          await page.locator('.media-card form button[type="submit"]').click();
+          await page.locator('#media-status').getByText(/Spot utworzony/).waitFor();
+          await page.locator('.media-card button').filter({hasText:'Przeanalizuj screenshot'}).click();
+          await page.locator('.media-analysis button').filter({hasText:'Zapisz analizę'}).click();
+          await page.locator('.media-card details.media-analysis').waitFor();
+          page.once('dialog',dialog=>dialog.accept());
+          await page.locator('.media-card button').filter({hasText:'Usuń obraz'}).click();
+          await page.locator('.media-card').waitFor({state:'detached'});
+          assert.equal(preview.mediaObjects.size,0,'disposable R2 object removed');
         }
       }
       if(width===390&&route==='/pages/wyjazdy.html'){
