@@ -1,0 +1,23 @@
+{
+  "version":"2026-10-06.en.1",
+  "confidence":{"wysoka":"high","średnia":"medium","niska":"low"},
+  "screenshots":{
+    "echo-10":["Map mode, Raw, beam and sensitivity","The settings panel shows Raw, beam and 34% sensitivity; the map and profile are at roughly 24 m.","Compare tracks using the same settings. The material of the bottom is not visible."],
+    "echo-052343":["Dark palette and bottom line","A continuous bright bottom line around 15 m with several faint marks above it.","Do not identify targets from one frame; repeat the pass."],
+    "echo-052350":["0% sensitivity and Fish Icons","The 0% sensitivity, Fish Icons and palette settings are open; the bottom line is strong.","Settings alter the visibility of echoes. Do not compare density with an image made under different settings."],
+    "echo-052356":["Fish Icons, depth range and palette","The icon, depth-range and palette panel is open at a reading near 23 m.","Icons do not identify species. Return to Raw to examine structure."],
+    "echo-052456":["Scattered marks above level bottom","An almost level bottom line near 10 m and faint marks above it.","They may be targets, suspended matter or interference. Scan again."],
+    "echo-052504":["Strong arch-shaped marks","Two large arch-like marks above the bottom line at a reading near 33 m.","A target return or motion artefact; one frame does not confirm the number or species of fish."],
+    "echo-052509":["Compact cluster in mid-water","A patch of returns about 4–7 m above the bottom at a depth reading of 12.6 m.","Possible targets or interference; check on a repeat pass."],
+    "echo-052519":["Vertical returns rising from bottom","Many upright returns above an uneven bottom at a depth reading of 3.6 m.","Consistent with vegetation or obstacles, but type is uncertain. Scan across the feature."],
+    "echo-052535":["Gentle hollow","The bottom line dips toward the middle and rises again around 8–10 m.","Mark the edges and make a cross pass. Colour alone proves neither gravel nor silt."],
+    "echo-052547":["Slope with returns near bottom","The bottom falls from left to around 5 m, with protruding returns along the slope.","Compare top, side and base. Returns may be structure or vegetation."],
+    "echo-052558":["Cluster over a descending bottom","A compact group of echoes in the water column above a gentle slope around 10 m.","Do not identify a species; compare two tracks and settings."],
+    "echo-052608":["Raised feature and changing bottom line","Nearly level bottom with a rise and a local change in echo thickness around 9 m.","Bottom material needs comparison at unchanged settings and a lead check."],
+    "echo-052614":["Several tall, overlapping arches","Several arch shapes overlap above a flat bottom around 7.2 m.","Shape depends on movement and time in the beam. Do not infer species."],
+    "echo-052656":["Steep rise into shallower water","The bottom rises sharply toward about 2 m; another line is visible below.","It could be a multiple echo on the slope. Repeat in the opposite direction."],
+    "echo-052745":["Standard Scan with target icon","A simplified profile, green band above bottom and an icon near a slope.","The icon is the app's interpretation. Compare Raw and check with a lead."],
+    "echo-052754":["Fish Icons over a hollow","Several icons over a depression, with upright green returns along its sides.","Icons confirm neither species nor bottom hardness."],
+    "echo-052802":["Hollow and target icons","Bottom dips toward the centre and rises on the right, with icons above the hollow.","Compare a safe side and the base, checking for snags."]
+  }
+}

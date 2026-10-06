@@ -44,3 +44,15 @@ test('English encyclopedia retains all articles, sections and source-linked iden
  }
  }
 });
+test('English field answers cover every Polish question and preserve article links',async()=>{
+ const source=JSON.parse(await readFile('public/data/knowledge/field-guides.json'));
+ const en=JSON.parse(await readFile('public/data/knowledge/en/field-guides.json'));
+ assert.equal(Object.keys(en.guides).length,source.guides.length);
+ for(const guide of source.guides){assert.equal(en.guides[guide.id].length,4);assert.ok(en.guides[guide.id].every(text=>text.length>15));assert.ok(guide.article);}
+});
+test('English atlas preserves every actual user screenshot and cautious confidence',async()=>{
+ const source=JSON.parse(await readFile('public/assets/deeper/chirp2/index.json'));
+ const en=JSON.parse(await readFile('public/assets/deeper/chirp2/index.en.json'));
+ assert.equal(Object.keys(en.screenshots).length,source.screenshots.length);
+ for(const shot of source.screenshots){assert.match(shot.src,/^fish-deeper-/);assert.equal(en.screenshots[shot.id].length,3);assert.ok(en.confidence[shot.confidence]);}
+});

@@ -21,9 +21,12 @@ if(english){
     const response=await fetch(`/data/knowledge/en/${name}.json`,{credentials:'same-origin'});
     if(response.ok){const localized=await response.json();for(const a of collection.articles){const tr=localized.articles[a.id];if(!tr)continue;a.title=tr.title;a.lead=tr.lead;a.category=localized.categories[a.category]||a.category;a.sections=tr.sections.map(([h,p])=>({h,p}));}}
   }
+  const guideResponse=await fetch('/data/knowledge/en/field-guides.json',{credentials:'same-origin'});
+  if(guideResponse.ok){const localized=await guideResponse.json();for(const guide of fieldGuides.guides){const tr=localized.guides[guide.id];if(!tr)continue;[guide.question,guide.start,guide.check,guide.change]=tr;guide.category=localized.categories[guide.category]||guide.category;}}
 }
 const catalog=sonar?sonarData:encyclopedia;
 const atlas=sonar?await fetch('/assets/deeper/chirp2/index.json',{credentials:'same-origin'}).then(r=>r.ok?r.json():{screenshots:[]}):{screenshots:[]};
+if(english&&sonar){const response=await fetch('/assets/deeper/chirp2/index.en.json',{credentials:'same-origin'});if(response.ok){const localized=await response.json();for(const shot of atlas.screenshots){const tr=localized.screenshots[shot.id];if(!tr)continue;[shot.caption,shot.observed,shot.explanation]=tr;shot.confidence=localized.confidence[shot.confidence]||shot.confidence;}}}
 const index=new Map([...encyclopedia.articles,...sonarData.articles].map(a=>[a.id,a]));
 const sourceIndex=new Map(sources.sources.map(s=>[s.id,s]));
 const diagramNames={cone:'Stożek wiązki',hardsoft:'Twarde i miękkie dno',gravel:'Żwir',silt:'Muł',weed:'Zielsko',clearing:'Czyste oczko',plateau:'Plateau',slope:'Spadek',trench:'Rów',fish:'Łuk ryby',school:'Stado',thermocline:'Możliwa termoklina',transects:'Równoległe tory skanowania'};
