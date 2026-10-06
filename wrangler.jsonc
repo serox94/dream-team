@@ -2,6 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "dream-team",
   "main": "src/worker.js",
+  "secrets": { "required": ["TAVILY_API_KEY"] },
   "compatibility_date": "2026-09-03",
   "triggers": { "crons": ["0 6 * * *"] },
   "assets": {
