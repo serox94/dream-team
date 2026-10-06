@@ -91,6 +91,20 @@
       root.prepend(result);result.querySelector('#wizard-profile').onclick=()=>{root.querySelector(`[data-lake="${CSS.escape(lakeId)}"]`)?.click();};result.scrollIntoView({behavior:'smooth',block:'start'});
     }catch(error){status.textContent=error.message;button.disabled=false;}};
   }
+  async function showTripAdvice(tripId){
+    const box=root.querySelector('#trip-advice');
+    box.hidden=false;box.innerHTML='<h2>Porady dla wyjazdu</h2><p>Przygotowuję wskazówki…</p>';
+    box.scrollIntoView({behavior:'smooth',block:'start'});
+    try{
+      const data=await Dream.api(`/api/trips/${encodeURIComponent(tripId)}/advice`);
+      const source=f=>f.url?` · <a href="${E(f.url)}" target="_blank" rel="noopener noreferrer">źródło</a>`:'';
+      box.innerHTML=`<div class="section-head"><h2>Porady: ${E(data.tripName)}</h2><button type="button" class="secondary-btn" id="close-trip-advice">Zamknij</button></div>
+        ${data.incomplete?`<div class="weather-note status-warn"><strong>Brakuje danych do pełnej rekomendacji</strong><ul>${data.missing.map(x=>`<li>${E(x)}</li>`).join('')}</ul></div>`:''}
+        <div class="trip-advice-grid"><section><h3>Fakty z łowiska / regulaminu</h3><ul>${data.facts.map(f=>`<li><strong>${E(f.label||f.field)}:</strong> ${E(f.value)} <small>(${E(f.origin)}${f.confidence?' · '+E(f.confidence):''})${source(f)}</small></li>`).join('')}</ul></section>
+        <section><h3>Sugestie wędkarskie</h3><p>${E(data.disclaimer)}</p><dl>${data.suggestions.map(x=>`<div><dt><strong>${E(x.name)}</strong></dt><dd>${E(x.value)} <small>${E(x.basis)}${x.reference?` · <a href="${E(x.reference.url)}">Encyklopedia</a>`:''}</small></dd></div>`).join('')}</dl></section></div>`;
+      box.querySelector('#close-trip-advice').onclick=()=>{box.hidden=true;box.replaceChildren();};
+    }catch(error){box.textContent=error.message;}
+  }
   async function trash(){
     const box=document.getElementById('trash-list');box.textContent='Ładowanie…';
     try{
@@ -119,8 +133,8 @@
   async function research(lakeId,url,sourceType){try{const result=await Dream.api(`/api/lakes/${encodeURIComponent(lakeId)}/research`,{method:'POST',body:JSON.stringify({url,sourceType})});Dream.notice(`Sprawdzono źródło. Zapisano ${result.count} jawnie oznaczonych faktów.`);await lakeProfile(lakeId);}catch(error){Dream.notice(error.message,true);}}
   function render(){
     const m=window.DREAM_MODEL;
-    const cards=archived=>m.trips.filter(t=>(t.status==='archived')===archived).map(t=>`<article class="panel-card trip-card"><div class="section-head"><h3>${E(t.name)}</h3><span class="section-chip">${t.isActive?'● AKTYWNY':archived?'ARCHIWUM':t.year}</span></div><p class="trip-card-lake">${E(t.lakeProfile?.name||t.lake)}${t.peg?` · stanowisko ${E(t.peg)}`:''}</p><p class="trip-card-meta">${t.start?E(Dream.dateInput(t.start,chosenZone(t.lakeProfile)).replace('T',' · ')):'Termin do ustalenia'} · ${E(t.participants.map(a=>a.name).join(' i ')||'Uczestnicy do ustalenia')}</p><div class="trip-card-foot"><strong>${t.stats.fishCount} ryb · ${Number(t.stats.totalWeightKg).toFixed(1)} kg</strong><div class="form-actions"><button type="button" data-open="${E(t.id)}">Otwórz</button><button type="button" data-edit="${E(t.id)}" class="secondary-btn">Edytuj</button>${!archived&&!t.isActive?`<button type="button" data-activate="${E(t.id)}" class="secondary-btn">Ustaw aktywny</button>`:''}</div></div></article>`).join('')||'<p class="empty-box">Brak wyjazdów w tej sekcji.</p>';
-    root.innerHTML=`<section id="trip-wizard" class="panel-card trip-wizard" hidden></section><section><div class="section-head trip-section-head"><h2>Wyjazdy</h2><button type="button" id="create-trip">+ Nowy wyjazd</button></div><div class="two-column">${cards(false)}</div></section>
+    const cards=archived=>m.trips.filter(t=>(t.status==='archived')===archived).map(t=>`<article class="panel-card trip-card"><div class="section-head"><h3>${E(t.name)}</h3><span class="section-chip">${t.isActive?'● AKTYWNY':archived?'ARCHIWUM':t.year}</span></div><p class="trip-card-lake">${E(t.lakeProfile?.name||t.lake)}${t.peg?` · stanowisko ${E(t.peg)}`:''}</p><p class="trip-card-meta">${t.start?E(Dream.dateInput(t.start,chosenZone(t.lakeProfile)).replace('T',' · ')):'Termin do ustalenia'} · ${E(t.participants.map(a=>a.name).join(' i ')||'Uczestnicy do ustalenia')}</p><div class="trip-card-foot"><strong>${t.stats.fishCount} ryb · ${Number(t.stats.totalWeightKg).toFixed(1)} kg</strong><div class="form-actions"><button type="button" data-open="${E(t.id)}">Otwórz</button><button type="button" data-advice="${E(t.id)}" class="secondary-btn">Porady dla wyjazdu</button><button type="button" data-edit="${E(t.id)}" class="secondary-btn">Edytuj</button>${!archived&&!t.isActive?`<button type="button" data-activate="${E(t.id)}" class="secondary-btn">Ustaw aktywny</button>`:''}</div></div></article>`).join('')||'<p class="empty-box">Brak wyjazdów w tej sekcji.</p>';
+    root.innerHTML=`<section id="trip-wizard" class="panel-card trip-wizard" hidden></section><section id="trip-advice" class="panel-card" hidden></section><section><div class="section-head trip-section-head"><h2>Wyjazdy</h2><button type="button" id="create-trip">+ Nowy wyjazd</button></div><div class="two-column">${cards(false)}</div></section>
       <section><h2>Archiwum</h2><div class="two-column">${cards(true)}</div></section>
       <details class="panel-card management-details" id="trip-editor-panel"><summary>Utwórz lub edytuj wyjazd</summary><section id="trip-editor"></section></details>
       <section class="panel-card"><h2>Łowiska</h2><p>Profile łowisk są wspólne dla wszystkich lat. Wybierz profil, aby zobaczyć źródła i stan researchu.</p><div class="form-actions">${m.lakes.map(l=>`<button type="button" data-lake="${E(l.id)}" class="secondary-btn">${E(l.name)}</button>`).join('')}</div><div id="lake-profile"></div><details class="management-details" id="lake-editor-panel"><summary>Dodaj lub edytuj łowisko</summary><div id="lake-editor"></div></details></section>
@@ -131,6 +145,7 @@
     root.querySelector('#backup-download').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{await Dream.downloadBackup();}catch(e){Dream.notice(e.message,true);}finally{button.disabled=false;}};
     root.querySelector('#ryby-logout').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{await Dream.logout();}catch(e){Dream.notice(e.message,true);button.disabled=false;}};
     root.querySelector('#create-trip').onclick=tripWizard;
+    root.querySelectorAll('[data-advice]').forEach(b=>b.onclick=()=>showTripAdvice(b.dataset.advice));
     root.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{Dream.rememberTrip(b.dataset.open);location.href='/';});
     root.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{wireTrip(m.trips.find(t=>t.id===b.dataset.edit));root.querySelector('#trip-editor-panel').open=true;document.getElementById('trip-editor').scrollIntoView({behavior:'smooth',block:'start'});});
     root.querySelectorAll('[data-lake]').forEach(b=>b.onclick=()=>{wireLake(m.lakes.find(l=>l.id===b.dataset.lake));void lakeProfile(b.dataset.lake);document.getElementById('lake-profile').scrollIntoView({behavior:'smooth',block:'start'});});
