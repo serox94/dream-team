@@ -32,6 +32,15 @@ test('late editorial controls translate without changing user notes',async()=>{
  assert.equal(root.querySelector('button').textContent,'All items');
  assert.equal(root.querySelector('[data-user-content]').textContent,'Typ dna');d.window.close();
 });
+test('late dashboard panels translate while catch and checklist names remain original',async()=>{
+ const d=await device('en-GB');
+ const panel=d.window.document.createElement('section');
+ panel.innerHTML='<h3>Połowy</h3><div class="catch-note">Połowy</div><div class="check-item-title">Połowy</div>';
+ d.window.document.body.append(panel);await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(panel.querySelector('h3').textContent,'Catches');
+ assert.equal(panel.querySelector('.catch-note').textContent,'Połowy');
+ assert.equal(panel.querySelector('.check-item-title').textContent,'Połowy');d.window.close();
+});
 test('English encyclopedia retains all articles, sections and source-linked identities',async()=>{
  for(const name of ['encyclopedia','sonar']){
  const original=JSON.parse(await readFile(`public/data/knowledge/${name}.json`));
