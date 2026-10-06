@@ -13,7 +13,7 @@ export async function ensureSchema(env){
 }
 async function applySchema(env){
   const version=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-  if(Number(version?.value)>=21)return;
+  if(Number(version?.value)>=22)return;
   if(Number(version?.value)<16)throw new Error('Wymagane wcześniejsze migracje D1 (do wersji 16).');
   const cols=async name=>(await env.DB.prepare(`PRAGMA table_info(${name})`).all()).results;
   const statements=[];
@@ -53,13 +53,18 @@ async function applySchema(env){
     push('CREATE INDEX IF NOT EXISTS lake_candidate_searches_query ON lake_candidate_searches(query_key,started_at)');
     if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0020_lake_candidate_searches.sql','0020_lake_candidate_searches.sql');
   }
-  push('CREATE TABLE IF NOT EXISTS deeper_media (id TEXT PRIMARY KEY,object_key TEXT NOT NULL UNIQUE,name TEXT NOT NULL,mime_type TEXT NOT NULL,size_bytes INTEGER NOT NULL,trip_id TEXT REFERENCES trips(id),lake_id TEXT REFERENCES lakes(id),spot_id INTEGER REFERENCES spots(id),depth_m REAL,captured_at TEXT,note TEXT,analysis_json TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
-  push('CREATE INDEX IF NOT EXISTS deeper_media_trip ON deeper_media(trip_id,created_at)');
-  if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0021_deeper_media.sql','0021_deeper_media.sql');
-  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','21',CURRENT_TIMESTAMP)");
+  if(Number(version?.value)<21){
+    push('CREATE TABLE IF NOT EXISTS deeper_media (id TEXT PRIMARY KEY,object_key TEXT NOT NULL UNIQUE,name TEXT NOT NULL,mime_type TEXT NOT NULL,size_bytes INTEGER NOT NULL,trip_id TEXT REFERENCES trips(id),lake_id TEXT REFERENCES lakes(id),spot_id INTEGER REFERENCES spots(id),depth_m REAL,captured_at TEXT,note TEXT,analysis_json TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+    push('CREATE INDEX IF NOT EXISTS deeper_media_trip ON deeper_media(trip_id,created_at)');
+    if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0021_deeper_media.sql','0021_deeper_media.sql');
+  }
+  push("CREATE TABLE IF NOT EXISTS deeper_ai_attempts (id TEXT PRIMARY KEY,day_utc TEXT NOT NULL,media_id TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'started',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+  push('CREATE INDEX IF NOT EXISTS deeper_ai_attempts_day ON deeper_ai_attempts(day_utc)');
+  if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0022_deeper_ai_limits.sql','0022_deeper_ai_limits.sql');
+  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','22',CURRENT_TIMESTAMP)");
   try{await env.DB.batch(statements);}catch(error){
     // Two concurrent first requests can race; the other request may have won.
     const latest=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-    if(Number(latest?.value)<21)throw error;
+    if(Number(latest?.value)<22)throw error;
   }
 }

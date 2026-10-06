@@ -4,7 +4,7 @@ import worker from '../src/worker.js';
 import {database} from './db.mjs';
 const PNG=new Uint8Array([137,80,78,71,13,10,26,10,...new Array(40).fill(0)]);
 function fixture(){
- const DB=database(),objects=new Map(),MEDIA={async put(k,v){objects.set(k,new Uint8Array(v));},async get(k){const v=objects.get(k);return v?{body:v}:null;},async delete(k){objects.delete(k);}};
+ const DB=database(),objects=new Map(),MEDIA={async put(k,v){objects.set(k,new Uint8Array(v));},async get(k){const v=objects.get(k);return v?{body:v,arrayBuffer:async()=>v.buffer.slice(v.byteOffset,v.byteOffset+v.byteLength)}:null;},async delete(k){objects.delete(k);}};
  const env={DB,MEDIA,RYBY_LOGIN_USERNAME:'tester',RYBY_LOGIN_PASSWORD:'local-only-pass',RYBY_SESSION_SECRET:'local-session-secret-at-least-32-characters',ASSETS:{fetch:()=>new Response('asset')}};
  async function req(path,method='GET',body,headers={}){
   const signed=await worker.fetch(new Request('https://dream.test/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:env.RYBY_LOGIN_USERNAME,password:env.RYBY_LOGIN_PASSWORD})}),env);
@@ -35,5 +35,23 @@ test('rejects forged media and mismatched MIME before writing to R2 or D1',async
   for(const image of bad)assert.ok((await s.req('deeper-media','POST',upload({image}))).status>=400);
   assert.equal(s.objects.size,0);assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM deeper_media').get().n,0);
   const forged=await s.req('deeper-media','POST',upload(),{origin:'https://other.example'});assert.equal(forged.status,403);
+ }finally{s.DB.close();}
+});
+test('AI Vision is opt-in, mock-limited to ten attempts per UTC day, and saved only after approval',async()=>{
+ const s=fixture();try{
+  const created=await s.req('deeper-media','POST',upload());const {id}=await created.json();
+  assert.equal((await s.req(`deeper-media/${id}/analyze`,'POST')).status,503);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM deeper_ai_attempts').get().n,0);
+  let calls=0;s.env.AI_FREE_ONLY='true';s.env.AI={async run(model,input){calls++;assert.match(model,/gemma-4/);assert.match(input.image,/^data:image\/png;base64,/);return {response:JSON.stringify({observed:'Zmiana profilu dna',bottom:'nie wiadomo',hardness:'nie wiadomo',weed:'nie wiadomo',structure:'Spadek',fishEcho:'nie wiadomo',interference:'nie wiadomo',spotsA:'Bok spadku',spotsB:'Podstawa',spotsC:'Góra',confidence:'średnia'})};}};
+  const draft=await (await s.req(`deeper-media/${id}/analyze`,'POST')).json();
+  assert.equal(draft.analysis.structure,'Spadek');assert.match(draft.analysis.warning,/gatunku/);
+  assert.equal((await (await s.req('deeper-media')).json()).images[0].analysis,null,'draft is not persisted');
+  assert.equal((await s.req(`deeper-media/${id}/analysis`,'PUT',JSON.stringify({analysis:draft.analysis}),{'content-type':'application/json'})).status,200);
+  assert.equal((await (await s.req('deeper-media')).json()).images[0].analysis.observed,'Zmiana profilu dna');
+  for(let n=1;n<10;n++)assert.equal((await s.req(`deeper-media/${id}/analyze`,'POST')).status,200);
+  assert.equal((await s.req(`deeper-media/${id}/analyze`,'POST')).status,429);assert.equal(calls,10);
+  assert.equal((await s.req(`deeper-media/${id}/analysis`,'DELETE')).status,200);
+  assert.equal((await (await s.req('deeper-media')).json()).images[0].analysis,null);
+  await s.req(`deeper-media/${id}`,'DELETE');assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM deeper_ai_attempts').get().n,10);
  }finally{s.DB.close();}
 });
