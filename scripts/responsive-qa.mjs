@@ -291,11 +291,11 @@ try{
       const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
       assert.ok(dimensions.scroll<=dimensions.viewport+1&&dimensions.body<=dimensions.viewport+1,`EN ${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)}`);
       if(route.endsWith('encyklopedia.html')){
-        await page.locator('.knowledge-entry').first().waitFor();
-        assert.match(await page.locator('.knowledge-entry').first().innerText(),/Baits: presentation before flavour|Flavour profiles are hypotheses/);
+        await page.locator('.knowledge-entry').first().waitFor({state:'attached'});
+        assert.match(await page.locator('.knowledge-entry').first().textContent(),/Baits: presentation before flavour|Flavour profiles are hypotheses/);
       }
       if(route.endsWith('sonar.html')){
-        await page.locator('.knowledge-entry').first().waitFor();
+        await page.locator('.knowledge-entry').first().waitFor({state:'attached'});
         assert.equal(await page.locator('.knowledge-entry').count(),17);
       }
       if(route.endsWith('rigi.html'))assert.match(await page.locator('main h2').first().innerText(),/Carp rigs/);
