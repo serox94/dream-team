@@ -49,6 +49,7 @@
       depth_m: x.depthM,
       bottom_type: x.bottomType,
       note: x.notes,
+      weed: x.weed, rig: x.rig, bait: x.bait,
       obstacles: x.obstacles,
       best_time: x.bestTime,
       best_wind: x.bestWind,

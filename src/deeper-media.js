@@ -6,7 +6,7 @@ const all=async(env,sql,...args)=>(await env.DB.prepare(sql).bind(...args).all()
 const run=(env,sql,...args)=>env.DB.prepare(sql).bind(...args).run();
 const mimeExt={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'};
 const MAX_BYTES=8*1024*1024;
-const columns='id,name,mime_type mimeType,size_bytes sizeBytes,trip_id tripId,lake_id lakeId,spot_id spotId,depth_m depthM,captured_at capturedAt,note,analysis_json analysisJson,created_at createdAt,updated_at updatedAt';
+const columns='d.id,d.name,d.mime_type mimeType,d.size_bytes sizeBytes,d.trip_id tripId,d.lake_id lakeId,d.spot_id spotId,d.depth_m depthM,d.captured_at capturedAt,d.note,d.analysis_json analysisJson,d.created_at createdAt,d.updated_at updatedAt,s.name spotName,s.weed spotWeed,s.rig spotRig,s.bait spotBait,(SELECT COUNT(*) FROM catches c WHERE c.spot_id=d.spot_id AND c.trip_id=d.trip_id AND c.deleted_at IS NULL) spotFishCount';
 
 function imageType(bytes){
   if(bytes.length>=8&&[137,80,78,71,13,10,26,10].every((b,i)=>bytes[i]===b))return 'image/png';
@@ -34,7 +34,7 @@ export async function handleDeeperMedia(request,env,id,part){
   const method=request.method;
   if(!id&&method==='GET'){
     const tripId=new URL(request.url).searchParams.get('tripId');
-    const rows=tripId?await all(env,`SELECT ${columns} FROM deeper_media WHERE trip_id=? ORDER BY created_at DESC`,tripId):await all(env,`SELECT ${columns} FROM deeper_media ORDER BY created_at DESC`);
+    const rows=tripId?await all(env,`SELECT ${columns} FROM deeper_media d LEFT JOIN spots s ON s.id=d.spot_id AND s.trip_id=d.trip_id WHERE d.trip_id=? ORDER BY d.created_at DESC`,tripId):await all(env,`SELECT ${columns} FROM deeper_media d LEFT JOIN spots s ON s.id=d.spot_id AND s.trip_id=d.trip_id ORDER BY d.created_at DESC`);
     return json({ok:true,images:rows.map(r=>({...r,analysis:r.analysisJson?JSON.parse(r.analysisJson):null,analysisJson:undefined}))});
   }
   if(!id&&method==='POST'){

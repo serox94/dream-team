@@ -152,9 +152,9 @@ async function saveCatch(request,env,id){
 async function saveSpot(request,env,id){
   const x=await body(request),c=id?await scopedRow(request,env,'spots',id):{};
   const tripId=id?c.trip_id:text(x.tripId,'Wyjazd',100,true);await tripExists(env,tripId);
-  const fields=[text(pick(x,'name',c.name),'Nazwa spotu',100,true),number(pick(x,'latitude',c.latitude),'Szerokość GPS',-90,90),number(pick(x,'longitude',c.longitude),'Długość GPS',-180,180),number(pick(x,'depthM',c.depth_m),'Głębokość',0,100),text(pick(x,'bottomType',c.bottom_type),'Dno',100),number(pick(x,'distanceM',c.distance_m),'Odległość',0,5000),text(pick(x,'notes',c.notes),'Notatka',2000),text(pick(x,'obstacles',c.obstacles),'Zaczepy',300),text(pick(x,'bestTime',c.best_time),'Pora',100),text(pick(x,'bestWind',c.best_wind),'Wiatr',100)];
-  if(id) await run(env,`UPDATE spots SET name=?,latitude=?,longitude=?,depth_m=?,bottom_type=?,distance_m=?,notes=?,obstacles=?,best_time=?,best_wind=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,...fields,id);
-  else {const q=await run(env,`INSERT INTO spots(trip_id,name,latitude,longitude,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind) VALUES(?,?,?,?,?,?,?,?,?,?,?)`,tripId,...fields);id=q.meta.last_row_id;}
+  const fields=[text(pick(x,'name',c.name),'Nazwa spotu',100,true),number(pick(x,'latitude',c.latitude),'Szerokość GPS',-90,90),number(pick(x,'longitude',c.longitude),'Długość GPS',-180,180),number(pick(x,'depthM',c.depth_m),'Głębokość',0,100),text(pick(x,'bottomType',c.bottom_type),'Dno',100),number(pick(x,'distanceM',c.distance_m),'Odległość',0,5000),text(pick(x,'notes',c.notes),'Notatka',2000),text(pick(x,'obstacles',c.obstacles),'Zaczepy',300),text(pick(x,'bestTime',c.best_time),'Pora',100),text(pick(x,'bestWind',c.best_wind),'Wiatr',100),text(pick(x,'weed',c.weed),'Zielsko',100),text(pick(x,'rig',c.rig),'Rig',100),text(pick(x,'bait',c.bait),'Przynęta',100)];
+  if(id) await run(env,`UPDATE spots SET name=?,latitude=?,longitude=?,depth_m=?,bottom_type=?,distance_m=?,notes=?,obstacles=?,best_time=?,best_wind=?,weed=?,rig=?,bait=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,...fields,id);
+  else {const q=await run(env,`INSERT INTO spots(trip_id,name,latitude,longitude,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind,weed,rig,bait) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,tripId,...fields);id=q.meta.last_row_id;}
   return json({ok:true,id},c.id?200:201);
 }
 async function saveChecklist(request,env,id){
@@ -198,7 +198,7 @@ async function settings(request,env){
   if(request.method==='GET'){
     const rows=await all(env,"SELECT key,value,updated_at FROM app_settings WHERE key IN ('research_auto','research_languages','research_official_first','trip_time_zone')");
     const lastRun=await one(env,'SELECT completed_at FROM lake_research_runs WHERE status=? ORDER BY completed_at DESC LIMIT 1','completed');
-    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',version:'1.2.0',schemaVersion:22});
+    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',version:'1.2.0',schemaVersion:23});
   }
   const x=await body(request),statements=[];
   for(const [key,value] of Object.entries(x)){
@@ -215,7 +215,7 @@ async function settings(request,env){
 async function list(request,env,kind){
   const tripId=new URL(request.url).searchParams.get('tripId');if(!tripId) fail('Wymagany tripId.');await tripExists(env,tripId);
   if(kind==='catches')return json({ok:true,catches:await all(env,`SELECT c.id,c.trip_id tripId,c.angler_id anglerId,a.name anglerName,c.caught_at caughtAt,c.weight_kg weightKg,c.species,COALESCE(s.name,c.spot) spot,c.spot_id spotId,c.bait,c.rig,c.depth_m depthM,c.notes,c.photo_url photoUrl,c.created_at createdAt FROM catches c JOIN anglers a ON a.id=c.angler_id LEFT JOIN spots s ON s.id=c.spot_id AND s.trip_id=c.trip_id WHERE c.trip_id=? AND c.deleted_at IS NULL ORDER BY c.caught_at DESC,c.id DESC`,tripId)});
-  if(kind==='spots')return json({ok:true,spots:await all(env,`SELECT id,trip_id tripId,name,latitude,longitude,depth_m depthM,bottom_type bottomType,distance_m distanceM,notes,obstacles,best_time bestTime,best_wind bestWind,created_at createdAt FROM spots WHERE trip_id=? AND deleted_at IS NULL ORDER BY created_at,id`,tripId)});
+  if(kind==='spots')return json({ok:true,spots:await all(env,`SELECT id,trip_id tripId,name,latitude,longitude,depth_m depthM,bottom_type bottomType,distance_m distanceM,notes,obstacles,best_time bestTime,best_wind bestWind,weed,rig,bait,created_at createdAt FROM spots WHERE trip_id=? AND deleted_at IS NULL ORDER BY created_at,id`,tripId)});
   const items=await all(env,`SELECT id,trip_id tripId,category,label,assigned_to assignedTo,packed,quantity,notes,sort_order sortOrder,created_at createdAt FROM checklist_items WHERE trip_id=? AND deleted_at IS NULL ORDER BY category,sort_order,id`,tripId);
   return json({ok:true,items:items.map(x=>({...x,packed:Boolean(x.packed)}))});
 }

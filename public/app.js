@@ -1008,6 +1008,9 @@ function renderSpotsList(spots) {
     if (item.obstacles) meta.push(`Zaczepy: ${normalizeText(item.obstacles, 120)}`);
     if (item.best_time) meta.push(`Najlepsza pora: ${normalizeText(item.best_time, 60)}`);
     if (item.best_wind) meta.push(`Najlepszy wiatr: ${normalizeText(item.best_wind, 60)}`);
+    if (item.weed) meta.push(`Zielsko: ${normalizeText(item.weed, 100)}`);
+    if (item.rig) meta.push(`Rig: ${normalizeText(item.rig, 100)}`);
+    if (item.bait) meta.push(`Przynęta: ${normalizeText(item.bait, 100)}`);
     if (meta.length) {
       article.appendChild(el("div", "catch-note", meta.join(" • ")));
     }
