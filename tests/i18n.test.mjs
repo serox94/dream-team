@@ -32,3 +32,13 @@ test('late editorial controls translate without changing user notes',async()=>{
  assert.equal(root.querySelector('button').textContent,'All items');
  assert.equal(root.querySelector('[data-user-content]').textContent,'Typ dna');d.window.close();
 });
+test('English encyclopedia retains all articles, sections and source-linked identities',async()=>{
+ const original=JSON.parse(await readFile('public/data/knowledge/encyclopedia.json'));
+ const localized=JSON.parse(await readFile('public/data/knowledge/en/encyclopedia.json'));
+ assert.equal(Object.keys(localized.articles).length,original.articles.length);
+ for(const article of original.articles){const copy=localized.articles[article.id];assert.ok(copy,article.id);
+  assert.equal(copy.sections.length,article.sections.length,article.id);
+  assert.ok(copy.title&&copy.lead&&copy.sections.every(([heading,text])=>heading&&text.length>70),article.id);
+  assert.doesNotMatch(JSON.stringify(copy),/[ąćęłńóśźż]/i,article.id);
+ }
+});

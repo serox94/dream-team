@@ -2,6 +2,8 @@
 const root=document.getElementById('knowledge-root');
 if(root){
 const module=root.dataset.module, sonar=module==='sonar';
+const deviceLanguage=localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
+const english=deviceLanguage==='en';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const q=id=>document.getElementById(id);
 const label={science:'📘 nauka / technika',practice:'🎣 praktyka',manufacturer:'🏭 producent',community:'💬 społeczność',sonar:'📡 dokumentacja sonaru'};
@@ -13,7 +15,12 @@ const data=await Promise.all(paths.map(async name=>{
   return response.json();
 })).catch(error=>{root.innerHTML=`<section class="panel-card"><h2>Treść chwilowo niedostępna</h2><p>${esc(error.message)}. Sprawdź połączenie i odśwież stronę.</p></section>`;return null;});
 if(data){
-const [sources,encyclopedia,sonarData,tools,fieldGuides,chirpPractice]=data, catalog=sonar?sonarData:encyclopedia;
+const [sources,encyclopedia,sonarData,tools,fieldGuides,chirpPractice]=data;
+if(english){
+  const response=await fetch('/data/knowledge/en/encyclopedia.json',{credentials:'same-origin'});
+  if(response.ok){const localized=await response.json();for(const a of encyclopedia.articles){const tr=localized.articles[a.id];if(!tr)continue;a.title=tr.title;a.lead=tr.lead;a.category=localized.categories[a.category]||a.category;a.sections=tr.sections.map(([h,p])=>({h,p}));}}
+}
+const catalog=sonar?sonarData:encyclopedia;
 const atlas=sonar?await fetch('/assets/deeper/chirp2/index.json',{credentials:'same-origin'}).then(r=>r.ok?r.json():{screenshots:[]}):{screenshots:[]};
 const index=new Map([...encyclopedia.articles,...sonarData.articles].map(a=>[a.id,a]));
 const sourceIndex=new Map(sources.sources.map(s=>[s.id,s]));
