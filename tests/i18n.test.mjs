@@ -24,3 +24,11 @@ test('device language defaults from browser, persists independently and leaves u
  assert.equal(restarted.window.document.documentElement.lang,'pl');assert.equal(restarted.window.document.querySelector('button').textContent,'Zaloguj');
  patryk.window.close();english.window.close();restarted.window.close();
 });
+test('late editorial controls translate without changing user notes',async()=>{
+ const d=await device('en-GB');
+ const root=d.window.document.createElement('div');root.id='knowledge-root';root.innerHTML='<section><p>Typ dna</p><button>Wszystkie pozycje</button><p data-user-content>Typ dna</p></section>';
+ d.window.document.body.append(root);await new Promise(resolve=>setTimeout(resolve,0));
+ assert.equal(root.querySelector('p').textContent,'Bottom type');
+ assert.equal(root.querySelector('button').textContent,'All items');
+ assert.equal(root.querySelector('[data-user-content]').textContent,'Typ dna');d.window.close();
+});

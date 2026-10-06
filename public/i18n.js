@@ -13,7 +13,7 @@ const walk=node=>{
 };
 // Translate static markup and UI controls inserted later. Never inspect editable fields or user records.
 walk(document.body);
-const observer=new MutationObserver(records=>{for(const record of records){for(const node of record.addedNodes){if(node.nodeType===Node.ELEMENT_NODE){if(node.matches('button,label,option,summary,nav a,[data-i18n]'))walk(node);else node.querySelectorAll?.('button,label,option,summary,nav a,[data-i18n]').forEach(walk);}}}});
+const observer=new MutationObserver(records=>{for(const record of records){for(const node of record.addedNodes){if(node.nodeType===Node.ELEMENT_NODE){if(node.closest('#knowledge-root')||node.matches('#knowledge-root'))walk(node);else if(node.matches('button,label,option,summary,nav a,[data-i18n]'))walk(node);else node.querySelectorAll?.('button,label,option,summary,nav a,[data-i18n]').forEach(walk);}}}});
 observer.observe(document.body,{childList:true,subtree:true});
 function selector(locationNode){if(!locationNode)return;const label=document.createElement('label');label.className='language-selector';label.textContent='PL / EN ';const select=document.createElement('select');select.setAttribute('aria-label','Language / Język');for(const [value,name] of [['pl','PL'],['en','EN']]){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}select.value=lang;select.addEventListener('change',()=>window.DreamI18n.set(select.value));label.append(select);locationNode.append(label);}
 selector(document.querySelector('.login-card')||document.querySelector('.header-top'));
