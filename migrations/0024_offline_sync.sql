@@ -1,0 +1,13 @@
+ALTER TABLE catches ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE catches ADD COLUMN client_mutation_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS catches_client_mutation ON catches(client_mutation_id);
+ALTER TABLE spots ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE spots ADD COLUMN client_mutation_id TEXT;
+ALTER TABLE spots ADD COLUMN last_mutation_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS spots_client_mutation ON spots(client_mutation_id);
+ALTER TABLE checklist_items ADD COLUMN revision INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE checklist_items ADD COLUMN last_mutation_id TEXT;
+ALTER TABLE trip_notes ADD COLUMN client_mutation_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS trip_notes_client_mutation ON trip_notes(client_mutation_id);
+CREATE TABLE IF NOT EXISTS offline_receipts (id TEXT PRIMARY KEY,path TEXT NOT NULL,request_json TEXT NOT NULL,result_json TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','24',CURRENT_TIMESTAMP);

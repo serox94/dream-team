@@ -571,7 +571,7 @@ function renderCatchesList(catches, spots) {
     const top = el("div", "catch-item-top");
     const left = el("div");
     left.appendChild(el("h4", "", `${item.person} - ${item.species}`));
-    left.appendChild(el("div", "catch-meta", formatCaughtAt(item.caught_at)));
+    left.appendChild(el("div", "catch-meta", formatCaughtAt(item.caught_at)+(item.pendingSync?" · Oczekuje na synchronizację":"")));
     if (item.spot_id) {
       left.appendChild(el("div", "muted-small", `Powiązany spot: ${getSpotDisplayName(item, spots)}`));
     }
@@ -583,6 +583,7 @@ function renderCatchesList(catches, spots) {
     const deleteBtn = el("button", "danger-btn", "Usuń");
     deleteBtn.type = "button";
     deleteBtn.addEventListener("click", () => deleteCatch(item.id));
+    editBtn.disabled=deleteBtn.disabled=Boolean(item.pendingSync);
     actions.append(editBtn, deleteBtn);
     top.append(left, actions);
 
@@ -790,6 +791,7 @@ function renderChecklistGroups(items) {
       const content = el("div", "check-item-content");
       const title = el("div", `check-item-title${item.done ? " done" : ""}`, item.item_name);
       const metaText = [];
+      if (item.pendingSync) metaText.push("Oczekuje na synchronizację");
       if (item.quantity !== null && item.quantity !== undefined) metaText.push(`${Number(item.quantity)} ${item.unit}`);
       metaText.push(item.done ? "Spakowane" : "Do ogarnięcia");
       const meta = el("div", "check-item-meta", metaText.join(" • "));
@@ -985,7 +987,7 @@ function renderSpotsList(spots) {
     const top = el("div", "spot-card-top");
     const left = el("div");
     left.appendChild(el("h4", "", item.name));
-    left.appendChild(el("div", "catch-meta", `Dodano: ${formatCaughtAt(item.created_at)}`));
+    left.appendChild(el("div", "catch-meta", `Dodano: ${formatCaughtAt(item.created_at)}${item.pendingSync?" · Oczekuje na synchronizację":""}`));
 
     const actions = el("div", "inline-actions");
     const editBtn = el("button", "edit-btn", "Edytuj");
@@ -994,6 +996,7 @@ function renderSpotsList(spots) {
     const deleteBtn = el("button", "danger-btn", "Usuń");
     deleteBtn.type = "button";
     deleteBtn.addEventListener("click", () => deleteSpot(item.id));
+    editBtn.disabled=deleteBtn.disabled=Boolean(item.pendingSync);
     actions.append(editBtn, deleteBtn);
     top.append(left, actions);
 

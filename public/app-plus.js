@@ -703,6 +703,7 @@
           const title = createNode("div", `check-item-title${item.done ? " done" : ""}`, normalizeTextSafe(item.item_name, 80));
 
           const metaParts = [];
+          if (item.pendingSync) metaParts.push("Oczekuje na synchronizację");
           if (item.quantity !== null && item.quantity !== undefined) {
             metaParts.push(`${Number(item.quantity)} ${item.unit}`);
           }

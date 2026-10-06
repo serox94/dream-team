@@ -13,7 +13,7 @@ export async function ensureSchema(env){
 }
 async function applySchema(env){
   const version=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-  if(Number(version?.value)>=23)return;
+  if(Number(version?.value)>=24)return;
   if(Number(version?.value)<16)throw new Error('Wymagane wcześniejsze migracje D1 (do wersji 16).');
   const cols=async name=>(await env.DB.prepare(`PRAGMA table_info(${name})`).all()).results;
   const statements=[];
@@ -68,10 +68,21 @@ async function applySchema(env){
     for(const field of ['weed','rig','bait'])if(!exists(spots,field))push(`ALTER TABLE spots ADD COLUMN ${field} TEXT`);
     if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0023_spot_sonar_context.sql','0023_spot_sonar_context.sql');
   }
-  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','23',CURRENT_TIMESTAMP)");
+  if(Number(version?.value)<24){
+    for(const [table,fields] of Object.entries({catches:['revision INTEGER NOT NULL DEFAULT 0','client_mutation_id TEXT'],spots:['revision INTEGER NOT NULL DEFAULT 0','client_mutation_id TEXT','last_mutation_id TEXT'],checklist_items:['revision INTEGER NOT NULL DEFAULT 0','last_mutation_id TEXT'],trip_notes:['client_mutation_id TEXT']})){
+      const existing=await cols(table);
+      for(const definition of fields)if(!exists(existing,definition.split(' ')[0]))push(`ALTER TABLE ${table} ADD COLUMN ${definition}`);
+    }
+    push('CREATE UNIQUE INDEX IF NOT EXISTS catches_client_mutation ON catches(client_mutation_id)');
+    push('CREATE UNIQUE INDEX IF NOT EXISTS spots_client_mutation ON spots(client_mutation_id)');
+    push('CREATE UNIQUE INDEX IF NOT EXISTS trip_notes_client_mutation ON trip_notes(client_mutation_id)');
+    push('CREATE TABLE IF NOT EXISTS offline_receipts (id TEXT PRIMARY KEY,path TEXT NOT NULL,request_json TEXT NOT NULL,result_json TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+    if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0024_offline_sync.sql','0024_offline_sync.sql');
+  }
+  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','24',CURRENT_TIMESTAMP)");
   try{await env.DB.batch(statements);}catch(error){
     // Two concurrent first requests can race; the other request may have won.
     const latest=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-    if(Number(latest?.value)<23)throw error;
+    if(Number(latest?.value)<24)throw error;
   }
 }

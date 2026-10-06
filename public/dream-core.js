@@ -19,8 +19,72 @@
   }
   const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json',...options.headers},signal});
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
-  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|settings)(?:\?|$)/;
-  const offlineEntries=new Map();
+  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings)(?:\?|$)/;
+  const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1';
+  let synchronizing=false;
+  function readQueue(){try{const value=JSON.parse(localStorage.getItem(queueKey)||'[]');return Array.isArray(value)?value:[];}catch{return [];}}
+  function writeQueue(items){localStorage.setItem(queueKey,JSON.stringify(items));showOfflineState();}
+  function pendingCount(){return readQueue().length;}
+  function eligible(path,method,payload){
+    if(method==='POST'&&['/api/catches','/api/spots','/api/notes'].includes(path))return Boolean(payload?.tripId);
+    if(method==='PATCH'&&/^\/api\/checklist\/\d+\?tripId=[a-zA-Z0-9_-]+$/.test(path))return typeof payload?.packed==='boolean'&&Object.keys(payload).length===1;
+    if(method==='PUT'&&/^\/api\/spots\/\d+\?tripId=[a-zA-Z0-9_-]+$/.test(path))return true;
+    return false;
+  }
+  function queueMutation(path,method,payload,key){
+    if(!Number(localStorage.getItem(authMarkerKey)))throw new Error('Otwórz wyjazd online i zaloguj się przed pierwszym zapisem offline.');
+    const queue=readQueue();if(queue.length>=50)throw new Error('Kolejka offline ma 50 zmian. Połącz się i zsynchronizuj dane.');
+    if(JSON.stringify(payload).length>8000)throw new Error('Notatka jest za duża do kolejki offline.');
+    let baseRevision=null,resource,id,tripId;
+    const match=path.match(/^\/api\/(checklist|spots)\/(\d+)\?tripId=([a-zA-Z0-9_-]+)$/);
+    if(match){[,resource,id,tripId]=match;const cached=readEntries()[`/api/${resource}?tripId=${tripId}`]?.data;
+      const current=cached?.[resource==='checklist'?'items':'spots']?.find(row=>Number(row.id)===Number(id));
+      if(!current||!Number.isInteger(current.revision))throw new Error('Brak wersji tego rekordu offline. Otwórz go online przed wyjazdem.');
+      baseRevision=current.revision;
+      if(resource==='checklist'){current.packed=payload.packed;current.pendingSync=true;}
+      else{Object.assign(current,payload,{pendingSync:true});}
+      saveReadCache(`/api/${resource}?tripId=${tripId}`,cached);
+    }else{
+      tripId=payload.tripId;resource=path.split('/').pop();const cachePath=`/api/${resource}?tripId=${encodeURIComponent(tripId)}`;
+      const cached=readEntries()[cachePath]?.data;
+      const list=resource==='catches'?'catches':resource==='spots'?'spots':'notes';
+      if(cached?.[list]){
+        const synthetic=-Date.now()-queue.length;
+        const row=resource==='catches'?{...payload,id:synthetic,weightKg:payload.weightKg,anglerName:window.DREAM_MODEL?.anglers.find(a=>a.id===payload.anglerId)?.name||'',pendingSync:true}:
+          resource==='spots'?{...payload,id:synthetic,pendingSync:true}:{...payload,id:synthetic,pendingSync:true};
+        cached[list].unshift(row);saveReadCache(cachePath,cached);
+      }
+    }
+    queue.push({key,path,method,payload,baseRevision,at:Date.now(),status:'pending'});writeQueue(queue);
+    return {ok:true,pendingSync:true,id:-Date.now()};
+  }
+  async function syncQueue(){
+    if(synchronizing||navigator.onLine===false||!readQueue().length)return;
+    synchronizing=true;let synced=0;
+    try{for(const item of readQueue()){
+      if(item.status==='conflict')continue;
+      try{const response=await authorizedFetch('/api/offline-sync',{method:'POST',body:JSON.stringify(item)},AbortSignal.timeout(20000));
+        if(response.status===401)break;
+        const result=await response.json();
+        if(response.status===409){item.status='conflict';item.serverRevision=result.serverRevision;item.serverValue=result.serverValue;item.error=result.error;writeQueue(readQueue().map(q=>q.key===item.key?item:q));continue;}
+        if(!response.ok){item.status='error';item.error=result.error||`HTTP ${response.status}`;writeQueue(readQueue().map(q=>q.key===item.key?item:q));break;}
+        const remaining=readQueue().filter(q=>q.key!==item.key);writeQueue(remaining);synced++;
+        const tripId=item.payload.tripId||new URL(item.path,location.origin).searchParams.get('tripId');
+        const resource=item.path.match(/^\/api\/(catches|spots|checklist|notes)/)?.[1];
+        if(resource&&tripId){const entries=readEntries();delete entries[`/api/${resource}?tripId=${tripId}`];localStorage.setItem(readCacheKey,JSON.stringify(entries));}
+      }catch{break;}
+    }}finally{synchronizing=false;showOfflineState();}
+    if(synced){document.dispatchEvent(new Event('dream:synced'));if(!pendingCount())setTimeout(()=>location.reload(),100);}
+  }
+  function resolveConflict(key,choice){const queue=readQueue(),item=queue.find(q=>q.key===key);if(!item)return;
+    if(choice==='server')writeQueue(queue.filter(q=>q.key!==key));
+    else if(choice==='mine'&&Number.isInteger(item.serverRevision)){item.baseRevision=item.serverRevision;item.status='pending';writeQueue(queue);syncQueue();}
+  }
+  window.addEventListener('online',syncQueue);
+  document.addEventListener('click',event=>{if(event.target?.id!=='offline-banner')return;
+    const conflict=readQueue().find(item=>item.status==='conflict');if(!conflict)return;
+    if(confirm(`${conflict.error}\nOK: ponów swoją zmianę. Anuluj: zachowaj wersję serwera.`))resolveConflict(conflict.key,'mine');else resolveConflict(conflict.key,'server');
+  });
   async function clearShell(){
     if(!('caches' in window))return;
     try{for(const key of await caches.keys())if(key.startsWith('ryby-shell-'))await caches.delete(key);}catch{}
@@ -48,14 +112,21 @@
     }catch{return null;}
   }
   function showOfflineState(){
-    let banner=document.getElementById('offline-banner');
-    if(!offlineEntries.size){banner?.remove();return;}
+    let banner=document.getElementById('offline-banner');const count=pendingCount();
+    if(!offlineEntries.size&&!count){banner?.remove();return;}
     if(!banner){banner=document.createElement('div');banner.id='offline-banner';banner.className='offline-banner';banner.setAttribute('role','status');document.body.prepend(banner);}
-    const oldest=Math.min(...offlineEntries.values());
-    banner.textContent=`Dane offline / ostatnia synchronizacja ${new Date(oldest).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. Zapisy wymagają internetu.`;
+    const stale=offlineEntries.size?`Dane offline / ostatnia synchronizacja ${new Date(Math.min(...offlineEntries.values())).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
+    const conflicts=readQueue().filter(item=>item.status==='conflict').length;
+    banner.textContent=stale+(count?`${count} zmian${count===1?'a':'y'} oczekuj${count===1?'e':'ą'} na synchronizację.${conflicts?` ${conflicts} konflikt(y) — dotknij tutaj, aby rozstrzygnąć.`:''}`:'');
   }
   async function api(path,options={}){
     const get=!options.method||options.method==='GET';
+    let payload=null,mutationKey=null;
+    if(!get){try{payload=JSON.parse(options.body||'{}');}catch{}
+      if(eligible(path,options.method,payload)){mutationKey=crypto.randomUUID();options={...options,headers:{...options.headers,'idempotency-key':mutationKey}};
+        if(navigator.onLine===false)return queueMutation(path,options.method,payload,mutationKey);
+      }
+    }
     if(get&&pending.has(path))return pending.get(path);
     const task=(async()=>{
       const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
@@ -69,6 +140,7 @@
         if(get)saveReadCache(path,data);
         return data;
       }catch(error){
+        if(mutationKey&&(error.name==='AbortError'||error.name==='TypeError'))return queueMutation(path,options.method,payload,mutationKey);
         if(get&&(eligibleFallback||error.name==='AbortError'||error.name==='TypeError')){
           const cached=readOffline(path);if(cached)return cached;
         }
@@ -94,16 +166,19 @@
   async function logout(){
     const response=await authorizedFetch('/api/logout',{method:'POST',body:'{}'});
     if(!response.ok)throw new Error('Nie udało się wylogować. Spróbuj ponownie.');
-    clearReadCache();
+    if(pendingCount()&&!confirm('Masz zmiany oczekujące na synchronizację. Wylogowanie usunie je z tego urządzenia. Kontynuować?'))return;
+    localStorage.removeItem(queueKey);clearReadCache();
     await clearShell();
     location.assign('/login');
   }
   async function registerShell(){
+    showOfflineState();syncQueue();
     if(!('serviceWorker' in navigator))return;
     try{
       await navigator.serviceWorker.register('/sw.js',{scope:'/'});
       const registration=await navigator.serviceWorker.ready;
       if(navigator.onLine!==false)registration.active?.postMessage({type:'WARM_SHELL'});
+      showOfflineState();syncQueue();
     }catch(error){console.warn('Offline shell unavailable:',error);}
   }
   function notice(message,error=false){
@@ -160,7 +235,7 @@
     b.addEventListener('click',async()=>{b.disabled=true;try{await api(`/api/${kind}/${id}/restore?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`,{method:'POST',body:'{}'});await refreshModel();await refresh();notice('Wpis przywrócony.');}catch(e){notice(e.message,true);b.disabled=false;}});
     document.getElementById('app-notice')?.append(b);
   }
-  window.Dream={renderHeader,api,downloadBackup,logout,clearReadCache,registerShell,esc,zone,dateInput,fromInput,format,safeUrl,notice,refreshModel,rememberTrip,readTrip,undo,
+  window.Dream={renderHeader,api,downloadBackup,logout,clearReadCache,registerShell,pendingCount,syncQueue,esc,zone,dateInput,fromInput,format,safeUrl,notice,refreshModel,rememberTrip,readTrip,undo,
     hour:value=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:zone(),hour:'2-digit',hourCycle:'h23'}).format(new Date(value))),
     day:value=>new Date(value).toLocaleDateString('pl-PL',{timeZone:zone()})};
 })();

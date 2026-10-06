@@ -27,7 +27,7 @@
 
   function oldCatch(x) {
     return {
-      id: x.id,
+      id: x.id, revision: x.revision, pendingSync: x.pendingSync,
       person: x.anglerName,
       angler_id: x.anglerId,
       species: x.species,
@@ -43,7 +43,7 @@
 
   function oldSpot(x) {
     return {
-      id: x.id,
+      id: x.id, revision: x.revision, pendingSync: x.pendingSync,
       name: x.name,
       distance_m: x.distanceM,
       depth_m: x.depthM,
@@ -60,7 +60,7 @@
   function oldCheck(x) {
     const qty = parseQuantity(x.quantity);
     return {
-      id: x.id,
+      id: x.id, revision: x.revision, pendingSync: x.pendingSync,
       category: x.category,
       item_name: x.label,
       quantity: qty.quantity,
