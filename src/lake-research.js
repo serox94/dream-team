@@ -40,18 +40,17 @@ export function extractFacts(content){
 export function suggestions(facts){
   return facts.filter(f=>ruleGear[f.field]&&f.status==='potwierdzone'&&/wymagan|required|obligat|pflicht|verplicht|must|mandatory/i.test(f.value)&&!/nie\s+(?:jest\s+)?wymagan|not\s+(?:be\s+)?required|non\s+obligat|nicht\s+(?:erforderlich|vorgeschrieben)|niet\s+verplicht/i.test(f.value)).map(f=>({label:ruleGear[f.field],reason:f.value,sourceUrl:f.url,sourceType:f.source_type}));
 }
-export function provider(env,onUsage=()=>{}){
+export function provider(env){
   if(!env.TAVILY_API_KEY)return null;
   const call=async(path,payload)=>{
     const response=await fetch('https://api.tavily.com/'+path,{method:'POST',headers:{authorization:'Bearer '+env.TAVILY_API_KEY,'content-type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(14000)});
     if(response.status===429||response.status===402)fail(limitMessage,429);
     if(!response.ok)throw new Error('Dostawca researchu jest chwilowo niedostępny.');
-    const data=await response.json();onUsage({endpoint:path,credits:Number(data.usage?.credits)||null});return data;
+    return response.json();
   };
   return {
     name:'Tavily',
     async candidates(name,country,preferences={}){const labels={PL:'łowisko',EN:'carp lake',FR:'étang carpe',DE:'Karpfensee',NL:'karpervijver'},terms=(preferences.languages||'PL,EN,FR,DE,NL').split(',').map(lang=>labels[lang]).filter(Boolean).join(' ');const data=await call('search',{query:`${name} ${country} ${terms} ${preferences.official==='off'?'fishing information':'official website regulations'}`,search_depth:'basic',max_results:5,include_answer:false,include_raw_content:false,include_usage:true});return (data.results||[]).map(x=>({name:x.title?.slice(0,150)||name,region:(x.content||'').match(/(?:region|miejscowość|locality|commune|ort|plaats)\s*[:–-]\s*([^.,;\n]{2,80})/i)?.[1]||'Nieustalony region',country,url:x.url,location:null})).filter(x=>{try{safeSourceUrl(x.url);return true;}catch{return false;}});},
-    async search(query){const data=await call('search',{query,search_depth:'basic',max_results:5,include_answer:false,include_raw_content:false,include_usage:true});return (data.results||[]).map(x=>({name:x.title,url:x.url,excerpt:String(x.content||'').slice(0,500)})).filter(x=>{try{safeSourceUrl(x.url);return true;}catch{return false;}});},
     async extract(url){const data=await call('extract',{urls:[url],extract_depth:'basic',format:'markdown',include_usage:true});return String(data.results?.[0]?.raw_content||'').slice(0,160000);}
   };
 }

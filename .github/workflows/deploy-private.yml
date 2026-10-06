@@ -66,11 +66,6 @@ jobs:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/smoke-auth.mjs
-      - name: Run isolated Tavily fixture diagnostic
-        env:
-          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
-          TAVILY_FIXTURE_PHASE: candidates
-        run: node scripts/live-tavily-fixture.mjs
       - name: Roll back Worker if production verification fails
         if: failure() && steps.deploy.outcome == 'success'
         env:
