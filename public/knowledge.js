@@ -17,8 +17,10 @@ const data=await Promise.all(paths.map(async name=>{
 if(data){
 const [sources,encyclopedia,sonarData,tools,fieldGuides,chirpPractice]=data;
 if(english){
-  const response=await fetch('/data/knowledge/en/encyclopedia.json',{credentials:'same-origin'});
-  if(response.ok){const localized=await response.json();for(const a of encyclopedia.articles){const tr=localized.articles[a.id];if(!tr)continue;a.title=tr.title;a.lead=tr.lead;a.category=localized.categories[a.category]||a.category;a.sections=tr.sections.map(([h,p])=>({h,p}));}}
+  for(const [name,collection] of [['encyclopedia',encyclopedia],['sonar',sonarData]]){
+    const response=await fetch(`/data/knowledge/en/${name}.json`,{credentials:'same-origin'});
+    if(response.ok){const localized=await response.json();for(const a of collection.articles){const tr=localized.articles[a.id];if(!tr)continue;a.title=tr.title;a.lead=tr.lead;a.category=localized.categories[a.category]||a.category;a.sections=tr.sections.map(([h,p])=>({h,p}));}}
+  }
 }
 const catalog=sonar?sonarData:encyclopedia;
 const atlas=sonar?await fetch('/assets/deeper/chirp2/index.json',{credentials:'same-origin'}).then(r=>r.ok?r.json():{screenshots:[]}):{screenshots:[]};
