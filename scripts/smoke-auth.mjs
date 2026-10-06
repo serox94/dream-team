@@ -65,7 +65,7 @@ const categories=await request('/api/checklist-categories',{headers});assert.equ
 assert.ok((await categories.json()).categories.length>=3,'migrated categories readable');
 const settings=await request('/api/settings',{headers});assert.equal(settings.status,200);
 const runtime=await settings.json();
-assert.equal(runtime.schemaVersion,26);
+assert.equal(runtime.schemaVersion,27);
 assert.equal(typeof runtime.researchProviderConfigured,'boolean');
 assert.equal(typeof runtime.workersAiAvailable,'boolean');
 assert.equal((await request('/api/bootstrap',{headers})).status,200,'reused cookie after reopening');

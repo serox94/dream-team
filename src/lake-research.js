@@ -27,7 +27,9 @@ export function extractFacts(content){
       if(!found)continue;
       const value=row.slice(found.length+1).replace(/\s*\|\s*$/,'').trim();
       if(!value||value.length>240||/^(?:n\/a|brak|none|unknown)$/i.test(value))continue;
-      out.push({field,value,evidence:row.slice(0,280),confidence:.7});break;
+      // Only unique localized labels identify a language; shared labels remain unknown.
+      const matches=labels.map((item,index)=>item===found?index:-1).filter(index=>index>=0);
+      out.push({field,value,evidence:row.slice(0,280),sourceLanguage:matches.length===1?['pl','en','fr','de','nl'][matches[0]]:null,confidence:.7});break;
     }
   }
   for(const field of Object.keys(ruleGear)){
@@ -73,20 +75,22 @@ async function saveSource(db,lakeId,url,title,type){
   return id;
 }
 async function saveFact(db,lakeId,sourceId,fact){
+  const sourceLanguage=['pl','en','fr','de','nl'].includes(fact.sourceLanguage)?fact.sourceLanguage:null;
+  const originalText=String(fact.evidence||fact.value).slice(0,500),normalizedValue=fact.value;
   const existing=await one(db,'SELECT id FROM lake_facts WHERE lake_id=? AND field=? AND source_id=?',lakeId,fact.field,sourceId);
   if(existing){
     const old=await one(db,'SELECT value FROM lake_facts WHERE id=?',existing.id);
     if(old?.value!==fact.value)await run(db,'INSERT INTO lake_fact_changes(id,lake_id,field,old_value,new_value,source_id) VALUES(?,?,?,?,?,?)',crypto.randomUUID(),lakeId,fact.field,old.value,fact.value,sourceId);
-    await run(db,'UPDATE lake_facts SET value=?,evidence=?,confidence=?,checked_at=CURRENT_TIMESTAMP WHERE id=?',fact.value,fact.evidence||null,fact.confidence||.5,existing.id);
+    await run(db,'UPDATE lake_facts SET value=?,evidence=?,original_text=?,source_language=?,normalized_value=?,translation_pl=CASE WHEN value=? THEN translation_pl ELSE NULL END,translation_en=CASE WHEN value=? THEN translation_en ELSE NULL END,confidence=?,checked_at=CURRENT_TIMESTAMP WHERE id=?',fact.value,fact.evidence||null,originalText,sourceLanguage,normalizedValue,fact.value,fact.value,fact.confidence||.5,existing.id);
   }
-  else await run(db,'INSERT INTO lake_facts(id,lake_id,field,value,source_id,evidence,confidence,status) VALUES(?,?,?,?,?,?,?,?)',crypto.randomUUID(),lakeId,fact.field,fact.value,sourceId,fact.evidence||null,fact.confidence||.5,'potwierdzone');
+  else await run(db,'INSERT INTO lake_facts(id,lake_id,field,value,source_id,evidence,original_text,source_language,normalized_value,confidence,status) VALUES(?,?,?,?,?,?,?,?,?,?,?)',crypto.randomUUID(),lakeId,fact.field,fact.value,sourceId,fact.evidence||null,originalText,sourceLanguage,normalizedValue,fact.confidence||.5,'potwierdzone');
   const values=await all(db,'SELECT DISTINCT value FROM lake_facts WHERE lake_id=? AND field=?',lakeId,fact.field);
   await run(db,'UPDATE lake_facts SET status=? WHERE lake_id=? AND field=?',values.length>1?'sprzeczne':'potwierdzone',lakeId,fact.field);
 }
 export async function profile(env,lakeId){
   const db=env.DB,lake=await one(db,'SELECT id,name,country,latitude,longitude,source_url sourceUrl,facts_json factsJson FROM lakes WHERE id=?',lakeId);
   if(!lake)fail('Nie znaleziono łowiska.',404);
-  const facts=await all(db,`SELECT f.id,f.field,f.value,f.evidence,f.confidence,f.status,f.checked_at checkedAt,s.url,s.title sourceName,s.source_type FROM lake_facts f LEFT JOIN lake_sources s ON f.source_id=s.id WHERE f.lake_id=? ORDER BY f.field`,lakeId);
+  const facts=await all(db,`SELECT f.id,f.field,f.value,f.evidence,f.original_text originalText,f.source_language sourceLanguage,f.normalized_value normalizedValue,f.translation_pl translationPl,f.translation_en translationEn,f.confidence,f.status,f.checked_at checkedAt,s.url,s.title sourceName,s.source_type FROM lake_facts f LEFT JOIN lake_sources s ON f.source_id=s.id WHERE f.lake_id=? ORDER BY f.field`,lakeId);
   facts.sort((a,b)=>a.field.localeCompare(b.field)||(sourcePriority[a.source_type]||9)-(sourcePriority[b.source_type]||9));
   const sources=await all(db,'SELECT id,url,title,source_type sourceType,checked_at checkedAt FROM lake_sources WHERE lake_id=? ORDER BY checked_at DESC',lakeId);
   const last=await one(db,"SELECT status,completed_at completedAt,message FROM lake_research_runs WHERE lake_id=? AND status<>'reserved' ORDER BY started_at DESC LIMIT 1",lakeId);
@@ -136,7 +140,7 @@ export async function handleLakeResearch(request,env,lakeId,action){
     const url=safeSourceUrl(x.url),field=fieldName(x.field),value=String(x.value||'').trim();if(!value||value.length>500)fail('Podaj krótki fakt (maksymalnie 500 znaków).');
     const sourceType=['official','regulation','official_social','operator','directory','community','manual'].includes(x.sourceType)?x.sourceType:'manual';
     const sourceId=await saveSource(db,lakeId,url,x.title,sourceType);
-    await saveFact(db,lakeId,sourceId,{field,value,evidence:String(x.evidence||'').slice(0,280),confidence:.5,sourceType});
+    await saveFact(db,lakeId,sourceId,{field,value,evidence:String(x.evidence||'').slice(0,280),sourceLanguage:x.sourceLanguage,confidence:.5,sourceType});
     return reply({ok:true,profile:await profile(env,lakeId)},201);
   }
   if(action==='sources'){

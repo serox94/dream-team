@@ -13,7 +13,7 @@ export async function ensureSchema(env){
 }
 async function applySchema(env){
   const version=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-  if(Number(version?.value)>=26)return;
+  if(Number(version?.value)>=27)return;
   if(Number(version?.value)<16)throw new Error('Wymagane wcześniejsze migracje D1 (do wersji 16).');
   const cols=async name=>(await env.DB.prepare(`PRAGMA table_info(${name})`).all()).results;
   const statements=[];
@@ -91,10 +91,16 @@ async function applySchema(env){
     if(!exists(anglers,'default_language'))push("ALTER TABLE anglers ADD COLUMN default_language TEXT NOT NULL DEFAULT 'pl'");
     if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0026_participant_profiles.sql','0026_participant_profiles.sql');
   }
-  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','26',CURRENT_TIMESTAMP)");
+  if(Number(version?.value)<27){
+    const facts=await cols('lake_facts');
+    for(const field of ['original_text','source_language','normalized_value','translation_pl','translation_en'])if(!exists(facts,field))push(`ALTER TABLE lake_facts ADD COLUMN ${field} TEXT`);
+    push('UPDATE lake_facts SET original_text=COALESCE(evidence,value),normalized_value=value WHERE original_text IS NULL');
+    if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0027_lake_fact_locales.sql','0027_lake_fact_locales.sql');
+  }
+  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','27',CURRENT_TIMESTAMP)");
   try{await env.DB.batch(statements);}catch(error){
     // Two concurrent first requests can race; the other request may have won.
     const latest=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-    if(Number(latest?.value)<26)throw error;
+    if(Number(latest?.value)<27)throw error;
   }
 }

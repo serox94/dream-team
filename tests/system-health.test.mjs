@@ -11,7 +11,7 @@ test('authenticated system status reads backup metadata without exposing object 
   const login=await request('/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:'username=test&password=local-password'});
   const cookie=login.headers.get('set-cookie').split(';')[0];
   const response=await request('/api/settings',{headers:{cookie}}),raw=await response.text(),data=JSON.parse(raw);
-  assert.equal(data.backupStatus,'available');assert.equal(data.lastBackupAt,'2026-10-05T03:17:00.000Z');assert.equal(data.schemaVersion,26);
+  assert.equal(data.backupStatus,'available');assert.equal(data.lastBackupAt,'2026-10-05T03:17:00.000Z');assert.equal(data.schemaVersion,27);
   assert.equal(data.researchProviderConfigured,true);assert.equal(data.workersAiAvailable,true);
   assert.doesNotMatch(raw,/private\.sql|fixture-secret|account_id/i);
  }finally{DB.close();}
