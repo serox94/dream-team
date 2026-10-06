@@ -286,3 +286,16 @@ test('checklist templates are manageable directly on the checklist screen',async
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
+test('participant settings edit persists without changing the device language',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/ustawienia.html');
+ try{
+  await waitFor(()=>p.d.querySelector('#participant-profile-list form'),'profile form');
+  const form=[...p.d.querySelectorAll('#participant-profile-list form')].find(x=>x.querySelector('h4').textContent==='Patryk');
+  const active=form.querySelector('input[type="checkbox"]'),language=form.querySelector('select');active.checked=false;language.value='en';
+  form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+  await waitFor(()=>s.DB.sqlite.prepare("SELECT default_language FROM anglers WHERE id='patryk'").get().default_language==='en','profile save');
+  assert.equal(s.DB.sqlite.prepare("SELECT active FROM anglers WHERE id='patryk'").get().active,0);
+  assert.equal(p.w.localStorage.getItem('dreamteam.language'),null);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});

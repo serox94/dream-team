@@ -13,7 +13,7 @@ export async function ensureSchema(env){
 }
 async function applySchema(env){
   const version=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-  if(Number(version?.value)>=25)return;
+  if(Number(version?.value)>=26)return;
   if(Number(version?.value)<16)throw new Error('Wymagane wcześniejsze migracje D1 (do wersji 16).');
   const cols=async name=>(await env.DB.prepare(`PRAGMA table_info(${name})`).all()).results;
   const statements=[];
@@ -85,10 +85,16 @@ async function applySchema(env){
     push('CREATE INDEX IF NOT EXISTS template_items_parent ON checklist_template_items(template_id,sort_order)');
     if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0025_checklist_templates.sql','0025_checklist_templates.sql');
   }
-  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','25',CURRENT_TIMESTAMP)");
+  if(Number(version?.value)<26){
+    const anglers=await cols('anglers');
+    if(!exists(anglers,'active'))push('ALTER TABLE anglers ADD COLUMN active INTEGER NOT NULL DEFAULT 1');
+    if(!exists(anglers,'default_language'))push("ALTER TABLE anglers ADD COLUMN default_language TEXT NOT NULL DEFAULT 'pl'");
+    if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0026_participant_profiles.sql','0026_participant_profiles.sql');
+  }
+  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','26',CURRENT_TIMESTAMP)");
   try{await env.DB.batch(statements);}catch(error){
     // Two concurrent first requests can race; the other request may have won.
     const latest=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-    if(Number(latest?.value)<25)throw error;
+    if(Number(latest?.value)<26)throw error;
   }
 }

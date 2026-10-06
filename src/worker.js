@@ -32,13 +32,15 @@ async function scopedRow(request, env, table, id, includeDeleted = false) {
 }
 async function bootstrap(env) {
   const timeZone=await one(env,"SELECT value FROM app_settings WHERE key='trip_time_zone'");
-  const anglers = await all(env,`SELECT a.id,a.name,COALESCE(a.baseline_pb_kg,a.pb_kg) baselinePbKg,
+  const anglers = await all(env,`SELECT a.id,a.name,a.active,a.default_language defaultLanguage,COALESCE(a.baseline_pb_kg,a.pb_kg) baselinePbKg,
     MAX(COALESCE(a.baseline_pb_kg,a.pb_kg),COALESCE(MAX(c.weight_kg),0)) pbKg
     FROM anglers a LEFT JOIN catches c ON c.angler_id=a.id AND c.deleted_at IS NULL GROUP BY a.id ORDER BY a.name`);
   const rawLakes = await all(env,'SELECT id,name,country,latitude,longitude,image_url imageUrl,facts_json factsJson,source_url sourceUrl FROM lakes ORDER BY name');
   const lakes = rawLakes.map(({factsJson,...l})=>({...l,facts:parseFacts(factsJson)}));
   const rawTrips = await all(env,`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at start,end_at end,peg,latitude,longitude,lake_image lakeImage,facts_json factsJson,is_active isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`);
   const participants = await all(env,'SELECT trip_id tripId,angler_id anglerId FROM trip_participants');
+  const anglerCounts=await all(env,'SELECT angler_id anglerId,COUNT(*) fishCount FROM catches WHERE deleted_at IS NULL GROUP BY angler_id');
+  for(const angler of anglers){angler.active=Boolean(angler.active);angler.tripCount=participants.filter(p=>p.anglerId===angler.id).length;angler.fishCount=anglerCounts.find(c=>c.anglerId===angler.id)?.fishCount||0;}
   const stats = await all(env,`SELECT trip_id tripId,COUNT(*) fishCount,SUM(weight_kg) totalWeightKg,MAX(weight_kg) biggestFishKg FROM catches WHERE deleted_at IS NULL GROUP BY trip_id`);
   const leaders = await all(env,`SELECT c.trip_id tripId,c.weight_kg weightKg,a.name anglerName FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.deleted_at IS NULL ORDER BY c.weight_kg DESC,c.caught_at,c.id`);
   const topSpots = await all(env,`SELECT c.trip_id tripId,COALESCE(s.name,c.spot) spot,COUNT(*) cnt FROM catches c LEFT JOIN spots s ON s.id=c.spot_id AND s.trip_id=c.trip_id WHERE c.deleted_at IS NULL AND TRIM(COALESCE(s.name,c.spot,'')) NOT IN ('','Brak') GROUP BY c.trip_id,COALESCE(s.name,c.spot) ORDER BY cnt DESC,spot`);
@@ -120,10 +122,21 @@ async function saveLake(request,env,id) {
   return json({ok:true,id},c.id?200:201);
 }
 async function createAngler(request,env){
-  const x=await body(request),name=text(x.name,'Imię',60,true),pb=number(x.baselinePbKg??0,'Dotychczasowe PB',0,150,false);
+  const x=await body(request),name=text(x.name,'Imię',60,true),pb=number(x.baselinePbKg??0,'Dotychczasowe PB',0,150,false),language=x.defaultLanguage||'pl';
+  if(!['pl','en'].includes(language))fail('Wybierz język PL lub EN.');
   if(await one(env,'SELECT id FROM anglers WHERE lower(name)=lower(?)',name)) fail('Osoba o tej nazwie już istnieje.',409);
-  const id=crypto.randomUUID();await run(env,'INSERT INTO anglers(id,name,pb_kg,baseline_pb_kg) VALUES(?,?,?,?)',id,name,pb,pb);
+  const id=crypto.randomUUID();await run(env,'INSERT INTO anglers(id,name,pb_kg,baseline_pb_kg,default_language) VALUES(?,?,?,?,?)',id,name,pb,pb,language);
   return json({ok:true,id},201);
+}
+async function updateAngler(request,env,id){
+  const current=await one(env,'SELECT * FROM anglers WHERE id=?',id);if(!current)fail('Nie znaleziono uczestnika.',404);
+  const x=await body(request),name=text(pick(x,'name',current.name),'Imię',60,true);
+  const pb=number(pick(x,'baselinePbKg',current.baseline_pb_kg??current.pb_kg),'PB',0,150,false);
+  const active=has(x,'active')?x.active:Boolean(current.active),language=pick(x,'defaultLanguage',current.default_language);
+  if(typeof active!=='boolean'||!['pl','en'].includes(language))fail('Nieprawidłowy status lub język.');
+  if(await one(env,'SELECT id FROM anglers WHERE lower(name)=lower(?) AND id<>?',name,id))fail('Osoba o tej nazwie już istnieje.',409);
+  await run(env,'UPDATE anglers SET name=?,pb_kg=?,baseline_pb_kg=?,active=?,default_language=? WHERE id=?',name,pb,pb,active?1:0,language,id);
+  return json({ok:true});
 }
 async function activate(env,id){
   const t=await tripExists(env,id);if(t.status==='archived') fail('Najpierw przywróć wyjazd z archiwum.',409);
@@ -250,7 +263,7 @@ async function settings(request,env){
   if(request.method==='GET'){
     const rows=await all(env,"SELECT key,value,updated_at FROM app_settings WHERE key IN ('research_auto','research_languages','research_official_first','trip_time_zone')");
     const lastRun=await one(env,'SELECT completed_at FROM lake_research_runs WHERE status=? ORDER BY completed_at DESC LIMIT 1','completed');
-    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',version:'1.2.0',schemaVersion:25});
+    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',version:'1.2.0',schemaVersion:26});
   }
   const x=await body(request),statements=[];
   for(const [key,value] of Object.entries(x)){
@@ -330,6 +343,8 @@ async function privateFetch(request,env,ctx){
       if(path==='/api/trips'&&method==='POST')return await saveTrip(request,env,null,ctx);
       if(path==='/api/lakes'&&method==='POST')return await saveLake(request,env);
       if(path==='/api/anglers'&&method==='POST')return await createAngler(request,env);
+      const anglerMatch=path.match(/^\/api\/anglers\/([^/]+)$/);
+      if(anglerMatch&&method==='PATCH')return await updateAngler(request,env,decodeURIComponent(anglerMatch[1]));
       let m=path.match(/^\/api\/(trips|lakes)\/([^/]+)(\/activate)?$/);
       if(m){
         const id=decodeURIComponent(m[2]);

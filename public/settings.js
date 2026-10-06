@@ -11,6 +11,18 @@ document.addEventListener('dream:ready',async()=>{
   $('research-auto').closest('label').before(providerStatus);
   $('research-official').closest('label').lastChild.textContent=' Preferuj oficjalne strony w wyszukiwaniu';
   $('settings-schema').closest('p').append(document.createTextNode(' Status backupu: informacja infrastruktury, nie odczyt na żywo.'));
+  const participantsSection=document.createElement('section');participantsSection.className='panel-card';participantsSection.id='participant-profiles';participantsSection.innerHTML='<h3>Profile uczestników</h3><p>Język profilu jest przygotowany na przyszłe konta. Język interfejsu wybierasz osobno na każdym urządzeniu.</p><div id="participant-profile-list"></div>';
+  profile.after(participantsSection);
+  async function renderProfiles(){const host=$('participant-profile-list');host.replaceChildren();for(const person of window.DREAM_MODEL.anglers){
+    const form=document.createElement('form');form.className='form-grid participant-profile';const title=document.createElement('h4');title.textContent=person.name;form.append(title);
+    function control(labelText,type,value){const label=document.createElement('label');label.textContent=labelText;const input=document.createElement('input');input.type=type;if(type==='checkbox')input.checked=Boolean(value);else input.value=value??'';label.append(input);form.append(label);return input;}
+    const name=control('Imię','text',person.name),pb=control('PB startowe (kg)','number',person.baselinePbKg),active=control('Aktywny','checkbox',person.active);
+    name.maxLength=60;pb.min=0;pb.max=150;pb.step='.01';const languageLabel=document.createElement('label');languageLabel.textContent='Domyślny język profilu';const language=document.createElement('select');for(const [value,label] of [['pl','PL'],['en','EN']]){const option=document.createElement('option');option.value=value;option.textContent=label;language.append(option);}language.value=person.defaultLanguage;languageLabel.append(language);form.append(languageLabel);
+    const stats=document.createElement('p');stats.textContent=`Wyjazdy: ${person.tripCount} · Połowy: ${person.fishCount} · PB: ${person.pbKg} kg`;form.append(stats);
+    const save=document.createElement('button');save.type='submit';save.textContent='Zapisz profil';form.append(save);
+    form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await Dream.api(`/api/anglers/${encodeURIComponent(person.id)}`,{method:'PATCH',body:JSON.stringify({name:name.value,baselinePbKg:Number(pb.value),active:active.checked,defaultLanguage:language.value})});await Dream.refreshModel();renderProfiles();say('Profil zapisany.');}catch(error){say(error.message,true);save.disabled=false;}};
+    host.append(form);
+  }}renderProfiles();
   const categorySection=$('category-list').closest('section'),categoryDetails=document.createElement('details');categoryDetails.className='settings-category-details';categoryDetails.innerHTML='<summary>Zarządzaj kategoriami checklisty</summary>';
   for(const child of [...categorySection.children].filter(node=>node.tagName!=='H3'))categoryDetails.append(child);
   categorySection.append(categoryDetails);
