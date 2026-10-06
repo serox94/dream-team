@@ -3,6 +3,11 @@ const key='dreamteam.language';
 const stored=localStorage.getItem(key),lang=stored==='pl'||stored==='en'?stored:/^pl\b/i.test(navigator.language)?'pl':'en';
 document.documentElement.lang=lang;
 const dictionary=await fetch(`/locales/${lang}.json`,{cache:'force-cache'}).then(r=>r.json()).catch(()=>({}));
+const guide=location.pathname.match(/\/pages\/(rigi|wezly)\.html$/)?.[1];
+if(lang==='en'&&guide){
+ const file=guide==='rigi'?'guides':'knots';
+ Object.assign(dictionary,await fetch(`/locales/${file}.en.json`,{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
+}
 const translate=string=>dictionary[string]||string;
 window.DreamI18n={lang,t:translate,set(next){if(next!=='pl'&&next!=='en')return;localStorage.setItem(key,next);location.reload();}};
 const walk=node=>{
