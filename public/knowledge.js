@@ -29,6 +29,8 @@ if(english){
   if(practiceResponse.ok){const localized=await practiceResponse.json();for(const [id,tr] of Object.entries(localized.practice)){if(chirpPractice.practice[id])[chirpPractice.practice[id].setting,chirpPractice.practice[id].field,chirpPractice.practice[id].decision]=tr;}}
   const quizResponse=await fetch('/data/knowledge/en/quiz.json',{credentials:'same-origin'});
   if(quizResponse.ok){const localized=await quizResponse.json();sonarData.quiz.forEach((item,i)=>{const tr=localized.questions[i];if(tr)[item.question,item.options,item.explanation]=tr;});}
+  const matricesResponse=await fetch('/data/knowledge/en/matrices.json',{credentials:'same-origin'});
+  if(matricesResponse.ok){const localized=await matricesResponse.json();encyclopedia.substrates=localized.substrates.map(([name,family,sign,presentation,risk])=>[name,sign,presentation,risk,...localized.substrateFamilies[family]]);encyclopedia.profiles=localized.profiles.map(([name,family,use,pair,caveat])=>[name,use,pair,caveat,...localized.profileFamilies[family]]);encyclopedia.temperatures=localized.temperatures;}
 }
 const catalog=sonar?sonarData:encyclopedia;
 const atlas=sonar?await fetch('/assets/deeper/chirp2/index.json',{credentials:'same-origin'}).then(r=>r.ok?r.json():{screenshots:[]}):{screenshots:[]};

@@ -74,3 +74,11 @@ test('CHIRP+ 2 practice and quiz retain every topic, answer index and source ref
  assert.equal(quiz.questions.length,sonar.quiz.length);
  sonar.quiz.forEach((item,i)=>{assert.equal(quiz.questions[i][1].length,item.options.length);assert.ok(Number.isInteger(item.correct)&&item.correct<item.options.length);assert.ok(item.sourceIds.length);});
 });
+test('all twenty substrate and flavour profiles plus seven temperature bands have complete English fields',async()=>{
+ const original=JSON.parse(await readFile('public/data/knowledge/encyclopedia.json'));
+ const en=JSON.parse(await readFile('public/data/knowledge/en/matrices.json'));
+ assert.equal(en.substrates.length,original.substrates.length);assert.equal(en.profiles.length,original.profiles.length);assert.equal(en.temperatures.length,original.temperatures.length);
+ for(const [name,family,sign,presentation,risk] of en.substrates){assert.ok(name&&sign&&presentation&&risk);assert.equal(en.substrateFamilies[family].length,4);}
+ for(const [name,family,use,pair,caveat] of en.profiles){assert.ok(name&&use&&pair&&caveat);assert.equal(en.profileFamilies[family].length,4);}
+ assert.doesNotMatch(JSON.stringify(en),/[ąćęłńóśźż]/i);
+});
