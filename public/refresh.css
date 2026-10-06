@@ -303,3 +303,4 @@ body[data-page="ustawienia"] input[type="checkbox"] { width:auto; }
 .wizard-result ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 18px;padding-left:20px}
 @media(max-width:600px){.wizard-result ul{grid-template-columns:1fr}}
 @media(max-width:760px){.check-category-manage-row{grid-template-columns:minmax(0,1fr) repeat(3,auto)}.check-category-manage-row input,.check-category-manage-row select{min-width:0}.check-category-manage-row select{grid-column:1 / 4}.check-category-manage-row .danger-btn{grid-column:4}.check-category-summary{font-size:1rem}}
+.trip-advice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:1rem}.trip-advice-grid section{min-width:0}.trip-advice-grid li,.trip-advice-grid dd{margin:.6rem 0;overflow-wrap:anywhere}.trip-advice-grid dt{margin-top:.9rem}.trip-advice-grid small{display:block;opacity:.78}

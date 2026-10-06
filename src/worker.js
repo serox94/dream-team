@@ -1,6 +1,7 @@
 import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
 import { weatherForTrip } from './weather.js';
+import {handleTripAdvice} from './trip-advice.js';
 import {authConfigured,session,login,logout,loginAssets} from './auth.js';
 import {handleLakeResearch,handleLakeCandidates,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
 
@@ -239,6 +240,8 @@ async function privateFetch(request,env,ctx){
       }
       if(path==='/api/bootstrap'&&method==='GET')return json(await bootstrap(env));
       if(path==='/api/weather'&&method==='GET')return json(await weatherForTrip(env,url.searchParams.get('tripId')));
+      const adviceMatch=path.match(/^\/api\/trips\/([^/]+)\/advice$/);
+      if(adviceMatch&&method==='GET')return json(await handleTripAdvice(env,decodeURIComponent(adviceMatch[1])));
       if(path==='/api/export'&&method==='GET')return await exportData(env);
       if(path==='/api/checklist-categories'&&['GET','POST'].includes(method))return await categories(request,env);
       if(path==='/api/lake-candidates'&&method==='POST')return await handleLakeCandidates(request,env);
