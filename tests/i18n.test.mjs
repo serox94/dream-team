@@ -64,3 +64,13 @@ test('English dynamic tools preserve diagnostic route IDs and complete decision 
  for(const key of ['temperature','bottom','pressure','visibility','activity','season','weather','wind','depth'])assert.deepEqual(Object.keys(en.tactics[key]).sort(),Object.keys(source.tactics[key]).sort());
  assert.deepEqual(Object.keys(en.spots).sort(),Object.keys(source.spots).sort());assert.equal(en.scanChecklist.length,source.scanChecklist.length);
 });
+test('CHIRP+ 2 practice and quiz retain every topic, answer index and source reference',async()=>{
+ const practice=JSON.parse(await readFile('public/data/knowledge/chirp2-practice.json'));
+ const enPractice=JSON.parse(await readFile('public/data/knowledge/en/chirp2-practice.json'));
+ assert.deepEqual(Object.keys(enPractice.practice).sort(),Object.keys(practice.practice).sort());
+ assert.ok(Object.values(enPractice.practice).every(row=>row.length===3&&row.every(x=>x.length>25)));
+ const sonar=JSON.parse(await readFile('public/data/knowledge/sonar.json'));
+ const quiz=JSON.parse(await readFile('public/data/knowledge/en/quiz.json'));
+ assert.equal(quiz.questions.length,sonar.quiz.length);
+ sonar.quiz.forEach((item,i)=>{assert.equal(quiz.questions[i][1].length,item.options.length);assert.ok(Number.isInteger(item.correct)&&item.correct<item.options.length);assert.ok(item.sourceIds.length);});
+});
