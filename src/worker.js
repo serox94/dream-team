@@ -2,6 +2,7 @@ import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
 import { weatherForTrip } from './weather.js';
 import {handleTripAdvice} from './trip-advice.js';
+import {liveFixture} from './tavily-fixture.js';
 import {authConfigured,session,login,logout,loginAssets} from './auth.js';
 import {handleLakeResearch,handleLakeCandidates,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
 
@@ -318,6 +319,7 @@ export default {
         const origin=request.headers.get('origin');
         if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return json({ok:false,error:'Cross-origin write blocked'},403);
       }
+      if(path==='/api/_fixture-tavily-20261006')return await liveFixture(request,env);
       await ensureSchema(env);
       if(path==='/api/login'&&method==='POST')return await login(request,env);
       const active=await session(request,env);
