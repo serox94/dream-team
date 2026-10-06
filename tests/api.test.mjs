@@ -30,7 +30,7 @@ test('all migrations, bootstrap, participants, original PB and legacy content su
  const s=setup(),b=(await s.req('bootstrap')).data;
  assert.equal(b.trips.length,4);assert.equal(b.lakes.length,3);assert.ok(b.trips.every(t=>t.participants.length===2));assert.ok(b.anglers.every(a=>a.pbKg===13));
  assert.equal(b.lakes.find(l=>l.id==='plaine2').facts.contentPack,'plaine2');
- assert.equal((await s.req('health')).data.schemaVersion,'24');s.DB.close();
+ assert.equal((await s.req('health')).data.schemaVersion,'25');s.DB.close();
 });
 test('create/edit/clear a catch; trip isolation; soft delete and restore; PB recalculates',async()=>{
  const s=setup(),r=await s.req('catches','POST',catchData);assert.equal(r.status,201);const id=r.data.id;
@@ -139,7 +139,7 @@ test('category migration, rename, order and safe move retain packed rows',async(
 });
 test('settings persist allowed preferences without accepting secrets',async()=>{
  const s=setup();try{
-  const original=await s.req('settings');assert.equal(original.data.schemaVersion,24);
+  const original=await s.req('settings');assert.equal(original.data.schemaVersion,25);
   assert.equal((await s.req('settings','PATCH',{research_auto:'off',research_languages:'PL,EN,FR,DE,NL',trip_time_zone:'Europe/Warsaw'})).status,200);
   const current=(await s.req('settings')).data.settings;assert.equal(current.research_auto,'off');assert.equal(current.research_languages,'PL,EN,FR,DE,NL');
   assert.equal((await s.req('settings','PATCH',{api_key:'unsafe'})).status,400);

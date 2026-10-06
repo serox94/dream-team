@@ -273,3 +273,16 @@ test('existing spot edits and new spots remain usable without signal and sync la
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
+test('checklist templates are manageable directly on the checklist screen',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/checklisty.html');
+ try{
+  await waitFor(()=>p.d.getElementById('template-create'),'template UI');
+  fill(p,'template-name','Standardowy wyjazd');submit(p,'template-create');
+  await waitFor(()=>p.d.querySelectorAll('.template-card').length===1,'created template');
+  p.d.querySelector('.template-select').checked=true;p.d.getElementById('template-apply').click();
+  await waitFor(()=>p.d.getElementById('template-message').textContent.includes('Dodano'),'template applied');
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_templates').get().n,1);
+  assert.match(p.d.getElementById('template-message').textContent,/identyczne/);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});

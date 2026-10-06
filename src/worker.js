@@ -4,6 +4,7 @@ import { weatherForTrip } from './weather.js';
 import {handleTripAdvice} from './trip-advice.js';
 import {handleDeeperMedia} from './deeper-media.js';
 import {handleDeeperAI} from './deeper-ai.js';
+import {checklistTemplates,applyChecklistTemplates} from './checklist-templates.js';
 import {authConfigured,session,login,logout,loginAssets} from './auth.js';
 import {handleLakeResearch,handleLakeCandidates,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
 
@@ -249,7 +250,7 @@ async function settings(request,env){
   if(request.method==='GET'){
     const rows=await all(env,"SELECT key,value,updated_at FROM app_settings WHERE key IN ('research_auto','research_languages','research_official_first','trip_time_zone')");
     const lastRun=await one(env,'SELECT completed_at FROM lake_research_runs WHERE status=? ORDER BY completed_at DESC LIMIT 1','completed');
-    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',version:'1.2.0',schemaVersion:24});
+    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',version:'1.2.0',schemaVersion:25});
   }
   const x=await body(request),statements=[];
   for(const [key,value] of Object.entries(x)){
@@ -280,7 +281,7 @@ async function removeOrRestore(request,env,kind,id,restore){
 }
 async function exportData(env){
   const data={format:'dream-team-backup-v1',exportedAt:new Date().toISOString(),tables:{}};
-  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','deeper_media','deeper_ai_attempts','offline_receipts','trip_documents','trip_notes','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
+  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
   return json(data,200,{'content-disposition':`attachment; filename="dream-team-backup-${new Date().toISOString().slice(0,10)}.json"`});
 }
 async function privateFetch(request,env,ctx){
@@ -299,6 +300,10 @@ async function privateFetch(request,env,ctx){
       if(path==='/api/checklist-categories'&&['GET','POST'].includes(method))return await categories(request,env);
       if(path==='/api/notes'&&['GET','POST'].includes(method))return await notes(request,env);
       if(path==='/api/offline-sync'&&method==='POST')return await offlineSync(request,env);
+      const templateMatch=path.match(/^\/api\/checklist-templates(?:\/([a-f0-9-]{36}))?$/);
+      if(templateMatch)return await checklistTemplates(request,env,templateMatch[1]||null);
+      const applyMatch=path.match(/^\/api\/trips\/([^/]+)\/checklist-templates\/apply$/);
+      if(applyMatch&&method==='POST')return await applyChecklistTemplates(request,env,decodeURIComponent(applyMatch[1]));
       const mediaMatch=path.match(/^\/api\/deeper-media(?:\/([a-f0-9-]{36})(\/(?:image|analyze|analysis))?)?$/);
       if(mediaMatch){
         const action=mediaMatch[2];

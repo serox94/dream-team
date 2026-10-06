@@ -13,7 +13,7 @@ export async function ensureSchema(env){
 }
 async function applySchema(env){
   const version=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-  if(Number(version?.value)>=24)return;
+  if(Number(version?.value)>=25)return;
   if(Number(version?.value)<16)throw new Error('Wymagane wcześniejsze migracje D1 (do wersji 16).');
   const cols=async name=>(await env.DB.prepare(`PRAGMA table_info(${name})`).all()).results;
   const statements=[];
@@ -79,10 +79,16 @@ async function applySchema(env){
     push('CREATE TABLE IF NOT EXISTS offline_receipts (id TEXT PRIMARY KEY,path TEXT NOT NULL,request_json TEXT NOT NULL,result_json TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
     if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0024_offline_sync.sql','0024_offline_sync.sql');
   }
-  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','24',CURRENT_TIMESTAMP)");
+  if(Number(version?.value)<25){
+    push('CREATE TABLE IF NOT EXISTS checklist_templates (id TEXT PRIMARY KEY,name TEXT NOT NULL UNIQUE COLLATE NOCASE,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+    push('CREATE TABLE IF NOT EXISTS checklist_template_items (id TEXT PRIMARY KEY,template_id TEXT NOT NULL REFERENCES checklist_templates(id) ON DELETE CASCADE,category TEXT NOT NULL,label TEXT NOT NULL,assigned_to TEXT,quantity TEXT,notes TEXT,sort_order INTEGER NOT NULL DEFAULT 0)');
+    push('CREATE INDEX IF NOT EXISTS template_items_parent ON checklist_template_items(template_id,sort_order)');
+    if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0025_checklist_templates.sql','0025_checklist_templates.sql');
+  }
+  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','25',CURRENT_TIMESTAMP)");
   try{await env.DB.batch(statements);}catch(error){
     // Two concurrent first requests can race; the other request may have won.
     const latest=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-    if(Number(latest?.value)<24)throw error;
+    if(Number(latest?.value)<25)throw error;
   }
 }

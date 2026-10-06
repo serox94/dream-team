@@ -36,6 +36,7 @@
     if(document.getElementById('trip-manager'))await loadScript('trip-manager.js');
     await window.initDreamApp();
     if(document.body.dataset.page==='teren')await loadScript('trip-notes.js');
+    if(document.body.dataset.page==='checklisty')await loadScript('checklist-templates.js');
     if(document.querySelector('.location-photo-card'))await loadScript('trip-peg-enhancer.js');
     document.documentElement.dataset.ready='true';
     Dream.registerShell();
