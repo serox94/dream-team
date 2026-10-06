@@ -17,5 +17,6 @@
       "database_name": "dream-team-db",
       "database_id": "b64c7a2c-8694-41c6-b54a-857b88bf2c96"
     }
-  ]
+  ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "dream-team-media" }]
 }

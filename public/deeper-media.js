@@ -1,0 +1,40 @@
+const host=document.querySelector('#deeper-media');
+if(host){
+const e=(tag,attributes={},text='')=>{const node=document.createElement(tag);for(const [k,v] of Object.entries(attributes))node.setAttribute(k,v);node.textContent=text;return node;};
+const input=(id,label,type='text')=>`<label for="${id}">${label}</label><input id="${id}" type="${type}">`;
+host.innerHTML=`<h3>Moje screenshoty</h3><p>Dodaj ekran Fish Deeper z telefonu lub wklej go tutaj. Obraz i opis są prywatne dla zalogowanych użytkowników DreamTeam.</p><form id="media-form" class="media-form"><label for="media-file">Screenshot (PNG, JPG, WebP; do 8 MB)</label><input type="file" id="media-file" accept="image/png,image/jpeg,image/webp" required><button type="button" class="secondary-btn" id="media-paste">Wklej ze schowka</button><p id="media-file-info" role="status"></p>${input('media-name','Nazwa')}${input('media-date','Data','date')}<label for="media-lake">Łowisko</label><select id="media-lake"><option value="">Bez przypisania</option></select><label for="media-trip">Wyjazd</label><select id="media-trip"><option value="">Bez przypisania</option></select><label for="media-spot">Spot</label><select id="media-spot"><option value="">Bez przypisania</option></select>${input('media-depth','Głębokość (m)','number')}<label for="media-note">Moja notatka</label><textarea id="media-note" maxlength="2000" rows="3"></textarea><div><button type="submit" id="media-save">Dodaj screenshot</button><button type="button" id="media-cancel" class="secondary-btn" hidden>Anuluj edycję</button></div></form><p id="media-status" role="status"></p><div id="media-list" class="media-list"></div>`;
+const $=id=>host.querySelector('#'+id),form=$('media-form');let file=null,editing=null,images=[],model=null;
+const status=(message,error=false)=>{const node=$('media-status');node.textContent=message;node.classList.toggle('error',error);};
+async function api(path,options={}){const response=await fetch('/api/'+path,{credentials:'same-origin',cache:'no-store',...options});const data=await response.json();if(!response.ok)throw Error(data.error||`Błąd ${response.status}`);return data;}
+function option(select,value,label){select.append(e('option',{value},label));}
+async function updateSpots(){const tripId=$('media-trip').value,select=$('media-spot');select.replaceChildren(e('option',{value:''},'Bez przypisania'));
+ if(!tripId)return;try{const data=await api('spots?tripId='+encodeURIComponent(tripId));for(const spot of data.spots)option(select,spot.id,spot.name);}catch(error){status(error.message,true);}}
+function updateTrips(){const select=$('media-trip'),lake=$('media-lake').value,old=select.value;select.replaceChildren(e('option',{value:''},'Bez przypisania'));
+ for(const trip of model.trips.filter(t=>!lake||t.lakeId===lake))option(select,trip.id,trip.name);
+ select.value=old;if(select.selectedIndex<0)select.value='';updateSpots();}
+function choose(selected){file=selected;$('media-file-info').textContent=selected?`${selected.name} · ${(selected.size/1024/1024).toFixed(2)} MB`:'';if(selected&&!$('media-name').value)$('media-name').value=selected.name.replace(/\.[^.]+$/,'');}
+$('media-file').addEventListener('change',()=>choose($('media-file').files[0]||null));
+$('media-paste').addEventListener('click',async()=>{if(!navigator.clipboard?.read){status('Schowek obrazów nie jest dostępny. Użyj systemowego Wklej lub wybierz plik.',true);return;}
+ try{for(const item of await navigator.clipboard.read()){const type=item.types.find(t=>['image/png','image/jpeg','image/webp'].includes(t));if(type){const blob=await item.getType(type);choose(new File([blob],`wklejony-screenshot.${type.split('/')[1]}`,{type}));return;}}status('Schowek nie zawiera obsługiwanego obrazu.',true);}catch{status('Przeglądarka nie udostępniła schowka. Wybierz plik.',true);}});
+host.addEventListener('paste',event=>{const item=[...event.clipboardData?.items||[]].find(i=>i.type.startsWith('image/'));if(item){const pasted=item.getAsFile();if(pasted){choose(new File([pasted],`wklejony-screenshot.${pasted.type.split('/')[1]}`,{type:pasted.type}));event.preventDefault();}}});
+$('media-lake').addEventListener('change',updateTrips);$('media-trip').addEventListener('change',()=>{const trip=model.trips.find(t=>t.id===$('media-trip').value);if(trip)$('media-lake').value=trip.lakeId;updateSpots();});
+function reset(){editing=null;form.reset();file=null;$('media-file-info').textContent='';$('media-save').textContent='Dodaj screenshot';$('media-file').required=true;$('media-cancel').hidden=true;updateTrips();}
+$('media-cancel').addEventListener('click',reset);
+async function compress(original){if(original.size<=2.5*1024*1024)return original;
+ const bitmap=await createImageBitmap(original);if(Math.max(bitmap.width,bitmap.height)<=2048)return original;
+ const scale=Math.min(1,2048/Math.max(bitmap.width,bitmap.height)),canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);
+ canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close?.();
+ const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',0.9));return blob&&blob.size<original.size?new File([blob],original.name.replace(/\.[^.]+$/,'.webp'),{type:'image/webp'}):original;}
+form.addEventListener('submit',async event=>{event.preventDefault();const payload={name:$('media-name').value,tripId:$('media-trip').value||null,lakeId:$('media-lake').value||null,spotId:$('media-spot').value||null,depthM:$('media-depth').value||null,capturedAt:$('media-date').value?new Date($('media-date').value+'T12:00:00Z').toISOString():null,note:$('media-note').value||null};
+ if(!editing&&!file){status('Wybierz screenshot.',true);return;}const button=$('media-save');button.disabled=true;status('Zapisywanie…');
+ try{if(editing){await api(`deeper-media/${editing}`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});}
+ else{const formData=new FormData();for(const [k,v] of Object.entries(payload))if(v!==null)formData.set(k,v);formData.set('image',await compress(file));await api('deeper-media',{method:'POST',body:formData});}
+ reset();await refresh();status('Screenshot zapisany.');}catch(error){status(error.message,true);}finally{button.disabled=false;}});
+function render(){const list=$('media-list');list.replaceChildren();if(!images.length){list.append(e('p',{},'Nie ma jeszcze własnych screenshotów.'));return;}
+ for(const shot of images){const card=e('article',{class:'media-card'}),img=e('img',{src:`/api/deeper-media/${shot.id}/image`,alt:shot.name,loading:'lazy'});card.append(img,e('h4',{},shot.name),e('p',{},[shot.capturedAt?.slice(0,10),model.lakes.find(l=>l.id===shot.lakeId)?.name,model.trips.find(t=>t.id===shot.tripId)?.name,shot.depthM!=null?`${shot.depthM} m`:null].filter(Boolean).join(' · ')),e('p',{},shot.note||''));
+ const edit=e('button',{type:'button',class:'secondary-btn'},'Edytuj opis');edit.addEventListener('click',async()=>{editing=shot.id;file=null;$('media-file').required=false;$('media-save').textContent='Zapisz opis';$('media-cancel').hidden=false;$('media-name').value=shot.name;$('media-date').value=shot.capturedAt?.slice(0,10)||'';$('media-lake').value=shot.lakeId||'';updateTrips();$('media-trip').value=shot.tripId||'';await updateSpots();$('media-spot').value=shot.spotId||'';$('media-depth').value=shot.depthM??'';$('media-note').value=shot.note||'';form.scrollIntoView({block:'start'});});
+ const remove=e('button',{type:'button',class:'secondary-btn'},'Usuń obraz');remove.addEventListener('click',async()=>{if(!confirm(`Usunąć screenshot „${shot.name}”?`))return;try{await api(`deeper-media/${shot.id}`,{method:'DELETE'});await refresh();status('Screenshot usunięty.');}catch(error){status(error.message,true);}});
+ card.append(edit,remove);list.append(card);}}
+async function refresh(){images=(await api('deeper-media')).images;render();}
+try{model=await api('bootstrap');for(const lake of model.lakes)option($('media-lake'),lake.id,lake.name);updateTrips();await refresh();}catch(error){status(error.message,true);}
+}

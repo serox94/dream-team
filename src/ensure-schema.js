@@ -13,7 +13,7 @@ export async function ensureSchema(env){
 }
 async function applySchema(env){
   const version=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-  if(Number(version?.value)>=20)return;
+  if(Number(version?.value)>=21)return;
   if(Number(version?.value)<16)throw new Error('Wymagane wcześniejsze migracje D1 (do wersji 16).');
   const cols=async name=>(await env.DB.prepare(`PRAGMA table_info(${name})`).all()).results;
   const statements=[];
@@ -48,13 +48,18 @@ async function applySchema(env){
   push('CREATE INDEX IF NOT EXISTS lake_runs_lake ON lake_research_runs(lake_id,started_at)');
   if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0019_lake_research_and_categories.sql','0019_lake_research_and_categories.sql');
   }
-  push('CREATE TABLE IF NOT EXISTS lake_candidate_searches (id TEXT PRIMARY KEY,query_key TEXT NOT NULL,status TEXT NOT NULL,credits_used INTEGER NOT NULL DEFAULT 1,started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,completed_at TEXT)');
-  push('CREATE INDEX IF NOT EXISTS lake_candidate_searches_query ON lake_candidate_searches(query_key,started_at)');
-  if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0020_lake_candidate_searches.sql','0020_lake_candidate_searches.sql');
-  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','20',CURRENT_TIMESTAMP)");
+  if(Number(version?.value)<20){
+    push('CREATE TABLE IF NOT EXISTS lake_candidate_searches (id TEXT PRIMARY KEY,query_key TEXT NOT NULL,status TEXT NOT NULL,credits_used INTEGER NOT NULL DEFAULT 1,started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,completed_at TEXT)');
+    push('CREATE INDEX IF NOT EXISTS lake_candidate_searches_query ON lake_candidate_searches(query_key,started_at)');
+    if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0020_lake_candidate_searches.sql','0020_lake_candidate_searches.sql');
+  }
+  push('CREATE TABLE IF NOT EXISTS deeper_media (id TEXT PRIMARY KEY,object_key TEXT NOT NULL UNIQUE,name TEXT NOT NULL,mime_type TEXT NOT NULL,size_bytes INTEGER NOT NULL,trip_id TEXT REFERENCES trips(id),lake_id TEXT REFERENCES lakes(id),spot_id INTEGER REFERENCES spots(id),depth_m REAL,captured_at TEXT,note TEXT,analysis_json TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+  push('CREATE INDEX IF NOT EXISTS deeper_media_trip ON deeper_media(trip_id,created_at)');
+  if(migrationTable)push("INSERT INTO d1_migrations(name) SELECT ? WHERE NOT EXISTS(SELECT 1 FROM d1_migrations WHERE name=?)",'0021_deeper_media.sql','0021_deeper_media.sql');
+  push("INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','21',CURRENT_TIMESTAMP)");
   try{await env.DB.batch(statements);}catch(error){
     // Two concurrent first requests can race; the other request may have won.
     const latest=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();
-    if(Number(latest?.value)<20)throw error;
+    if(Number(latest?.value)<21)throw error;
   }
 }
