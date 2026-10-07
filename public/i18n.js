@@ -15,6 +15,12 @@ const dynamic=string=>{
  if(lang!=='en')return null;
  const patterns=[
   [/^Spakowane (\d+) z (\d+) · pozostało (\d+)$/,(_,a,b,c)=>`Packed ${a} of ${b} · ${c} remaining`],
+  [/^(\d\d:\d\d) \((\d+) brań\)$/,(_,time,count)=>`${time} (${count} bites)`],
+  [/^(.+?)  (\d+)\/(\d+)$/,(_,category,packed,total)=>`${dictionary[category]||category} ${packed}/${total}`],
+  [/^(\d+) szt\. • Do ogarnięcia$/,(_,count)=>`${count} pcs · To pack`],
+  [/^· stanowisko (.+)$/,(_,peg)=>`· swim ${peg}`],
+  [/^Schemat edukacyjny: (.+)\. Interpretację potwierdź ponownym skanem\.$/,(_,name)=>`Illustrative diagram: ${dictionary[name]||name}. Verify the interpretation with another pass.`],
+  [/^Opracowanie własne\. 🎣 praktyka i 💬 społeczność opisują obserwacje; 🏭 producent może mieć interes handlowy\. Przy sprzecznościach porównuj i testuj\. Dostęp: (.+)\.$/,(_,date)=>`Editorial synthesis. 🎣 practice and 💬 community describe observations; 🏭 manufacturers may have a commercial interest. Compare conflicting claims and test them. Accessed: ${date}.`],
   [/^Godziny łowiska: (.+)\. Termin może pozostać pusty\.$/,(_,zone)=>`Lake time: ${zone}. Dates may be left blank.`],
   [/^Usunięte wpisy z wyjazdu (.+)\.$/,(_,trip)=>`Deleted entries from trip ${trip}.`],
   [/^Przynęta: (.+)$/,(_,bait)=>`Bait: ${bait}`],
