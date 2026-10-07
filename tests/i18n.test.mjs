@@ -32,6 +32,12 @@ test('device language defaults from browser, persists independently and leaves u
  assert.equal(restarted.window.document.documentElement.lang,'pl');assert.equal(restarted.window.document.querySelector('button').textContent,'Zaloguj');
  patryk.window.close();english.window.close();restarted.window.close();
 });
+test('English dynamic statuses translate labels while preserving trip and bait values',async()=>{
+ const english=await device('en-GB'),t=english.window.DreamI18n.t;
+ assert.equal(t('Spakowane 1 z 2 · pozostało 1'),'Packed 1 of 2 · 1 remaining');
+ assert.equal(t('Przynęta: coco'),'Bait: coco');
+ assert.equal(t('Godziny łowiska: Europe/Warsaw. Termin może pozostać pusty.'),'Lake time: Europe/Warsaw. Dates may be left blank.');
+});
 test('late editorial controls translate without changing user notes',async()=>{
  const d=await device('en-GB');
  const root=d.window.document.createElement('div');root.id='knowledge-root';root.innerHTML='<section><p>Typ dna</p><button>Wszystkie pozycje</button><p data-user-content>Typ dna</p></section>';
