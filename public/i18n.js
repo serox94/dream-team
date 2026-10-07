@@ -14,6 +14,16 @@ if(lang==='en'&&guide){
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^Weather unavailable: (.+)$/,(_,message)=>`Weather unavailable: ${translate(message)}`],
+  [/^Dostawca pogody zwrócił HTTP (\d+)\.$/,(_,code)=>`The weather provider returned HTTP ${code}.`],
+  [/^Nazwa kategorii (.+)$/,(_,name)=>`Category name: ${translate(name)}`],
+  [/^Schemat wiązania (.+)$/,(_,name)=>`${name} tying diagram`],
+  [/^Schemat (.+)$/,(_,name)=>`${name} diagram`],
+  [/^(.+?) - wiązanie lub gotowy przypon$/,(_,name)=>`${name} - tying or ready-made rig`],
+  [/^(.+?) - schemat wiązania lub gotowy wygląd$/,(_,name)=>`${name} - tying diagram or ready-made rig`],
+  [/^(.+?) - schemat lub gotowy wygląd$/,(_,name)=>`${name} - diagram or ready-made rig`],
+  [/^(.+?) - schemat lub gotowy przypon$/,(_,name)=>`${name} - diagram or ready-made rig`],
+  [/^(.+?) - wariant combi$/,(_,name)=>`${name} - combi variant`],
   [/^Schemat: (.+)$/,(_,name)=>`Diagram: ${translate(name)}`],
   [/^np\. (.+)$/,(_,example)=>`e.g. ${translate(example)}`],
   [/^(\d+) z (\d+)$/,(_,a,b)=>`${a} of ${b}`],
@@ -60,7 +70,7 @@ const dynamic=string=>{
   [/^(Dodano|Powiązany spot|Najlepszy wiatr): (.+)$/,(_,label,value)=>`${{Dodano:'Added','Powiązany spot':'Linked spot','Najlepszy wiatr':'Best wind'}[label]}: ${value}`],
   [/^Odznaczyć (\d+) pozycji w tym wyjeździe\?$/,(_,n)=>`Uncheck ${n} items in this trip?`],
   [/^Przenieś (.+) (wyżej|niżej)$/,(_,name,dir)=>`Move ${name} ${dir==='wyżej'?'up':'down'}`],
-  [/^Przenieś pozycje z (.+) do$/,(_,name)=>`Move items from ${name} to`],
+  [/^Przenieś pozycje z (.+) do$/,(_,name)=>`Move items from ${translate(name)} to`],
   [/^Spakowane: (.+)$/,(_,name)=>`Packed: ${name}`],
   [/^Usunąć kategorię (.+)\? Pozycje pozostaną na liście tylko po przeniesieniu\.$/,(_,name)=>`Delete category ${name}? Items remain on the list only if moved.`],
   [/^Dodano (\d+) pozycji\.$/,(_,n)=>`Added ${n} items.`],
