@@ -1,0 +1,18 @@
+// Read binding names and safe status only. Never prints secrets or enables billing.
+import assert from 'node:assert/strict';import {readFile,mkdir,writeFile} from 'node:fs/promises';
+const base='https://dream-team-preview.sewerynski00.workers.dev',config=JSON.parse(await readFile('wrangler.preview.generated.jsonc','utf8'));assert.equal(config.name,'dream-team-preview');assert.equal(config.vars.AI_FREE_ONLY,'false');
+const login=await fetch(base+'/api/login',{method:'POST',redirect:'manual',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:process.env.RYBY_LOGIN_USERNAME,password:process.env.RYBY_LOGIN_PASSWORD})});assert.equal(login.status,303);const cookie=login.headers.get('set-cookie').split(';')[0];
+const settings=await fetch(base+'/api/settings',{headers:{cookie}}).then(r=>r.json());const report={tavily:{result:'BLOCKED'},ai:{result:'BLOCKED',freeAllocationPerDay:10000,pricingSource:'https://developers.cloudflare.com/workers-ai/platform/pricing/',enabled:settings.workersAiAvailable,calls:0}};
+const cfRoot=`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`;
+const cf=async path=>{const r=await fetch(cfRoot+path,{headers:{authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`}});if(!r.ok)return {status:r.status,available:false};const data=await r.json();return data.success?{available:true,value:data.result}:{available:false};};
+const bindingSettings=await cf('/workers/scripts/dream-team-preview/settings');report.ai.binding=!!bindingSettings.value?.bindings?.find(b=>b.type==='ai'&&b.name==='AI');
+const subscriptions=await cf('/subscriptions');report.ai.billingVerificationAvailable=subscriptions.available;
+if(subscriptions.available)report.ai.workersSubscriptions=(Array.isArray(subscriptions.value)?subscriptions.value:[]).filter(s=>/workers/i.test(s.rate_plan?.id+' '+s.rate_plan?.public_name)).map(s=>({id:s.rate_plan?.id,name:s.rate_plan?.public_name}));
+// An empty subscription list is not proof of the active Workers plan, prepaid billing or today's usage.
+report.ai.remaining='Free billing and remaining allowance cannot be confirmed unambiguously; AI_FREE_ONLY remains false. No inference, paid plan or overage enabled.';
+if(!settings.researchProviderConfigured){report.tavily.remaining='Set exactly one Worker secret: TAVILY_API_KEY on dream-team-preview.';report.tavily.requestCount=0;report.tavily.credits=0;}
+else{
+ // Exactly one controlled candidate search. Never invent a specific lake when the name is ambiguous.
+ const r=await fetch(base+'/api/lake-candidates',{method:'POST',headers:{cookie,origin:base,'content-type':'application/json'},body:JSON.stringify({name:'Kamień',country:'Polska'})});const data=await r.json();report.tavily={result:r.ok()?'PARTIAL':'FAIL',query:'Kamień / Polska',requestCount:1,reservedCredits:1,candidates:data.candidates||[],ambiguity:(data.candidates||[]).length!==1,remaining:'Candidate search only. Official identity and location require confirmation before any source extraction; 38 fields, provenance, conflicts, regulations and checklist suggestions remain unverified.'};
+}
+assert.equal(settings.workersAiAvailable,false,'AI must remain disabled without confirmed free-only billing');await mkdir('live-preview-qa',{recursive:true});await writeFile('live-preview-qa/bindings.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report));
