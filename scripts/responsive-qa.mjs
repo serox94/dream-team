@@ -364,4 +364,51 @@ try{
   await field.screenshot({path:`${screenshotDir}/dashboard-field-390.png`});
   await field.close();
   console.log('390px active trip field mode PASS.');
+  const offlineFixture=await serve({seed:true});
+  try{
+    const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,locale:'pl-PL'});
+    try{
+      const page=await context.newPage();
+      await page.goto(offlineFixture.url+'/pages/mapa.html');await page.locator('html[data-ready="true"]').waitFor();
+      await page.waitForFunction(async()=>Boolean(await caches.match('/index.html')));
+      const original=await page.evaluate(async()=>{
+        const spot=await Dream.api('/api/spots',{method:'POST',body:JSON.stringify({tripId:'next-trip',name:'Existing bank',depthM:3})});
+        await Promise.all(['/api/spots?tripId=next-trip','/api/checklist?tripId=next-trip','/api/catches?tripId=next-trip','/api/notes?tripId=next-trip'].map(path=>Dream.api(path)));
+        return spot.id;
+      });
+      const item=offlineFixture.DB.sqlite.prepare("SELECT id FROM checklist_items WHERE trip_id='next-trip' AND packed=0 LIMIT 1").get().id;
+      const before=offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n;
+      await context.setOffline(true);
+      const result=await page.evaluate(async({original,item})=>{
+        const operations=[
+          [`/api/checklist/${item}?tripId=next-trip`,'PATCH',{packed:true}],
+          ['/api/catches','POST',{tripId:'next-trip',anglerId:'patryk',weightKg:7.4,caughtAt:'2026-09-01T10:00:00Z'}],
+          ['/api/notes','POST',{tripId:'next-trip',content:'Offline bank note'}],
+          ['/api/spots','POST',{tripId:'next-trip',name:'New offline bank',depthM:2.1}],
+          [`/api/spots/${original}?tripId=next-trip`,'PUT',{name:'Edited offline bank',depthM:3.7}]
+        ];
+        const responses=[];for(const [path,method,payload] of operations)responses.push(await Dream.api(path,{method,body:JSON.stringify(payload)}));
+        return {responses,count:Dream.pendingCount(),queue:JSON.parse(localStorage.getItem('dreamteam.offline.queue.v1'))};
+      },{original,item});
+      assert.ok(result.responses.every(x=>x.pendingSync),'every offline operation is queued');
+      assert.equal(result.count,5,'five changes wait for sync');
+      assert.match(await page.locator('#offline-banner').innerText(),/5/);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,before,'no offline server write');
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT name FROM spots WHERE id=?').get(original).name,'Existing bank');
+      await context.setOffline(false);
+      await page.waitForFunction(()=>Dream.pendingCount()===0,null,{timeout:30000});
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(item).packed,1);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,before+1);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM trip_notes WHERE content=?').get('Offline bank note').n,1);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM spots WHERE name=?').get('New offline bank').n,1);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT name FROM spots WHERE id=?').get(original).name,'Edited offline bank');
+      const replay=await page.request.post(offlineFixture.url+'/api/offline-sync',{data:result.queue[1]});
+      assert.equal(replay.status(),200,'catch replay accepted with same idempotency key');
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,before+1,'retry does not duplicate the catch');
+      await page.waitForTimeout(200);await page.reload();await page.locator('html[data-ready="true"]').waitFor();
+      assert.equal(await page.evaluate(()=>Dream.pendingCount()),0);
+      assert.equal(await page.locator('#offline-banner').count(),0,'pending state clears after sync');
+      console.log('390px offline field scenario: checklist, catch, note, spot create/edit, ordered sync, replay and cleared status PASS.');
+    }finally{await context.close();}
+  }finally{await offlineFixture.close();}
 }finally{await browser.close();await preview.close();await loginPreview.close();}
