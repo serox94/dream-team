@@ -11,7 +11,7 @@ if(lang==='en'&&guide){
 }
 const translate=string=>dictionary[string]||string;
 window.DreamI18n={lang,t:translate,set(next){if(next!=='pl'&&next!=='en')return;localStorage.setItem(key,next);location.reload();}};
-const personal='[data-user-content],.media-card,.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew';
+const personal='[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew';
 const walk=node=>{
  if(node.nodeType===Node.TEXT_NODE){if(node.parentElement?.closest(`script,style,${personal}`))return;const original=node.textContent.trim();if(original&&dictionary[original])node.textContent=node.textContent.replace(original,dictionary[original]);return;}
  if(node.nodeType!==Node.ELEMENT_NODE||node.closest(personal))return;

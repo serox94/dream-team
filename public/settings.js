@@ -1,28 +1,28 @@
 document.addEventListener('dream:ready',async()=>{
-  const $=id=>document.getElementById(id), say=(message,error=false)=>Dream.notice(message,error);
+  const $=id=>document.getElementById(id), t=value=>window.DreamI18n?.t(value)||value, locale=window.DreamI18n?.lang==='en'?'en-GB':'pl-PL', say=(message,error=false)=>Dream.notice(t(message),error);
   const languages=['PL','EN','FR','DE','NL'];
   const saved=await Dream.api('/api/settings');
   $('settings-version').textContent=saved.version;
   $('settings-schema').textContent=saved.schemaVersion;
-  $('research-last').textContent=saved.lastResearchAt?new Date(saved.lastResearchAt).toLocaleString('pl-PL'):'brak';
+  $('research-last').textContent=saved.lastResearchAt?new Date(saved.lastResearchAt).toLocaleString(locale):t('brak');
   const profile=$('settings-version').closest('section');
   profile.querySelector('p:nth-of-type(2)').insertAdjacentHTML('beforeend',' <small>(profil informacyjny; instrukcje Deeper są napisane dla tego zestawu)</small>');
   const providerStatus=document.createElement('p');providerStatus.id='research-provider-status';providerStatus.textContent=saved.researchProviderConfigured?'Automatyczny research: dostawca skonfigurowany.':'AUTOMATYCZNY RESEARCH: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.';
   $('research-auto').closest('label').before(providerStatus);
   $('research-official').closest('label').lastChild.textContent=' Preferuj oficjalne strony w wyszukiwaniu';
   const system=document.createElement('section');system.className='panel-card';system.id='system-health';
-  const backup=saved.lastBackupAt?new Date(saved.lastBackupAt).toLocaleString(window.DreamI18n?.lang==='en'?'en-GB':'pl-PL'):saved.backupStatus==='missing'?'brak potwierdzonej kopii':'status niedostępny';
-  system.innerHTML='<h3>System</h3><dl class="system-health-list"><dt>Wersja DreamTeam</dt><dd></dd><dt>Schemat D1</dt><dd></dd><dt>Ostatnia udana kopia zapasowa</dt><dd></dd><dt>Research provider</dt><dd></dd><dt>Workers AI</dt><dd></dd><dt>Offline / cache</dt><dd id="system-cache"></dd><dt>Zmiany do synchronizacji</dt><dd id="system-pending"></dd></dl>';
-  const values=system.querySelectorAll('dd');[saved.version,saved.schemaVersion,backup,saved.researchProviderConfigured?'skonfigurowany':'niedostępny',saved.workersAiAvailable?'dostępny':'wyłączony'].forEach((value,i)=>values[i].textContent=String(value));
+  const backup=saved.lastBackupAt?new Date(saved.lastBackupAt).toLocaleString(locale):saved.backupStatus==='missing'?t('brak potwierdzonej kopii'):t('status niedostępny');
+  system.innerHTML='<h3>System</h3><dl class="system-health-list"><dt>Wersja DreamTeam</dt><dd></dd><dt>Schemat D1</dt><dd></dd><dt>Ostatnia udana kopia zapasowa</dt><dd></dd><dt>Research provider</dt><dd></dd><dt>Workers AI</dt><dd></dd><dt>Media R2</dt><dd></dd><dt>Offline / cache</dt><dd id="system-cache"></dd><dt>Zmiany do synchronizacji</dt><dd id="system-pending"></dd></dl>';
+  const values=system.querySelectorAll('dd');[saved.version,saved.schemaVersion,backup,saved.researchProviderConfigured?t('skonfigurowany'):t('niedostępny'),saved.workersAiAvailable?t('dostępny'):t('wyłączony'),saved.mediaStorageAvailable?t('dostępny'):t('niedostępny')].forEach((value,i)=>values[i].textContent=String(value));
   document.querySelector('.two-column').append(system);
   const participantsSection=document.createElement('section');participantsSection.className='panel-card';participantsSection.id='participant-profiles';participantsSection.innerHTML='<h3>Profile uczestników</h3><p>Język profilu jest przygotowany na przyszłe konta. Język interfejsu wybierasz osobno na każdym urządzeniu.</p><div id="participant-profile-list"></div>';
   profile.after(participantsSection);
   async function renderProfiles(){const host=$('participant-profile-list');host.replaceChildren();for(const person of window.DREAM_MODEL.anglers){
-    const form=document.createElement('form');form.className='form-grid participant-profile';const title=document.createElement('h4');title.textContent=person.name;form.append(title);
+    const form=document.createElement('form');form.className='form-grid participant-profile';const title=document.createElement('h4');title.dataset.userContent='';title.textContent=person.name;form.append(title);
     function control(labelText,type,value){const label=document.createElement('label');label.textContent=labelText;const input=document.createElement('input');input.type=type;if(type==='checkbox')input.checked=Boolean(value);else input.value=value??'';label.append(input);form.append(label);return input;}
     const name=control('Imię','text',person.name),pb=control('PB startowe (kg)','number',person.baselinePbKg),active=control('Aktywny','checkbox',person.active);
     name.maxLength=60;pb.min=0;pb.max=150;pb.step='.01';const languageLabel=document.createElement('label');languageLabel.textContent='Domyślny język profilu';const language=document.createElement('select');for(const [value,label] of [['pl','PL'],['en','EN']]){const option=document.createElement('option');option.value=value;option.textContent=label;language.append(option);}language.value=person.defaultLanguage;languageLabel.append(language);form.append(languageLabel);
-    const stats=document.createElement('p');stats.textContent=`Wyjazdy: ${person.tripCount} · Połowy: ${person.fishCount} · PB: ${person.pbKg} kg`;form.append(stats);
+    const stats=document.createElement('p');stats.textContent=`${t('Wyjazdy')}: ${person.tripCount} · ${t('Połowy')}: ${person.fishCount} · PB: ${person.pbKg} kg`;form.append(stats);
     const save=document.createElement('button');save.type='submit';save.textContent='Zapisz profil';form.append(save);
     form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await Dream.api(`/api/anglers/${encodeURIComponent(person.id)}`,{method:'PATCH',body:JSON.stringify({name:name.value,baselinePbKg:Number(pb.value),active:active.checked,defaultLanguage:language.value})});await Dream.refreshModel();renderProfiles();say('Profil zapisany.');}catch(error){say(error.message,true);save.disabled=false;}};
     host.append(form);
@@ -40,7 +40,7 @@ document.addEventListener('dream:ready',async()=>{
   $('category-add').onsubmit=async e=>{e.preventDefault();try{await Dream.api('/api/checklist-categories',{method:'POST',body:JSON.stringify({name:$('category-name').value})});$('category-add').reset();await categories();}catch(error){say(error.message,true);}};
   await categories();
   const cacheEntries=()=>{try{return JSON.parse(localStorage.getItem('ryby_read_cache_v1')||'{}');}catch{return {};}};
-  async function offlineStatus(){const entries=Object.values(cacheEntries());const latest=Math.max(0,...entries.map(x=>x.at||0));const keys='caches'in window?await caches.keys():[];const estimate=await navigator.storage?.estimate?.();const usage=estimate?.usage?` · ${(estimate.usage/1048576).toFixed(1)} MB`:'';$('offline-status').textContent=`Ostatnia synchronizacja: ${latest?new Date(latest).toLocaleString('pl-PL'):'brak'} · wpisy ${entries.length} · cache ${keys.length}${usage}.`;$('system-cache').textContent=`${entries.length} wpisów · ${keys.length} cache${usage}`;$('system-pending').textContent=String(Dream.pendingCount());}
+  async function offlineStatus(){const entries=Object.values(cacheEntries());const latest=Math.max(0,...entries.map(x=>x.at||0));const keys='caches'in window?await caches.keys():[];const estimate=await navigator.storage?.estimate?.();const usage=estimate?.usage?` · ${(estimate.usage/1048576).toFixed(1)} MB`:'';$('offline-status').textContent=`${t('Ostatnia synchronizacja')}: ${latest?new Date(latest).toLocaleString(locale):t('brak')} · ${t('wpisy')} ${entries.length} · cache ${keys.length}${usage}.`;$('system-cache').textContent=`${entries.length} ${t('wpisów')} · ${keys.length} cache${usage}`;$('system-pending').textContent=String(Dream.pendingCount());}
   $('clear-offline').onclick=async()=>{Dream.clearReadCache();if('caches'in window)for(const key of await caches.keys())if(key.startsWith('ryby-shell-'))await caches.delete(key);await offlineStatus();say('Wyczyszczono dane offline.');};
   $('settings-export').onclick=async()=>{try{await Dream.downloadBackup();}catch(e){say(e.message,true);}};
   await offlineStatus();
