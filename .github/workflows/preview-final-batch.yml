@@ -1,6 +1,8 @@
 name: Preview final batch
 on:
   workflow_dispatch:
+  push:
+    branches: [feat/final-batch]
 permissions:
   contents: read
 concurrency:
