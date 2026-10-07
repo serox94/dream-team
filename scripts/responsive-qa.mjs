@@ -184,7 +184,9 @@ try{
           await page.locator('.media-card button').filter({hasText:'Edytuj opis'}).click();
           await page.locator('#media-note').fill('Mój opis dna');
           await page.locator('#media-form button[type="submit"]').click();
-          await page.waitForFunction(()=>[...document.querySelectorAll('.media-card p')].some(p=>p.textContent.includes('Mój opis dna'))||document.querySelector('#media-status')?.classList.contains('error'),null,{timeout:5000});
+          await page.waitForTimeout(750);
+          const mediaState=await page.evaluate(()=>({status:document.querySelector('#media-status')?.textContent,note:document.querySelector('#media-note')?.value,required:document.querySelector('#media-file')?.required,card:document.querySelector('.media-card')?.innerText.slice(0,300)}));
+          console.log('Media edit fixture state:',JSON.stringify(mediaState),'recent requests:',JSON.stringify(preview.requests.slice(-5)));
           assert.match(await page.locator('.media-card').innerText(),/Mój opis dna/,`media edit: ${await page.locator('#media-status').innerText()}`);
           await page.locator('.media-card button').filter({hasText:'Utwórz spot'}).click();
           await page.locator('.media-card form input[name="name"]').fill('Mój spot sonarowy');
