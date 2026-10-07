@@ -215,8 +215,9 @@ test('spot form CRUD retains optional values and renders user notes as text, nev
  const s=await testServe(),p=await page(s,'/pages/mapa.html');
  try{
   const markup='<img src=x onerror=alert(1)>';
-  fill(p,'spot-name','Testowy spot');fill(p,'spot-depth','4.5');fill(p,'spot-obstacles',markup);submit(p,'spot-form');
+  fill(p,'spot-name','Testowy spot');fill(p,'spot-depth','4.5');fill(p,'spot-latitude','53.12345');fill(p,'spot-longitude','18.54321');fill(p,'spot-weed','pas zielska');fill(p,'spot-rig','Ronnie Rig');fill(p,'spot-bait','wafters 15 mm');fill(p,'spot-obstacles',markup);submit(p,'spot-form');
   await waitFor(()=>p.d.querySelector('.spot-card'));assert.equal(p.d.querySelector('img[src="x"]'),null);assert.ok(p.d.querySelector('.spot-meta-grid').textContent.includes(markup));
+  const stored=s.DB.sqlite.prepare('SELECT latitude,longitude,weed,rig,bait FROM spots').get();assert.equal(stored.latitude,53.12345);assert.equal(stored.longitude,18.54321);assert.equal(stored.weed,'pas zielska');assert.equal(stored.rig,'Ronnie Rig');assert.equal(stored.bait,'wafters 15 mm');
   p.d.querySelector('.spot-card .edit-btn').click();await waitFor(()=>p.d.getElementById('edit-spot-id').value);fill(p,'spot-depth','');fill(p,'spot-obstacles','');submit(p,'spot-form');
   await waitFor(()=>p.d.getElementById('spot-message').textContent==='Zmiany zapisane.'&&p.d.querySelector('.spot-card .catch-badges')?.textContent.includes('Głębokość: brak'));assert.equal(s.DB.sqlite.prepare('SELECT depth_m FROM spots').get().depth_m,null);
   p.d.querySelector('.spot-card .danger-btn').click();await waitFor(()=>p.d.querySelector('#app-notice button'));p.d.querySelector('#app-notice button').click();await waitFor(()=>p.d.getElementById('app-notice').textContent==='Wpis przywrócony.');assert.equal(s.DB.sqlite.prepare('SELECT count(*) n FROM spots WHERE deleted_at IS NULL').get().n,1);
