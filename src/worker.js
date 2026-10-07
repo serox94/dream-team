@@ -395,7 +395,7 @@ export default {
       const assetPath=path==='/login'?'/login.html':path;
       const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));
       const result=protectedResponse(asset);
-      if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+      if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
       return result;
     }
     if(!authConfigured(env))return json({ok:false,error:'Logowanie nie jest jeszcze skonfigurowane.'},503);
