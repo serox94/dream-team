@@ -72,11 +72,13 @@ jobs:
           npm install --no-save --package-lock=false playwright
           npx playwright install --with-deps chromium
       - name: Real preview language QA at 390 and desktop
+        id: language
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/live-preview-language.mjs
       - name: Real preview media lifecycle in UI and isolated D1/R2
+        id: media
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.browser.outcome == 'success' }}
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
@@ -85,6 +87,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/live-preview-media.mjs
       - name: Real preview offline UI writes and automatic synchronization
+        id: offline
         if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.browser.outcome == 'success' }}
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
@@ -101,7 +104,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/live-preview-bindings.mjs
       - name: Final real preview PL EN regression at 390 and desktop
-        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.browser.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.language.outcome == 'success' && steps.media.outcome == 'success' && steps.offline.outcome == 'success' }}
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
