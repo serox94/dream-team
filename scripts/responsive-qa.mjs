@@ -54,6 +54,8 @@ try{
       }
       if(route==='/pages/sonar.html'){
         assert.equal(await page.locator('.knowledge-entry').count(),17);
+        assert.equal(await page.locator('#atlas-overview .deeper-shot-image').count(),17,'all actual Deeper screenshots appear in the atlas');
+        assert.equal(await page.locator('#atlas-overview .deeper-shot-image[target="_blank"]').count(),17,'atlas opens the original image');
         assert.equal(await page.locator('#sonar-gallery a[href^="https://support.deeper.eu/"]').count(),4);
         assert.match(await page.locator('.knowledge-hero').innerText(),/CHIRP\+ 2[\s\S]*Fish Deeper/);
       }
@@ -181,13 +183,12 @@ try{
           assert.equal(preview.mediaObjects.size,1,'disposable R2 stores uploaded image');
           const imageUrl=await page.locator('.media-card img').first().getAttribute('src');
           assert.equal((await page.request.get(preview.url+imageUrl)).status(),200,'private R2 read');
+          assert.equal(await page.locator('.media-card a[target="_blank"]').first().getAttribute('href'),imageUrl,'private original opens full size');
+          assert.equal((await fetch(loginPreview.url+imageUrl)).status,401,'image URL is not readable without a session');
           await page.locator('.media-card button').filter({hasText:'Edytuj opis'}).click();
           await page.locator('#media-note').fill('Mój opis dna');
           await page.locator('#media-form button[type="submit"]').click();
-          await page.waitForTimeout(750);
-          const mediaState=await page.evaluate(()=>({status:document.querySelector('#media-status')?.textContent,note:document.querySelector('#media-note')?.value,required:document.querySelector('#media-file')?.required,card:document.querySelector('.media-card')?.innerText.slice(0,300)}));
-          console.log('Media edit fixture state:',JSON.stringify(mediaState),'recent requests:',JSON.stringify(preview.requests.slice(-5)));
-          assert.match(await page.locator('.media-card').innerText(),/Mój opis dna/,`media edit: ${await page.locator('#media-status').innerText()}`);
+          await page.locator('.media-card').getByText('Mój opis dna').waitFor();
           await page.locator('.media-card button').filter({hasText:'Utwórz spot'}).click();
           await page.locator('.media-card form input[name="name"]').fill('Mój spot sonarowy');
           await page.locator('.media-card form button[type="submit"]').click();
@@ -288,7 +289,7 @@ try{
       const response=await page.goto(preview.url+route,{waitUntil:'domcontentloaded'});
       assert.equal(response.status(),200,`EN ${width} ${route}`);
       await page.locator('html[data-ready="true"]').waitFor({timeout:20000});
-      await page.waitForFunction(()=>window.DreamI18n?.lang==='en');
+      await page.locator('html[data-i18n-ready="en"]').waitFor();
       assert.equal(await page.locator('html').getAttribute('lang'),'en');
       assert.equal(await page.locator('.main-nav a[href$="wyjazdy.html"]').innerText(),'Trips and archive');
       const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
@@ -308,7 +309,7 @@ try{
       await page.close();
     }
     const login=await context.newPage();await login.goto(loginPreview.url+'/login');
-    await login.waitForFunction(()=>window.DreamI18n?.lang==='en');
+    await login.locator('html[data-i18n-ready="en"]').waitFor();
     assert.match(await login.locator('button[type="submit"]').innerText(),/Sign in/);
     await login.close();await context.close();
     console.log(`English responsive QA ${width}px: PASS (${routes.length} screens + login).`);

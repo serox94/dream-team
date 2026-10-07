@@ -36,7 +36,6 @@ export async function serve({port=0,seed=false,weatherFetch,testSession=true}={}
    const request=new Request(`http://${req.headers.host}${req.url}`,{method:req.method,headers,body:['GET','HEAD'].includes(req.method)?undefined:Buffer.concat(chunks)});
    const response=await worker.fetch(request,env);
    const record={method:req.method,url:req.url,status:response.status};
-   if(req.method==='PATCH'&&req.url.startsWith('/api/deeper-media/'))record.fixtureBody=Buffer.concat(chunks).toString('utf8');
    requests.push(record);
    res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
   }catch(error){res.writeHead(500);res.end(error.message);}

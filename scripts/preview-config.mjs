@@ -1,0 +1,28 @@
+// Provision only isolated staging resources; never mutate the production D1 or backup R2.
+import {readFile,writeFile} from 'node:fs/promises';
+
+const token=process.env.CLOUDFLARE_API_TOKEN,account=process.env.CLOUDFLARE_ACCOUNT_ID;
+if(!token||!account)throw Error('Preview requires existing Cloudflare deployment credentials.');
+const apiRoot=`https://api.cloudflare.com/client/v4/accounts/${account}`;
+async function api(path,method='GET',body){
+ const response=await fetch(apiRoot+path,{method,headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
+ const data=await response.json();
+ if(!response.ok||!data.success)throw Error(`Cloudflare ${method} ${path.split('/')[1]} failed (${response.status}; code ${data.errors?.[0]?.code||'unknown'}).`);
+ return data.result;
+}
+const databaseName='dream-team-preview-db',bucketName='dream-team-preview-media';
+const databases=await api(`/d1/database?name=${databaseName}&per_page=100`);
+let database=databases.find(row=>row.name===databaseName);
+if(!database)database=await api('/d1/database','POST',{name:databaseName});
+const buckets=(await api('/r2/buckets')).buckets||[];
+if(!buckets.some(row=>row.name===bucketName))await api('/r2/buckets','POST',{name:bucketName});
+const production=JSON.parse((await readFile('wrangler.jsonc','utf8')).replace(/^\s*\/\/.*$/gm,''));
+const productionId=production.d1_databases[0].database_id;
+if(!database.uuid||database.uuid===productionId)throw Error('Preview database identity is missing or matches production.');
+const preview={...production,name:'dream-team-preview',workers_dev:true,triggers:{crons:[]},secrets:undefined,
+ d1_databases:[{binding:'DB',database_name:databaseName,database_id:database.uuid}],
+ r2_buckets:[{binding:'MEDIA',bucket_name:bucketName}],
+ vars:{AI_FREE_ONLY:'false'}};
+delete preview.secrets;
+await writeFile('wrangler.preview.generated.jsonc',JSON.stringify(preview,null,2));
+console.log('Isolated preview configuration ready: separate D1 and private media R2.');
