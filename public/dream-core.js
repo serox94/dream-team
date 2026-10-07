@@ -118,7 +118,7 @@
     const english=window.DreamI18n?.lang==='en';
     const stale=offlineEntries.size?`${english?'Offline data / last sync':'Dane offline / ostatnia synchronizacja'} ${new Date(Math.min(...offlineEntries.values())).toLocaleString(english?'en-GB':(document.documentElement.lang==='en'?'en-GB':'pl-PL'),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
     const conflicts=readQueue().filter(item=>item.status==='conflict').length;
-    banner.textContent=stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — tap here to resolve.`:''}`:`${count} zmian${count===1?'a':'y'} oczekuj${count===1?'e':'ą'} na synchronizację.${conflicts?` ${conflicts} konflikt(y) — dotknij tutaj, aby rozstrzygnąć.`:''}`:'');
+    banner.textContent=stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — tap here to resolve.`:''}`:`Oczekuje na synchronizację: ${count} zmian.${conflicts?` ${conflicts} konflikt(y) — dotknij tutaj, aby rozstrzygnąć.`:''}`:'');
   }
   async function api(path,options={}){
     const get=!options.method||options.method==='GET';
