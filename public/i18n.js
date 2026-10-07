@@ -4,16 +4,17 @@ const stored=localStorage.getItem(key),lang=stored==='pl'||stored==='en'?stored:
 document.documentElement.lang=lang;
 const dictionary=await fetch(`/locales/${lang}.json`,{cache:'force-cache'}).then(r=>r.json()).catch(()=>({}));
 if(lang==='en')Object.assign(dictionary,await fetch('/locales/runtime.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
+if(lang==='en'&&!/^\/login(?:\.html)?$/.test(location.pathname))Object.assign(dictionary,await fetch('/locales/legacy.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
 const guide=location.pathname.match(/\/pages\/(rigi|wezly)\.html$/)?.[1];
 if(lang==='en'&&guide){
  const file=guide==='rigi'?'guides':'knots';
  Object.assign(dictionary,await fetch(`/locales/${file}.en.json`,{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
 }
-const translate=string=>dictionary[string]||string;
+const translate=string=>dictionary[string]||dictionary[string?.replace(/\s+/g,' ').trim()]||string;
 window.DreamI18n={lang,t:translate,set(next){if(next!=='pl'&&next!=='en')return;localStorage.setItem(key,next);location.reload();}};
 const personal='[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew';
 const walk=node=>{
- if(node.nodeType===Node.TEXT_NODE){if(node.parentElement?.closest(`script,style,${personal}`))return;const original=node.textContent.trim();if(original&&dictionary[original])node.textContent=node.textContent.replace(original,dictionary[original]);return;}
+ if(node.nodeType===Node.TEXT_NODE){if(node.parentElement?.closest(`script,style,${personal}`))return;const original=node.textContent.trim(),translated=translate(original);if(original&&translated!==original)node.textContent=node.textContent.replace(original,translated);return;}
  if(node.nodeType!==Node.ELEMENT_NODE||node.closest(personal))return;
  for(const attr of ['placeholder','aria-label','title']){const value=node.getAttribute(attr);if(value&&dictionary[value]&&dictionary[value]!==value)node.setAttribute(attr,dictionary[value]);}
  for(const child of node.childNodes)walk(child);
