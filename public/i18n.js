@@ -14,6 +14,7 @@ if(lang==='en'&&guide){
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^np\. (.+)$/,(_,example)=>`e.g. ${translate(example)}`],
   [/^(\d+) z (\d+)$/,(_,a,b)=>`${a} of ${b}`],
   [/^rzeczy gotowych · (\d+)%$/,(_,n)=>`items ready · ${n}%`],
   [/^Ciśnienie (\d+) hPa jest mniej korzystne i może osłabiać żerowanie\.$/,(_,n)=>`Pressure ${n} hPa is less favourable and may reduce feeding.`],
