@@ -12,8 +12,25 @@ if(lang==='en'&&guide){
  Object.assign(dictionary,await fetch(`/locales/${file}.en.json`,{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
 }
 const dynamic=string=>{
- if(lang!=='en')return null;
+ if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^Spakowane (\d+) \/ (\d+)$/,(_,a,b)=>`Packed ${a} / ${b}`],
+  [/^✅ Spakowane (\d+) rzeczy$/,(_,a)=>`✅ ${a} items packed`],
+  [/^Razem: (\d+) ryb · ([\d,.]+) kg$/,(_,a,b)=>`Total: ${a} fish · ${b} kg`],
+  [/^(\d+) ryb(?: · ([\d,.]+) kg)?$/,(_,a,b)=>`${a} fish${b?` · ${b} kg`:''}`],
+  [/^([\d,.]+)°C · wiatr ([\d,.]+) km\/h$/,(_,a,b)=>`${a}°C · wind ${b} km/h`],
+  [/^Jutro wiatr ([\d,.]+) km\/h • (.+)$/,(_,a,b)=>`Tomorrow: wind ${a} km/h • ${translate(b)}`],
+  [/^(.+?) · (★ Aktywny wyjazd|Podgląd wyjazdu|Archiwum)$/,(_,zone,status)=>`${zone} · ${translate(status)}`],
+  [/^(Odległość|Głębokość): ([\d,.]+) m$/,(_,type,value)=>`${type==='Odległość'?'Distance':'Depth'}: ${value} m`],
+  [/^(Dodano|Powiązany spot|Najlepszy wiatr): (.+)$/,(_,label,value)=>`${{Dodano:'Added','Powiązany spot':'Linked spot','Najlepszy wiatr':'Best wind'}[label]}: ${value}`],
+  [/^Odznaczyć (\d+) pozycji w tym wyjeździe\?$/,(_,n)=>`Uncheck ${n} items in this trip?`],
+  [/^Przenieś (.+) (wyżej|niżej)$/,(_,name,dir)=>`Move ${name} ${dir==='wyżej'?'up':'down'}`],
+  [/^Przenieś pozycje z (.+) do$/,(_,name)=>`Move items from ${name} to`],
+  [/^Spakowane: (.+)$/,(_,name)=>`Packed: ${name}`],
+  [/^Usunąć kategorię (.+)\? Pozycje pozostaną na liście tylko po przeniesieniu\.$/,(_,name)=>`Delete category ${name}? Items remain on the list only if moved.`],
+  [/^Dodano (\d+) pozycji\.$/,(_,n)=>`Added ${n} items.`],
+  [/^Źródła \((\d+)\)$/,(_,n)=>`Sources (${n})`],
+  [/^Błąd (\d+)$/,(_,code)=>`Error ${code}`],
   [/^Spakowane (\d+) z (\d+) · pozostało (\d+)$/,(_,a,b,c)=>`Packed ${a} of ${b} · ${c} remaining`],
   [/^(\d\d:\d\d) \((\d+) brań\)$/,(_,time,count)=>`${time} (${count} bites)`],
   [/^(.+?)  (\d+)\/(\d+)$/,(_,category,packed,total)=>`${dictionary[category]||category} ${packed}/${total}`],
@@ -44,17 +61,22 @@ const translate=string=>dictionary[string]||dictionary[string?.replace(/\s+/g,' 
 window.DreamI18n={lang,t:translate,set(next){if(next!=='pl'&&next!=='en')return;localStorage.setItem(key,next);location.reload();}};
 const personal='[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew';
 const walk=node=>{
- if(node.nodeType===Node.TEXT_NODE){if(node.parentElement?.closest(`script,style,${personal}`))return;const original=node.textContent.trim(),translated=translate(original);if(original&&translated!==original)node.textContent=node.textContent.replace(original,translated);return;}
+ if(node.nodeType===Node.TEXT_NODE){if(node.parentElement?.closest(`script,style,textarea,${personal}`))return;const original=node.textContent.trim(),translated=translate(original);if(original&&translated!==original)node.textContent=node.textContent.replace(original,translated);return;}
  if(node.nodeType!==Node.ELEMENT_NODE||node.closest(personal))return;
- for(const attr of ['placeholder','aria-label','title']){const value=node.getAttribute(attr);if(value&&dictionary[value]&&dictionary[value]!==value)node.setAttribute(attr,dictionary[value]);}
+ for(const attr of ['placeholder','aria-label','title','label','alt']){const value=node.getAttribute(attr),translated=translate(value);if(value&&translated!==value)node.setAttribute(attr,translated);}
  for(const child of node.childNodes)walk(child);
 };
 // Translate new UI panels as they render. Explicit personal-content regions keep their original text.
 walk(document.body);
-const observer=new MutationObserver(records=>{for(const record of records){if(record.type==='attributes')walk(record.target);else for(const node of record.addedNodes)walk(node);}});
-observer.observe(document.body,{childList:true,attributes:true,attributeFilter:['placeholder','aria-label','title'],subtree:true});
+const observer=new MutationObserver(records=>{for(const record of records){if(record.type==='attributes'||record.type==='characterData')walk(record.target);else for(const node of record.addedNodes)walk(node);}});
+observer.observe(document.body,{childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title','label','alt'],subtree:true});
 function selector(locationNode){if(!locationNode)return;const label=document.createElement('label');label.className='language-selector';label.textContent='PL / EN ';const select=document.createElement('select');select.setAttribute('aria-label','Language / Język');for(const [value,name] of [['pl','PL'],['en','EN']]){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}select.value=lang;select.addEventListener('change',()=>window.DreamI18n.set(select.value));label.append(select);locationNode.append(label);}
 selector(document.querySelector('.login-card')||document.querySelector('.header-top'));
+function menuSelector(){const menu=document.getElementById('main-nav');if(menu&&!menu.querySelector('.language-selector'))selector(menu);}
+menuSelector();
+document.addEventListener('dream:ready',menuSelector);
+// Native dialogs are outside the DOM observer. Only known UI messages are translated.
+for(const name of ['alert','confirm','prompt']){const native=window[name].bind(window);window[name]=(message,...args)=>native(translate(String(message)),...args);}
 if(location.pathname.endsWith('/ustawienia.html')){const section=document.querySelector('#settings-form')?.closest('section');if(section){const row=document.createElement('p');row.textContent=lang==='pl'?'Język tego urządzenia: ':'Language on this device: ';selector(row);section.insertBefore(row,section.querySelector('form'));}}
 document.documentElement.dataset.i18nReady=lang;
 document.dispatchEvent(new Event('dream:i18n-ready'));

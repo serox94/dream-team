@@ -12,7 +12,7 @@
     if(dateInput(guess,timeZone)!==value)throw new Error('Ta godzina nie istnieje przy zmianie czasu. Wybierz inną godzinę.');
     return new Date(guess).toISOString();
   }
-  const format = value => value ? new Date(value).toLocaleString('pl-PL',{timeZone:zone(),day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'termin do ustalenia';
+  const format = value => value ? new Date(value).toLocaleString((document.documentElement.lang==='en'?'en-GB':'pl-PL'),{timeZone:zone(),day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'termin do ustalenia';
   function safeUrl(value) {
     if(!value)return '';
     try {const u=new URL(value,location.origin);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}
@@ -116,7 +116,7 @@
     if(!offlineEntries.size&&!count){banner?.remove();return;}
     if(!banner){banner=document.createElement('div');banner.id='offline-banner';banner.className='offline-banner';banner.setAttribute('role','status');document.body.prepend(banner);}
     const english=window.DreamI18n?.lang==='en';
-    const stale=offlineEntries.size?`${english?'Offline data / last sync':'Dane offline / ostatnia synchronizacja'} ${new Date(Math.min(...offlineEntries.values())).toLocaleString(english?'en-GB':'pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
+    const stale=offlineEntries.size?`${english?'Offline data / last sync':'Dane offline / ostatnia synchronizacja'} ${new Date(Math.min(...offlineEntries.values())).toLocaleString(english?'en-GB':(document.documentElement.lang==='en'?'en-GB':'pl-PL'),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
     const conflicts=readQueue().filter(item=>item.status==='conflict').length;
     banner.textContent=stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — tap here to resolve.`:''}`:`${count} zmian${count===1?'a':'y'} oczekuj${count===1?'e':'ą'} na synchronizację.${conflicts?` ${conflicts} konflikt(y) — dotknij tutaj, aby rozstrzygnąć.`:''}`:'');
   }
@@ -206,8 +206,8 @@
     for(const archived of [false,true]){
       const group=document.createElement('optgroup');group.label=archived?'Archiwum':'Wyjazdy';
       for(const t of model.trips.filter(t=>(t.status==='archived')===archived)){
-        const o=document.createElement('option');o.value=t.id;
-        o.textContent=`${t.isActive?'★ ':''}${t.name} · ${t.start?Dream.dateInput(t.start,t.lakeProfile?.facts?.timeZone||'Europe/Paris').slice(0,10):t.year+' · bez terminu'}${archived?' · archiwum':''}`;
+        const o=document.createElement('option');o.value=t.id;o.dataset.userContent='';
+        o.textContent=`${t.isActive?'★ ':''}${t.name} · ${t.start?Dream.dateInput(t.start,t.lakeProfile?.facts?.timeZone||'Europe/Paris').slice(0,10):t.year+' · '+(window.DreamI18n?.t('bez terminu')||'bez terminu')}${archived?' · '+(window.DreamI18n?.t('archiwum')||'archiwum'):''}`;
         o.selected=t.id===trip.id;group.append(o);
       }
       if(group.children.length)select.append(group);
@@ -238,5 +238,5 @@
   }
   window.Dream={renderHeader,api,downloadBackup,logout,clearReadCache,registerShell,pendingCount,syncQueue,esc,zone,dateInput,fromInput,format,safeUrl,notice,refreshModel,rememberTrip,readTrip,undo,
     hour:value=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:zone(),hour:'2-digit',hourCycle:'h23'}).format(new Date(value))),
-    day:value=>new Date(value).toLocaleDateString('pl-PL',{timeZone:zone()})};
+    day:value=>new Date(value).toLocaleDateString((document.documentElement.lang==='en'?'en-GB':'pl-PL'),{timeZone:zone()})};
 })();

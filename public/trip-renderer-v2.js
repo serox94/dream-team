@@ -56,7 +56,7 @@
     const p=profileOf(trip), hero=document.querySelector('.dashboard-hero');
     if(!hero)return;
     const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value;};
-    const date=value=>value?new Date(value).toLocaleDateString('pl-PL',{timeZone:Dream.zone(),day:'numeric',month:'short',year:'numeric'}):'do ustalenia';
+    const date=value=>value?new Date(value).toLocaleDateString((document.documentElement.lang==='en'?'en-GB':'pl-PL'),{timeZone:Dream.zone(),day:'numeric',month:'short',year:'numeric'}):'do ustalenia';
     set('dashboard-status',trip.status==='archived'?'Archiwum':trip.isActive?'Aktywny wyjazd':'Wybrany wyjazd');
     set('dashboard-trip-name',trip.name);
     set('dashboard-lake',p.name||trip.lake);

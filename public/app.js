@@ -55,7 +55,7 @@ function formatCaughtAt(value) { return value ? Dream.format(value) : 'Brak daty
 function formatDateForInput(value) { return Dream.dateInput(value); }
 
 function formatHour(value) {
-  return new Date(value).toLocaleString("pl-PL", {
+  return new Date(value).toLocaleString((document.documentElement.lang==='en'?'en-GB':'pl-PL'), {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -64,7 +64,7 @@ function formatHour(value) {
 }
 
 function formatDay(value) {
-  return new Date(value).toLocaleDateString("pl-PL", {
+  return new Date(value).toLocaleDateString((document.documentElement.lang==='en'?'en-GB':'pl-PL'), {
     weekday: "long",
     day: "2-digit",
     month: "2-digit"

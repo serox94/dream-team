@@ -65,3 +65,18 @@ jobs:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/preview-media-smoke.mjs
+      - name: Install browser for real preview QA
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Real preview language QA at 390 and desktop
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-language.mjs
+      - name: Preserve live preview evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-qa
+          path: live-preview-qa
