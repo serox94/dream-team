@@ -24,6 +24,7 @@ const dynamic=string=>{
   [/^Faza księżyca: (.+), oświetlenie około (\d+)%\.$/,(_,phase,pct)=>`Moon phase: ${dictionary[phase]||phase}, about ${pct}% illumination.`],
   [/^Obecna szansa na branie: (.+)\. Punktacja aktywności: (\d+)\.$/,(_,level,score)=>`Current bite outlook: ${dictionary[level]||level}. Activity score: ${score}.`],
   [/^Pilnuj szczególnie około (\d\d:\d\d)$/,(_,time)=>`Watch especially around ${time}`],
+  [/^Najmocniejsze przewidywane okno aktywności: (\d\d:\d\d) \((.+)\)\.$/,(_,time,level)=>`Strongest predicted activity window: ${time} (${dictionary[level]||level}).`],
   [/^Ciśnienie (\d+) hPa jest w dobrym zakresie pod aktywność ryb\.$/,(_,pressure)=>`Pressure ${pressure} hPa is in a potentially favourable range for fish activity.`],
   [/^Wiatr ([\d.]+) km\/h wygląda korzystnie — pracuje na powierzchni i może poprawiać aktywność\.$/,(_,speed)=>`Wind at ${speed} km/h may help by moving the surface.`],
   [/^Małe zachmurzenie \((\d+)%\) oznacza sporo światła, więc ryby mogą być ostrożniejsze\.$/,(_,cloud)=>`Low cloud cover (${cloud}%) means more light; fish may be more cautious.`],
@@ -33,7 +34,7 @@ const dynamic=string=>{
  for(const [pattern,render] of patterns){const match=string.match(pattern);if(match)return render(...match);}
  return null;
 };
-const translate=string=>dictionary[string]||dictionary[string?.replace(/\s+/g,' ').trim()]||dynamic(string)||string;
+const translate=string=>dictionary[string]||dictionary[string?.replace(/\s+/g,' ').trim()]||(lang==='en'&&string?.startsWith('#')&&dictionary[string.slice(1)]?'#'+dictionary[string.slice(1)]:null)||dynamic(string)||string;
 window.DreamI18n={lang,t:translate,set(next){if(next!=='pl'&&next!=='en')return;localStorage.setItem(key,next);location.reload();}};
 const personal='[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew';
 const walk=node=>{

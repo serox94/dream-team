@@ -37,12 +37,14 @@
 
   function formatHour(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+    const language=localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
+    return date.toLocaleTimeString(language==='en'?'en-GB':'pl-PL', { hour: "2-digit", minute: "2-digit" });
   }
 
   function formatDay(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString("pl-PL", {
+    const language=localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
+    return date.toLocaleDateString(language==='en'?'en-GB':'pl-PL', {
       weekday: "long",
       day: "2-digit",
       month: "2-digit"
