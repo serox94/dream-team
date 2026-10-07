@@ -83,7 +83,7 @@
   window.addEventListener('online',syncQueue);
   document.addEventListener('click',event=>{if(event.target?.id!=='offline-banner')return;
     const conflict=readQueue().find(item=>item.status==='conflict');if(!conflict)return;
-    if(confirm(`${conflict.error}\nOK: ponów swoją zmianę. Anuluj: zachowaj wersję serwera.`))resolveConflict(conflict.key,'mine');else resolveConflict(conflict.key,'server');
+    if(confirm(`${window.DreamI18n?.t(conflict.error)||conflict.error}\n${window.DreamI18n?.t('OK: ponów swoją zmianę. Anuluj: zachowaj wersję serwera.')||'OK: ponów swoją zmianę. Anuluj: zachowaj wersję serwera.'}`))resolveConflict(conflict.key,'mine');else resolveConflict(conflict.key,'server');
   });
   async function clearShell(){
     if(!('caches' in window))return;

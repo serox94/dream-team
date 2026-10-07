@@ -103,7 +103,7 @@
   "Fakt i źródło zapisane.": "Fact and source saved.",
   "Znaleziono wymagane wyposażenie — dodać do checklisty?": "Required equipment found. Add it to the checklist?",
   "Brak jednoznacznych wymagań wyposażenia w potwierdzonych faktach.": "No clear equipment requirements in verified facts.",
-  "PB sprzed zapisów w aplikacji (kg)": "PB before app records (kg)",
+  "PB sprzed zapisów w aplikacji (kg)": "Personal best before app records (kg)",
   "Schowek obrazów nie jest dostępny. Użyj systemowego Wklej lub wybierz plik.": "Image clipboard unavailable. Use your system paste command or choose a file.",
   "Schowek nie zawiera obsługiwanego obrazu.": "The clipboard has no supported image.",
   "Przeglądarka nie udostępniła schowka. Wybierz plik.": "The browser did not provide clipboard access. Choose a file.",
@@ -631,7 +631,7 @@
   "Dodaj wybrane pozycje": "Add selected items",
   "Ustaw aktywny": "Set active",
   "Brak wyjazdów w tej sekcji.": "No trips in this section.",
-  "Uczestnicy i PB": "Participants and PB",
+  "Uczestnicy i PB": "Participants and personal bests",
   "Dodaj uczestnika": "Add participant",
   "Kopia danych i ustawienia": "Data backup and settings",
   "🔎 Źródła i weryfikacja": "🔎 Sources and verification",
@@ -665,5 +665,14 @@
   "Treść chwilowo niedostępna": "Content temporarily unavailable",
   "Miejsce na Twój screenshot Fish Deeper": "Your Fish Deeper screenshot",
   "Rigi →": "Rigs →",
-  "Wróć do artykułów przy niepewnych rozpoznaniach. Jeden ekran sonaru nie wystarcza do decyzji.": "Return to the articles when an interpretation is uncertain. One sonar screen is not enough to make a decision."
+  "Wróć do artykułów przy niepewnych rozpoznaniach. Jeden ekran sonaru nie wystarcza do decyzji.": "Return to the articles when an interpretation is uncertain. One sonar screen is not enough to make a decision.",
+  "Wyjazdy i archiwum": "Trips and archive",
+  "Logowanie": "Sign in",
+  "OK: ponów swoją zmianę. Anuluj: zachowaj wersję serwera.": "OK: retry your change. Cancel: keep the server version.",
+  "Ciśnienie rośnie, więc warunki mogą iść w stronę poprawy.": "Pressure is rising, so conditions may improve.",
+  "Ciśnienie spada, więc aktywność może być nierówna i zależna od zmiany pogody.": "Pressure is falling, so activity may vary as the weather changes.",
+  "Brak istotnych opadów — warunki są spokojniejsze i bardziej stabilne.": "No significant rain — conditions are calmer and more stable.",
+  "Aktualna pora dnia należy do najlepszych okien aktywności ryb.": "The current time is among the best predicted fish activity windows.",
+  "Pora dnia jest umiarkowanie dobra i warto pilnować sygnałów z wody.": "The time of day is moderately favourable; watch for signs of activity.",
+  "To nie jest najmocniejsze okno aktywności — większe szanse mogą pojawić się rano lub wieczorem.": "This is not the strongest activity window; prospects may improve in the morning or evening."
 }

@@ -2,18 +2,30 @@
 const key='dreamteam.language';
 const stored=localStorage.getItem(key),lang=stored==='pl'||stored==='en'?stored:/^pl\b/i.test(navigator.language)?'pl':'en';
 document.documentElement.lang=lang;
-const dictionary=await fetch(`/locales/${lang}.json`,{cache:'force-cache'}).then(r=>r.json()).catch(()=>({}));
-if(lang==='en')Object.assign(dictionary,await fetch('/locales/runtime.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
-if(lang==='en'&&!/^\/login(?:\.html)?$/.test(location.pathname))Object.assign(dictionary,await fetch('/locales/legacy.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
-if(lang==='en'&&location.pathname.endsWith('/porady.html'))Object.assign(dictionary,await fetch('/locales/porady.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
+const dictionary=await fetch(`/locales/${lang}.json`,{cache:'no-cache'}).then(r=>r.json()).catch(()=>({}));
+if(lang==='en')Object.assign(dictionary,await fetch('/locales/runtime.en.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
+if(lang==='en'&&!/^\/login(?:\.html)?$/.test(location.pathname))Object.assign(dictionary,await fetch('/locales/legacy.en.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
+if(lang==='en'&&location.pathname.endsWith('/porady.html'))Object.assign(dictionary,await fetch('/locales/porady.en.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
 const guide=location.pathname.match(/\/pages\/(rigi|wezly)\.html$/)?.[1];
 if(lang==='en'&&guide){
  const file=guide==='rigi'?'guides':'knots';
- Object.assign(dictionary,await fetch(`/locales/${file}.en.json`,{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
+ Object.assign(dictionary,await fetch(`/locales/${file}.en.json`,{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
 }
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^Ciśnienie (\d+) hPa jest mniej korzystne i może osłabiać żerowanie\.$/,(_,n)=>`Pressure ${n} hPa is less favourable and may reduce feeding.`],
+  [/^Ciśnienie (\d+) hPa jest jeszcze akceptowalne, ale nie idealne\.$/,(_,n)=>`Pressure ${n} hPa is acceptable, though not ideal.`],
+  [/^Temperatura ([\d.-]+)°C jest bardzo dobra pod regularne brania\.$/,(_,n)=>`Temperature ${n}°C is favourable for regular bites.`],
+  [/^Temperatura ([\d.-]+)°C jest jeszcze sensowna, choć nie idealna\.$/,(_,n)=>`Temperature ${n}°C is reasonable, though not ideal.`],
+  [/^Temperatura ([\d.-]+)°C może ograniczać aktywność ryb\.$/,(_,n)=>`Temperature ${n}°C may limit fish activity.`],
+  [/^Wiatr ([\d.]+) km\/h jest słaby — woda może być zbyt spokojna\.$/,(_,n)=>`Wind at ${n} km/h is weak; the water may be too calm.`],
+  [/^Wiatr ([\d.]+) km\/h jest mocny i może utrudniać łowienie\.$/,(_,n)=>`Wind at ${n} km/h is strong and may make fishing difficult.`],
+  [/^Wiatr ([\d.]+) km\/h jest neutralny\.$/,(_,n)=>`Wind at ${n} km/h is neutral.`],
+  [/^Porywy ([\d.]+) km\/h są wysokie i mogą pogarszać kontrolę nad zestawem\.$/,(_,n)=>`Gusts of ${n} km/h are strong and may reduce rig control.`],
+  [/^Zachmurzenie (\d+)% wygląda dobrze — światło jest bardziej miękkie, co bywa korzystne\.$/,(_,n)=>`Cloud cover of ${n}% looks favourable; the light is softer.`],
+  [/^Lekki opad \(([\d.]+) mm\) może działać na plus i pobudzać wodę\.$/,(_,n)=>`Light rain (${n} mm) may help stimulate activity.`],
+  [/^Wersja (.+) · baza Cloudflare D1$/,(_,v)=>`Version ${v} · Cloudflare D1 database`],
   [/^DreamTeam \| (.+)$/,(_,title)=>`DreamTeam | ${translate(title)}`],
   [/^(.+) · DreamTeam$/,(_,title)=>`${translate(title)} · DreamTeam`],
   [/^Porady: (.+)$/,(_,trip)=>`Trip advice: ${trip}`],

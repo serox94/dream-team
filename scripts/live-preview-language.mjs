@@ -19,9 +19,11 @@ try{
  if(route.includes('sonar')||route.includes('encyklopedia'))await page.locator('#knowledge-search').waitFor();
  if(route.includes('ustawienia'))await page.locator('#system-health').waitFor();
  if(width===390&&route==='/'){await page.locator('#bottom-more').click();assert.ok(await page.locator('#main-nav .language-selector').isVisible(),'More language visible');await page.locator('#bottom-more').click();}
+ if(route.includes('wyjazdy')){await page.locator('#create-trip').click();await page.locator('#trip-wizard-form').waitFor();}
+ for(const detail of await page.locator('details').all()){if(!await detail.evaluate(e=>e.open))await detail.locator('summary').click();}
  if(route.includes('ustawienia'))assert.ok(await page.locator('#settings-form').locator('..').locator('.language-selector').isVisible(),'settings language visible');
  // Capture visible UI; data supplied by people is deliberately excluded.
- const leftovers=await page.evaluate(originals=>{const known=new Set(originals);const skip='script,style,textarea,[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,.trip-card-lake,#dream-trip-select option,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew,.subtitle';const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){const p=n.parentElement,s=n.textContent.trim();if(!s||p.closest(skip)||!p.getClientRects().length||getComputedStyle(p).visibility==='hidden')continue;if(/[ąćęłńóśźż]/i.test(s)||known.has(s))out.push(s);}return [...new Set(out)];},originals);
+ const leftovers=await page.evaluate(originals=>{const known=new Set(originals);const skip='script,style,textarea,[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dream-trip-select option,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew,.subtitle';const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){const p=n.parentElement,s=n.textContent.trim();if(!s||p.closest(skip)||!p.getClientRects().length||getComputedStyle(p).visibility==='hidden')continue;if(/[ąćęłńóśźż]/i.test(s)||known.has(s))out.push(s);}return [...new Set(out)];},originals);
  report.push({width,route,leftovers});console.log(JSON.stringify({width,route,leftovers}));await page.screenshot({path:`live-preview-qa/en-${width}-${route.split('/').pop()||'dashboard'}.png`,fullPage:true});
  }
  await context.close();

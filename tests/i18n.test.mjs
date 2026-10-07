@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
 
 const script=await readFile('public/i18n.js','utf8');
-const locales={pl:JSON.parse(await readFile('public/locales/pl.json')),en:JSON.parse(await readFile('public/locales/en.json'))};
+const locales={pl:JSON.parse(await readFile('public/locales/pl.json')),en:JSON.parse(await readFile('public/locales/en.json')),runtime:JSON.parse(await readFile('public/locales/runtime.en.json'))};
 test('English lake rules, travel and advice cover every Polish editorial text node',async()=>{
  const dictionary={...locales.en,...JSON.parse(await readFile('public/locales/runtime.en.json')),...JSON.parse(await readFile('public/locales/legacy.en.json')),...JSON.parse(await readFile('public/locales/porady.en.json'))};
  for(const page of ['regulamin','dojazd','porady']){
@@ -17,7 +17,7 @@ async function device(browserLanguage,preference){
  const dom=new JSDOM('<html lang="pl"><body><main class="login-card"><label>Hasło</label><button>Zaloguj</button><p data-user-content>Połowy</p></main></body></html>',{url:'https://dream.test/login',runScripts:'outside-only'});
  if(preference)dom.window.localStorage.setItem('dreamteam.language',preference);
  Object.defineProperty(dom.window.navigator,'language',{value:browserLanguage,configurable:true});
- dom.window.fetch=async url=>({json:async()=>locales[url.includes('/en.json')?'en':'pl']});
+ dom.window.fetch=async url=>({ok:true,json:async()=>locales[url.includes('runtime.en')?'runtime':url.includes('/en.json')?'en':'pl']});
  await dom.window.eval(`(async()=>{${script}})()`);
  return dom;
 }
@@ -104,4 +104,8 @@ test('all twenty substrate and flavour profiles plus seven temperature bands hav
  for(const [name,family,sign,presentation,risk] of en.substrates){assert.ok(name&&sign&&presentation&&risk);assert.equal(en.substrateFamilies[family].length,4);}
  for(const [name,family,use,pair,caveat] of en.profiles){assert.ok(name&&use&&pair&&caveat);assert.equal(en.profileFamilies[family].length,4);}
  assert.doesNotMatch(JSON.stringify(en),/[ąćęłńóśźż]/i);
+});
+
+test('in-place dynamic text changes translate while personally entered notes and native dialogs retain values',async()=>{
+ const d=await device('en-GB');const text=d.window.document.createElement('p');text.textContent='Zapisz profil';d.window.document.body.append(text);await new Promise(r=>setTimeout(r,0));assert.equal(text.textContent,'Save profile');text.firstChild.data='Wiatr 2.5 km/h jest słaby — woda może być zbyt spokojna.';await new Promise(r=>setTimeout(r,0));assert.equal(text.textContent,'Wind at 2.5 km/h is weak; the water may be too calm.');assert.equal(d.window.DreamI18n.t('Porady: Moje łowisko'),'Trip advice: Moje łowisko');d.window.close();
 });
