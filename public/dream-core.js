@@ -115,9 +115,10 @@
     let banner=document.getElementById('offline-banner');const count=pendingCount();
     if(!offlineEntries.size&&!count){banner?.remove();return;}
     if(!banner){banner=document.createElement('div');banner.id='offline-banner';banner.className='offline-banner';banner.setAttribute('role','status');document.body.prepend(banner);}
-    const stale=offlineEntries.size?`Dane offline / ostatnia synchronizacja ${new Date(Math.min(...offlineEntries.values())).toLocaleString('pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
+    const english=window.DreamI18n?.lang==='en';
+    const stale=offlineEntries.size?`${english?'Offline data / last sync':'Dane offline / ostatnia synchronizacja'} ${new Date(Math.min(...offlineEntries.values())).toLocaleString(english?'en-GB':'pl-PL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
     const conflicts=readQueue().filter(item=>item.status==='conflict').length;
-    banner.textContent=stale+(count?`${count} zmian${count===1?'a':'y'} oczekuj${count===1?'e':'ą'} na synchronizację.${conflicts?` ${conflicts} konflikt(y) — dotknij tutaj, aby rozstrzygnąć.`:''}`:'');
+    banner.textContent=stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — tap here to resolve.`:''}`:`${count} zmian${count===1?'a':'y'} oczekuj${count===1?'e':'ą'} na synchronizację.${conflicts?` ${conflicts} konflikt(y) — dotknij tutaj, aby rozstrzygnąć.`:''}`:'');
   }
   async function api(path,options={}){
     const get=!options.method||options.method==='GET';
@@ -166,7 +167,7 @@
   async function logout(){
     const response=await authorizedFetch('/api/logout',{method:'POST',body:'{}'});
     if(!response.ok)throw new Error('Nie udało się wylogować. Spróbuj ponownie.');
-    if(pendingCount()&&!confirm('Masz zmiany oczekujące na synchronizację. Wylogowanie usunie je z tego urządzenia. Kontynuować?'))return;
+    if(pendingCount()&&!confirm(window.DreamI18n?.t('Masz zmiany oczekujące na synchronizację. Wylogowanie usunie je z tego urządzenia. Kontynuować?')||'Masz zmiany oczekujące na synchronizację. Wylogowanie usunie je z tego urządzenia. Kontynuować?'))return;
     localStorage.removeItem(queueKey);clearReadCache();
     await clearShell();
     location.assign('/login');
@@ -184,7 +185,7 @@
   function notice(message,error=false){
     let box=document.getElementById('app-notice');
     if(!box){box=document.createElement('div');box.id='app-notice';box.setAttribute('role','status');document.querySelector('main')?.prepend(box);}
-    box.className='weather-note '+(error?'status-danger':'status-info');box.textContent=message;box.hidden=!message;
+    box.className='weather-note '+(error?'status-danger':'status-info');box.textContent=window.DreamI18n?.t(message)||message;box.hidden=!message;
   }
   function renderHeader(){
     const model=window.DREAM_MODEL,trip=window.DREAM_TRIP;

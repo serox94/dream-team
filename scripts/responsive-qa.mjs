@@ -304,6 +304,30 @@ try{
       }
       if(route.endsWith('rigi.html'))assert.match(await page.locator('main h2').first().innerText(),/Carp rigs/);
       if(route.endsWith('wezly.html'))assert.match(await page.locator('main h2').first().innerText(),/Knots, lead systems/);
+      if(width===390&&route.endsWith('checklisty.html')){
+        await page.locator('#checklist-templates').waitFor();
+        assert.match(await page.locator('#checklist-templates h3').innerText(),/Checklist templates/);
+        await page.locator('#template-name').fill('English session kit');
+        await page.locator('#template-create button[type="submit"]').click();
+        await page.locator('.template-card').filter({hasText:'English session kit'}).waitFor();
+        assert.match(await page.locator('#template-message').innerText(),/Template saved/);
+      }
+      if(width===390&&route.endsWith('sonar.html')){
+        assert.equal(await page.locator('#atlas-overview .deeper-shot-image').count(),17);
+        assert.match(await page.locator('#atlas-overview figcaption').first().innerText(),/Observed:|Interpretation:/);
+        const original=await page.locator('#atlas-overview .deeper-shot-image').first().getAttribute('href');
+        assert.equal((await page.request.get(preview.url+original)).status(),200);
+        assert.match(await page.locator('#deeper-media h3').innerText(),/My screenshots/);
+      }
+      if(width===390&&route.endsWith('encyklopedia.html')){
+        await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+        assert.match(await page.locator('#tactic-result').innerText(),/starting point|start/i);
+      }
+      if(width===390&&route.endsWith('ustawienia.html')){
+        await page.locator('#system-health').waitFor();
+        assert.match(await page.locator('#system-health').innerText(),/Media R2[\s\S]*available/);
+        assert.match(await page.locator('#participant-profiles').innerText(),/Participant profiles/);
+      }
       if(width===390){
         const untranslated=await page.evaluate(()=>{const found=[];const walker=document.createTreeWalker(document.querySelector('main')||document.body,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode())){if(node.parentElement?.closest('[data-user-content],script,style,.catch-note,.check-item-title'))continue;const value=node.textContent.trim();if(/[ąęłńóśźżĄĘŁŃÓŚŹŻ]/.test(value)&&value.length>4)found.push(value.slice(0,150));}return [...new Set(found)].slice(0,20);});
         if(untranslated.length)console.log(`EN content audit ${route}: ${JSON.stringify(untranslated)}`);

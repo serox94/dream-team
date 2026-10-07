@@ -194,26 +194,28 @@ async function getSpotNameById(spotId) {
 function updateCountdown() {
   const countdownEl = $("countdown");
   if (!countdownEl) return;
+  const english=window.DreamI18n?.lang==='en';
   const show=value=>{countdownEl.textContent=value;if($("dashboard-countdown"))$("dashboard-countdown").textContent=value;};
 
-  if (!TRIP_START) { show(window.DREAM_TRIP?.status === 'archived' ? 'Archiwum · termin nieustalony' : 'Termin do ustalenia'); return; }
+  if (!TRIP_START) { show(window.DREAM_TRIP?.status === 'archived' ? (english?'Archive · date unknown':'Archiwum · termin nieustalony') : (english?'Date to be confirmed':'Termin do ustalenia')); return; }
   const now = new Date();
   if (now < TRIP_START) {
     const diff = TRIP_START - now;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    show(`Do wyjazdu: ${days} dni, ${hours} godz., ${minutes} min.`);
+    show(english?`Trip in: ${days} days, ${hours} hr, ${minutes} min.`:`Do wyjazdu: ${days} dni, ${hours} godz., ${minutes} min.`);
     return;
   }
 
   if (now >= TRIP_START && (!TRIP_END || now <= TRIP_END)) {
-    show("Wyjazd trwa");
+    show(english?'Trip in progress':'Wyjazd trwa');
     return;
   }
 
-  show("Wyjazd zakończony");
+  show(english?'Trip ended':'Wyjazd zakończony');
 }
+document.addEventListener('dream:i18n-ready',updateCountdown);
 
 function setupMobileMenu() {
   const toggleBtn = $("menu-toggle");

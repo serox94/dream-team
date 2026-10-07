@@ -15,14 +15,15 @@ const personal='[data-user-content],.catch-note,.check-item-title,.spot-card h4,
 const walk=node=>{
  if(node.nodeType===Node.TEXT_NODE){if(node.parentElement?.closest(`script,style,${personal}`))return;const original=node.textContent.trim();if(original&&dictionary[original])node.textContent=node.textContent.replace(original,dictionary[original]);return;}
  if(node.nodeType!==Node.ELEMENT_NODE||node.closest(personal))return;
- for(const attr of ['placeholder','aria-label','title']){const value=node.getAttribute(attr);if(value&&dictionary[value])node.setAttribute(attr,dictionary[value]);}
+ for(const attr of ['placeholder','aria-label','title']){const value=node.getAttribute(attr);if(value&&dictionary[value]&&dictionary[value]!==value)node.setAttribute(attr,dictionary[value]);}
  for(const child of node.childNodes)walk(child);
 };
 // Translate new UI panels as they render. Explicit personal-content regions keep their original text.
 walk(document.body);
-const observer=new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes)walk(node);});
-observer.observe(document.body,{childList:true,subtree:true});
+const observer=new MutationObserver(records=>{for(const record of records){if(record.type==='attributes')walk(record.target);else for(const node of record.addedNodes)walk(node);}});
+observer.observe(document.body,{childList:true,attributes:true,attributeFilter:['placeholder','aria-label','title'],subtree:true});
 function selector(locationNode){if(!locationNode)return;const label=document.createElement('label');label.className='language-selector';label.textContent='PL / EN ';const select=document.createElement('select');select.setAttribute('aria-label','Language / Język');for(const [value,name] of [['pl','PL'],['en','EN']]){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}select.value=lang;select.addEventListener('change',()=>window.DreamI18n.set(select.value));label.append(select);locationNode.append(label);}
 selector(document.querySelector('.login-card')||document.querySelector('.header-top'));
 if(location.pathname.endsWith('/ustawienia.html')){const section=document.querySelector('#settings-form')?.closest('section');if(section){const row=document.createElement('p');row.textContent=lang==='pl'?'Język tego urządzenia: ':'Language on this device: ';selector(row);section.insertBefore(row,section.querySelector('form'));}}
 document.documentElement.dataset.i18nReady=lang;
+document.dispatchEvent(new Event('dream:i18n-ready'));

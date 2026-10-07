@@ -129,9 +129,9 @@ function diagnostic(){
   step();
   q('tactic-form').addEventListener('submit',event=>{
     event.preventDefault();const v=id=>q('t-'+id).value,t=tools.tactics,b=t.bottom[v('bottom')],temp=t.temperature[v('temp')];
-    const presentation=v('weed')==='high'?'Szukaj dużego czystego oczka lub krawędzi; nie kładź zestawu w gęstwinie.':b.presentation;
+    const presentation=v('weed')==='high'?say('Szukaj dużego czystego oczka lub krawędzi; nie kładź zestawu w gęstwinie.','Find a sizable clear pocket or edge; avoid laying the rig in dense weed.'):b.presentation;
     const items=[['Przynęta',temp.bait],['Profil smakowy',temp.flavour],['Kolor',t.visibility[v('visibility')]],['Bottom / wafter / pop-up',presentation],['Rig',b.rig],['Długość przyponu',b.length],['Nęcenie i ilość',`${b.feed}; ${temp.feed}`],['Plan B',temp.backup],['Obserwacja',`${t.activity[v('activity')]} ${t.pressure[v('pressure')]}`],['Sezon, pogoda i wiatr',`${t.season[v('season')]} ${t.weather[v('weather')]} ${t.wind[v('wind')]} ${t.depth[v('depth')]}`]];
-    q('tactic-result').innerHTML=`<div class="tool-result"><h4>Dobry punkt startowy · ${esc(temp.title)}</h4><p>Warto rozważyć i sprawdzić na tej wodzie; to nie jest gwarancja brania.</p><dl>${items.map(([h,p])=>`<div><dt>${esc(h)}</dt><dd>${esc(p)}</dd></div>`).join('')}</dl><p><a href="/pages/rigi.html">Istniejące Rigi →</a> · <a href="/pages/wezly.html">Węzły →</a> · <a href="/pages/sonar.html#sonar-potwierdzenie">Potwierdź dno →</a></p></div>`;
+    q('tactic-result').innerHTML=`<div class="tool-result"><h4>${say('Dobry punkt startowy','A useful starting point')} · ${esc(temp.title)}</h4><p>${say('Warto rozważyć i sprawdzić na tej wodzie; to nie jest gwarancja brania.','Consider and verify on this water; there is no guarantee of a bite.')}</p><dl>${items.map(([h,p])=>`<div><dt>${esc(h)}</dt><dd>${esc(p)}</dd></div>`).join('')}</dl><p><a href="/pages/rigi.html">Istniejące Rigi →</a> · <a href="/pages/wezly.html">Węzły →</a> · <a href="/pages/sonar.html#sonar-potwierdzenie">Potwierdź dno →</a></p></div>`;
   });
 }
 function sonarTools(){
