@@ -17,7 +17,7 @@
 .knowledge-library>summary{cursor:pointer;font-size:1.15rem;font-weight:800;min-height:46px;padding:8px}
 .deeper-shot{margin:12px 0;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:#14231d}
 .deeper-shot-placeholder{min-height:130px;display:grid;place-items:center;text-align:center;padding:20px;color:var(--muted);background:repeating-linear-gradient(135deg,#16271e,#16271e 14px,#1b2e23 14px,#1b2e23 28px)}
-.deeper-shot-image{position:relative}.deeper-shot-image img{width:100%;display:block}.deeper-shot-region{position:absolute;border:3px solid #eac775;border-radius:6px;box-shadow:0 0 0 999px #0003;pointer-events:none}
+.deeper-shot-image{position:relative;display:block;cursor:zoom-in}.deeper-shot-image img{width:100%;display:block}.deeper-shot-image:focus-visible{outline:3px solid #eac775;outline-offset:3px}.deeper-shot-region{position:absolute;border:3px solid #eac775;border-radius:6px;box-shadow:0 0 0 999px #0003;pointer-events:none}
 .deeper-shot figcaption{padding:12px;font-size:.86rem;line-height:1.4}
 .chirp-practice{padding:15px;border:1px solid var(--border-strong);border-radius:12px;background:#23382b;margin:14px 0}.chirp-practice p{margin:8px 0!important}
 .knowledge-shortcuts,.knowledge-chips,.entry-tags,.article-related,.quick-cross { display:flex; gap:8px; flex-wrap:wrap; }

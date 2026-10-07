@@ -25,7 +25,7 @@ test('private media upload, retrieval, edit, spot ownership, delete and R2 isola
   assert.equal((await s.req(`deeper-media/${id}`,'PATCH',JSON.stringify({spotId:999}),{'content-type':'application/json'})).status,400);
   const spot=s.DB.sqlite.prepare("INSERT INTO spots(trip_id,name) VALUES('next-trip','Testowy spot')").run().lastInsertRowid;
   const updated=await s.req(`deeper-media/${id}`,'PATCH',JSON.stringify({name:'Nowa nazwa',spotId:Number(spot),note:'Kontrola dna'}),{'content-type':'application/json'});assert.equal(updated.status,200);
-  assert.equal((await (await s.req('deeper-media')).json()).images[0].spotId,Number(spot));
+  const edited=(await (await s.req('deeper-media')).json()).images[0];assert.equal(edited.spotId,Number(spot));assert.equal(edited.note,'Kontrola dna');
   await s.req('catches','POST',JSON.stringify({tripId:'next-trip',anglerId:'patryk',weightKg:8,caughtAt:'2026-09-01T10:00:00Z',spotId:Number(spot)}),{'content-type':'application/json'});
   const linked=(await (await s.req('deeper-media')).json()).images[0];assert.equal(linked.spotName,'Testowy spot');assert.equal(linked.spotFishCount,1);
   assert.equal((await s.req(`deeper-media/${id}`,'DELETE')).status,200);assert.equal(s.objects.size,0);assert.equal((await (await s.req('deeper-media')).json()).images.length,0);
