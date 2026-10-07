@@ -107,6 +107,35 @@
 
           <div class="form-row">
             <div>
+              <label for="spot-latitude">Szerokość GPS</label>
+              <input type="number" inputmode="decimal" id="spot-latitude" min="-90" max="90" step="any" placeholder="np. 53.12345" />
+            </div>
+
+            <div>
+              <label for="spot-longitude">Długość GPS</label>
+              <input type="number" inputmode="decimal" id="spot-longitude" min="-180" max="180" step="any" placeholder="np. 18.12345" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="spot-weed">Zielsko</label>
+              <input type="text" id="spot-weed" maxlength="100" placeholder="np. pas zielska / czysto" />
+            </div>
+
+            <div>
+              <label for="spot-rig">Użyty rig</label>
+              <input type="text" id="spot-rig" maxlength="100" placeholder="np. Ronnie Rig" />
+            </div>
+          </div>
+
+          <div>
+            <label for="spot-bait">Przynęta</label>
+            <input type="text" id="spot-bait" maxlength="100" placeholder="np. wafters 15 mm" />
+          </div>
+
+          <div class="form-row">
+            <div>
               <label for="spot-obstacles">Zaczepy / przeszkody</label>
               <input type="text" id="spot-obstacles" maxlength="120" placeholder="np. gałęzie przy brzegu / czysto" />
             </div>
