@@ -934,11 +934,11 @@
 
       const metaGrid = createNode("div", "spot-meta-grid");
       const meta1 = createNode("div", "spot-meta-box");
-      meta1.innerHTML = `<span>Zaczepy / uwagi</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.obstacles || "brak", 120))}</strong>`;
+      meta1.innerHTML = `<span>Zaczepy / uwagi</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.obstacles || window.DreamI18n?.t("brak") || "brak", 120))}</strong>`;
       const meta2 = createNode("div", "spot-meta-box");
-      meta2.innerHTML = `<span>Najlepsza pora</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.best_time || "brak", 60))}</strong>`;
+      meta2.innerHTML = `<span>Najlepsza pora</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.best_time || window.DreamI18n?.t("brak") || "brak", 60))}</strong>`;
       const meta3 = createNode("div", "spot-meta-box");
-      meta3.innerHTML = `<span>Najlepszy wiatr</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.best_wind || "brak", 60))}</strong>`;
+      meta3.innerHTML = `<span>Najlepszy wiatr</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.best_wind || window.DreamI18n?.t("brak") || "brak", 60))}</strong>`;
       const meta4 = createNode("div", "spot-meta-box");
       meta4.innerHTML = `<span>Skuteczność</span><strong>${linkedCatches.length ? `${linkedCatches.length} brań • śr. ${avgWeight} kg` : "Brak połowów"}</strong>`;
 

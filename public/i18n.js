@@ -14,6 +14,10 @@ if(lang==='en'&&guide){
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^DreamTeam \| (.+)$/,(_,title)=>`DreamTeam | ${translate(title)}`],
+  [/^(.+) · DreamTeam$/,(_,title)=>`${translate(title)} · DreamTeam`],
+  [/^Porady: (.+)$/,(_,trip)=>`Trip advice: ${trip}`],
+  [/^Dno: (.+)$/,(_,bottom)=>`Bottom: ${bottom==='brak'?'unknown':bottom}`],
   [/^(Pogoda niedostępna|Ocena|Warunki): (.+)$/,(_,label,message)=>`${{'Pogoda niedostępna':'Weather unavailable',Ocena:'Rating',Warunki:'Conditions'}[label]}: ${translate(message)}`],
   [/^📡 sonar documentation · (.+)$/,(_,title)=>`📡 sonar documentation · ${translate(title)}`],
   [/^(\d+) rzeczy$/,(_,count)=>`${count} items`],
@@ -83,6 +87,7 @@ const walk=node=>{
 };
 // Translate new UI panels as they render. Explicit personal-content regions keep their original text.
 walk(document.body);
+document.title=translate(document.title);
 const observer=new MutationObserver(records=>{for(const record of records){if(record.type==='attributes'||record.type==='characterData')walk(record.target);else for(const node of record.addedNodes)walk(node);}});
 observer.observe(document.body,{childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title','label','alt'],subtree:true});
 function selector(locationNode){if(!locationNode)return;const label=document.createElement('label');label.className='language-selector';label.textContent='PL / EN ';const select=document.createElement('select');select.setAttribute('aria-label','Language / Język');for(const [value,name] of [['pl','PL'],['en','EN']]){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}select.value=lang;select.addEventListener('change',()=>window.DreamI18n.set(select.value));label.append(select);locationNode.append(label);}

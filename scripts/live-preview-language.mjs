@@ -4,6 +4,7 @@ import {mkdir,writeFile} from 'node:fs/promises';
 import {chromium} from 'playwright';
 const base='https://dream-team-preview.sewerynski00.workers.dev';
 const routes=['/','/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/mapa.html','/pages/regulamin.html','/pages/dojazd.html','/pages/teren.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/rigi.html','/pages/wezly.html','/pages/ustawienia.html'];
+const dictionaries=Object.assign({},...await Promise.all(['en','runtime.en','legacy.en','porady.en','guides.en','knots.en'].map(name=>import('node:fs/promises').then(fs=>fs.readFile(`public/locales/${name}.json`,'utf8')).then(JSON.parse))));const originals=Object.keys(dictionaries).filter(k=>k!==dictionaries[k]);
 const browser=await chromium.launch();await mkdir('live-preview-qa',{recursive:true});const report=[];
 try{
  for(const width of [390,1280]){
@@ -20,7 +21,7 @@ try{
  if(width===390&&route==='/'){await page.locator('#bottom-more').click();assert.ok(await page.locator('#main-nav .language-selector').isVisible(),'More language visible');await page.locator('#bottom-more').click();}
  if(route.includes('ustawienia'))assert.ok(await page.locator('#settings-form').locator('..').locator('.language-selector').isVisible(),'settings language visible');
  // Capture visible UI; data supplied by people is deliberately excluded.
- const leftovers=await page.evaluate(()=>{const skip='script,style,textarea,[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,.trip-card-lake,#dream-trip-select option,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew,.subtitle';const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){const p=n.parentElement,s=n.textContent.trim();if(!s||p.closest(skip)||!p.getClientRects().length||getComputedStyle(p).visibility==='hidden')continue;if(/[ąćęłńóśźż]/i.test(s))out.push(s);}return [...new Set(out)];});
+ const leftovers=await page.evaluate(originals=>{const known=new Set(originals);const skip='script,style,textarea,[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,.trip-card-lake,#dream-trip-select option,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew,.subtitle';const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){const p=n.parentElement,s=n.textContent.trim();if(!s||p.closest(skip)||!p.getClientRects().length||getComputedStyle(p).visibility==='hidden')continue;if(/[ąćęłńóśźż]/i.test(s)||known.has(s))out.push(s);}return [...new Set(out)];},originals);
  report.push({width,route,leftovers});console.log(JSON.stringify({width,route,leftovers}));await page.screenshot({path:`live-preview-qa/en-${width}-${route.split('/').pop()||'dashboard'}.png`,fullPage:true});
  }
  await context.close();
