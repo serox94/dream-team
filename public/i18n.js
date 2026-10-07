@@ -5,6 +5,7 @@ document.documentElement.lang=lang;
 const dictionary=await fetch(`/locales/${lang}.json`,{cache:'force-cache'}).then(r=>r.json()).catch(()=>({}));
 if(lang==='en')Object.assign(dictionary,await fetch('/locales/runtime.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
 if(lang==='en'&&!/^\/login(?:\.html)?$/.test(location.pathname))Object.assign(dictionary,await fetch('/locales/legacy.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
+if(lang==='en'&&location.pathname.endsWith('/porady.html'))Object.assign(dictionary,await fetch('/locales/porady.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
 const guide=location.pathname.match(/\/pages\/(rigi|wezly)\.html$/)?.[1];
 if(lang==='en'&&guide){
  const file=guide==='rigi'?'guides':'knots';
