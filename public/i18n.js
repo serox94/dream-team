@@ -14,6 +14,8 @@ if(lang==='en'&&guide){
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^(\d+) z (\d+)$/,(_,a,b)=>`${a} of ${b}`],
+  [/^rzeczy gotowych · (\d+)%$/,(_,n)=>`items ready · ${n}%`],
   [/^Ciśnienie (\d+) hPa jest mniej korzystne i może osłabiać żerowanie\.$/,(_,n)=>`Pressure ${n} hPa is less favourable and may reduce feeding.`],
   [/^Ciśnienie (\d+) hPa jest jeszcze akceptowalne, ale nie idealne\.$/,(_,n)=>`Pressure ${n} hPa is acceptable, though not ideal.`],
   [/^Temperatura ([\d.-]+)°C jest bardzo dobra pod regularne brania\.$/,(_,n)=>`Temperature ${n}°C is favourable for regular bites.`],

@@ -358,7 +358,7 @@ try{
   await Promise.all([polish.close(),english.close()]);
   console.log('PL → EN → reload and independent EN → PL device PASS.');
   preview.DB.sqlite.prepare("UPDATE trips SET start_at=?,end_at=? WHERE id='next-trip'").run(new Date(Date.now()-3600000).toISOString(),new Date(Date.now()+86400000).toISOString());
-  const field=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const field=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,locale:'pl-PL'});
   await field.goto(preview.url+'/');await field.locator('html[data-ready="true"]').waitFor();
   assert.equal(await field.locator('body').getAttribute('data-field-mode'),'field');
   assert.ok(await field.locator('.hero-actions a[href="/pages/teren.html"]').count());
