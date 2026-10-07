@@ -867,6 +867,11 @@ function validateSpotPayload(raw) {
   const distance_m = parseNumber(raw.distance_m, { min: 0, max: 2000, allowNull: true });
   const depth_m = parseNumber(raw.depth_m, { min: 0, max: 100, allowNull: true });
   const bottom_type = normalizeText(raw.bottom_type, 60);
+  const latitude = parseNumber(raw.latitude, { min: -90, max: 90, allowNull: true });
+  const longitude = parseNumber(raw.longitude, { min: -180, max: 180, allowNull: true });
+  const weed = normalizeText(raw.weed, 100);
+  const rig = normalizeText(raw.rig, 100);
+  const bait = normalizeText(raw.bait, 100);
   const note = normalizeText(raw.note, 500);
   const obstacles = normalizeText(raw.obstacles, 120);
   const best_time = normalizeText(raw.best_time, 60);
@@ -875,6 +880,8 @@ function validateSpotPayload(raw) {
   if (!name) return { ok: false, message: "Podaj nazwę spotu." };
   if (Number.isNaN(distance_m)) return { ok: false, message: "Odległość musi być liczbą 0 lub większą." };
   if (Number.isNaN(depth_m)) return { ok: false, message: "Głębokość musi być liczbą 0 lub większą." };
+  if (Number.isNaN(latitude)) return { ok: false, message: "Szerokość GPS musi być liczbą od -90 do 90." };
+  if (Number.isNaN(longitude)) return { ok: false, message: "Długość GPS musi być liczbą od -180 do 180." };
 
   return {
     ok: true,
@@ -883,6 +890,11 @@ function validateSpotPayload(raw) {
       distance_m,
       depth_m,
       bottom_type: bottom_type || null,
+      latitude,
+      longitude,
+      weed: weed || null,
+      rig: rig || null,
+      bait: bait || null,
       note: note || null,
       obstacles: obstacles || null,
       best_time: best_time || null,
@@ -897,6 +909,11 @@ function fillSpotFormForEdit(item) {
   $("spot-distance").value = item.distance_m ?? "";
   $("spot-depth").value = item.depth_m ?? "";
   $("spot-bottom").value = item.bottom_type || "";
+  if ($("spot-latitude")) $("spot-latitude").value = item.latitude ?? "";
+  if ($("spot-longitude")) $("spot-longitude").value = item.longitude ?? "";
+  if ($("spot-weed")) $("spot-weed").value = item.weed || "";
+  if ($("spot-rig")) $("spot-rig").value = item.rig || "";
+  if ($("spot-bait")) $("spot-bait").value = item.bait || "";
   $("spot-note").value = item.note || "";
   if ($("spot-obstacles")) $("spot-obstacles").value = item.obstacles || "";
   if ($("spot-best-time")) $("spot-best-time").value = item.best_time || "";
@@ -925,6 +942,11 @@ async function handleSpotSubmit(event) {
     distance_m: $("spot-distance")?.value,
     depth_m: $("spot-depth")?.value,
     bottom_type: $("spot-bottom")?.value,
+    latitude: $("spot-latitude")?.value,
+    longitude: $("spot-longitude")?.value,
+    weed: $("spot-weed")?.value,
+    rig: $("spot-rig")?.value,
+    bait: $("spot-bait")?.value,
     note: $("spot-note")?.value,
     obstacles: $("spot-obstacles")?.value,
     best_time: $("spot-best-time")?.value,
@@ -1027,6 +1049,7 @@ function renderSpotsList(spots) {
     badges.appendChild(el("span", "badge", `Odległość: ${item.distance_m !== null && item.distance_m !== undefined ? `${Number(item.distance_m).toFixed(1)} m` : "brak"}`));
     badges.appendChild(el("span", "badge", `Głębokość: ${item.depth_m !== null && item.depth_m !== undefined ? `${Number(item.depth_m).toFixed(1)} m` : "brak"}`));
     badges.appendChild(el("span", "badge", `Dno: ${normalizeText(item.bottom_type || "brak", 60)}`));
+    if (item.latitude != null && item.longitude != null) badges.appendChild(el("span", "badge", `GPS: ${Number(item.latitude).toFixed(5)}, ${Number(item.longitude).toFixed(5)}`));
 
     article.append(top, badges);
 
