@@ -14,6 +14,7 @@ if(lang==='en'&&guide){
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^Schemat: (.+)$/,(_,name)=>`Diagram: ${translate(name)}`],
   [/^np\. (.+)$/,(_,example)=>`e.g. ${translate(example)}`],
   [/^(\d+) z (\d+)$/,(_,a,b)=>`${a} of ${b}`],
   [/^rzeczy gotowych · (\d+)%$/,(_,n)=>`items ready · ${n}%`],
