@@ -311,6 +311,8 @@ try{
         await page.locator('#template-create button[type="submit"]').click();
         await page.locator('.template-card').filter({hasText:'English session kit'}).waitFor();
         assert.match(await page.locator('#template-message').innerText(),/Template saved/);
+        assert.equal(await page.locator('#template-apply').innerText(),'Apply selected templates');
+        assert.equal(await page.locator('#template-categories').evaluate(el=>getComputedStyle(el).display),'grid','category choices remain readable on a phone');
       }
       if(width===390&&route.endsWith('sonar.html')){
         assert.equal(await page.locator('#atlas-overview .deeper-shot-image').count(),17);
