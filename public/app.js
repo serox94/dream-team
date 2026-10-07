@@ -394,7 +394,7 @@ function populateSpotSelect(spots) {
   spots.forEach(spot => {
     const option = document.createElement("option");
     option.value = String(spot.id);
-    option.textContent = spot.name;
+    option.dataset.userContent=""; option.textContent = spot.name;
     select.appendChild(option);
   });
 

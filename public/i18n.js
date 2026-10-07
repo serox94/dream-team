@@ -14,6 +14,21 @@ if(lang==='en'&&guide){
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^(Pogoda niedostępna|Ocena|Warunki): (.+)$/,(_,label,message)=>`${{'Pogoda niedostępna':'Weather unavailable',Ocena:'Rating',Warunki:'Conditions'}[label]}: ${translate(message)}`],
+  [/^📡 sonar documentation · (.+)$/,(_,title)=>`📡 sonar documentation · ${translate(title)}`],
+  [/^(\d+) rzeczy$/,(_,count)=>`${count} items`],
+  [/^(\d+) \/ (\d+) sprawdzone$/,(_,a,b)=>`${a} / ${b} checked`],
+  [/^Amplituda temperatury około ([\d.]+)°C jest dość duża, więc zachowanie ryb może się szybciej zmieniać\.$/,(_,n)=>`A temperature range of about ${n}°C is fairly large, so fish behaviour may change more quickly.`],
+  [/^Porywy ([\d.]+) km\/h nie powinny mocno przeszkadzać\.$/,(_,n)=>`Gusts of ${n} km/h should not cause much disruption.`],
+  [/^Duże zachmurzenie \((\d+)%\) może pomagać, o ile nie towarzyszy temu załamanie pogody\.$/,(_,n)=>`High cloud cover (${n}%) may help if conditions are not deteriorating.`],
+  [/^(.+): wymagany tekst\.$/,(_,label)=>`${translate(label)}: text is required.`],
+  [/^(.+): pole jest wymagane\.$/,(_,label)=>`${translate(label)}: this field is required.`],
+  [/^(.+): maksymalnie (\d+) znaków\.$/,(_,label,n)=>`${translate(label)}: at most ${n} characters.`],
+  [/^(.+): nieprawidłowa liczba\.$/,(_,label)=>`${translate(label)}: invalid number.`],
+  [/^(.+): wartość od ([\d.-]+) do ([\d.-]+)\.$/,(_,label,a,b)=>`${translate(label)}: value from ${a} to ${b}.`],
+  [/^(.+): podaj datę ze strefą czasową\.$/,(_,label)=>`${translate(label)}: enter a date with a time zone.`],
+  [/^(.+): nieprawidłowy dzień\.$/,(_,label)=>`${translate(label)}: invalid day.`],
+  [/^(.+): dozwolony jest adres http lub https\.$/,(_,label)=>`${translate(label)}: an HTTP or HTTPS URL is required.`],
   [/^Spakowane (\d+) \/ (\d+)$/,(_,a,b)=>`Packed ${a} / ${b}`],
   [/^✅ Spakowane (\d+) rzeczy$/,(_,a)=>`✅ ${a} items packed`],
   [/^Razem: (\d+) ryb · ([\d,.]+) kg$/,(_,a,b)=>`Total: ${a} fish · ${b} kg`],
