@@ -100,7 +100,7 @@
       const english=(localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en'))==='en';
       const words=english?await fetch('/locales/trip-advice.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})):{};
       const t=value=>words[value]||value;
-      const restriction=value=>Object.entries(words).filter(([source])=>source.includes('niezweryfikowany:')||source.startsWith('Status łódki')||source.startsWith('Liczba wędek nie jest')).reduce((text,[source,target])=>text.replaceAll(source,target),value);
+      const restriction=value=>Object.entries(words).filter(([source])=>source.includes('niezweryfikowany:')||source.startsWith('Status łódki')||source.startsWith('Liczba wędek nie jest')).reduce((text,[source,target])=>text.replaceAll(source,target),value).replace(/(Środki pływające|Łódka zanętowa|Leadcore|Regulamin):/g,(_,label)=>t(label)+':');
       const source=f=>f.url?` · <a href="${E(f.url)}" target="_blank" rel="noopener noreferrer">źródło</a>`:'';
       box.innerHTML=`<div class="section-head"><h2>Porady: ${E(data.tripName)}</h2><button type="button" class="secondary-btn" id="close-trip-advice">Zamknij</button></div>
         ${data.incomplete?`<div class="weather-note status-warn"><strong>Brakuje danych do pełnej rekomendacji</strong><ul>${data.missing.map(x=>`<li>${E(t(x))}</li>`).join('')}</ul></div>`:''}
