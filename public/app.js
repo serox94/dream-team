@@ -499,6 +499,7 @@ async function handleCatchSubmit(event) {
 
   let error;
   let savedCatch = null;
+  let pendingSync = false;
   if (editId) {
     ({ data: savedCatch, error } = await d1Client
       .from("catches")
@@ -507,11 +508,28 @@ async function handleCatchSubmit(event) {
       .select("id, person, weight, caught_at")
       .single());
   } else {
-    ({ data: savedCatch, error } = await d1Client
-      .from("catches")
-      .insert([validation.payload])
-      .select("id, person, weight, caught_at")
-      .single());
+    try {
+      const angler = window.DREAM_MODEL?.anglers?.find(a => a.name === validation.payload.person);
+      if (!angler) throw new Error("Nieznany uczestnik wyjazdu.");
+      const result = await Dream.api("/api/catches", {
+        method: "POST",
+        body: JSON.stringify({
+          tripId: window.DREAM_TRIP.id,
+          anglerId: angler.id,
+          weightKg: validation.payload.weight,
+          species: validation.payload.species,
+          caughtAt: validation.payload.caught_at,
+          spot: validation.payload.spot,
+          spotId: validation.payload.spot_id,
+          bait: validation.payload.bait,
+          notes: validation.payload.note
+        })
+      });
+      pendingSync = Boolean(result.pendingSync);
+      savedCatch = { ...validation.payload, id: result.id };
+    } catch (caught) {
+      error = { message: caught?.message || String(caught) };
+    }
   }
 
   if (error) {
@@ -520,11 +538,14 @@ async function handleCatchSubmit(event) {
     return;
   }
 
-  if (savedCatch) celebrateCatchIfNeeded(savedCatch, { play: true });
+  if (savedCatch) celebrateCatchIfNeeded(savedCatch, { play: !pendingSync });
   resetCatchForm();
-  setMessage("form-message", editId ? "Zmiany zapisane." : "Połów został dodany.", "success");
-  try { await Dream.refreshModel(); await renderCatchesPage(); }
-  catch (error) { Dream.notice(`Połów zapisany. Nie udało się odświeżyć listy: ${error.message}`,true); }
+  setMessage("form-message", pendingSync ? "Oczekuje na synchronizację." : (editId ? "Zmiany zapisane." : "Połów został dodany."), "success");
+  try {
+    if (!pendingSync) await Dream.refreshModel();
+    await renderCatchesPage();
+  }
+  catch (error) { Dream.notice(`${pendingSync ? "Połów czeka na synchronizację." : "Połów zapisany."} Nie udało się odświeżyć listy: ${error.message}`,true); }
 }
 
 async function deleteCatch(id) {
