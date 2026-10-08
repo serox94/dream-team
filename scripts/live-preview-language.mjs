@@ -7,24 +7,27 @@ const routes=['/','/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.
 const dictionaries=Object.assign({},...await Promise.all(['en','runtime.en','legacy.en','porady.en','guides.en','knots.en'].map(name=>import('node:fs/promises').then(fs=>fs.readFile(`public/locales/${name}.json`,'utf8')).then(JSON.parse))));const originals=Object.keys(dictionaries).filter(k=>k!==dictionaries[k]);
 const browser=await chromium.launch();await mkdir('live-preview-qa',{recursive:true});const report=[];
 const safeShot=async(page,path)=>{try{await page.screenshot({path,fullPage:false,timeout:10000});}catch(error){console.warn('QA screenshot skipped:',path,error.message);}};
-const login=async page=>{
- let ready=false,lastError;
- for(let attempt=0;attempt<2&&!ready;attempt++){
+const open=async(page,path,ready)=>{
+ let lastError;
+ for(let attempt=0;attempt<3;attempt++){
   try{
-   await page.goto(base+'/login',{waitUntil:'domcontentloaded',timeout:60000});
-   await page.locator('html[data-i18n-ready]').waitFor({timeout:30000});
-   ready=true;
-  }catch(error){lastError=error;if(attempt===0)await page.waitForTimeout(750);}
+   await page.goto(base+path,{waitUntil:'commit',timeout:30000});
+   if(ready)await page.locator(ready).waitFor({state:'attached',timeout:30000});
+   return;
+  }catch(error){lastError=error;if(attempt<2)await page.waitForTimeout(750*(attempt+1));}
  }
- if(!ready)throw lastError;
+ throw lastError;
+};
+const login=async page=>{
+ await open(page,'/login','html[data-i18n-ready]');
  assert.ok(await page.locator('.login-card .language-selector').isVisible(),'login language visible');
  await page.locator('.language-selector select').selectOption('en');
  await page.locator('html[data-i18n-ready="en"]').waitFor({timeout:30000});
- await page.reload({waitUntil:'domcontentloaded',timeout:60000});
+ await page.reload({waitUntil:'commit',timeout:30000});
  await page.locator('html[data-i18n-ready="en"]').waitFor({timeout:30000});
  await page.locator('input[name="username"]').fill(process.env.RYBY_LOGIN_USERNAME);
  await page.locator('input[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);
- await page.locator('button[type="submit"]').click();
+ await page.locator('button[type="submit"]').click({noWaitAfter:true});
  await page.waitForURL(url=>new URL(url).pathname==='/',{waitUntil:'domcontentloaded',timeout:60000});
  await page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
 };
@@ -33,7 +36,7 @@ try{
  const context=await browser.newContext({viewport:{width,height:844},locale:'pl-PL',isMobile:width===390,hasTouch:width===390});const page=await context.newPage();
  await login(page);
  for(const route of routes){
- await page.goto(base+route,{waitUntil:'domcontentloaded',timeout:60000});await page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
+ await open(page,route,'html[data-ready="true"][data-i18n-ready="en"]');
  if(route.includes('sonar')||route.includes('encyklopedia'))await page.locator('#knowledge-search').waitFor();
  if(route.includes('ustawienia'))await page.locator('#system-health').waitFor();
  if(width===390&&route==='/'){await page.locator('#bottom-more').click();assert.ok(await page.locator('#main-nav .language-selector').isVisible(),'More language visible');await page.locator('#bottom-more').click();}

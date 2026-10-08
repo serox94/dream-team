@@ -12,7 +12,7 @@ const login=async(locale,lang)=>{
   await page.locator(`html[data-i18n-ready="${lang}"]`).waitFor({timeout:30000});
   await page.locator('input[name="username"]').fill(process.env.RYBY_LOGIN_USERNAME);
   await page.locator('input[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);
-  await page.locator('button[type="submit"]').click();
+  await page.locator('button[type="submit"]').click({noWaitAfter:true});
   await page.waitForURL(url=>new URL(url).pathname==='/',{waitUntil:'domcontentloaded',timeout:60000});
   await page.locator(`html[data-ready="true"][data-i18n-ready="${lang}"]`).waitFor({timeout:30000});
   return {context,page};
