@@ -22,7 +22,7 @@ const login=async page=>{
  await page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
 };
 try{
- for(const width of [390,1280]){
+ for(const width of [360,390,412,768,1280]){
  const context=await browser.newContext({viewport:{width,height:844},locale:'pl-PL',isMobile:width===390,hasTouch:width===390});const page=await context.newPage();
  await login(page);
  for(const route of routes){
@@ -41,4 +41,4 @@ try{
  }
 }finally{await writeFile('live-preview-qa/language.json',JSON.stringify(report,null,2));await browser.close();}
 assert.equal(report.filter(r=>r.leftovers.length).length,0,'Real preview still contains Polish UI; see language.json');
-console.log('LIVE LANGUAGE: PASS (390/1280, login, More, Settings, EN persisted after reload).');
+console.log('LIVE LANGUAGE: PASS (360/390/412/768/1280, login, More, Settings, EN persisted after reload).');
