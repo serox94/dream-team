@@ -110,8 +110,15 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/live-preview-bindings.mjs
+      - name: Real preview templates profiles and two-device language
+        id: extras
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.browser.outcome == 'success' }}
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-extras.mjs
       - name: Final real preview PL EN regression at 390 and desktop
-        if: ${{ !cancelled() && steps.language.outcome == 'success' && steps.media.outcome == 'success' && steps.offline.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.language.outcome == 'success' && steps.media.outcome == 'success' && steps.offline.outcome == 'success' && steps.extras.outcome == 'success' }}
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
