@@ -644,6 +644,11 @@ function bindCatchesPageEvents() {
 
   const catchForm=$("catch-form"),catchSave=$("save-catch-btn");
   catchForm?.addEventListener("submit", guardedSubmit(handleCatchSubmit));
+  catchSave?.addEventListener("click", event => {
+    event.preventDefault();
+    if(!catchForm?.reportValidity())return;
+    catchForm.dispatchEvent(new SubmitEvent("submit",{bubbles:true,cancelable:true,submitter:catchSave}));
+  });
   if(catchForm)catchForm.dataset.bound="true";
   if(catchSave)catchSave.disabled=false;
   $("refresh-catches-btn")?.addEventListener("click", () => renderCatchesPage().catch(error=>Dream.notice(error.message,true)));
