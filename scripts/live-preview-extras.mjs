@@ -81,13 +81,13 @@ try{
   const bootstrap=await page.request.get(base+'/api/bootstrap').then(r=>r.json());
   const person=bootstrap.anglers[0],form=page.locator('.participant-profile').filter({has:page.getByRole('heading',{name:person.name,exact:true})});
   const language=form.locator('select'),original=person.defaultLanguage,next=original==='pl'?'en':'pl';
-  await language.selectOption(next);await form.locator('button[type="submit"]').click();
+  await language.selectOption(next);const firstProfileSave=page.waitForResponse(r=>r.url().includes('/api/anglers/'+encodeURIComponent(person.id))&&r.request().method()==='PATCH');await form.locator('button[type="submit"]').click();assert.equal((await firstProfileSave).status(),200);
   await page.getByText('Profil zapisany.',{exact:true}).waitFor({timeout:30000});
   let changed=await page.request.get(base+'/api/bootstrap').then(r=>r.json());
   assert.equal(changed.anglers.find(a=>a.id===person.id).defaultLanguage,next);
   const refreshedForm=page.locator('.participant-profile').filter({has:page.getByRole('heading',{name:person.name,exact:true})});
-  await refreshedForm.locator('select').selectOption(original);await refreshedForm.locator('button[type="submit"]').click();
-  await page.getByText('Profil zapisany.',{exact:true}).waitFor({timeout:30000});
+  await refreshedForm.locator('select').selectOption(original);const restoreProfile=page.waitForResponse(r=>r.url().includes('/api/anglers/'+encodeURIComponent(person.id))&&r.request().method()==='PATCH');await refreshedForm.locator('button[type="submit"]').click();assert.equal((await restoreProfile).status(),200);
+  await page.waitForFunction(({id,language})=>window.DREAM_MODEL?.anglers?.find(a=>a.id===id)?.defaultLanguage===language,{id:person.id,language:original},{timeout:30000});
   changed=await page.request.get(base+'/api/bootstrap').then(r=>r.json());
   assert.equal(changed.anglers.find(a=>a.id===person.id).defaultLanguage,original);
   console.log('LIVE PARTICIPANT PROFILE: PASS reversible edit/persist/reload/restore.');

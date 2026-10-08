@@ -644,10 +644,6 @@ function bindCatchesPageEvents() {
 
   const catchForm=$("catch-form"),catchSave=$("save-catch-btn");
   catchForm?.addEventListener("submit", guardedSubmit(handleCatchSubmit));
-  catchSave?.addEventListener("click", event => {
-    event.preventDefault();
-    catchForm?.requestSubmit(catchSave);
-  });
   if(catchForm)catchForm.dataset.bound="true";
   if(catchSave)catchSave.disabled=false;
   $("refresh-catches-btn")?.addEventListener("click", () => renderCatchesPage().catch(error=>Dream.notice(error.message,true)));
