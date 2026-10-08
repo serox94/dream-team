@@ -30,7 +30,8 @@ try{
   // Checklist templates: seed one disposable preview item, create two templates from its category,
   // rename one, apply both with zero duplicates, then remove templates and the disposable item.
   const page=pl.page,api=async(path,options={})=>{
-    const response=await pl.context.request.fetch(base+path,{...options,headers:{origin:base,'content-type':'application/json',...(options.headers||{})}});
+    const {body,...rest}=options;
+    const response=await pl.context.request.fetch(base+path,{...rest,data:body===undefined?undefined:JSON.parse(body),headers:{origin:base,'content-type':'application/json',...(options.headers||{})}});
     const data=await response.json();assert.ok(response.ok(),`${options.method||'GET'} ${path}: ${response.status()} ${JSON.stringify(data)}`);return data;
   };
   const boot=await api('/api/bootstrap'),trip=boot.trips.find(t=>t.id===boot.app.activeTripId)||boot.trips.find(t=>t.status!=='archived')||boot.trips[0];
