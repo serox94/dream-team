@@ -699,5 +699,6 @@
   "spada": "falling",
   "stabilne": "stable",
   "Brania": "Bites",
-  "Rok": "Year"
+  "Rok": "Year",
+  "preview nie korzysta z produkcyjnego backupu": "preview does not use the production backup"
 }
