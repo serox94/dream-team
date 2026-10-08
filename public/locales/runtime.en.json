@@ -694,5 +694,6 @@
   "Szerokość GPS musi być liczbą od -90 do 90.": "GPS latitude must be a number from -90 to 90.",
   "Długość GPS musi być liczbą od -180 do 180.": "GPS longitude must be a number from -180 to 180.",
   "Zdjęcie łowiska z góry": "Aerial view of the lake",
-  "( profil informacyjny; instrukcje Deeper są napisane dla tego zestawu )": "(informational profile; Deeper guidance is written for this setup)"
+  "( profil informacyjny; instrukcje Deeper są napisane dla tego zestawu )": "(informational profile; Deeper guidance is written for this setup)",
+  "Automatyczny research: dostawca skonfigurowany.": "Automated research: provider configured."
 }
