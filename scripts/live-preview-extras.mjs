@@ -6,9 +6,12 @@ const browser=await chromium.launch();
 const login=async(locale,lang)=>{
   const context=await browser.newContext({viewport:{width:390,height:844},locale});
   const page=await context.newPage();
-  await page.goto(base+'/login',{waitUntil:'domcontentloaded',timeout:60000});
-  await page.locator('html[data-i18n-ready]').waitFor({timeout:30000});
-  await page.locator('.language-selector select').selectOption(lang);
+  const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
+  for(let attempt=0;attempt<2;attempt++){
+    let response;try{response=await page.goto(base+'/login',{waitUntil:'commit',timeout:30000});assert.equal(response.status(),200);await page.locator('html[data-i18n-ready]').waitFor({state:'attached',timeout:30000});break;}
+    catch(error){console.warn('EXTRAS login readiness',{attempt,status:response?.status(),url:page.url(),pageErrors});if(attempt)throw error;}
+  }
+  await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded',timeout:30000}),page.locator('.language-selector select').selectOption(lang)]);
   await page.locator(`html[data-i18n-ready="${lang}"]`).waitFor({timeout:30000});
   await page.locator('input[name="username"]').fill(process.env.RYBY_LOGIN_USERNAME);
   await page.locator('input[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);
