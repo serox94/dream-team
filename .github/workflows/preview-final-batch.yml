@@ -41,20 +41,27 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.preview.generated.jsonc
-      - name: Attach existing login secrets only to preview
+      - name: Attach existing runtime secrets to preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
         run: |
           set -euo pipefail
           for name in RYBY_LOGIN_USERNAME RYBY_LOGIN_PASSWORD RYBY_SESSION_SECRET; do
             test -n "${!name}" || { echo "Missing $name"; exit 1; }
             printf '%s' "${!name}" | npx wrangler secret put "$name" --name dream-team-preview >/dev/null
           done
-          echo 'Preview login bindings attached.'
+          if [ -n "${TAVILY_API_KEY:-}" ]; then
+            printf '%s' "$TAVILY_API_KEY" | npx wrangler secret put TAVILY_API_KEY --name dream-team-preview >/dev/null
+            echo 'Preview Tavily binding attached from the repository secret.'
+          else
+            echo 'Preview Tavily binding not attached: GitHub secret TAVILY_API_KEY is not configured.'
+          fi
+          echo 'Preview runtime bindings attached.'
       - name: Read-only staging smoke
         env:
           RYBY_PRODUCTION_URL: https://dream-team-preview.sewerynski00.workers.dev
