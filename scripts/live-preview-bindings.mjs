@@ -9,7 +9,7 @@ const cf=async path=>{try{const r=await fetch(cfRoot+path,{headers:{authorizatio
 const bindingSettings=await cf('/workers/scripts/dream-team-preview/settings');report.ai.binding=!!bindingSettings.value?.bindings?.find(b=>b.type==='ai'&&b.name==='AI');
 const subscriptions=await cf('/subscriptions');report.ai.billingVerificationAvailable=subscriptions.available;
 if(subscriptions.available)report.ai.workersSubscriptions=(Array.isArray(subscriptions.value)?subscriptions.value:[]).filter(s=>/workers/i.test(s.rate_plan?.id+' '+s.rate_plan?.public_name)).map(s=>({id:s.rate_plan?.id,name:s.rate_plan?.public_name}));
-report.ai.remaining=config.vars.AI_FREE_ONLY==='true'?'Workers Free verified by absence of a Workers Paid subscription; preview AI may use only the free allocation. The media QA owns the single live inference.':'Workers Paid or unverifiable plan detected; AI_FREE_ONLY remains false and no inference is allowed.';
+report.ai.remaining=config.vars.AI_FREE_ONLY==='true'?'Workers Free verified by absence of a Workers Paid subscription; preview AI may use only the free allocation. The media QA owns the single live inference.':'Free plan and remaining allowance are not affirmatively verified; preview AI remains disabled and no inference is allowed.';
 if(!settings.researchProviderConfigured){report.tavily.remaining='Set exactly one Worker secret: TAVILY_API_KEY on dream-team-preview.';report.tavily.requestCount=0;report.tavily.credits=0;}
 else{
  // Reserve this one-shot QA run in preview D1 so workflow retries never repeat a paid provider request.

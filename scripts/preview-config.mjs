@@ -32,20 +32,9 @@ const production=JSON.parse((await readFile('wrangler.jsonc','utf8')).replace(/^
 const productionId=production.d1_databases[0].database_id;
 if(!database.uuid||database.uuid===productionId)throw Error('Preview database identity is missing or matches production.');
 
-// Workers AI Free cannot bill overage: after the 10,000-neuron daily allocation,
-// requests fail until the next reset. Enable preview AI only when Cloudflare reports
-// no Workers Paid subscription; if plan detection is unavailable, fail closed.
-let aiFreeOnly='false';
-try{
- const subscriptions=await api('/subscriptions');
- const workersPaid=(Array.isArray(subscriptions)?subscriptions:[]).some(subscription=>{
-  const plan=(subscription.rate_plan?.id+' '+subscription.rate_plan?.public_name).toLowerCase();
-  return plan.includes('workers')&&!plan.includes('free');
- });
- aiFreeOnly=workersPaid?'false':'true';
-}catch(error){
- console.warn('Workers plan could not be verified; preview AI remains disabled:',error.message);
-}
+// This audit requires affirmative verification of the free plan and allowance.
+// An empty subscriptions response does not establish either; keep preview AI off.
+const aiFreeOnly='false';
 const preview={...production,name:'dream-team-preview',workers_dev:true,triggers:{crons:[]},secrets:undefined,
  d1_databases:[{binding:'DB',database_name:databaseName,database_id:database.uuid}],
  r2_buckets:[{binding:'MEDIA',bucket_name:bucketName}],
