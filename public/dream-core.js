@@ -77,7 +77,15 @@
     if(synced){document.dispatchEvent(new Event('dream:synced'));if(!pendingCount())setTimeout(()=>location.reload(),100);}
   }
   function resolveConflict(key,choice){const queue=readQueue(),item=queue.find(q=>q.key===key);if(!item)return;
-    if(choice==='server')writeQueue(queue.filter(q=>q.key!==key));
+    if(choice==='server'){
+      const match=item.path.match(/^\/api\/(checklist|spots)\/(\d+)\?tripId=([a-zA-Z0-9_-]+)$/);
+      if(match){const [,resource,id,tripId]=match,path=`/api/${resource}?tripId=${tripId}`,cached=readEntries()[path]?.data;
+        const row=cached?.[resource==='checklist'?'items':'spots']?.find(row=>Number(row.id)===Number(id));
+        if(row){if(resource==='checklist')row.packed=item.serverValue;else Object.assign(row,item.serverValue);row.revision=item.serverRevision;delete row.pendingSync;saveReadCache(path,cached);}
+      }
+      writeQueue(queue.filter(q=>q.key!==key));
+      document.dispatchEvent(new Event('dream:synced'));if(!pendingCount())setTimeout(()=>location.reload(),100);
+    }
     else if(choice==='mine'&&Number.isInteger(item.serverRevision)){item.baseRevision=item.serverRevision;item.status='pending';writeQueue(queue);syncQueue();}
   }
   window.addEventListener('online',syncQueue);
