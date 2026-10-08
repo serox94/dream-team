@@ -648,6 +648,8 @@ function bindCatchesPageEvents() {
     event.preventDefault();
     catchForm?.requestSubmit(catchSave);
   });
+  if(catchForm)catchForm.dataset.bound="true";
+  if(catchSave)catchSave.disabled=false;
   $("refresh-catches-btn")?.addEventListener("click", () => renderCatchesPage().catch(error=>Dream.notice(error.message,true)));
   $("cancel-edit-catch-btn")?.addEventListener("click", resetCatchForm);
   $("spot-id")?.addEventListener("change", async e => {

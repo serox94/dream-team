@@ -8,8 +8,15 @@ const dictionaries=Object.assign({},...await Promise.all(['en','runtime.en','leg
 const browser=await chromium.launch();await mkdir('live-preview-qa',{recursive:true});const report=[];
 const safeShot=async(page,path)=>{try{await page.screenshot({path,fullPage:false,timeout:10000});}catch(error){console.warn('QA screenshot skipped:',path,error.message);}};
 const login=async page=>{
- await page.goto(base+'/login',{waitUntil:'domcontentloaded',timeout:60000});
- await page.locator('html[data-i18n-ready="pl"]').waitFor({timeout:30000});
+ let ready=false,lastError;
+ for(let attempt=0;attempt<2&&!ready;attempt++){
+  try{
+   await page.goto(base+'/login',{waitUntil:'domcontentloaded',timeout:60000});
+   await page.locator('html[data-i18n-ready]').waitFor({timeout:30000});
+   ready=true;
+  }catch(error){lastError=error;if(attempt===0)await page.waitForTimeout(750);}
+ }
+ if(!ready)throw lastError;
  assert.ok(await page.locator('.login-card .language-selector').isVisible(),'login language visible');
  await page.locator('.language-selector select').selectOption('en');
  await page.locator('html[data-i18n-ready="en"]').waitFor({timeout:30000});

@@ -59,6 +59,7 @@ try{
   await page.locator('.template-card').filter({hasText:renamed}).waitFor({timeout:30000});
   for(const name of [renamed,nameB]){
     const card=page.locator('.template-card').filter({hasText:name});
+    if(!(await card.evaluate(e=>e.open)))await card.locator(':scope > summary').click();
     await card.locator('.template-select').check();
   }
   await page.locator('#template-apply').click();
