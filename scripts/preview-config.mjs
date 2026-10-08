@@ -19,10 +19,25 @@ if(!buckets.some(row=>row.name===bucketName))await api('/r2/buckets','POST',{nam
 const production=JSON.parse((await readFile('wrangler.jsonc','utf8')).replace(/^\s*\/\/.*$/gm,''));
 const productionId=production.d1_databases[0].database_id;
 if(!database.uuid||database.uuid===productionId)throw Error('Preview database identity is missing or matches production.');
+
+// Workers AI Free cannot bill overage: after the 10,000-neuron daily allocation,
+// requests fail until the next reset. Enable preview AI only when Cloudflare reports
+// no Workers Paid subscription; if plan detection is unavailable, fail closed.
+let aiFreeOnly='false';
+try{
+ const subscriptions=await api('/subscriptions');
+ const workersPaid=(Array.isArray(subscriptions)?subscriptions:[]).some(subscription=>{
+  const plan=(subscription.rate_plan?.id+' '+subscription.rate_plan?.public_name).toLowerCase();
+  return plan.includes('workers')&&!plan.includes('free');
+ });
+ aiFreeOnly=workersPaid?'false':'true';
+}catch(error){
+ console.warn('Workers plan could not be verified; preview AI remains disabled:',error.message);
+}
 const preview={...production,name:'dream-team-preview',workers_dev:true,triggers:{crons:[]},secrets:undefined,
  d1_databases:[{binding:'DB',database_name:databaseName,database_id:database.uuid}],
  r2_buckets:[{binding:'MEDIA',bucket_name:bucketName}],
- vars:{AI_FREE_ONLY:'false'}};
+ vars:{AI_FREE_ONLY:aiFreeOnly}};
 delete preview.secrets;
 await writeFile('wrangler.preview.generated.jsonc',JSON.stringify(preview,null,2));
-console.log('Isolated preview configuration ready: separate D1 and private media R2.');
+console.log(`Isolated preview configuration ready: separate D1 and private media R2; AI_FREE_ONLY=${aiFreeOnly}.`);
