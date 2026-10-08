@@ -1,5 +1,6 @@
 (function () {
   const $ = (id) => document.getElementById(id);
+  const tr = value => window.DreamI18n?.t(value) || value;
 
   function getFishingSpotSafe() {
     try {
@@ -535,7 +536,7 @@
     if ($("weather-current-wind")) $("weather-current-wind").textContent = `${Number(current.wind_speed_10m).toFixed(1)} / ${Number(current.wind_gusts_10m).toFixed(1)} km/h`;
     if ($("weather-current-pressure")) $("weather-current-pressure").textContent = `${Number(current.pressure_msl).toFixed(0)} hPa / ${trend}`;
     if ($("weather-rating")) $("weather-rating").textContent = rating;
-    if ($("weather-description")) $("weather-description").textContent = `${icon} ${description}`;
+    if ($("weather-description")) $("weather-description").textContent = `${icon} ${tr(description)}`;
     if ($("weather-description-copy")) $("weather-description-copy").textContent = description;
     if ($("weather-pressure-note")) $("weather-pressure-note").textContent = `Trend: ${trend}`;
     if ($("weather-rating-note")) $("weather-rating-note").textContent = `Warunki: ${rating}`;
