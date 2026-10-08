@@ -34,7 +34,9 @@ const inferredSourceType=(url,title,confirmedHost,confirmedType)=>{
 };
 export function extractFacts(content){
   const escapedLabel=label=>label.replace(/[.*+?^$(){}|[\]\\]/g,'\\export function extractFacts(content){
+  const escapedLabel=label=>label.replace(/[.*+?^$(){}|[\]\\]/g,'\\export function extractFacts(content){
   const rows=');
+');
   const rows=String(content||'').split(/\n+/).map(s=>s.replace(/^[\s>*#|–-]+/,'').trim()).filter(Boolean),out=[];
   for(const [field,labels] of Object.entries(fields)){
     for(const row of rows){
