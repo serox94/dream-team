@@ -271,7 +271,7 @@ async function settings(request,env){
       lastBackupAt=valid[0]?.uploaded.toISOString()||null;backupStatus=lastBackupAt?'available':'missing';
     }catch{backupStatus='unavailable';}}
     const schema=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
-    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',mediaStorageAvailable:Boolean(env.MEDIA),lastBackupAt,backupStatus,version:'1.2.0',schemaVersion:Number(schema?.value)||null});
+    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',mediaStorageAvailable:Boolean(env.MEDIA),lastBackupAt,backupStatus,environment:env.APP_ENV==='preview'?'preview':'production',version:'1.2.0',schemaVersion:Number(schema?.value)||null});
   }
   const x=await body(request),statements=[];
   for(const [key,value] of Object.entries(x)){
