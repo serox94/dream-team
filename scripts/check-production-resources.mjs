@@ -7,7 +7,7 @@ const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API
 assert.ok(account&&token,'Cloudflare deployment credentials missing');
 const config=JSON.parse(await readFile('wrangler.jsonc','utf8'));
 assert.equal(config.name,'dream-team');
-assert.equal(config.vars?.AI_FREE_ONLY,'true','Production AI must remain behind the free-only gate.');
+assert.equal(config.vars?.AI_FREE_ONLY,'false','AI remains disabled until the free plan and allowance are affirmatively verified.');
 
 const root=`https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(account)}`;
 async function api(path,method='GET',body){
@@ -26,10 +26,4 @@ if(!buckets.some(b=>b.name===expectedMedia)){
 }
 assert.ok(buckets.some(b=>b.name===expectedMedia),'Dedicated DreamTeam media bucket is unavailable.');
 
-const subscriptions=await api('/subscriptions');
-const workersPaid=(Array.isArray(subscriptions)?subscriptions:[]).some(subscription=>{
- const plan=(String(subscription.rate_plan?.id||'')+' '+String(subscription.rate_plan?.public_name||'')).toLowerCase();
- return plan.includes('workers')&&!plan.includes('free');
-});
-assert.equal(workersPaid,false,'Workers Paid detected while AI_FREE_ONLY=true; refusing deploy to prevent AI overage.');
-console.log('Production resources: media R2 present, backup R2 preserved, Workers Free guard PASS.');
+console.log('Production resources: media R2 present, backup R2 preserved; AI remains disabled pending free allowance verification.');

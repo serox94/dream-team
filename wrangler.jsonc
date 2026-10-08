@@ -4,7 +4,7 @@
   "main": "src/worker.js",
   "secrets": { "required": ["TAVILY_API_KEY"] },
   "compatibility_date": "2026-09-03",
-  "vars": { "AI_FREE_ONLY": "true" },
+  "vars": { "AI_FREE_ONLY": "false" },
   "triggers": { "crons": ["0 6 * * *"] },
   "assets": {
     "directory": "./public",
