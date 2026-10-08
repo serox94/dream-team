@@ -11,7 +11,7 @@ document.addEventListener('dream:ready',async()=>{
   $('research-auto').closest('label').before(providerStatus);
   $('research-official').closest('label').lastChild.textContent=' Preferuj oficjalne strony w wyszukiwaniu';
   const system=document.createElement('section');system.className='panel-card';system.id='system-health';
-  const backup=saved.lastBackupAt?new Date(saved.lastBackupAt).toLocaleString(locale):saved.backupStatus==='missing'?t('brak potwierdzonej kopii'):t('status niedostępny');
+  const backup=saved.environment==='preview'&&!saved.lastBackupAt?t('preview nie korzysta z produkcyjnego backupu'):saved.lastBackupAt?new Date(saved.lastBackupAt).toLocaleString(locale):saved.backupStatus==='missing'?t('brak potwierdzonej kopii'):t('status niedostępny');
   system.innerHTML='<h3>System</h3><dl class="system-health-list"><dt>Wersja DreamTeam</dt><dd></dd><dt>Schemat D1</dt><dd></dd><dt>Ostatnia udana kopia zapasowa</dt><dd></dd><dt>Research provider</dt><dd></dd><dt>Workers AI</dt><dd></dd><dt>Media R2</dt><dd></dd><dt>Offline / cache</dt><dd id="system-cache"></dd><dt>Zmiany do synchronizacji</dt><dd id="system-pending"></dd></dl>';
   const values=system.querySelectorAll('dd');[saved.version,saved.schemaVersion,backup,saved.researchProviderConfigured?t('skonfigurowany'):t('niedostępny'),saved.workersAiAvailable?t('dostępny'):t('wyłączony'),saved.mediaStorageAvailable?t('dostępny'):t('niedostępny')].forEach((value,i)=>values[i].textContent=String(value));
   document.querySelector('.two-column').append(system);
