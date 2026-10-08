@@ -27,18 +27,29 @@ try{
   await en.page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
   console.log('LIVE TWO-DEVICE LANGUAGE: PASS independent PL/EN preferences persist.');
 
-  // Checklist templates: create two from the current list, rename one, apply both with zero duplicates, delete both.
-  const page=pl.page;
+  // Checklist templates: seed one disposable preview item, create two templates from its category,
+  // rename one, apply both with zero duplicates, then remove templates and the disposable item.
+  const page=pl.page,api=async(path,options={})=>{
+    const response=await pl.context.request.fetch(base+path,{...options,headers:{origin:base,'content-type':'application/json',...(options.headers||{})}});
+    const data=await response.json();assert.ok(response.ok(),`${options.method||'GET'} ${path}: ${response.status()} ${JSON.stringify(data)}`);return data;
+  };
+  const boot=await api('/api/bootstrap'),trip=boot.trips.find(t=>t.id===boot.app.activeTripId)||boot.trips.find(t=>t.status!=='archived')||boot.trips[0];
+  const cats=(await api('/api/checklist-categories')).categories.filter(c=>c.active);assert.ok(cats.length,'preview must have an active checklist category');
+  const stamp=Date.now(),seedLabel='QA template seed '+stamp,nameA='QA template A '+stamp,nameB='QA template B '+stamp,renamed=nameA+' edited';
+  const seed=(await api('/api/checklist',{method:'POST',body:JSON.stringify({tripId:trip.id,category:cats[0].name,label:seedLabel,packed:false})})).id;
   await page.goto(base+'/pages/checklisty.html',{waitUntil:'domcontentloaded',timeout:60000});
   await page.locator('html[data-ready="true"]').waitFor({timeout:30000});
   await page.locator('#checklist-templates').waitFor({timeout:30000});
-  const stamp=Date.now(),nameA='QA template A '+stamp,nameB='QA template B '+stamp,renamed=nameA+' edited';
+  for(const box of await page.locator('#template-categories input').all())await box.uncheck();
+  await page.locator('#template-categories input').first().check();
   const create=async name=>{
     await page.locator('#template-name').fill(name);
     await page.locator('#template-create button[type="submit"]').click();
-    await page.locator('#template-message').filter({hasText:'Zapisano szablon'}).waitFor({timeout:30000});
+    await page.waitForFunction(()=>document.getElementById('template-message')?.textContent.trim().length>0,null,{timeout:30000});
+    const message=await page.locator('#template-message').innerText();assert.match(message,/Zapisano szablon/i,`template creation failed: ${message}`);
     await page.locator('.template-card').filter({hasText:name}).waitFor({timeout:30000});
   };
+  try{
   await create(nameA);await create(nameB);
   const cardA=page.locator('.template-card').filter({hasText:nameA});
   await cardA.locator('summary').click();
@@ -59,6 +70,7 @@ try{
     await card.waitFor({state:'detached',timeout:30000});
   }
   console.log('LIVE CHECKLIST TEMPLATES: PASS create/rename/apply-multiple/dedupe/delete through UI.');
+  }finally{await api(`/api/checklist/${seed}?tripId=${encodeURIComponent(trip.id)}`,{method:'DELETE',body:'{}'}).catch(()=>{});}
 
   // Participant profile: persist one reversible change and restore it.
   await page.goto(base+'/pages/ustawienia.html',{waitUntil:'domcontentloaded',timeout:60000});
