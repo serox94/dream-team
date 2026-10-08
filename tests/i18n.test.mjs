@@ -42,6 +42,8 @@ test('English dynamic statuses translate labels while preserving trip and bait v
  assert.equal(t('NW (326°) • umiarkowany, lekko porywisty'), 'NW (326°) • moderate, slightly gusty');
  assert.equal(t('umiarkowany, porywisty'), 'moderate, gusty');
  assert.equal(t('7 DNI'), '7 DAYS');
+ assert.equal(t('7 dni'), '7 days');
+ assert.equal(t('🎣 field practice · PZW Opole: wysokie temperatury a dobrostan ryb'), '🎣 field practice · PZW Opole: high temperatures and fish welfare');
  assert.equal(t('Godziny łowiska: Europe/Warsaw. Termin może pozostać pusty.'),'Lake time: Europe/Warsaw. Dates may be left blank.');
 });
 test('late editorial controls translate without changing user notes',async()=>{

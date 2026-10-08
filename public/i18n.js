@@ -14,6 +14,8 @@ if(lang==='en'&&guide){
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^(🎣 field practice|🏭 manufacturer|💬 community) · (.+)$/,(_,kind,title)=>`${kind} · ${translate(title)}`],
+
   [/^(bardzo słaby|słaby|umiarkowany|odczuwalny|mocny|bardzo mocny|bardzo silny), (mało porywisty|lekko porywisty|porywisty|mocno porywisty|bardzo porywisty)$/,(_,strength,gusts)=>`${translate(strength)}, ${translate(gusts)}`],
 
   [/^(\d\d:\d\d[–-]\d\d:\d\d) \((.+)\)$/,(_,time,level)=>`${time} (${translate(level)})`],
