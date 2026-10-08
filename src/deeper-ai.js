@@ -3,19 +3,20 @@ const json=(data,status=200)=>Response.json(data,{status,headers:{'cache-control
 const one=(env,sql,...args)=>env.DB.prepare(sql).bind(...args).first();
 const run=(env,sql,...args)=>env.DB.prepare(sql).bind(...args).run();
 const MODEL='@cf/google/gemma-4-26b-a4b-it';
-const prompt=`Interpret a Fish Deeper CHIRP+ 2 sonar screenshot conservatively. Reply in Polish as JSON only, with string keys observed,bottom,hardness,weed,structure,fishEcho,interference,spotsA,spotsB,spotsC,confidence. Use "nie wiadomo" where the image does not support a claim. A colored band alone does not prove gravel or silt; a fish icon or arch does not identify species. Spots A/B/C are hypotheses to verify, never guarantees. Do not infer fish species. Keep each value under 300 characters.`;
-function normalize(raw){
+const prompt=language=>`Interpret a Fish Deeper CHIRP+ 2 sonar screenshot conservatively. Reply as JSON only, with string keys observed,bottom,hardness,weed,structure,fishEcho,interference,spotsA,spotsB,spotsC,confidence. Reply in ${language==='en'?'English':'Polish'}. Use "${language==='en'?'unknown':'nie wiadomo'}" where the image does not support a claim. A colored band alone does not prove gravel or silt; a fish icon or arch does not identify species. Spots A/B/C are hypotheses to verify, never guarantees. Do not infer fish species. confidence must be one of ${language==='en'?'low, medium, high':'niska, średnia, wysoka'}. Keep each value under 300 characters.`;
+function normalize(raw,language='pl'){
  let value=raw?.response??raw?.choices?.[0]?.message?.content??raw?.result??raw;
  if(Array.isArray(value))value=value.map(p=>p.text||'').join('');
  if(typeof value==='string'){
   try{value=JSON.parse(value.replace(/^```(?:json)?\s*|\s*```$/g,''));}
-  catch{value={observed:value,bottom:'nie wiadomo',hardness:'nie wiadomo',weed:'nie wiadomo',structure:'nie wiadomo',fishEcho:'nie wiadomo',interference:'nie wiadomo',spotsA:'nie wiadomo',spotsB:'nie wiadomo',spotsC:'nie wiadomo',confidence:'niska'};}
+  catch{const unknown=language==='en'?'unknown':'nie wiadomo';value={observed:value,bottom:unknown,hardness:unknown,weed:unknown,structure:unknown,fishEcho:unknown,interference:unknown,spotsA:unknown,spotsB:unknown,spotsC:unknown,confidence:language==='en'?'low':'niska'};}
  }
  if(!value||typeof value!=='object'||Array.isArray(value))fail('Model nie zwrócił czytelnego wyniku.',502);
- const fields=['observed','bottom','hardness','weed','structure','fishEcho','interference','spotsA','spotsB','spotsC'];
- const result=Object.fromEntries(fields.map(k=>[k,text(value[k]??'nie wiadomo',k,300,true)]));
- result.confidence=['niska','średnia','wysoka'].includes(value.confidence)?value.confidence:'niska';
- result.warning='Echo sonaru wymaga ponownego przejazdu i sprawdzenia miejsca. Model nie rozpoznaje gatunku ryby.';
+ const fields=['observed','bottom','hardness','weed','structure','fishEcho','interference','spotsA','spotsB','spotsC'],unknown=language==='en'?'unknown':'nie wiadomo';
+ const result=Object.fromEntries(fields.map(k=>[k,text(value[k]??unknown,k,300,true)]));
+ const allowed=language==='en'?['low','medium','high']:['niska','średnia','wysoka'];result.confidence=allowed.includes(value.confidence)?value.confidence:allowed[0];
+ result.warning=language==='en'?'Verify the sonar interpretation with another pass. The model does not identify fish species.':'Echo sonaru wymaga ponownego przejazdu i sprawdzenia miejsca. Model nie rozpoznaje gatunku ryby.';
+ result.language=language;
  result.model=MODEL;
  return result;
 }
@@ -30,17 +31,18 @@ export async function handleDeeperAI(request,env,id,action){
   const inserted=await run(env,"INSERT INTO deeper_ai_attempts(id,day_utc,media_id) SELECT ?,?,? WHERE (SELECT COUNT(*) FROM deeper_ai_attempts WHERE day_utc=?)<10",attemptId,day,id,day);
   if(!inserted.meta?.changes)return json({ok:false,error:'Dzisiejszy limit 10 analiz został wyczerpany.'},429);
   try{
+   let input={};try{input=await request.clone().json();}catch{}const language=input.language==='en'?'en':'pl';
    const object=await env.MEDIA.get(row.object_key);if(!object)fail('Brakuje obrazu w bibliotece.',404);
    const bytes=new Uint8Array(await object.arrayBuffer());
-   const answer=await env.AI.run(MODEL,{messages:[{role:'user',content:prompt}],image:`data:${row.mimeType};base64,${base64(bytes)}`,max_tokens:500,temperature:0.2},{rejectIfBusy:true});
-   const analysis=normalize(answer);
+   const answer=await env.AI.run(MODEL,{messages:[{role:'user',content:prompt(language)}],image:`data:${row.mimeType};base64,${base64(bytes)}`,max_tokens:500,temperature:0.2},{rejectIfBusy:true});
+   const analysis=normalize(answer,language);
    await run(env,"UPDATE deeper_ai_attempts SET status='completed' WHERE id=?",attemptId);
    return json({ok:true,analysis,remaining:9-(await one(env,'SELECT COUNT(*) n FROM deeper_ai_attempts WHERE day_utc=?',day)).n+1});
   }catch(error){await run(env,"UPDATE deeper_ai_attempts SET status='failed' WHERE id=?",attemptId);if(error.status)throw error;return json({ok:false,error:'Model nie odpowiedział. Spróbuj później lub użyj analizy bez AI.'},502);}
  }
  if(action==='analysis'&&request.method==='PUT'){
   const {analysis}=await body(request);
-  const clean=normalize(analysis);
+  const clean=normalize(analysis,analysis?.language==='en'?'en':'pl');
   await run(env,'UPDATE deeper_media SET analysis_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?',JSON.stringify(clean),id);
   return json({ok:true});
  }
