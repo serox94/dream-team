@@ -642,7 +642,12 @@ function bindCatchesPageEvents() {
   if (catchFormBound) return;
   catchFormBound = true;
 
-  $("catch-form")?.addEventListener("submit", guardedSubmit(handleCatchSubmit));
+  const catchForm=$("catch-form"),catchSave=$("save-catch-btn");
+  catchForm?.addEventListener("submit", guardedSubmit(handleCatchSubmit));
+  catchSave?.addEventListener("click", event => {
+    event.preventDefault();
+    catchForm?.requestSubmit(catchSave);
+  });
   $("refresh-catches-btn")?.addEventListener("click", () => renderCatchesPage().catch(error=>Dream.notice(error.message,true)));
   $("cancel-edit-catch-btn")?.addEventListener("click", resetCatchForm);
   $("spot-id")?.addEventListener("change", async e => {
