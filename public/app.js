@@ -1009,9 +1009,13 @@ async function deleteSpot(id) {
 }
 
 async function editSpot(id) {
-  const spots = await loadSpotsFromD1();
-  const item = spots.find(spot => Number(spot.id) === Number(id));
-  if (item) fillSpotFormForEdit(item);
+  const controls=[...$("spot-form").querySelectorAll("input,select,button")],disabled=controls.map(control=>control.disabled);
+  controls.forEach(control=>control.disabled=true);
+  try {
+    const spots = await loadSpotsFromD1();
+    const item = spots.find(spot => Number(spot.id) === Number(id));
+    if (item) fillSpotFormForEdit(item);
+  } finally {controls.forEach((control,index)=>control.disabled=disabled[index]);}
 }
 
 function renderSpotsSummary(spots) {
