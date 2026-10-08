@@ -1015,7 +1015,7 @@ async function editSpot(id) {
     const spots = await loadSpotsFromD1();
     const item = spots.find(spot => Number(spot.id) === Number(id));
     if (item) fillSpotFormForEdit(item);
-  } finally {controls.forEach((control,index)=>control.disabled=disabled[index]);}
+  } finally {controls.forEach((control,index)=>control.disabled=control.type==="submit"?$("spot-form").dataset.saving==="true":disabled[index]);}
 }
 
 function renderSpotsSummary(spots) {

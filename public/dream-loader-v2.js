@@ -1,5 +1,5 @@
 (async () => {
-  const VERSION='20261008-9';
+  const VERSION='20261008-10';
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
