@@ -7,15 +7,27 @@ const apiRoot=`https://api.cloudflare.com/client/v4/accounts/${account}`;
 async function api(path,method='GET',body){
  const response=await fetch(apiRoot+path,{method,headers:{authorization:`Bearer ${token}`,'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
  const data=await response.json();
- if(!response.ok||!data.success)throw Error(`Cloudflare ${method} ${path.split('/')[1]} failed (${response.status}; code ${data.errors?.[0]?.code||'unknown'}).`);
+ if(!response.ok||!data.success){
+  const error=Error(`Cloudflare ${method} ${path.split('/')[1]} failed (${response.status}; code ${data.errors?.[0]?.code||'unknown'}).`);
+  error.status=response.status;error.code=data.errors?.[0]?.code;throw error;
+ }
  return data.result;
 }
 const databaseName='dream-team-preview-db',bucketName='dream-team-preview-media';
 const databases=await api(`/d1/database?name=${databaseName}&per_page=100`);
 let database=databases.find(row=>row.name===databaseName);
 if(!database)database=await api('/d1/database','POST',{name:databaseName});
-const buckets=(await api('/r2/buckets')).buckets||[];
-if(!buckets.some(row=>row.name===bucketName))await api('/r2/buckets','POST',{name:bucketName});
+try{
+ const buckets=(await api('/r2/buckets')).buckets||[];
+ if(!buckets.some(row=>row.name===bucketName))await api('/r2/buckets','POST',{name:bucketName});
+}catch(error){
+ // The deployment token can lose R2-list permission independently of Worker deploy permission.
+ // This preview bucket is persistent and has already been provisioned by successful runs.
+ // Reuse it instead of blocking every QA rerun; wrangler deploy / the R2 smoke step will
+ // still fail closed if the bucket is genuinely missing or inaccessible.
+ if(!(error.status===403&&Number(error.code)===10042))throw error;
+ console.warn('R2 list permission unavailable; reusing the existing isolated preview media bucket.');
+}
 const production=JSON.parse((await readFile('wrangler.jsonc','utf8')).replace(/^\s*\/\/.*$/gm,''));
 const productionId=production.d1_databases[0].database_id;
 if(!database.uuid||database.uuid===productionId)throw Error('Preview database identity is missing or matches production.');
