@@ -62,6 +62,11 @@ jobs:
             echo 'Preview Tavily binding not attached: GitHub secret TAVILY_API_KEY is not configured.'
           fi
           echo 'Preview runtime bindings attached.'
+      - name: Wait for exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
       - name: Read-only staging smoke
         env:
           RYBY_PRODUCTION_URL: https://dream-team-preview.sewerynski00.workers.dev
