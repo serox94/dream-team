@@ -3,8 +3,8 @@
   "średnie": "moderate",
   "słabe": "weak",
   "słaba": "weak",
-  "bardzo słaby": "very weak",
-  "słaby": "weak",
+  "bardzo słaby": "very light",
+  "słaby": "light",
   "mało porywisty": "few gusts",
   "rośnie": "rising",
   "Słaba": "Poor",
@@ -700,5 +700,9 @@
   "stabilne": "stable",
   "Brania": "Bites",
   "Rok": "Year",
-  "preview nie korzysta z produkcyjnego backupu": "preview does not use the production backup"
+  "preview nie korzysta z produkcyjnego backupu": "preview does not use the production backup",
+  "umiarkowany": "moderate",
+  "mocny": "strong",
+  "porywisty": "gusty",
+  "7 DNI": "7 DAYS"
 }

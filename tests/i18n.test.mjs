@@ -36,6 +36,12 @@ test('English dynamic statuses translate labels while preserving trip and bait v
  const english=await device('en-GB'),t=english.window.DreamI18n.t;
  assert.equal(t('Spakowane 1 z 2 · pozostało 1'),'Packed 1 of 2 · 1 remaining');
  assert.equal(t('Przynęta: coco'),'Bait: coco');
+ assert.equal(t('19:00–20:00 (Bardzo wysoka)'), '19:00–20:00 (Very high)');
+ assert.equal(t('19.9 km/h • umiarkowany, porywisty'), '19.9 km/h • moderate, gusty');
+ assert.equal(t('Maciek: 0 ryb'), 'Maciek: 0 fish');
+ assert.equal(t('NW (326°) • umiarkowany, lekko porywisty'), 'NW (326°) • moderate, slightly gusty');
+ assert.equal(t('umiarkowany, porywisty'), 'moderate, gusty');
+ assert.equal(t('7 DNI'), '7 DAYS');
  assert.equal(t('Godziny łowiska: Europe/Warsaw. Termin może pozostać pusty.'),'Lake time: Europe/Warsaw. Dates may be left blank.');
 });
 test('late editorial controls translate without changing user notes',async()=>{

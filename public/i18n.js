@@ -14,6 +14,12 @@ if(lang==='en'&&guide){
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^(bardzo słaby|słaby|umiarkowany|odczuwalny|mocny|bardzo mocny|bardzo silny), (mało porywisty|lekko porywisty|porywisty|mocno porywisty|bardzo porywisty)$/,(_,strength,gusts)=>`${translate(strength)}, ${translate(gusts)}`],
+
+  [/^(\d\d:\d\d[–-]\d\d:\d\d) \((.+)\)$/,(_,time,level)=>`${time} (${translate(level)})`],
+  [/^([\d.,]+ km\/h) • (.+), (.+)$/,(_,speed,strength,gusts)=>`${speed} • ${translate(strength)}, ${translate(gusts)}`],
+  [/^(.+): (\d+) ryb$/,(_,name,count)=>`${name}: ${count} fish`],
+
   [/^Weather unavailable: (.+)$/,(_,message)=>`Weather unavailable: ${translate(message)}`],
   [/^Dane: (.+)$/,(_,value)=>`Data: ${value}`],
   [/^Brania: (.+)$/,(_,value)=>`Bites: ${translate(value)}`],
@@ -91,8 +97,8 @@ const dynamic=string=>{
   [/^Godziny łowiska: (.+)\. Termin może pozostać pusty\.$/,(_,zone)=>`Lake time: ${zone}. Dates may be left blank.`],
   [/^Usunięte wpisy z wyjazdu (.+)\.$/,(_,trip)=>`Deleted entries from trip ${trip}.`],
   [/^Przynęta: (.+)$/,(_,bait)=>`Bait: ${bait}`],
-  [/^([NSEW]{1,3}) \((\d+)°\) • (.+)$/,(_,direction,degrees,condition)=>`${direction} (${degrees}°) • ${dictionary[condition]||condition}`],
-  [/^([\d.]+ km\/h) • (.+)$/,(_,speed,condition)=>`${speed} • ${dictionary[condition]||condition}`],
+  [/^([NSEW]{1,3}) \((\d+)°\) • (.+)$/,(_,direction,degrees,condition)=>`${direction} (${degrees}°) • ${translate(condition)}`],
+  [/^([\d.]+ km\/h) • (.+)$/,(_,speed,condition)=>`${speed} • ${translate(condition)}`],
   [/^(Odległość|Głębokość): brak$/,(_,type)=>`${type==='Odległość'?'Distance':'Depth'}: unknown`],
   [/^Faza księżyca: (.+), oświetlenie około (\d+)%\.$/,(_,phase,pct)=>`Moon phase: ${dictionary[phase]||phase}, about ${pct}% illumination.`],
   [/^Obecna szansa na branie: (.+)\. Punktacja aktywności: (\d+)\.$/,(_,level,score)=>`Current bite outlook: ${dictionary[level]||level}. Activity score: ${score}.`],

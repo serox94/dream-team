@@ -1,5 +1,5 @@
 // Only static application files live here. API responses and writes never enter this cache.
-const shell='ryby-shell-20261008-5';
+const shell='ryby-shell-20261008-6';
 const warm=['/','/index.html','/pages/polowy.html','/pages/checklisty.html','/pages/teren.html','/pages/mapa.html','/pages/regulamin.html','/pages/pogoda.html',
   '/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html','/settings.js','/knowledge.js','/knowledge.css','/i18n.js','/locales/pl.json','/locales/en.json','/locales/runtime.en.json','/locales/guides.en.json','/locales/knots.en.json','/locales/trip-advice.en.json','/deeper-media.js','/deeper-media.css',
   '/data/knowledge/sources.json','/data/knowledge/encyclopedia.json','/data/knowledge/sonar.json','/data/knowledge/tools.json','/data/knowledge/field-guides.json','/data/knowledge/chirp2-practice.json','/data/knowledge/en/encyclopedia.json','/data/knowledge/en/sonar.json','/data/knowledge/en/field-guides.json','/data/knowledge/en/tools.json','/data/knowledge/en/chirp2-practice.json','/data/knowledge/en/quiz.json','/data/knowledge/en/matrices.json','/assets/deeper/chirp2/index.json','/assets/deeper/chirp2/index.en.json','/locales/legacy.en.json','/locales/porady.en.json',
