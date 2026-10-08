@@ -130,7 +130,7 @@
     }
     if(get&&pending.has(path))return pending.get(path);
     const task=(async()=>{
-      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);
+      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),mutationKey?4000:15000);
       let eligibleFallback=false;
       try{
         const response=await authorizedFetch(path,options,controller.signal);
