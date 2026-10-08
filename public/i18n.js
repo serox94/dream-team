@@ -15,10 +15,15 @@ const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
   [/^Weather unavailable: (.+)$/,(_,message)=>`Weather unavailable: ${translate(message)}`],
+  [/^Dane: (.+)$/,(_,value)=>`Data: ${value}`],
+  [/^Brania: (.+)$/,(_,value)=>`Bites: ${translate(value)}`],
+  [/^Punktacja: (-?\d+)$/,(_,value)=>`Score: ${value}`],
+  [/^(\d+) hPa \/ (rośnie|spada|stabilne)$/,(_,value,trend)=>`${value} hPa / ${translate(trend)}`],
+  [/^Trend: (rośnie|spada|stabilne)$/,(_,trend)=>`Trend: ${translate(trend)}`],
   [/^Dostawca pogody zwrócił HTTP (\d+)\.$/,(_,code)=>`The weather provider returned HTTP ${code}.`],
   [/^Nazwa kategorii (.+)$/,(_,name)=>`Category name: ${translate(name)}`],
   [/^Schemat wiązania (.+)$/,(_,name)=>`${name} tying diagram`],
-  [/^Schemat (.+)$/,(_,name)=>`${name} diagram`],
+  [/^Schemat (?!edukacyjny:)(.+)$/,(_,name)=>`${name} diagram`],
   [/^(.+?) - wiązanie lub gotowy przypon$/,(_,name)=>`${name} - tying or ready-made rig`],
   [/^(.+?) - schemat wiązania lub gotowy wygląd$/,(_,name)=>`${name} - tying diagram or ready-made rig`],
   [/^(.+?) - schemat lub gotowy wygląd$/,(_,name)=>`${name} - diagram or ready-made rig`],
