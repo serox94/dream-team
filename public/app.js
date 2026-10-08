@@ -51,6 +51,7 @@ function average(values) {
   return values.reduce((sum, value) => sum + Number(value || 0), 0) / values.length;
 }
 
+function defaultCarpSpecies(){return window.DreamI18n?.lang==='en'?'Carp':'Karp';}
 function formatCaughtAt(value) { return value ? Dream.format(value) : 'Brak daty'; }
 function formatDateForInput(value) { return Dream.dateInput(value); }
 
@@ -441,7 +442,7 @@ function validateCatchPayload(raw) {
 function fillCatchFormForEdit(item) {
   $("edit-catch-id").value = item.id;
   $("person").value = item.person || "";
-  $("species").value = item.species || "Karp";
+  $("species").value = item.species || defaultCarpSpecies();
   $("weight").value = item.weight ?? "";
   $("bait").value = item.bait || "";
   $("spot").value = item.spot || "";
@@ -459,6 +460,7 @@ function resetCatchForm() {
   if (!form) return;
   form.reset();
   $("edit-catch-id").value = "";
+  if($("species")) $("species").value=defaultCarpSpecies();
   $("catch-form-title").textContent = "Dodaj połów";
   $("save-catch-btn").textContent = "Dodaj połów";
   $("cancel-edit-catch-btn").classList.add("hidden");
