@@ -1,0 +1,15 @@
+{
+  "version":"2026-10-06.en.1",
+  "questions":[
+    ["A strong uneven bottom return and a second echo: what would you check first?",["Gravel or another firm bottom","Deep silt","Definitely carp","I do not know"],"A strong return suggests firmness, but gravel, stones and clay need a lead check."],
+    ["The bottom line is weak and diffuse. What is a sensible hypothesis?",["Hard rock","Soft sediment","A shoal of carp","I do not know"],"Soft sediment can give a weaker return. Check how far the lead sinks and the condition of the silt."],
+    ["Vertical returns rise from bottom. What should you compare?",["Weed height on repeat scans","Moon phase","The colour of fish icons alone","I do not know"],"Repeated bands growing from bottom may be plants; verify with material on the lead."],
+    ["There is a gap between weed beds. Where might a rig go?",["In a checked opening or by a clear edge","In the densest weed","On any screen line","I do not know"],"Check opening size, GPS error and a safe route to land a fish."],
+    ["After reaching a plateau the screen becomes flat. What else should you check?",["Repeat the scan while moving and inspect the sides","Nothing: the top is always best","Only a fish icon","I do not know"],"The horizontal axis is time; a stopped sonar can make a section look flat."],
+    ["You see a steep slope. Which position is the only correct one?",["Only the top","Only the base","None: compare top, side and base","I do not know"],"Use fish activity, firmness, sediment and safety to decide."],
+    ["A channel has soft bottom and a firmer side. What would you test?",["Only its deepest bottom","The side and entrance, then perhaps the bottom","Always the middle of the lake","I do not know"],"The firm side may offer a cleaner presentation; assess oxygen in the channel too."],
+    ["A partial arch and several dots appear in mid-water. What do we know?",["Definitely carp","They may be fish, but species is uncertain","Always weed","I do not know"],"Shape depends on movement and beam geometry. Compare Raw and repeat passes."],
+    ["A horizontal band appears in deep water in summer. What does it mean?",["Certainly an oxygen boundary","Possibly a layer, suspended matter or noise: verify","Only a carp shoal","I do not know"],"Sonar measures neither temperature nor oxygen directly; another measurement is needed."],
+    ["Bottom changes colour along one track. What next?",["Repeat at identical settings and check with a lead","Change palette and sensitivity together","Certainly gravel","I do not know"],"Echo comparisons need the same palette, sensitivity and beam."]
+  ]
+}

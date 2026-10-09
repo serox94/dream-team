@@ -6,7 +6,7 @@ const one=(db,sql,...args)=>db.prepare(sql).bind(...args).first();
 const all=async(db,sql,...args)=>(await db.prepare(sql).bind(...args).all()).results;
 const run=(db,sql,...args)=>db.prepare(sql).bind(...args).run();
 const limitMessage='Limit automatycznego researchu wykorzystany — spróbuj później lub dodaj źródło ręcznie.';
-const fields={official_name:['nazwa łowiska','official name','nom du lac','name des sees','naam van het meer'],address:['adres','address','adresse','anschrift'],phone:['telefon','phone','telephone','téléphone','tel','kontakt'],email:['e-mail','email'],area:['powierzchnia','area','surface','fläche','oppervlakte'],depth:['głębokość','depth','profondeur','tiefe','diepte'],bottom:['dno','bottom','fond','grund','bodem'],weed:['zielsko','weed','herbiers','kraut','waterplanten'],pegs:['stanowiska','pegs','swims','postes','plätze','stekken'],carp:['karpie','carp stock','carpes','karpfen','karpers'],record:['rekord','record','rekorde'],species:['gatunki','species','espèces','arten','soorten'],rods:['liczba wędek','rods allowed','cannes autorisées','ruten erlaubt','hengels toegestaan'],bait_boats:['łódki zanętowe','bait boats','bateaux amorceurs','futterboote','voerboten'],boats:['pontony','boats','bateaux','boote'],leadcore:['leadcore'],leaders:['leadery','leaders','vorfach'],hooks:['haczyki','hooks','hameçons','haken'],cradle:['kołyska','cradle','matelas de réception','ab hakmatte','onthaakmat'],landing_net:['podbierak','landing net','épuisette','kescher','schepnet'],sling:['sling','worek do ważenia','weigh sling'],disinfectant:['środek do dezynfekcji','disinfectant','antiseptique','desinfektionsmittel'],fish_storage:['przechowywanie ryb','retention','conservation des poissons','hältern'],arrival:['godziny przyjazdu','arrival','arrivée','anreise','aankomst'],departure:['godziny wyjazdu','departure','départ','abreise','vertrek'],parking:['parking','stationnement','parkplatz'],electricity:['prąd','electricity','électricité','strom','elektriciteit'],toilets:['wc','toilets','toilettes'],showers:['prysznic','shower','douche','dusche'],drinking_water:['woda pitna','drinking water','eau potable','trinkwasser'],freezer:['zamrażarka','freezer','congélateur','gefriertruhe'],shops:['sklep','shop','magasin','geschäft','winkel'],access:['dojazd','access','accès','zufahrt','toegang']};
+const fields={official_name:['nazwa łowiska','official name','lake name','nom du lac','name des sees','naam van het meer'],address:['adres','address','adresse','anschrift'],phone:['telefon','phone','telephone','téléphone','tel','kontakt'],email:['e-mail','email'],area:['powierzchnia','area','lake size','water size','surface','fläche','oppervlakte'],depth:['głębokość','maksymalna głębokość','depth','maximum depth','max depth','profondeur','tiefe','diepte'],bottom:['dno','bottom','lake bed','fond','grund','bodem'],weed:['zielsko','weed','weed level','herbiers','kraut','waterplanten'],pegs:['stanowiska','liczba stanowisk','pegs','number of pegs','swims','number of swims','postes','plätze','stekken'],carp:['karpie','carp','carp stock','carpes','karpfen','karpers'],record:['rekord','rekord karpia','record','lake record','carp record','rekorde'],species:['gatunki','species','fish species','espèces','arten','soorten'],rods:['liczba wędek','limit wędek','rods allowed','rod limit','number of rods','cannes autorisées','ruten erlaubt','hengels toegestaan'],bait_boats:['łódki zanętowe','łódka zanętowa','bait boats','bait boat','bateaux amorceurs','futterboote','voerboten'],boats:['pontony','boats','boat use','bateaux','boote'],leadcore:['leadcore'],leaders:['leadery','leaders','vorfach'],hooks:['haczyki','hooks','hameçons','haken'],cradle:['kołyska','cradle','unhooking mat','matelas de réception','ab hakmatte','onthaakmat'],landing_net:['podbierak','landing net','épuisette','kescher','schepnet'],sling:['sling','worek do ważenia','weigh sling'],disinfectant:['środek do dezynfekcji','disinfectant','antiseptique','desinfektionsmittel'],fish_storage:['przechowywanie ryb','retention','fish retention','conservation des poissons','hältern'],arrival:['godziny przyjazdu','arrival','arrival time','arrivée','anreise','aankomst'],departure:['godziny wyjazdu','departure','departure time','départ','abreise','vertrek'],parking:['parking','stationnement','parkplatz'],electricity:['prąd','electricity','power','électricité','strom','elektriciteit'],toilets:['wc','toilet','toilets','toilettes'],showers:['prysznic','prysznice','shower','showers','douche','dusche'],drinking_water:['woda pitna','drinking water','potable water','eau potable','trinkwasser'],freezer:['zamrażarka','freezer','congélateur','gefriertruhe'],shops:['sklep','sklepy','shop','shops','magasin','geschäft','winkel'],access:['dojazd','access','road access','accès','zufahrt','toegang']};
 fields.rules=['regulamin','rules','règlement','regeln','regels'];
 fields.map=['mapa łowiska','lake map','carte du lac','gewässerkarte','kaart'];
 fields.fridge=['lodówka','fridge','réfrigérateur','kühlschrank','koelkast'];
@@ -19,15 +19,31 @@ export function safeSourceUrl(value){
 }
 const fieldName=value=>{if(!/^[a-z][a-z_]{1,40}$/.test(value||''))fail('Nieprawidłowe pole faktu.');return value;};
 const sourcePriority={official:1,regulation:2,official_social:3,operator:4,directory:5,community:6,manual:7};
+const coordinatesFromText=value=>{
+  const match=String(value||'').match(/(?:^|[^\d])(-?\d{1,2}\.\d{4,})\s*[,;]\s*(-?\d{1,3}\.\d{4,})(?:[^\d]|$)/);
+  if(!match)return null;
+  const latitude=Number(match[1]),longitude=Number(match[2]);
+  return Number.isFinite(latitude)&&Number.isFinite(longitude)&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180?{latitude,longitude}:null;
+};
+const inferredSourceType=(url,title,confirmedHost,confirmedType)=>{
+  const host=new URL(url).hostname.replace(/^www\./,'').toLowerCase();
+  const same=host===confirmedHost||host.endsWith('.'+confirmedHost)||confirmedHost.endsWith('.'+host);
+  if(/regul|rules?|règlement|regeln|regels|terms|fishery-rules/i.test(String(title||'')+' '+url))return 'regulation';
+  if(same&&['official','regulation'].includes(confirmedType))return 'official';
+  return 'operator';
+};
 export function extractFacts(content){
+  const escapedLabel=label=>label.replace(/[.*+?^$(){}|[\]\\]/g,'\\$&');
   const rows=String(content||'').split(/\n+/).map(s=>s.replace(/^[\s>*#|–-]+/,'').trim()).filter(Boolean),out=[];
   for(const [field,labels] of Object.entries(fields)){
     for(const row of rows){
-      const found=labels.find(label=>row.toLocaleLowerCase().startsWith(label.toLocaleLowerCase()+':'));
+      const found=labels.find(label=>new RegExp('^'+escapedLabel(label)+'\\s*(?::|\\||–|-)\\s*','i').test(row));
       if(!found)continue;
-      const value=row.slice(found.length+1).replace(/\s*\|\s*$/,'').trim();
+      const value=row.replace(new RegExp('^'+escapedLabel(found)+'\\s*(?::|\\||–|-)\\s*','i'),'').replace(/\s*\|\s*$/,'').trim();
       if(!value||value.length>240||/^(?:n\/a|brak|none|unknown)$/i.test(value))continue;
-      out.push({field,value,evidence:row.slice(0,280),confidence:.7});break;
+      // Only unique localized labels identify a language; shared labels remain unknown.
+      const matches=labels.map((item,index)=>item===found?index:-1).filter(index=>index>=0);
+      out.push({field,value,evidence:row.slice(0,280),sourceLanguage:matches.length===1?['pl','en','fr','de','nl'][matches[0]]:null,confidence:.7});break;
     }
   }
   for(const field of Object.keys(ruleGear)){
@@ -50,7 +66,26 @@ export function provider(env){
   };
   return {
     name:'Tavily',
-    async candidates(name,country,preferences={}){const labels={PL:'łowisko',EN:'carp lake',FR:'étang carpe',DE:'Karpfensee',NL:'karpervijver'},terms=(preferences.languages||'PL,EN,FR,DE,NL').split(',').map(lang=>labels[lang]).filter(Boolean).join(' ');const data=await call('search',{query:`${name} ${country} ${terms} ${preferences.official==='off'?'fishing information':'official website regulations'}`,search_depth:'basic',max_results:5,include_answer:false,include_raw_content:false,include_usage:true});return (data.results||[]).map(x=>({name:x.title?.slice(0,150)||name,region:(x.content||'').match(/(?:region|miejscowość|locality|commune|ort|plaats)\s*[:–-]\s*([^.,;\n]{2,80})/i)?.[1]||'Nieustalony region',country,url:x.url,location:null})).filter(x=>{try{safeSourceUrl(x.url);return true;}catch{return false;}});},
+    async candidates(name,country,preferences={}){
+      const labels={PL:'łowisko',EN:'carp lake',FR:'étang carpe',DE:'Karpfensee',NL:'karpervijver'};
+      const terms=(preferences.languages||'PL,EN,FR,DE,NL').split(',').map(lang=>labels[lang]).filter(Boolean).join(' ');
+      const data=await call('search',{query:`${name} ${country} ${terms} ${preferences.official==='off'?'fishing information':'official website regulations'}`,search_depth:'basic',max_results:5,include_answer:false,include_raw_content:false,include_usage:true});
+      return (data.results||[]).map(item=>{let url;try{url=safeSourceUrl(item.url);}catch{return null;}const coords=coordinatesFromText(item.content);return {name:item.title?.slice(0,150)||name,region:(item.content||'').match(/(?:region|miejscowość|locality|commune|ort|plaats)\s*[:–-]\s*([^.,;\n]{2,80})/i)?.[1]||'Nieustalony region',country,url,location:coords?`${coords.latitude}, ${coords.longitude}`:null};}).filter(Boolean);
+    },
+    async research(name,country,confirmedUrl,confirmedType='manual',preferences={}){
+      const safeConfirmed=safeSourceUrl(confirmedUrl),host=new URL(safeConfirmed).hostname.replace(/^www\./,'').toLowerCase();
+      const languageTerms={PL:'regulamin głębokość stanowiska prąd prysznic',EN:'rules depth swims electricity shower',FR:'règlement profondeur postes électricité douche',DE:'regeln tiefe plätze strom dusche',NL:'regels diepte stekken elektriciteit douche'};
+      const terms=(preferences.languages||'PL,EN,FR,DE,NL').split(',').map(lang=>languageTerms[lang]).filter(Boolean).join(' ');
+      const scoped=['official','regulation'].includes(confirmedType)?` site:${host}`:'';
+      const search=await call('search',{query:`${name} ${country} ${terms} carp record bait boat rods toilets parking map${scoped}`,search_depth:'basic',max_results:6,include_answer:false,include_raw_content:false,include_usage:true});
+      const discovered=(search.results||[]).map(item=>{try{return {url:safeSourceUrl(item.url),title:String(item.title||'').slice(0,150)};}catch{return null;}}).filter(Boolean);
+      const unique=[];
+      for(const item of [{url:safeConfirmed,title:name},...discovered])if(!unique.some(row=>row.url===item.url))unique.push(item);
+      const selected=unique.slice(0,5);
+      const extracted=await call('extract',{urls:selected.map(item=>item.url),extract_depth:'basic',format:'markdown',include_usage:true});
+      const byUrl=new Map(selected.map(item=>[item.url,item]));
+      return (extracted.results||[]).map(result=>{let url;try{url=safeSourceUrl(result.url);}catch{return null;}const base=byUrl.get(url)||{title:new URL(url).hostname};return {url,title:base.title||new URL(url).hostname,sourceType:url===safeConfirmed?confirmedType:inferredSourceType(url,base.title,host,confirmedType),content:String(result.raw_content||'').slice(0,160000)};}).filter(page=>page&&page.content);
+    },
     async extract(url){const data=await call('extract',{urls:[url],extract_depth:'basic',format:'markdown',include_usage:true});return String(data.results?.[0]?.raw_content||'').slice(0,160000);}
   };
 }
@@ -73,20 +108,22 @@ async function saveSource(db,lakeId,url,title,type){
   return id;
 }
 async function saveFact(db,lakeId,sourceId,fact){
+  const sourceLanguage=['pl','en','fr','de','nl'].includes(fact.sourceLanguage)?fact.sourceLanguage:null;
+  const originalText=String(fact.evidence||fact.value).slice(0,500),normalizedValue=fact.value;
   const existing=await one(db,'SELECT id FROM lake_facts WHERE lake_id=? AND field=? AND source_id=?',lakeId,fact.field,sourceId);
   if(existing){
     const old=await one(db,'SELECT value FROM lake_facts WHERE id=?',existing.id);
     if(old?.value!==fact.value)await run(db,'INSERT INTO lake_fact_changes(id,lake_id,field,old_value,new_value,source_id) VALUES(?,?,?,?,?,?)',crypto.randomUUID(),lakeId,fact.field,old.value,fact.value,sourceId);
-    await run(db,'UPDATE lake_facts SET value=?,evidence=?,confidence=?,checked_at=CURRENT_TIMESTAMP WHERE id=?',fact.value,fact.evidence||null,fact.confidence||.5,existing.id);
+    await run(db,'UPDATE lake_facts SET value=?,evidence=?,original_text=?,source_language=?,normalized_value=?,translation_pl=CASE WHEN value=? THEN translation_pl ELSE NULL END,translation_en=CASE WHEN value=? THEN translation_en ELSE NULL END,confidence=?,checked_at=CURRENT_TIMESTAMP WHERE id=?',fact.value,fact.evidence||null,originalText,sourceLanguage,normalizedValue,fact.value,fact.value,fact.confidence||.5,existing.id);
   }
-  else await run(db,'INSERT INTO lake_facts(id,lake_id,field,value,source_id,evidence,confidence,status) VALUES(?,?,?,?,?,?,?,?)',crypto.randomUUID(),lakeId,fact.field,fact.value,sourceId,fact.evidence||null,fact.confidence||.5,'potwierdzone');
+  else await run(db,'INSERT INTO lake_facts(id,lake_id,field,value,source_id,evidence,original_text,source_language,normalized_value,confidence,status) VALUES(?,?,?,?,?,?,?,?,?,?,?)',crypto.randomUUID(),lakeId,fact.field,fact.value,sourceId,fact.evidence||null,originalText,sourceLanguage,normalizedValue,fact.confidence||.5,'potwierdzone');
   const values=await all(db,'SELECT DISTINCT value FROM lake_facts WHERE lake_id=? AND field=?',lakeId,fact.field);
   await run(db,'UPDATE lake_facts SET status=? WHERE lake_id=? AND field=?',values.length>1?'sprzeczne':'potwierdzone',lakeId,fact.field);
 }
 export async function profile(env,lakeId){
   const db=env.DB,lake=await one(db,'SELECT id,name,country,latitude,longitude,source_url sourceUrl,facts_json factsJson FROM lakes WHERE id=?',lakeId);
   if(!lake)fail('Nie znaleziono łowiska.',404);
-  const facts=await all(db,`SELECT f.id,f.field,f.value,f.evidence,f.confidence,f.status,f.checked_at checkedAt,s.url,s.title sourceName,s.source_type FROM lake_facts f LEFT JOIN lake_sources s ON f.source_id=s.id WHERE f.lake_id=? ORDER BY f.field`,lakeId);
+  const facts=await all(db,`SELECT f.id,f.field,f.value,f.evidence,f.original_text originalText,f.source_language sourceLanguage,f.normalized_value normalizedValue,f.translation_pl translationPl,f.translation_en translationEn,f.confidence,f.status,f.checked_at checkedAt,s.url,s.title sourceName,s.source_type FROM lake_facts f LEFT JOIN lake_sources s ON f.source_id=s.id WHERE f.lake_id=? ORDER BY f.field`,lakeId);
   facts.sort((a,b)=>a.field.localeCompare(b.field)||(sourcePriority[a.source_type]||9)-(sourcePriority[b.source_type]||9));
   const sources=await all(db,'SELECT id,url,title,source_type sourceType,checked_at checkedAt FROM lake_sources WHERE lake_id=? ORDER BY checked_at DESC',lakeId);
   const last=await one(db,"SELECT status,completed_at completedAt,message FROM lake_research_runs WHERE lake_id=? AND status<>'reserved' ORDER BY started_at DESC LIMIT 1",lakeId);
@@ -125,18 +162,25 @@ export async function handleLakeResearch(request,env,lakeId,action){
     if(!web)return reply({ok:false,error:'Automatyczny research nie jest skonfigurowany. Zapisz źródło i fakty ręcznie.'},503);
     const id=await reserve(db,lakeId,'extract',2);
     try{
-      const content=await web.extract(url);if(!content)fail('Brak treści do ekstrakcji. Dodaj fakty ręcznie.',422);
-      const found=extractFacts(content),sourceId=await saveSource(db,lakeId,url,title,sourceType);
-      for(const fact of found)await saveFact(db,lakeId,sourceId,{...fact,sourceType});
-      await finish(db,id,'completed',`${found.length} faktów`);
-      return reply({ok:true,count:found.length,profile:await profile(env,lakeId)});
+      const rows=await all(db,"SELECT key,value FROM app_settings WHERE key IN ('research_languages','research_official_first')");
+      const preferences=Object.fromEntries(rows.map(row=>[row.key,row.value]));
+      const pages=await web.research(lake.name,lake.country||'',url,sourceType,{languages:preferences.research_languages,official:preferences.research_official_first});
+      if(!pages.length)fail('Brak treści do ekstrakcji. Dodaj fakty ręcznie.',422);
+      let count=0;
+      for(const page of pages){
+        const found=extractFacts(page.content),pageType=['official','regulation','operator','manual'].includes(page.sourceType)?page.sourceType:sourceType;
+        const sourceId=await saveSource(db,lakeId,page.url,page.title||title,pageType);
+        for(const fact of found){await saveFact(db,lakeId,sourceId,{...fact,sourceType:pageType});count++;}
+      }
+      await finish(db,id,'completed',`${count} faktów z ${pages.length} źródeł`);
+      return reply({ok:true,count,sourcesChecked:pages.length,profile:await profile(env,lakeId)});
     }catch(error){await finish(db,id,'failed',error.message);throw error;}
   }
   if(action==='facts'){
     const url=safeSourceUrl(x.url),field=fieldName(x.field),value=String(x.value||'').trim();if(!value||value.length>500)fail('Podaj krótki fakt (maksymalnie 500 znaków).');
     const sourceType=['official','regulation','official_social','operator','directory','community','manual'].includes(x.sourceType)?x.sourceType:'manual';
     const sourceId=await saveSource(db,lakeId,url,x.title,sourceType);
-    await saveFact(db,lakeId,sourceId,{field,value,evidence:String(x.evidence||'').slice(0,280),confidence:.5,sourceType});
+    await saveFact(db,lakeId,sourceId,{field,value,evidence:String(x.evidence||'').slice(0,280),sourceLanguage:x.sourceLanguage,confidence:.5,sourceType});
     return reply({ok:true,profile:await profile(env,lakeId)},201);
   }
   if(action==='sources'){

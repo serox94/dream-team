@@ -1,5 +1,5 @@
 (() => {
-  const formatWeight = value => Number(value).toLocaleString('pl-PL',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const formatWeight = value => Number(value).toLocaleString((document.documentElement.lang==='en'?'en-GB':'pl-PL'),{minimumFractionDigits:1,maximumFractionDigits:1});
 
   window.renderDreamChart = catches => {
     const host=document.getElementById('trip-score-charts'),total=document.getElementById('trip-score-total');

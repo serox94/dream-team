@@ -1,0 +1,136 @@
+name: Preview final batch
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/final-batch]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-preview
+  cancel-in-progress: true
+jobs:
+  preview:
+    if: github.ref == 'refs/heads/feat/final-batch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci && npm test
+      - name: Check current production runtime without reading secrets
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/check-production-runtime.mjs
+      - name: Prepare isolated D1 and R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-config.mjs
+      - name: Migrate staging database only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler d1 migrations apply dream-team-preview-db --remote --config wrangler.preview.generated.jsonc
+      - name: Deploy separate preview Worker
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.preview.generated.jsonc
+      - name: Attach existing runtime secrets to preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: |
+          set -euo pipefail
+          for name in RYBY_LOGIN_USERNAME RYBY_LOGIN_PASSWORD RYBY_SESSION_SECRET; do
+            test -n "${!name}" || { echo "Missing $name"; exit 1; }
+            printf '%s' "${!name}" | npx wrangler secret put "$name" --name dream-team-preview >/dev/null
+          done
+          if [ -n "${TAVILY_API_KEY:-}" ]; then
+            printf '%s' "$TAVILY_API_KEY" | npx wrangler secret put TAVILY_API_KEY --name dream-team-preview >/dev/null
+            echo 'Preview Tavily binding attached from the repository secret.'
+          else
+            echo 'Preview Tavily binding not attached: GitHub secret TAVILY_API_KEY is not configured.'
+          fi
+          echo 'Preview runtime bindings attached.'
+      - name: Wait for exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Read-only staging smoke
+        env:
+          RYBY_PRODUCTION_URL: https://dream-team-preview.sewerynski00.workers.dev
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/smoke-auth.mjs
+      - name: Verify private media R2 round trip in staging
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/preview-media-smoke.mjs
+      - name: Install browser for real preview QA
+        id: browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Real preview language QA at 390 and desktop
+        id: language
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-language.mjs
+      - name: Real preview media lifecycle in UI and isolated D1/R2
+        id: media
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.browser.outcome == 'success' }}
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/live-preview-media.mjs
+      - name: Real preview offline UI writes and automatic synchronization
+        id: offline
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.browser.outcome == 'success' }}
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/live-preview-offline.mjs
+      - name: Check live Tavily and AI binding without enabling billing
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' }}
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/live-preview-bindings.mjs
+      - name: Real preview templates profiles and two-device language
+        id: extras
+        if: ${{ !cancelled() && steps.deploy.outcome == 'success' && steps.browser.outcome == 'success' }}
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-extras.mjs
+      - name: Final real preview PL EN regression at 390 and desktop
+        if: ${{ !cancelled() && steps.language.outcome == 'success' && steps.media.outcome == 'success' && steps.offline.outcome == 'success' }}
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-regression.mjs
+      - name: Preserve live preview evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-qa
+          path: live-preview-qa

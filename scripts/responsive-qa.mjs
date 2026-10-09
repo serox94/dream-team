@@ -14,7 +14,7 @@ const screenshotDir='qa-screenshots';
 await mkdir(screenshotDir,{recursive:true});
 try{
   for(const width of widths){
-    const context=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1,isMobile:width<=412,hasTouch:width<=412});
+    const context=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1,isMobile:width<=412,hasTouch:width<=412,locale:'pl-PL'});
     for(const route of routes){
       const page=await context.newPage(),errors=[];
       let requests=0;
@@ -54,6 +54,8 @@ try{
       }
       if(route==='/pages/sonar.html'){
         assert.equal(await page.locator('.knowledge-entry').count(),17);
+        assert.equal(await page.locator('#atlas-overview .deeper-shot-image').count(),17,'all actual Deeper screenshots appear in the atlas');
+        assert.equal(await page.locator('#atlas-overview .deeper-shot-image[target="_blank"]').count(),17,'atlas opens the original image');
         assert.equal(await page.locator('#sonar-gallery a[href^="https://support.deeper.eu/"]').count(),4);
         assert.match(await page.locator('.knowledge-hero').innerText(),/CHIRP\+ 2[\s\S]*Fish Deeper/);
       }
@@ -173,6 +175,31 @@ try{
           await page.locator('#shot-analyze').click();
           assert.match(await page.locator('#shot-result').innerText(),/Twoich odpowiedzi/);
           assert.equal(preview.requests.filter(r=>r.method==='POST'&&r.url.includes('knowledge')).length,0,'screenshot never uploaded');
+          await page.locator('#media-file').setInputFiles({name:'fish-deeper.png',mimeType:'image/png',buffer:tiny});
+          await page.locator('#media-name').fill('Kontrolny screen CHIRP+ 2');
+          await page.locator('#media-trip').selectOption('next-trip');
+          await page.locator('#media-form button[type="submit"]').click();
+          await page.locator('.media-card').first().waitFor();
+          assert.equal(preview.mediaObjects.size,1,'disposable R2 stores uploaded image');
+          const imageUrl=await page.locator('.media-card img').first().getAttribute('src');
+          assert.equal((await page.request.get(preview.url+imageUrl)).status(),200,'private R2 read');
+          assert.equal(await page.locator('.media-card a[target="_blank"]').first().getAttribute('href'),imageUrl,'private original opens full size');
+          assert.equal((await fetch(loginPreview.url+imageUrl)).status,401,'image URL is not readable without a session');
+          await page.locator('.media-card button').filter({hasText:'Edytuj opis'}).click();
+          await page.locator('#media-note').fill('Mój opis dna');
+          await page.locator('#media-form button[type="submit"]').click();
+          await page.locator('.media-card').getByText('Mój opis dna').waitFor();
+          await page.locator('.media-card button').filter({hasText:'Utwórz spot'}).click();
+          await page.locator('.media-card form input[name="name"]').fill('Mój spot sonarowy');
+          await page.locator('.media-card form button[type="submit"]').click();
+          await page.locator('#media-status').getByText(/Spot utworzony/).waitFor();
+          await page.locator('.media-card button').filter({hasText:'Przeanalizuj screenshot'}).click();
+          await page.locator('.media-analysis button').filter({hasText:'Zapisz analizę'}).click();
+          await page.locator('.media-card details.media-analysis').waitFor();
+          page.once('dialog',dialog=>dialog.accept());
+          await page.locator('.media-card button').filter({hasText:'Usuń obraz'}).click();
+          await page.locator('.media-card').waitFor({state:'detached'});
+          assert.equal(preview.mediaObjects.size,0,'disposable R2 object removed');
         }
       }
       if(width===390&&route==='/pages/wyjazdy.html'){
@@ -212,18 +239,20 @@ try{
       await offline.goto(preview.url+'/pages/checklisty.html');
       await offline.locator('html[data-ready="true"]').waitFor();
       await offline.waitForFunction(async()=>Boolean(await caches.match('/index.html')),{timeout:20000});
-      const before=preview.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_items').get().n;
+      const row=preview.DB.sqlite.prepare("SELECT id,packed FROM checklist_items WHERE trip_id='next-trip' AND packed=0 LIMIT 1").get();
       await context.setOffline(true);
       await offline.goto(preview.url+'/',{waitUntil:'domcontentloaded'});
       await offline.locator('html[data-ready="true"]').waitFor({timeout:20000});
       assert.match(await offline.locator('#offline-banner').innerText(),/Dane offline \/ ostatnia synchronizacja/);
       assert.equal(await offline.locator('.score-row').count(),4);
-      const denied=await offline.evaluate(()=>window.Dream.api('/api/checklist',{method:'POST',body:'{}'}).then(()=>false,()=>true));
-      assert.ok(denied,'offline writes fail instead of queuing');
-      assert.equal(preview.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_items').get().n,before);
+      const queued=await offline.evaluate(id=>window.Dream.api(`/api/checklist/${id}?tripId=next-trip`,{method:'PATCH',body:JSON.stringify({packed:true})}),row.id);
+      assert.equal(queued.pendingSync,true,'offline checklist edit queued');
+      assert.equal(await offline.evaluate(()=>window.Dream.pendingCount()),1,'pending counter');
+      assert.equal(preview.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(row.id).packed,0,'no server write while offline');
       await context.setOffline(false);
-      await offline.reload();
-      await offline.locator('html[data-ready="true"]').waitFor();
+      await offline.waitForFunction(()=>window.Dream.pendingCount()===0,null,{timeout:20000});
+      assert.equal(preview.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(row.id).packed,1,'single synced update');
+      await offline.reload();await offline.locator('html[data-ready="true"]').waitFor();
       assert.equal(await offline.locator('#offline-banner').count(),0,'online reads replace stale banner');
       await context.setOffline(true);
       for(const knowledgeRoute of ['/pages/encyklopedia.html','/pages/sonar.html']){
@@ -247,13 +276,89 @@ try{
       }
       await context.setOffline(false);
       await offline.close();
-      console.log('390px offline: static shell, encyclopedia, sonar, private read cache, visible timestamp and write refusal PASS.');
+      console.log('390px offline: static shell, knowledge tools, queued checklist write and synchronization PASS.');
     }
     await context.close();
     console.log(`Responsive QA ${width}px: PASS (${routes.length} screens + login, no overflow or browser errors).`);
   }
+  for(const width of widths){
+    const context=await browser.newContext({viewport:{width,height:844},deviceScaleFactor:1,isMobile:width<=412,hasTouch:width<=412,locale:'en-GB'});
+    for(const route of routes){
+      const page=await context.newPage(),errors=[];
+      page.on('pageerror',error=>errors.push(error.message));
+      const response=await page.goto(preview.url+route,{waitUntil:'domcontentloaded'});
+      assert.equal(response.status(),200,`EN ${width} ${route}`);
+      await page.locator('html[data-ready="true"]').waitFor({timeout:20000});
+      await page.locator('html[data-i18n-ready="en"]').waitFor();
+      assert.equal(await page.locator('html').getAttribute('lang'),'en');
+      assert.equal(await page.locator('.main-nav a[href$="wyjazdy.html"]').innerText(),'Trips and archive');
+      const dimensions=await page.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth,body:document.body.scrollWidth}));
+      assert.ok(dimensions.scroll<=dimensions.viewport+1&&dimensions.body<=dimensions.viewport+1,`EN ${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)}`);
+      if(route.endsWith('encyklopedia.html')){
+        await page.locator('.knowledge-entry').first().waitFor({state:'attached'});
+        assert.match(await page.locator('.knowledge-entry').first().textContent(),/Baits: presentation before flavour|Flavour profiles are hypotheses/);
+      }
+      if(route.endsWith('sonar.html')){
+        await page.locator('.knowledge-entry').first().waitFor({state:'attached'});
+        assert.equal(await page.locator('.knowledge-entry').count(),17);
+      }
+      if(route.endsWith('rigi.html'))assert.match(await page.locator('main h2').first().innerText(),/Carp rigs/);
+      if(route.endsWith('wezly.html'))assert.match(await page.locator('main h2').first().innerText(),/Knots, lead systems/);
+      if(width===390&&route.endsWith('checklisty.html')){
+        await page.locator('#checklist-templates').waitFor();
+        assert.match(await page.locator('#checklist-templates h3').innerText(),/Checklist templates/);
+        await page.locator('#template-name').fill('English session kit');
+        await page.locator('#template-create button[type="submit"]').click();
+        await page.locator('.template-card').filter({hasText:'English session kit'}).waitFor();
+        assert.match(await page.locator('#template-message').innerText(),/Template saved/);
+        assert.equal(await page.locator('#template-apply').innerText(),'Apply selected templates');
+        assert.equal(await page.locator('#template-categories').evaluate(el=>getComputedStyle(el).display),'grid','category choices remain readable on a phone');
+      }
+      if(width===390&&route.endsWith('sonar.html')){
+        assert.equal(await page.locator('#atlas-overview .deeper-shot-image').count(),17);
+        assert.match(await page.locator('#atlas-overview figcaption').first().innerText(),/Observed:|Interpretation:/);
+        const original=await page.locator('#atlas-overview .deeper-shot-image').first().getAttribute('href');
+        assert.equal((await page.request.get(preview.url+original)).status(),200);
+        assert.match(await page.locator('#deeper-media h3').innerText(),/My screenshots/);
+      }
+      if(width===390&&route.endsWith('encyklopedia.html')){
+        await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+        assert.match(await page.locator('#tactic-result').innerText(),/starting point|start/i);
+      }
+      if(width===390&&route.endsWith('ustawienia.html')){
+        await page.locator('#system-health').waitFor();
+        assert.match(await page.locator('#system-health').innerText(),/Media R2[\s\S]*available/);
+        assert.match(await page.locator('#participant-profiles').innerText(),/Participant profiles/);
+      }
+      if(width===390){
+        const untranslated=await page.evaluate(()=>{const found=[];const walker=document.createTreeWalker(document.querySelector('main')||document.body,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode())){if(node.parentElement?.closest('[data-user-content],script,style,.catch-note,.check-item-title'))continue;const value=node.textContent.trim();if(/[ąęłńóśźżĄĘŁŃÓŚŹŻ]/.test(value)&&value.length>4)found.push(value.slice(0,150));}return [...new Set(found)].slice(0,20);});
+        if(untranslated.length)console.log(`EN content audit ${route}: ${JSON.stringify(untranslated)}`);
+      }
+      assert.deepEqual(errors,[],`EN ${width} ${route}: browser errors`);
+      if(width===390&&['/pages/checklisty.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/rigi.html','/pages/wezly.html','/pages/ustawienia.html'].includes(route))await page.screenshot({path:`${screenshotDir}/en-${route.split('/').pop().replace('.html','')}-390.png`});
+      await page.close();
+    }
+    const login=await context.newPage();await login.goto(loginPreview.url+'/login');
+    await login.locator('html[data-i18n-ready="en"]').waitFor();
+    assert.match(await login.locator('button[type="submit"]').innerText(),/Sign in/);
+    await login.close();await context.close();
+    console.log(`English responsive QA ${width}px: PASS (${routes.length} screens + login).`);
+  }
+  const polish=await browser.newContext({locale:'pl-PL'}),english=await browser.newContext({locale:'en-GB'});
+  const first=await polish.newPage(),second=await english.newPage();
+  await Promise.all([first.goto(preview.url+'/'),second.goto(preview.url+'/')]);
+  await Promise.all([first.waitForFunction(()=>window.DreamI18n?.lang==='pl'),second.waitForFunction(()=>window.DreamI18n?.lang==='en')]);
+  await first.locator('.language-selector select').first().selectOption('en');
+  await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
+  await first.reload();await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
+  assert.equal(await second.locator('html').getAttribute('lang'),'en','independent device preference');
+  await second.locator('.language-selector select').first().selectOption('pl');
+  await second.waitForFunction(()=>window.DreamI18n?.lang==='pl');
+  assert.equal(await first.locator('html').getAttribute('lang'),'en','device language is not global');
+  await Promise.all([polish.close(),english.close()]);
+  console.log('PL → EN → reload and independent EN → PL device PASS.');
   preview.DB.sqlite.prepare("UPDATE trips SET start_at=?,end_at=? WHERE id='next-trip'").run(new Date(Date.now()-3600000).toISOString(),new Date(Date.now()+86400000).toISOString());
-  const field=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+  const field=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,locale:'pl-PL'});
   await field.goto(preview.url+'/');await field.locator('html[data-ready="true"]').waitFor();
   assert.equal(await field.locator('body').getAttribute('data-field-mode'),'field');
   assert.ok(await field.locator('.hero-actions a[href="/pages/teren.html"]').count());
@@ -261,4 +366,51 @@ try{
   await field.screenshot({path:`${screenshotDir}/dashboard-field-390.png`});
   await field.close();
   console.log('390px active trip field mode PASS.');
+  const offlineFixture=await serve({seed:true});
+  try{
+    const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true,locale:'pl-PL'});
+    try{
+      const page=await context.newPage();
+      await page.goto(offlineFixture.url+'/pages/mapa.html');await page.locator('html[data-ready="true"]').waitFor();
+      await page.waitForFunction(async()=>Boolean(await caches.match('/index.html')));
+      const original=await page.evaluate(async()=>{
+        const spot=await Dream.api('/api/spots',{method:'POST',body:JSON.stringify({tripId:'next-trip',name:'Existing bank',depthM:3})});
+        await Promise.all(['/api/spots?tripId=next-trip','/api/checklist?tripId=next-trip','/api/catches?tripId=next-trip','/api/notes?tripId=next-trip'].map(path=>Dream.api(path)));
+        return spot.id;
+      });
+      const item=offlineFixture.DB.sqlite.prepare("SELECT id FROM checklist_items WHERE trip_id='next-trip' AND packed=0 LIMIT 1").get().id;
+      const before=offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n;
+      await context.setOffline(true);
+      const result=await page.evaluate(async({original,item})=>{
+        const operations=[
+          [`/api/checklist/${item}?tripId=next-trip`,'PATCH',{packed:true}],
+          ['/api/catches','POST',{tripId:'next-trip',anglerId:'patryk',weightKg:7.4,caughtAt:'2026-09-01T10:00:00Z'}],
+          ['/api/notes','POST',{tripId:'next-trip',content:'Offline bank note'}],
+          ['/api/spots','POST',{tripId:'next-trip',name:'New offline bank',depthM:2.1}],
+          [`/api/spots/${original}?tripId=next-trip`,'PUT',{name:'Edited offline bank',depthM:3.7}]
+        ];
+        const responses=[];for(const [path,method,payload] of operations)responses.push(await Dream.api(path,{method,body:JSON.stringify(payload)}));
+        return {responses,count:Dream.pendingCount(),queue:JSON.parse(localStorage.getItem('dreamteam.offline.queue.v1'))};
+      },{original,item});
+      assert.ok(result.responses.every(x=>x.pendingSync),'every offline operation is queued');
+      assert.equal(result.count,5,'five changes wait for sync');
+      assert.match(await page.locator('#offline-banner').innerText(),/5/);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,before,'no offline server write');
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT name FROM spots WHERE id=?').get(original).name,'Existing bank');
+      await context.setOffline(false);
+      await page.waitForFunction(()=>Dream.pendingCount()===0,null,{timeout:30000});
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(item).packed,1);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,before+1);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM trip_notes WHERE content=?').get('Offline bank note').n,1);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM spots WHERE name=?').get('New offline bank').n,1);
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT name FROM spots WHERE id=?').get(original).name,'Edited offline bank');
+      const replay=await page.request.post(offlineFixture.url+'/api/offline-sync',{data:result.queue[1]});
+      assert.equal(replay.status(),200,'catch replay accepted with same idempotency key');
+      assert.equal(offlineFixture.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,before+1,'retry does not duplicate the catch');
+      await page.waitForTimeout(200);await page.reload();await page.locator('html[data-ready="true"]').waitFor();
+      assert.equal(await page.evaluate(()=>Dream.pendingCount()),0);
+      assert.equal(await page.locator('#offline-banner').count(),0,'pending state clears after sync');
+      console.log('390px offline field scenario: checklist, catch, note, spot create/edit, ordered sync, replay and cleared status PASS.');
+    }finally{await context.close();}
+  }finally{await offlineFixture.close();}
 }finally{await browser.close();await preview.close();await loginPreview.close();}

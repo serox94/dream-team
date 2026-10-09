@@ -90,7 +90,7 @@ test('field mode follows active trip dates and guide reads the selected lake fac
   assert.deepEqual(guide.errors,[]);
  }finally{guide.close();await s.close();}
 });
-test('private read cache marks stale data, never queues writes and clears locally',async()=>{
+test('private read cache marks stale data, rejects unsupported writes and clears locally',async()=>{
  const s=await testServe({seed:true}),p=await page(s,'/');
  try{
   const before=s.DB.sqlite.prepare('SELECT count(*) n FROM checklist_items').get().n;
@@ -215,11 +215,92 @@ test('spot form CRUD retains optional values and renders user notes as text, nev
  const s=await testServe(),p=await page(s,'/pages/mapa.html');
  try{
   const markup='<img src=x onerror=alert(1)>';
-  fill(p,'spot-name','Testowy spot');fill(p,'spot-depth','4.5');fill(p,'spot-obstacles',markup);submit(p,'spot-form');
+  fill(p,'spot-name','Testowy spot');fill(p,'spot-depth','4.5');fill(p,'spot-latitude','53.12345');fill(p,'spot-longitude','18.54321');fill(p,'spot-weed','pas zielska');fill(p,'spot-rig','Ronnie Rig');fill(p,'spot-bait','wafters 15 mm');fill(p,'spot-obstacles',markup);submit(p,'spot-form');
   await waitFor(()=>p.d.querySelector('.spot-card'));assert.equal(p.d.querySelector('img[src="x"]'),null);assert.ok(p.d.querySelector('.spot-meta-grid').textContent.includes(markup));
+  const stored=s.DB.sqlite.prepare('SELECT latitude,longitude,weed,rig,bait FROM spots').get();assert.equal(stored.latitude,53.12345);assert.equal(stored.longitude,18.54321);assert.equal(stored.weed,'pas zielska');assert.equal(stored.rig,'Ronnie Rig');assert.equal(stored.bait,'wafters 15 mm');
   p.d.querySelector('.spot-card .edit-btn').click();await waitFor(()=>p.d.getElementById('edit-spot-id').value);fill(p,'spot-depth','');fill(p,'spot-obstacles','');submit(p,'spot-form');
   await waitFor(()=>p.d.getElementById('spot-message').textContent==='Zmiany zapisane.'&&p.d.querySelector('.spot-card .catch-badges')?.textContent.includes('Głębokość: brak'));assert.equal(s.DB.sqlite.prepare('SELECT depth_m FROM spots').get().depth_m,null);
   p.d.querySelector('.spot-card .danger-btn').click();await waitFor(()=>p.d.querySelector('#app-notice button'));p.d.querySelector('#app-notice button').click();await waitFor(()=>p.d.getElementById('app-notice').textContent==='Wpis przywrócony.');assert.equal(s.DB.sqlite.prepare('SELECT count(*) n FROM spots WHERE deleted_at IS NULL').get().n,1);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('offline write queue updates checklist immediately and syncs once when connection returns',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/checklisty.html');
+ try{
+  const before=s.DB.sqlite.prepare("SELECT id,packed,revision FROM checklist_items WHERE trip_id='next-trip' AND packed=0 LIMIT 1").get();
+  const live=p.w.fetch;p.w.fetch=async()=>{throw new TypeError('network offline');};
+  const response=await p.w.Dream.api(`/api/checklist/${before.id}?tripId=next-trip`,{method:'PATCH',body:JSON.stringify({packed:true})});
+  assert.equal(response.pendingSync,true);assert.equal(p.w.Dream.pendingCount(),1);
+  assert.equal(s.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(before.id).packed,0);
+  const pending=await p.w.Dream.api('/api/checklist?tripId=next-trip');assert.equal(pending.items.find(x=>x.id===before.id).packed,true);
+  assert.match(p.d.getElementById('offline-banner').textContent,/oczekuj.*synchronizację/i);
+  let attempts=0;const keys=[];
+  p.w.fetch=async(url,options)=>{if(url==='/api/offline-sync'){attempts++;keys.push(JSON.parse(options.body).key);const response=await live(url,options);if(attempts===1)throw new TypeError('response lost after server commit');return response;}return live(url,options);};
+  await p.w.Dream.syncQueue();assert.equal(p.w.Dream.pendingCount(),1);
+  await waitFor(()=>p.w.Dream.pendingCount()===0,'automatic retry after lost response');
+  assert.equal(attempts,2);assert.equal(keys[0],keys[1]);
+  assert.equal(s.DB.sqlite.prepare('SELECT packed,revision FROM checklist_items WHERE id=?').get(before.id).packed,1);
+  assert.equal(s.DB.sqlite.prepare('SELECT revision FROM checklist_items WHERE id=?').get(before.id).revision,before.revision+1);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('offline catch and trip note queue without creating production rows until sync',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/teren.html');
+ try{
+  await waitFor(()=>Boolean(p.d.getElementById('trip-note-form')),'trip notes');
+  const original=p.w.fetch;p.w.fetch=async()=>{throw new TypeError('network offline');};
+  const catchesBefore=s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n;
+  const catchResult=await p.w.Dream.api('/api/catches',{method:'POST',body:JSON.stringify({tripId:'next-trip',anglerId:'patryk',weightKg:7.4,caughtAt:'2026-09-01T10:00:00Z'})});
+  assert.equal(catchResult.pendingSync,true);
+  fill(p,'trip-note-content','Sprawdzić próg po południu');submit(p,'trip-note-form');
+  await waitFor(()=>p.w.Dream.pendingCount()===2,'queued catch and note');
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,catchesBefore);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM trip_notes WHERE content=?').get('Sprawdzić próg po południu').n,0);
+  p.w.fetch=original;await p.w.Dream.syncQueue();await waitFor(()=>p.w.Dream.pendingCount()===0);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,catchesBefore+1);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM trip_notes WHERE content=?').get('Sprawdzić próg po południu').n,1);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('existing spot edits and new spots remain usable without signal and sync later',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/mapa.html');
+ try{
+  await p.w.Dream.api('/api/spots',{method:'POST',body:JSON.stringify({tripId:'next-trip',name:'Spot istniejący',depthM:3})});
+  const spots=(await p.w.Dream.api('/api/spots?tripId=next-trip')).spots,original=spots[0];assert.ok(original?.id);
+  const live=p.w.fetch;p.w.fetch=async()=>{throw new TypeError('network offline');};
+  const edit=await p.w.Dream.api(`/api/spots/${original.id}?tripId=next-trip`,{method:'PUT',body:JSON.stringify({name:'Spot offline',depthM:3.7})});
+  const added=await p.w.Dream.api('/api/spots',{method:'POST',body:JSON.stringify({tripId:'next-trip',name:'Nowy spot offline',depthM:2.1})});
+  assert.ok(edit.pendingSync&&added.pendingSync);assert.equal(p.w.Dream.pendingCount(),2);
+  assert.equal(s.DB.sqlite.prepare('SELECT name FROM spots WHERE id=?').get(original.id).name,original.name);
+  p.w.fetch=live;await p.w.Dream.syncQueue();await waitFor(()=>p.w.Dream.pendingCount()===0);
+  assert.equal(s.DB.sqlite.prepare('SELECT name FROM spots WHERE id=?').get(original.id).name,'Spot offline');
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM spots WHERE name=?').get('Nowy spot offline').n,1);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('checklist templates are manageable directly on the checklist screen',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/checklisty.html');
+ try{
+  await waitFor(()=>p.d.getElementById('template-create'),'template UI');
+  fill(p,'template-name','Standardowy wyjazd');submit(p,'template-create');
+  await waitFor(()=>p.d.querySelectorAll('.template-card').length===1,'created template');
+  p.d.querySelector('.template-select').checked=true;p.d.getElementById('template-apply').click();
+  await waitFor(()=>p.d.getElementById('template-message').textContent.includes('Dodano'),'template applied');
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_templates').get().n,1);
+  assert.match(p.d.getElementById('template-message').textContent,/identyczne/);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('participant settings edit persists without changing the device language',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/ustawienia.html');
+ try{
+  await waitFor(()=>p.d.querySelector('#participant-profile-list form'),'profile form');
+  const form=[...p.d.querySelectorAll('#participant-profile-list form')].find(x=>x.querySelector('h4').textContent==='Patryk');
+  const active=form.querySelector('input[type="checkbox"]'),language=form.querySelector('select');active.checked=false;language.value='en';
+  form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+  await waitFor(()=>s.DB.sqlite.prepare("SELECT default_language FROM anglers WHERE id='patryk'").get().default_language==='en','profile save');
+  assert.equal(s.DB.sqlite.prepare("SELECT active FROM anglers WHERE id='patryk'").get().active,0);
+  assert.equal(p.w.localStorage.getItem('dreamteam.language'),null);
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });

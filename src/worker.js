@@ -2,6 +2,9 @@ import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
 import { weatherForTrip } from './weather.js';
 import {handleTripAdvice} from './trip-advice.js';
+import {handleDeeperMedia} from './deeper-media.js';
+import {handleDeeperAI} from './deeper-ai.js';
+import {checklistTemplates,applyChecklistTemplates} from './checklist-templates.js';
 import {authConfigured,session,login,logout,loginAssets} from './auth.js';
 import {handleLakeResearch,handleLakeCandidates,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
 
@@ -29,13 +32,15 @@ async function scopedRow(request, env, table, id, includeDeleted = false) {
 }
 async function bootstrap(env) {
   const timeZone=await one(env,"SELECT value FROM app_settings WHERE key='trip_time_zone'");
-  const anglers = await all(env,`SELECT a.id,a.name,COALESCE(a.baseline_pb_kg,a.pb_kg) baselinePbKg,
+  const anglers = await all(env,`SELECT a.id,a.name,a.active,a.default_language defaultLanguage,COALESCE(a.baseline_pb_kg,a.pb_kg) baselinePbKg,
     MAX(COALESCE(a.baseline_pb_kg,a.pb_kg),COALESCE(MAX(c.weight_kg),0)) pbKg
     FROM anglers a LEFT JOIN catches c ON c.angler_id=a.id AND c.deleted_at IS NULL GROUP BY a.id ORDER BY a.name`);
   const rawLakes = await all(env,'SELECT id,name,country,latitude,longitude,image_url imageUrl,facts_json factsJson,source_url sourceUrl FROM lakes ORDER BY name');
   const lakes = rawLakes.map(({factsJson,...l})=>({...l,facts:parseFacts(factsJson)}));
   const rawTrips = await all(env,`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at start,end_at end,peg,latitude,longitude,lake_image lakeImage,facts_json factsJson,is_active isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`);
   const participants = await all(env,'SELECT trip_id tripId,angler_id anglerId FROM trip_participants');
+  const anglerCounts=await all(env,'SELECT angler_id anglerId,COUNT(*) fishCount FROM catches WHERE deleted_at IS NULL GROUP BY angler_id');
+  for(const angler of anglers){angler.active=Boolean(angler.active);angler.tripCount=participants.filter(p=>p.anglerId===angler.id).length;angler.fishCount=anglerCounts.find(c=>c.anglerId===angler.id)?.fishCount||0;}
   const stats = await all(env,`SELECT trip_id tripId,COUNT(*) fishCount,SUM(weight_kg) totalWeightKg,MAX(weight_kg) biggestFishKg FROM catches WHERE deleted_at IS NULL GROUP BY trip_id`);
   const leaders = await all(env,`SELECT c.trip_id tripId,c.weight_kg weightKg,a.name anglerName FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.deleted_at IS NULL ORDER BY c.weight_kg DESC,c.caught_at,c.id`);
   const topSpots = await all(env,`SELECT c.trip_id tripId,COALESCE(s.name,c.spot) spot,COUNT(*) cnt FROM catches c LEFT JOIN spots s ON s.id=c.spot_id AND s.trip_id=c.trip_id WHERE c.deleted_at IS NULL AND TRIM(COALESCE(s.name,c.spot,'')) NOT IN ('','Brak') GROUP BY c.trip_id,COALESCE(s.name,c.spot) ORDER BY cnt DESC,spot`);
@@ -117,10 +122,21 @@ async function saveLake(request,env,id) {
   return json({ok:true,id},c.id?200:201);
 }
 async function createAngler(request,env){
-  const x=await body(request),name=text(x.name,'Imię',60,true),pb=number(x.baselinePbKg??0,'Dotychczasowe PB',0,150,false);
+  const x=await body(request),name=text(x.name,'Imię',60,true),pb=number(x.baselinePbKg??0,'Dotychczasowe PB',0,150,false),language=x.defaultLanguage||'pl';
+  if(!['pl','en'].includes(language))fail('Wybierz język PL lub EN.');
   if(await one(env,'SELECT id FROM anglers WHERE lower(name)=lower(?)',name)) fail('Osoba o tej nazwie już istnieje.',409);
-  const id=crypto.randomUUID();await run(env,'INSERT INTO anglers(id,name,pb_kg,baseline_pb_kg) VALUES(?,?,?,?)',id,name,pb,pb);
+  const id=crypto.randomUUID();await run(env,'INSERT INTO anglers(id,name,pb_kg,baseline_pb_kg,default_language) VALUES(?,?,?,?,?)',id,name,pb,pb,language);
   return json({ok:true,id},201);
+}
+async function updateAngler(request,env,id){
+  const current=await one(env,'SELECT * FROM anglers WHERE id=?',id);if(!current)fail('Nie znaleziono uczestnika.',404);
+  const x=await body(request),name=text(pick(x,'name',current.name),'Imię',60,true);
+  const pb=number(pick(x,'baselinePbKg',current.baseline_pb_kg??current.pb_kg),'PB',0,150,false);
+  const active=has(x,'active')?x.active:Boolean(current.active),language=pick(x,'defaultLanguage',current.default_language);
+  if(typeof active!=='boolean'||!['pl','en'].includes(language))fail('Nieprawidłowy status lub język.');
+  if(await one(env,'SELECT id FROM anglers WHERE lower(name)=lower(?) AND id<>?',name,id))fail('Osoba o tej nazwie już istnieje.',409);
+  await run(env,'UPDATE anglers SET name=?,pb_kg=?,baseline_pb_kg=?,active=?,default_language=? WHERE id=?',name,pb,pb,active?1:0,language,id);
+  return json({ok:true});
 }
 async function activate(env,id){
   const t=await tripExists(env,id);if(t.status==='archived') fail('Najpierw przywróć wyjazd z archiwum.',409);
@@ -128,7 +144,10 @@ async function activate(env,id){
   return json({ok:true});
 }
 async function saveCatch(request,env,id){
-  const x=await body(request),c=id?await scopedRow(request,env,'catches',id):{};
+  const x=await body(request),key=request.headers.get('idempotency-key');
+  if(key&&!/^[a-f0-9-]{36}$/.test(key))fail('Nieprawidłowy klucz synchronizacji.');
+  if(!id&&key){const existing=await one(env,'SELECT id,trip_id FROM catches WHERE client_mutation_id=?',key);if(existing){if(existing.trip_id!==x.tripId)fail('Klucz należy do innego wyjazdu.',409);return json({ok:true,id:existing.id});}}
+  const c=id?await scopedRow(request,env,'catches',id):{};
   const tripId=id?c.trip_id:text(x.tripId,'Wyjazd',100,true);await tripExists(env,tripId);
   const anglerId=text(pick(x,'anglerId',c.angler_id),'Uczestnik',100,true);
   if(!await one(env,'SELECT angler_id FROM trip_participants WHERE trip_id=? AND angler_id=?',tripId,anglerId)) fail('Ta osoba nie jest uczestnikiem wyjazdu.');
@@ -143,25 +162,31 @@ async function saveCatch(request,env,id){
   const species=text(pick(x,'species',c.species||'Karp'),'Gatunek',50,true),bait=text(pick(x,'bait',c.bait),'Przynęta',100);
   const rig=text(pick(x,'rig',c.rig),'Rig',100),depth=number(pick(x,'depthM',c.depth_m),'Głębokość',0,100);
   const notes=text(pick(x,'notes',c.notes),'Notatka',2000),photo=webUrl(pick(x,'photoUrl',c.photo_url),'Zdjęcie');
-  if(id) await run(env,`UPDATE catches SET angler_id=?,caught_at=?,weight_kg=?,species=?,spot=?,spot_id=?,bait=?,rig=?,depth_m=?,notes=?,photo_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo,id);
-  else {const q=await run(env,`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,spot_id,bait,rig,depth_m,notes,photo_url) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`,tripId,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo);id=q.meta.last_row_id;}
+  if(id) await run(env,`UPDATE catches SET angler_id=?,caught_at=?,weight_kg=?,species=?,spot=?,spot_id=?,bait=?,rig=?,depth_m=?,notes=?,photo_url=?,revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=?`,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo,id);
+  else {const q=await run(env,`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,spot_id,bait,rig,depth_m,notes,photo_url,client_mutation_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,tripId,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo,key);id=q.meta.last_row_id;}
   return json({ok:true,id},c.id?200:201);
 }
 async function saveSpot(request,env,id){
-  const x=await body(request),c=id?await scopedRow(request,env,'spots',id):{};
+  const x=await body(request),key=request.headers.get('idempotency-key');
+  if(key&&!/^[a-f0-9-]{36}$/.test(key))fail('Nieprawidłowy klucz synchronizacji.');
+  if(!id&&key){const existing=await one(env,'SELECT id,trip_id FROM spots WHERE client_mutation_id=?',key);if(existing){if(existing.trip_id!==x.tripId)fail('Klucz należy do innego wyjazdu.',409);return json({ok:true,id:existing.id});}}
+  const c=id?await scopedRow(request,env,'spots',id):{};
   const tripId=id?c.trip_id:text(x.tripId,'Wyjazd',100,true);await tripExists(env,tripId);
-  const fields=[text(pick(x,'name',c.name),'Nazwa spotu',100,true),number(pick(x,'latitude',c.latitude),'Szerokość GPS',-90,90),number(pick(x,'longitude',c.longitude),'Długość GPS',-180,180),number(pick(x,'depthM',c.depth_m),'Głębokość',0,100),text(pick(x,'bottomType',c.bottom_type),'Dno',100),number(pick(x,'distanceM',c.distance_m),'Odległość',0,5000),text(pick(x,'notes',c.notes),'Notatka',2000),text(pick(x,'obstacles',c.obstacles),'Zaczepy',300),text(pick(x,'bestTime',c.best_time),'Pora',100),text(pick(x,'bestWind',c.best_wind),'Wiatr',100)];
-  if(id) await run(env,`UPDATE spots SET name=?,latitude=?,longitude=?,depth_m=?,bottom_type=?,distance_m=?,notes=?,obstacles=?,best_time=?,best_wind=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,...fields,id);
-  else {const q=await run(env,`INSERT INTO spots(trip_id,name,latitude,longitude,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind) VALUES(?,?,?,?,?,?,?,?,?,?,?)`,tripId,...fields);id=q.meta.last_row_id;}
+  const fields=[text(pick(x,'name',c.name),'Nazwa spotu',100,true),number(pick(x,'latitude',c.latitude),'Szerokość GPS',-90,90),number(pick(x,'longitude',c.longitude),'Długość GPS',-180,180),number(pick(x,'depthM',c.depth_m),'Głębokość',0,100),text(pick(x,'bottomType',c.bottom_type),'Dno',100),number(pick(x,'distanceM',c.distance_m),'Odległość',0,5000),text(pick(x,'notes',c.notes),'Notatka',2000),text(pick(x,'obstacles',c.obstacles),'Zaczepy',300),text(pick(x,'bestTime',c.best_time),'Pora',100),text(pick(x,'bestWind',c.best_wind),'Wiatr',100),text(pick(x,'weed',c.weed),'Zielsko',100),text(pick(x,'rig',c.rig),'Rig',100),text(pick(x,'bait',c.bait),'Przynęta',100)];
+  if(id) await run(env,`UPDATE spots SET name=?,latitude=?,longitude=?,depth_m=?,bottom_type=?,distance_m=?,notes=?,obstacles=?,best_time=?,best_wind=?,weed=?,rig=?,bait=?,revision=revision+1,last_mutation_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,...fields,key,id);
+  else {const q=await run(env,`INSERT INTO spots(trip_id,name,latitude,longitude,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind,weed,rig,bait,client_mutation_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,tripId,...fields,key);id=q.meta.last_row_id;}
   return json({ok:true,id},c.id?200:201);
 }
 async function saveChecklist(request,env,id){
-  const x=await body(request),c=id?await scopedRow(request,env,'checklist_items',id):{};
+  const x=await body(request),key=request.headers.get('idempotency-key');
+  if(key&&!/^[a-f0-9-]{36}$/.test(key))fail('Nieprawidłowy klucz synchronizacji.');
+  const c=id?await scopedRow(request,env,'checklist_items',id):{};
+  if(id&&key&&c.last_mutation_id===key)return json({ok:true,id});
   const tripId=id?c.trip_id:text(x.tripId,'Wyjazd',100,true);await tripExists(env,tripId);
   if(has(x,'packed')&&typeof x.packed!=='boolean') fail('packed musi być wartością true/false.');
   const fields=[text(pick(x,'category',c.category||'sprzęt'),'Kategoria',100,true),text(pick(x,'label',c.label),'Nazwa pozycji',200,true),text(pick(x,'assignedTo',c.assigned_to),'Przypisanie',100),pick(x,'packed',Boolean(c.packed))?1:0,text(pick(x,'quantity',c.quantity),'Ilość',100),text(pick(x,'notes',c.notes),'Notatka',2000),number(pick(x,'sortOrder',c.sort_order??0),'Kolejność',0,100000,false)];
   if(!await one(env,'SELECT id FROM checklist_categories WHERE name=? AND active=1',fields[0]))fail('Wybierz aktywną kategorię checklisty.');
-  if(id) await run(env,`UPDATE checklist_items SET category=?,label=?,assigned_to=?,packed=?,quantity=?,notes=?,sort_order=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,...fields,id);
+  if(id) await run(env,`UPDATE checklist_items SET category=?,label=?,assigned_to=?,packed=?,quantity=?,notes=?,sort_order=?,revision=revision+1,last_mutation_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,...fields,key,id);
   else {const q=await run(env,`INSERT INTO checklist_items(trip_id,category,label,assigned_to,packed,quantity,notes,sort_order) VALUES(?,?,?,?,?,?,?,?)`,tripId,...fields);id=q.meta.last_row_id;}
   return json({ok:true,id},c.id?200:201);
 }
@@ -191,12 +216,62 @@ async function categories(request,env,id){
     await run(env,'DELETE FROM checklist_categories WHERE id=?',id);return json({ok:true});
   }
 }
+async function notes(request,env){
+  if(request.method==='GET'){
+    const tripId=new URL(request.url).searchParams.get('tripId');if(!tripId)fail('Wymagany tripId.');await tripExists(env,tripId);
+    return json({ok:true,notes:await all(env,'SELECT id,trip_id tripId,section,title,content,created_at createdAt FROM trip_notes WHERE trip_id=? ORDER BY id DESC',tripId)});
+  }
+  const x=await body(request),tripId=text(x.tripId,'Wyjazd',100,true);await tripExists(env,tripId);
+  const section=text(x.section||'field','Sekcja',100,true),title=text(x.title,'Tytuł',100),content=text(x.content,'Notatka',2000,true);
+  const key=request.headers.get('idempotency-key');if(key&&!/^[a-f0-9-]{36}$/.test(key))fail('Nieprawidłowy klucz synchronizacji.');
+  if(key){const existing=await one(env,'SELECT id,trip_id FROM trip_notes WHERE client_mutation_id=?',key);if(existing){if(existing.trip_id!==tripId)fail('Klucz należy do innego wyjazdu.',409);return json({ok:true,id:existing.id});}}
+  const result=await run(env,'INSERT INTO trip_notes(trip_id,section,title,content,client_mutation_id) VALUES(?,?,?,?,?)',tripId,section,title,content,key);
+  return json({ok:true,id:result.meta.last_row_id},201);
+}
+async function offlineSync(request,env){
+  const op=await body(request),key=op.key,path=op.path,method=op.method,payload=op.payload;
+  if(typeof key!=='string'||!/^[a-f0-9-]{36}$/.test(key)||typeof path!=='string'||!payload||typeof payload!=='object'||Array.isArray(payload))fail('Nieprawidłowa operacja offline.');
+  const allowed=/^\/api\/(catches|spots|notes)$/.test(path)&&method==='POST'||/^\/api\/checklist\/\d+\?tripId=[a-zA-Z0-9_-]+$/.test(path)&&method==='PATCH'||/^\/api\/spots\/\d+\?tripId=[a-zA-Z0-9_-]+$/.test(path)&&method==='PUT';
+  if(!allowed)fail('Ta operacja nie może być synchronizowana offline.');
+  const signature=JSON.stringify({path,method,payload});
+  const receipt=await one(env,'SELECT path,request_json requestJson,result_json resultJson FROM offline_receipts WHERE id=?',key);
+  if(receipt){if(receipt.path!==path||receipt.requestJson!==signature)fail('Klucz użyty dla innej operacji.',409);return json(JSON.parse(receipt.resultJson));}
+  const match=path.match(/^\/api\/(checklist|spots)\/(\d+)\?tripId=([a-zA-Z0-9_-]+)$/);
+  if(match){
+    const table=match[1]==='spots'?'spots':'checklist_items',id=Number(match[2]),tripId=match[3];
+    const row=await one(env,`SELECT * FROM ${table} WHERE id=? AND trip_id=? AND deleted_at IS NULL`,id,tripId);
+    if(!row)fail('Rekord został usunięty albo należy do innego wyjazdu.',409);
+    if(row.last_mutation_id===key)return json({ok:true,id,alreadyApplied:true});
+    if(!Number.isInteger(op.baseRevision)||row.revision!==op.baseRevision){
+      if(table==='checklist_items'&&typeof payload.packed==='boolean'&&Boolean(row.packed)===payload.packed)return json({ok:true,id,alreadyApplied:true});
+      return json({ok:false,error:'Konflikt: ktoś zmienił ten rekord. Wybierz, czy zachować zmianę serwera, czy ponowić swoją.',serverRevision:row.revision,serverValue:table==='checklist_items'?Boolean(row.packed):{name:row.name,depthM:row.depth_m,notes:row.notes}},409);
+    }
+    if(table==='checklist_items'&&(Object.keys(payload).length!==1||typeof payload.packed!=='boolean'))fail('Offline można zmienić tylko stan spakowania.');
+  }
+  const replay=new Request(new URL(path,request.url),{method,headers:{'content-type':'application/json','idempotency-key':key},body:JSON.stringify(payload)});
+  let response;if(path==='/api/catches')response=await saveCatch(replay,env,null);
+  else if(path==='/api/spots')response=await saveSpot(replay,env,null);
+  else if(path==='/api/notes')response=await notes(replay,env);
+  else if(match[1]==='spots')response=await saveSpot(replay,env,Number(match[2]));
+  else response=await saveChecklist(replay,env,Number(match[2]));
+  const result=await response.json();
+  await run(env,'INSERT OR IGNORE INTO offline_receipts(id,path,request_json,result_json) VALUES(?,?,?,?)',key,path,signature,JSON.stringify(result));
+  return json(result);
+}
 const userSettingKeys=['research_auto','research_languages','research_official_first','trip_time_zone'];
 async function settings(request,env){
   if(request.method==='GET'){
     const rows=await all(env,"SELECT key,value,updated_at FROM app_settings WHERE key IN ('research_auto','research_languages','research_official_first','trip_time_zone')");
     const lastRun=await one(env,'SELECT completed_at FROM lake_research_runs WHERE status=? ORDER BY completed_at DESC LIMIT 1','completed');
-    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),version:'1.2.0',schemaVersion:20});
+    let lastBackupAt=null,backupStatus='unavailable';
+    if(env.BACKUP_STATUS){try{
+      // Only metadata is read. Never expose object keys or the backup contents to the browser.
+      const listing=await env.BACKUP_STATUS.list({prefix:'dream-team-db/',limit:100});
+      const valid=listing.objects.filter(o=>o.size>1000&&o.uploaded instanceof Date).sort((a,b)=>b.uploaded-a.uploaded);
+      lastBackupAt=valid[0]?.uploaded.toISOString()||null;backupStatus=lastBackupAt?'available':'missing';
+    }catch{backupStatus='unavailable';}}
+    const schema=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
+    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',mediaStorageAvailable:Boolean(env.MEDIA),lastBackupAt,backupStatus,environment:env.APP_ENV==='preview'?'preview':'production',build:env.APP_BUILD||null,version:'1.2.0',schemaVersion:Number(schema?.value)||null});
   }
   const x=await body(request),statements=[];
   for(const [key,value] of Object.entries(x)){
@@ -212,9 +287,9 @@ async function settings(request,env){
 }
 async function list(request,env,kind){
   const tripId=new URL(request.url).searchParams.get('tripId');if(!tripId) fail('Wymagany tripId.');await tripExists(env,tripId);
-  if(kind==='catches')return json({ok:true,catches:await all(env,`SELECT c.id,c.trip_id tripId,c.angler_id anglerId,a.name anglerName,c.caught_at caughtAt,c.weight_kg weightKg,c.species,COALESCE(s.name,c.spot) spot,c.spot_id spotId,c.bait,c.rig,c.depth_m depthM,c.notes,c.photo_url photoUrl,c.created_at createdAt FROM catches c JOIN anglers a ON a.id=c.angler_id LEFT JOIN spots s ON s.id=c.spot_id AND s.trip_id=c.trip_id WHERE c.trip_id=? AND c.deleted_at IS NULL ORDER BY c.caught_at DESC,c.id DESC`,tripId)});
-  if(kind==='spots')return json({ok:true,spots:await all(env,`SELECT id,trip_id tripId,name,latitude,longitude,depth_m depthM,bottom_type bottomType,distance_m distanceM,notes,obstacles,best_time bestTime,best_wind bestWind,created_at createdAt FROM spots WHERE trip_id=? AND deleted_at IS NULL ORDER BY created_at,id`,tripId)});
-  const items=await all(env,`SELECT id,trip_id tripId,category,label,assigned_to assignedTo,packed,quantity,notes,sort_order sortOrder,created_at createdAt FROM checklist_items WHERE trip_id=? AND deleted_at IS NULL ORDER BY category,sort_order,id`,tripId);
+  if(kind==='catches')return json({ok:true,catches:await all(env,`SELECT c.id,c.trip_id tripId,c.angler_id anglerId,a.name anglerName,c.caught_at caughtAt,c.weight_kg weightKg,c.species,COALESCE(s.name,c.spot) spot,c.spot_id spotId,c.bait,c.rig,c.depth_m depthM,c.notes,c.photo_url photoUrl,c.revision,c.created_at createdAt FROM catches c JOIN anglers a ON a.id=c.angler_id LEFT JOIN spots s ON s.id=c.spot_id AND s.trip_id=c.trip_id WHERE c.trip_id=? AND c.deleted_at IS NULL ORDER BY c.caught_at DESC,c.id DESC`,tripId)});
+  if(kind==='spots')return json({ok:true,spots:await all(env,`SELECT id,trip_id tripId,name,latitude,longitude,depth_m depthM,bottom_type bottomType,distance_m distanceM,notes,obstacles,best_time bestTime,best_wind bestWind,weed,rig,bait,revision,created_at createdAt FROM spots WHERE trip_id=? AND deleted_at IS NULL ORDER BY created_at,id`,tripId)});
+  const items=await all(env,`SELECT id,trip_id tripId,category,label,assigned_to assignedTo,packed,quantity,notes,sort_order sortOrder,revision,created_at createdAt FROM checklist_items WHERE trip_id=? AND deleted_at IS NULL ORDER BY category,sort_order,id`,tripId);
   return json({ok:true,items:items.map(x=>({...x,packed:Boolean(x.packed)}))});
 }
 async function removeOrRestore(request,env,kind,id,restore){
@@ -227,7 +302,7 @@ async function removeOrRestore(request,env,kind,id,restore){
 }
 async function exportData(env){
   const data={format:'dream-team-backup-v1',exportedAt:new Date().toISOString(),tables:{}};
-  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','trip_documents','trip_notes','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
+  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
   return json(data,200,{'content-disposition':`attachment; filename="dream-team-backup-${new Date().toISOString().slice(0,10)}.json"`});
 }
 async function privateFetch(request,env,ctx){
@@ -244,6 +319,18 @@ async function privateFetch(request,env,ctx){
       if(adviceMatch&&method==='GET')return json(await handleTripAdvice(env,decodeURIComponent(adviceMatch[1])));
       if(path==='/api/export'&&method==='GET')return await exportData(env);
       if(path==='/api/checklist-categories'&&['GET','POST'].includes(method))return await categories(request,env);
+      if(path==='/api/notes'&&['GET','POST'].includes(method))return await notes(request,env);
+      if(path==='/api/offline-sync'&&method==='POST')return await offlineSync(request,env);
+      const templateMatch=path.match(/^\/api\/checklist-templates(?:\/([a-f0-9-]{36}))?$/);
+      if(templateMatch)return await checklistTemplates(request,env,templateMatch[1]||null);
+      const applyMatch=path.match(/^\/api\/trips\/([^/]+)\/checklist-templates\/apply$/);
+      if(applyMatch&&method==='POST')return await applyChecklistTemplates(request,env,decodeURIComponent(applyMatch[1]));
+      const mediaMatch=path.match(/^\/api\/deeper-media(?:\/([a-f0-9-]{36})(\/(?:image|analyze|analysis))?)?$/);
+      if(mediaMatch){
+        const action=mediaMatch[2];
+        if(action==='/analyze'||action==='/analysis')return await handleDeeperAI(request,env,mediaMatch[1],action.slice(1));
+        return await handleDeeperMedia(request,env,mediaMatch[1]||null,action||null);
+      }
       if(path==='/api/lake-candidates'&&method==='POST')return await handleLakeCandidates(request,env);
       if(path==='/api/settings'&&['GET','PATCH'].includes(method))return await settings(request,env);
       let researchMatch=path.match(/^\/api\/lakes\/([^/]+)\/(profile|candidates|research|facts|sources)$/);
@@ -264,6 +351,8 @@ async function privateFetch(request,env,ctx){
       if(path==='/api/trips'&&method==='POST')return await saveTrip(request,env,null,ctx);
       if(path==='/api/lakes'&&method==='POST')return await saveLake(request,env);
       if(path==='/api/anglers'&&method==='POST')return await createAngler(request,env);
+      const anglerMatch=path.match(/^\/api\/anglers\/([^/]+)$/);
+      if(anglerMatch&&method==='PATCH')return await updateAngler(request,env,decodeURIComponent(anglerMatch[1]));
       let m=path.match(/^\/api\/(trips|lakes)\/([^/]+)(\/activate)?$/);
       if(m){
         const id=decodeURIComponent(m[2]);
@@ -306,7 +395,7 @@ export default {
       const assetPath=path==='/login'?'/login.html':path;
       const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));
       const result=protectedResponse(asset);
-      if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+      if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
       return result;
     }
     if(!authConfigured(env))return json({ok:false,error:'Logowanie nie jest jeszcze skonfigurowane.'},503);

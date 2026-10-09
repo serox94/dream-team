@@ -56,7 +56,7 @@
     const p=profileOf(trip), hero=document.querySelector('.dashboard-hero');
     if(!hero)return;
     const set=(id,value)=>{const node=document.getElementById(id);if(node)node.textContent=value;};
-    const date=value=>value?new Date(value).toLocaleDateString('pl-PL',{timeZone:Dream.zone(),day:'numeric',month:'short',year:'numeric'}):'do ustalenia';
+    const date=value=>value?new Date(value).toLocaleDateString((document.documentElement.lang==='en'?'en-GB':'pl-PL'),{timeZone:Dream.zone(),day:'numeric',month:'short',year:'numeric'}):'do ustalenia';
     set('dashboard-status',trip.status==='archived'?'Archiwum':trip.isActive?'Aktywny wyjazd':'Wybrany wyjazd');
     set('dashboard-trip-name',trip.name);
     set('dashboard-lake',p.name||trip.lake);
@@ -80,7 +80,7 @@
     const url=Dream.safeUrl(f.mapImage||p.imageUrl),image=card.querySelector('img');
     if(image){image.hidden=!url;if(url)image.src=url;image.alt=`Mapa / widok: ${p.name}`;}
     const caption=card.querySelector('.photo-caption');
-    if(caption)caption.innerHTML=url?`${esc(p.name)} · mapa orientacyjna. <a href="${esc(url)}" target="_blank" rel="noopener">Otwórz cały obraz</a>`:'Brak mapy łowiska. Możesz dodać adres obrazu w profilu łowiska.';
+    if(caption){const en=window.DreamI18n?.lang==='en';caption.innerHTML=url?`${esc(p.name)} · ${en?'overview map':'mapa orientacyjna'}. <a href="${esc(url)}" target="_blank" rel="noopener">${en?'Open full image':'Otwórz cały obraz'}</a>`:(en?'No lake map is available. Add an image URL in the lake profile.':'Brak mapy łowiska. Możesz dodać adres obrazu w profilu łowiska.');}
   }
 
   function renderDirections(trip, docs) {

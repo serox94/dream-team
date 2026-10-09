@@ -16,3 +16,4 @@ button:hover { background: #d3e3ac; }
 .login-hint { margin: 15px 0 0; color: #9eaf9c; text-align: center; font-size: .82rem; }
 .error { padding: 12px; border: 1px solid rgba(238,140,126,.5); border-radius: 12px; color: #ffd0c8; background: rgba(238,140,126,.1); font-size: .88rem; }
 @media(max-width: 480px) { body { align-items: center; } .login-card { border-radius: 22px; } }
+.language-selector{display:inline-flex;align-items:center;gap:.4rem;margin-top:.8rem;font-size:.85rem}.language-selector select{width:auto;padding:.3rem .5rem}

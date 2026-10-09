@@ -1,11 +1,261 @@
 {
-  "version":"2026-10-05.2",
-  "note":"Własne zrzuty Fish Deeper Patryka. Umieść plik w tym katalogu i wpisz jego nazwę w src. Koordynaty obszaru to procenty obrazu.",
-  "screenshots":[
-    {"id":"echo-dna","articleId":"sonar-dno","src":null,"caption":"Raw: twarda plama i przejście do miękkiego dna","region":{"x":30,"y":62,"width":42,"height":24},"explanation":"Porównaj grubość i intensywność dna przy tej samej palecie, wiązce i czułości; potwierdź ciężarkiem."},
-    {"id":"zielsko-oczko","articleId":"sonar-czyste-oczko","src":null,"caption":"Czyste oczko w zielsku","region":{"x":35,"y":48,"width":32,"height":38},"explanation":"Powtórz przejazd w poprzek luki i sprawdź jej rozmiar względem zestawu oraz drogi holu."},
-    {"id":"mapa-przejazdy","articleId":"sonar-mapa","src":null,"caption":"Mapa głębokości z równoległymi przejazdami","region":{"x":15,"y":20,"width":70,"height":65},"explanation":"Zaznacz szczyt, bok i podstawę struktury, a potem wykonaj tor poprzeczny."},
-    {"id":"ryby-raw","articleId":"sonar-ryby","src":null,"caption":"Echo ryb w trybie Raw","region":{"x":25,"y":28,"width":50,"height":30},"explanation":"Pojedynczy ślad nie określa gatunku ani dokładnego położenia; porównaj powtórny skan."},
-    {"id":"ustawienia","articleId":"sonar-ustawienia","src":null,"caption":"Ustawienia CHIRP+ 2 w Fish Deeper","region":{"x":48,"y":10,"width":45,"height":78},"explanation":"Pokaż wybraną wiązkę, Raw/Basic, paletę i czułość przy konkretnym przykładzie."}
+  "version": "2026-10-06.1",
+  "note": "Ekrany dostarczone przez użytkownika. Interpretacja nie ustala materiału dna ani gatunku bez weryfikacji.",
+  "screenshots": [
+    {
+      "id": "echo-10",
+      "articleId": "sonar-ustawienia",
+      "src": "fish-deeper-10.png",
+      "caption": "Tryb mapy, Raw, wiązka i czułość",
+      "observed": "Panel ustawień pokazuje Raw, wiązkę i czułość 34%; mapa i profil przy około 24 m.",
+      "explanation": "Porównuj przejazdy przy tych samych ustawieniach; materiału dna nie widać.",
+      "confidence": "wysoka",
+      "region": {
+        "x": 69,
+        "y": 12,
+        "width": 27,
+        "height": 72
+      }
+    },
+    {
+      "id": "echo-052343",
+      "articleId": "sonar-raw",
+      "src": "fish-deeper-052343.png",
+      "caption": "Ciemna paleta i linia dna",
+      "observed": "Ciągła, jasna linia dna około 15 m i kilka słabych śladów powyżej.",
+      "explanation": "Nie identyfikuj śladów z jednego kadru; powtórz przejazd.",
+      "confidence": "średnia",
+      "region": {
+        "x": 7,
+        "y": 57,
+        "width": 85,
+        "height": 27
+      }
+    },
+    {
+      "id": "echo-052350",
+      "articleId": "sonar-ustawienia",
+      "src": "fish-deeper-052350.png",
+      "caption": "Czułość 0% i Fish Icons",
+      "observed": "Otwarty panel czułości 0%, Fish Icons i palety; mocna linia dna.",
+      "explanation": "Ustawienia wpływają na widoczność ech; nie porównuj gęstości z innym obrazem.",
+      "confidence": "wysoka",
+      "region": {
+        "x": 77,
+        "y": 10,
+        "width": 20,
+        "height": 74
+      }
+    },
+    {
+      "id": "echo-052356",
+      "articleId": "sonar-ustawienia",
+      "src": "fish-deeper-052356.png",
+      "caption": "Fish Icons, głębokość i paleta",
+      "observed": "Otwarty panel ikon, zakresu głębokości i palety przy odczycie około 23 m.",
+      "explanation": "Ikony nie identyfikują gatunku; do struktury wróć do Raw.",
+      "confidence": "wysoka",
+      "region": {
+        "x": 67,
+        "y": 11,
+        "width": 30,
+        "height": 72
+      }
+    },
+    {
+      "id": "echo-052456",
+      "articleId": "sonar-ryby",
+      "src": "fish-deeper-052456.png",
+      "caption": "Rozproszone ślady nad równym dnem",
+      "observed": "Prawie równa linia dna około 10 m i słabe ślady nad nią.",
+      "explanation": "Mogą to być cele, zawiesina lub zakłócenia; skanuj ponownie.",
+      "confidence": "niska",
+      "region": {
+        "x": 23,
+        "y": 45,
+        "width": 60,
+        "height": 48
+      }
+    },
+    {
+      "id": "echo-052504",
+      "articleId": "sonar-ryby",
+      "src": "fish-deeper-052504.png",
+      "caption": "Mocne łukowate ślady",
+      "observed": "Dwa duże łukowate ślady nad linią dna, odczyt około 33 m.",
+      "explanation": "Echo celu lub efekt ruchu; jeden kadr nie potwierdza liczby ani gatunku ryb.",
+      "confidence": "niska",
+      "region": {
+        "x": 38,
+        "y": 32,
+        "width": 48,
+        "height": 57
+      }
+    },
+    {
+      "id": "echo-052509",
+      "articleId": "sonar-ryby",
+      "src": "fish-deeper-052509.png",
+      "caption": "Zwarte skupisko w toni",
+      "observed": "Plama odbić około 4–7 m nad dnem przy odczycie 12,6 m.",
+      "explanation": "Możliwe cele lub zakłócenia; sprawdź powtórnym przejazdem.",
+      "confidence": "średnia",
+      "region": {
+        "x": 32,
+        "y": 25,
+        "width": 48,
+        "height": 52
+      }
+    },
+    {
+      "id": "echo-052519",
+      "articleId": "sonar-zielsko",
+      "src": "fish-deeper-052519.png",
+      "caption": "Pionowe odbicia od dna",
+      "observed": "Liczne pionowe echa nad nierównym dnem przy odczycie 3,6 m.",
+      "explanation": "Pasuje do roślinności lub przeszkód, bez pewności rodzaju; sprawdź poprzecznie.",
+      "confidence": "średnia",
+      "region": {
+        "x": 19,
+        "y": 28,
+        "width": 71,
+        "height": 60
+      }
+    },
+    {
+      "id": "echo-052535",
+      "articleId": "sonar-struktury",
+      "src": "fish-deeper-052535.png",
+      "caption": "Łagodna niecka",
+      "observed": "Linia dna obniża się ku środkowi i wznosi przy około 8–10 m.",
+      "explanation": "Zaznacz brzegi i powtórz przejazd w poprzek; kolor nie dowodzi żwiru ani mułu.",
+      "confidence": "wysoka",
+      "region": {
+        "x": 20,
+        "y": 65,
+        "width": 71,
+        "height": 24
+      }
+    },
+    {
+      "id": "echo-052547",
+      "articleId": "sonar-struktury",
+      "src": "fish-deeper-052547.png",
+      "caption": "Stok z odbiciami blisko dna",
+      "observed": "Dno opada z lewej ku około 5 m, przy stoku są wystające echa.",
+      "explanation": "Sprawdź górę, bok i podstawę; echa mogą być strukturą lub roślinnością.",
+      "confidence": "średnia",
+      "region": {
+        "x": 7,
+        "y": 44,
+        "width": 70,
+        "height": 46
+      }
+    },
+    {
+      "id": "echo-052558",
+      "articleId": "sonar-ryby",
+      "src": "fish-deeper-052558.png",
+      "caption": "Skupisko nad opadającym dnem",
+      "observed": "Zwarte skupisko ech w toni nad łagodnym stokiem około 10 m.",
+      "explanation": "Nie rozpoznawaj gatunku; porównaj dwa tory i ustawienia.",
+      "confidence": "średnia",
+      "region": {
+        "x": 38,
+        "y": 20,
+        "width": 43,
+        "height": 55
+      }
+    },
+    {
+      "id": "echo-052608",
+      "articleId": "sonar-dno",
+      "src": "fish-deeper-052608.png",
+      "caption": "Wypukłość i zmiana linii dna",
+      "observed": "Niemal płaskie dno z wypukłością i lokalną zmianą grubości echa przy około 9 m.",
+      "explanation": "Materiał dna wymaga porównania przy jednakowych ustawieniach i kontroli ciężarkiem.",
+      "confidence": "niska",
+      "region": {
+        "x": 47,
+        "y": 68,
+        "width": 45,
+        "height": 24
+      }
+    },
+    {
+      "id": "echo-052614",
+      "articleId": "sonar-ryby",
+      "src": "fish-deeper-052614.png",
+      "caption": "Powtarzające się wysokie łuki",
+      "observed": "Kilka nakładających się łuków nad płaskim dnem około 7,2 m.",
+      "explanation": "Kształt zależy od ruchu i czasu w wiązce; nie wnioskuj o gatunku.",
+      "confidence": "średnia",
+      "region": {
+        "x": 22,
+        "y": 21,
+        "width": 60,
+        "height": 67
+      }
+    },
+    {
+      "id": "echo-052656",
+      "articleId": "sonar-struktury",
+      "src": "fish-deeper-052656.png",
+      "caption": "Strome przejście na płytszą wodę",
+      "observed": "Dno wznosi się ostro ku około 2 m; niżej widoczna dodatkowa linia.",
+      "explanation": "Może być wielokrotne echo na stoku; powtórz skan przeciwnym kierunkiem.",
+      "confidence": "średnia",
+      "region": {
+        "x": 22,
+        "y": 38,
+        "width": 61,
+        "height": 52
+      }
+    },
+    {
+      "id": "echo-052745",
+      "articleId": "sonar-raw",
+      "src": "fish-deeper-052745.png",
+      "caption": "Standard Scan z ikoną celu",
+      "observed": "Uproszczony profil, zielony pas nad dnem i ikona przy stoku.",
+      "explanation": "Ikona jest interpretacją aplikacji; porównaj Raw i sprawdź ciężarkiem.",
+      "confidence": "wysoka",
+      "region": {
+        "x": 8,
+        "y": 36,
+        "width": 81,
+        "height": 52
+      }
+    },
+    {
+      "id": "echo-052754",
+      "articleId": "sonar-raw",
+      "src": "fish-deeper-052754.png",
+      "caption": "Fish Icons nad niecką",
+      "observed": "Wiele ikon nad zagłębieniem i zielone pionowe echa przy bokach.",
+      "explanation": "Ikony nie potwierdzają gatunku ani twardości dna.",
+      "confidence": "średnia",
+      "region": {
+        "x": 18,
+        "y": 25,
+        "width": 67,
+        "height": 60
+      }
+    },
+    {
+      "id": "echo-052802",
+      "articleId": "sonar-struktury",
+      "src": "fish-deeper-052802.png",
+      "caption": "Zagłębienie i ikony celów",
+      "observed": "Dno obniża się ku środkowi i wznosi z prawej, ikony nad niecką.",
+      "explanation": "Porównaj bezpieczny bok i podstawę, sprawdź zaczepy.",
+      "confidence": "średnia",
+      "region": {
+        "x": 23,
+        "y": 25,
+        "width": 66,
+        "height": 63
+      }
+    }
   ]
 }

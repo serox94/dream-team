@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {generateTripAdvice} from '../src/trip-advice.js';
+import {readFileSync} from 'node:fs';
 
 // Two pre-existing production profiles represented by their persisted lake/trip fields.
 const cases=[
@@ -35,4 +36,15 @@ test('Sprzeczne źródła nie dają pozornej pewności',()=>{
   const result=generateTripAdvice({trip:{id:'x',name:'X',facts:{}},lake:{name:'X',facts:{baitBoat:'dozwolona'}},researchedFacts:[{field:'bait_boats',value:'zabronione',status:'sprzeczne'}]});
   assert.ok(result.missing.some(x=>x.includes('sprzeczne źródła')));
   assert.ok(!result.facts.some(x=>x.field==='bait_boats'));
+});
+test('English trip advice has reviewed text for every authored recommendation on existing profiles',()=>{
+ const en=JSON.parse(readFileSync('public/locales/trip-advice.en.json','utf8'));
+ for(const item of cases){const advice=generateTripAdvice(item);
+  for(const suggestion of advice.suggestions.filter(x=>x.name!=='Ograniczenia')){
+   assert.ok(en[suggestion.name],suggestion.name);
+   assert.ok(en[suggestion.value],`${item.name}: ${suggestion.value}`);
+   assert.ok(en[suggestion.basis],`${item.name}: ${suggestion.basis}`);
+  }
+  assert.ok(en[advice.disclaimer]);
+ }
 });

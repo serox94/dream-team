@@ -29,10 +29,12 @@
     return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
   }
 
+  const uiLocale = () => (window.DreamI18n?.lang === "en" || document.documentElement.lang === "en") ? "en-GB" : "pl-PL";
+
   function formatDatePL(value) {
     if (!value) return "Brak danych";
     const date = new Date(value);
-    return date.toLocaleDateString("pl-PL", {
+    return date.toLocaleDateString(uiLocale(), {
       timeZone: Dream.zone(),
       day: "2-digit",
       month: "2-digit",
@@ -43,7 +45,7 @@
   function formatDateTimePL(value) {
     if (!value) return "Brak danych";
     const date = new Date(value);
-    return date.toLocaleString("pl-PL", {
+    return date.toLocaleString(uiLocale(), {
       timeZone: Dream.zone(),
       day: "2-digit",
       month: "2-digit",
@@ -56,7 +58,7 @@
   function formatHourPL(value) {
     if (!value) return "Brak";
     const date = new Date(value);
-    return date.toLocaleTimeString("pl-PL", {
+    return date.toLocaleTimeString(uiLocale(), {
       hour: "2-digit",
       minute: "2-digit"
     });
@@ -703,6 +705,7 @@
           const title = createNode("div", `check-item-title${item.done ? " done" : ""}`, normalizeTextSafe(item.item_name, 80));
 
           const metaParts = [];
+          if (item.pendingSync) metaParts.push("Oczekuje na synchronizację");
           if (item.quantity !== null && item.quantity !== undefined) {
             metaParts.push(`${Number(item.quantity)} ${item.unit}`);
           }
@@ -928,20 +931,27 @@
       badges.appendChild(createNode("span", "badge", `Odległość: ${item.distance_m !== null && item.distance_m !== undefined ? `${Number(item.distance_m).toFixed(1)} m` : "brak"}`));
       badges.appendChild(createNode("span", "badge", `Głębokość: ${item.depth_m !== null && item.depth_m !== undefined ? `${Number(item.depth_m).toFixed(1)} m` : "brak"}`));
       badges.appendChild(createNode("span", "badge", `Dno: ${normalizeTextSafe(item.bottom_type || "brak", 60)}`));
+      if (item.latitude != null && item.longitude != null) badges.appendChild(createNode("span", "badge", `GPS: ${Number(item.latitude).toFixed(5)}, ${Number(item.longitude).toFixed(5)}`));
 
       article.append(top, badges);
 
       const metaGrid = createNode("div", "spot-meta-grid");
       const meta1 = createNode("div", "spot-meta-box");
-      meta1.innerHTML = `<span>Zaczepy / uwagi</span><strong>${Dream.esc(normalizeTextSafe(item.obstacles || "brak", 120))}</strong>`;
+      meta1.innerHTML = `<span>Zaczepy / uwagi</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.obstacles || window.DreamI18n?.t("brak") || "brak", 120))}</strong>`;
       const meta2 = createNode("div", "spot-meta-box");
-      meta2.innerHTML = `<span>Najlepsza pora</span><strong>${Dream.esc(normalizeTextSafe(item.best_time || "brak", 60))}</strong>`;
+      meta2.innerHTML = `<span>Najlepsza pora</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.best_time || window.DreamI18n?.t("brak") || "brak", 60))}</strong>`;
       const meta3 = createNode("div", "spot-meta-box");
-      meta3.innerHTML = `<span>Najlepszy wiatr</span><strong>${Dream.esc(normalizeTextSafe(item.best_wind || "brak", 60))}</strong>`;
+      meta3.innerHTML = `<span>Najlepszy wiatr</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.best_wind || window.DreamI18n?.t("brak") || "brak", 60))}</strong>`;
       const meta4 = createNode("div", "spot-meta-box");
-      meta4.innerHTML = `<span>Skuteczność</span><strong>${linkedCatches.length ? `${linkedCatches.length} brań • śr. ${avgWeight} kg` : "Brak połowów"}</strong>`;
+      meta4.innerHTML = `<span>Skuteczność</span><strong>${linkedCatches.length ? `${linkedCatches.length} ryb • śr. ${avgWeight} kg` : "Brak połowów"}</strong>`;
+      const meta5 = createNode("div", "spot-meta-box");
+      meta5.innerHTML = `<span>Zielsko</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.weed || window.DreamI18n?.t("brak") || "brak", 100))}</strong>`;
+      const meta6 = createNode("div", "spot-meta-box");
+      meta6.innerHTML = `<span>Rig</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.rig || window.DreamI18n?.t("brak") || "brak", 100))}</strong>`;
+      const meta7 = createNode("div", "spot-meta-box");
+      meta7.innerHTML = `<span>Przynęta</span><strong data-user-content>${Dream.esc(normalizeTextSafe(item.bait || window.DreamI18n?.t("brak") || "brak", 100))}</strong>`;
 
-      metaGrid.append(meta1, meta2, meta3, meta4);
+      metaGrid.append(meta1, meta2, meta3, meta4, meta5, meta6, meta7);
       article.appendChild(metaGrid);
 
       if (item.note) {

@@ -51,11 +51,12 @@ function average(values) {
   return values.reduce((sum, value) => sum + Number(value || 0), 0) / values.length;
 }
 
+function defaultCarpSpecies(){return window.DreamI18n?.lang==='en'?'Carp':'Karp';}
 function formatCaughtAt(value) { return value ? Dream.format(value) : 'Brak daty'; }
 function formatDateForInput(value) { return Dream.dateInput(value); }
 
 function formatHour(value) {
-  return new Date(value).toLocaleString("pl-PL", {
+  return new Date(value).toLocaleString((document.documentElement.lang==='en'?'en-GB':'pl-PL'), {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
@@ -64,7 +65,7 @@ function formatHour(value) {
 }
 
 function formatDay(value) {
-  return new Date(value).toLocaleDateString("pl-PL", {
+  return new Date(value).toLocaleDateString((document.documentElement.lang==='en'?'en-GB':'pl-PL'), {
     weekday: "long",
     day: "2-digit",
     month: "2-digit"
@@ -194,26 +195,28 @@ async function getSpotNameById(spotId) {
 function updateCountdown() {
   const countdownEl = $("countdown");
   if (!countdownEl) return;
+  const english=window.DreamI18n?.lang==='en';
   const show=value=>{countdownEl.textContent=value;if($("dashboard-countdown"))$("dashboard-countdown").textContent=value;};
 
-  if (!TRIP_START) { show(window.DREAM_TRIP?.status === 'archived' ? 'Archiwum · termin nieustalony' : 'Termin do ustalenia'); return; }
+  if (!TRIP_START) { show(window.DREAM_TRIP?.status === 'archived' ? (english?'Archive · date unknown':'Archiwum · termin nieustalony') : (english?'Date to be confirmed':'Termin do ustalenia')); return; }
   const now = new Date();
   if (now < TRIP_START) {
     const diff = TRIP_START - now;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const minutes = Math.floor((diff / (1000 * 60)) % 60);
-    show(`Do wyjazdu: ${days} dni, ${hours} godz., ${minutes} min.`);
+    show(english?`Trip in: ${days} days, ${hours} hr, ${minutes} min.`:`Do wyjazdu: ${days} dni, ${hours} godz., ${minutes} min.`);
     return;
   }
 
   if (now >= TRIP_START && (!TRIP_END || now <= TRIP_END)) {
-    show("Wyjazd trwa");
+    show(english?'Trip in progress':'Wyjazd trwa');
     return;
   }
 
-  show("Wyjazd zakończony");
+  show(english?'Trip ended':'Wyjazd zakończony');
 }
+document.addEventListener('dream:i18n-ready',updateCountdown);
 
 function setupMobileMenu() {
   const toggleBtn = $("menu-toggle");
@@ -392,7 +395,7 @@ function populateSpotSelect(spots) {
   spots.forEach(spot => {
     const option = document.createElement("option");
     option.value = String(spot.id);
-    option.textContent = spot.name;
+    option.dataset.userContent=""; option.textContent = spot.name;
     select.appendChild(option);
   });
 
@@ -439,7 +442,7 @@ function validateCatchPayload(raw) {
 function fillCatchFormForEdit(item) {
   $("edit-catch-id").value = item.id;
   $("person").value = item.person || "";
-  $("species").value = item.species || "Karp";
+  $("species").value = item.species || defaultCarpSpecies();
   $("weight").value = item.weight ?? "";
   $("bait").value = item.bait || "";
   $("spot").value = item.spot || "";
@@ -457,6 +460,7 @@ function resetCatchForm() {
   if (!form) return;
   form.reset();
   $("edit-catch-id").value = "";
+  if($("species")) $("species").value=defaultCarpSpecies();
   $("catch-form-title").textContent = "Dodaj połów";
   $("save-catch-btn").textContent = "Dodaj połów";
   $("cancel-edit-catch-btn").classList.add("hidden");
@@ -497,6 +501,7 @@ async function handleCatchSubmit(event) {
 
   let error;
   let savedCatch = null;
+  let pendingSync = false;
   if (editId) {
     ({ data: savedCatch, error } = await d1Client
       .from("catches")
@@ -505,11 +510,28 @@ async function handleCatchSubmit(event) {
       .select("id, person, weight, caught_at")
       .single());
   } else {
-    ({ data: savedCatch, error } = await d1Client
-      .from("catches")
-      .insert([validation.payload])
-      .select("id, person, weight, caught_at")
-      .single());
+    try {
+      const angler = window.DREAM_MODEL?.anglers?.find(a => a.name === validation.payload.person);
+      if (!angler) throw new Error("Nieznany uczestnik wyjazdu.");
+      const result = await Dream.api("/api/catches", {
+        method: "POST",
+        body: JSON.stringify({
+          tripId: window.DREAM_TRIP.id,
+          anglerId: angler.id,
+          weightKg: validation.payload.weight,
+          species: validation.payload.species,
+          caughtAt: validation.payload.caught_at,
+          spot: validation.payload.spot,
+          spotId: validation.payload.spot_id,
+          bait: validation.payload.bait,
+          notes: validation.payload.note
+        })
+      });
+      pendingSync = Boolean(result.pendingSync);
+      savedCatch = { ...validation.payload, id: result.id };
+    } catch (caught) {
+      error = { message: caught?.message || String(caught) };
+    }
   }
 
   if (error) {
@@ -518,11 +540,14 @@ async function handleCatchSubmit(event) {
     return;
   }
 
-  if (savedCatch) celebrateCatchIfNeeded(savedCatch, { play: true });
+  if (savedCatch) celebrateCatchIfNeeded(savedCatch, { play: !pendingSync });
   resetCatchForm();
-  setMessage("form-message", editId ? "Zmiany zapisane." : "Połów został dodany.", "success");
-  try { await Dream.refreshModel(); await renderCatchesPage(); }
-  catch (error) { Dream.notice(`Połów zapisany. Nie udało się odświeżyć listy: ${error.message}`,true); }
+  setMessage("form-message", pendingSync ? "Oczekuje na synchronizację." : (editId ? "Zmiany zapisane." : "Połów został dodany."), "success");
+  try {
+    if (!pendingSync) await Dream.refreshModel();
+    await renderCatchesPage();
+  }
+  catch (error) { Dream.notice(`${pendingSync ? "Połów czeka na synchronizację." : "Połów zapisany."} Nie udało się odświeżyć listy: ${error.message}`,true); }
 }
 
 async function deleteCatch(id) {
@@ -571,7 +596,7 @@ function renderCatchesList(catches, spots) {
     const top = el("div", "catch-item-top");
     const left = el("div");
     left.appendChild(el("h4", "", `${item.person} - ${item.species}`));
-    left.appendChild(el("div", "catch-meta", formatCaughtAt(item.caught_at)));
+    left.appendChild(el("div", "catch-meta", formatCaughtAt(item.caught_at)+(item.pendingSync?" · Oczekuje na synchronizację":"")));
     if (item.spot_id) {
       left.appendChild(el("div", "muted-small", `Powiązany spot: ${getSpotDisplayName(item, spots)}`));
     }
@@ -583,6 +608,7 @@ function renderCatchesList(catches, spots) {
     const deleteBtn = el("button", "danger-btn", "Usuń");
     deleteBtn.type = "button";
     deleteBtn.addEventListener("click", () => deleteCatch(item.id));
+    editBtn.disabled=deleteBtn.disabled=Boolean(item.pendingSync);
     actions.append(editBtn, deleteBtn);
     top.append(left, actions);
 
@@ -616,7 +642,12 @@ function bindCatchesPageEvents() {
   if (catchFormBound) return;
   catchFormBound = true;
 
-  $("catch-form")?.addEventListener("submit", guardedSubmit(handleCatchSubmit));
+  const catchForm=$("catch-form"),catchSave=$("save-catch-btn");
+  // Keep the browser's native submit path. Custom click redispatch caused real
+  // mobile/offline clicks to be consumed without a submit event.
+  catchForm?.addEventListener("submit", guardedSubmit(handleCatchSubmit));
+  if(catchForm)catchForm.dataset.bound="true";
+  if(catchSave)catchSave.disabled=false;
   $("refresh-catches-btn")?.addEventListener("click", () => renderCatchesPage().catch(error=>Dream.notice(error.message,true)));
   $("cancel-edit-catch-btn")?.addEventListener("click", resetCatchForm);
   $("spot-id")?.addEventListener("change", async e => {
@@ -790,6 +821,7 @@ function renderChecklistGroups(items) {
       const content = el("div", "check-item-content");
       const title = el("div", `check-item-title${item.done ? " done" : ""}`, item.item_name);
       const metaText = [];
+      if (item.pendingSync) metaText.push("Oczekuje na synchronizację");
       if (item.quantity !== null && item.quantity !== undefined) metaText.push(`${Number(item.quantity)} ${item.unit}`);
       metaText.push(item.done ? "Spakowane" : "Do ogarnięcia");
       const meta = el("div", "check-item-meta", metaText.join(" • "));
@@ -842,6 +874,11 @@ function validateSpotPayload(raw) {
   const distance_m = parseNumber(raw.distance_m, { min: 0, max: 2000, allowNull: true });
   const depth_m = parseNumber(raw.depth_m, { min: 0, max: 100, allowNull: true });
   const bottom_type = normalizeText(raw.bottom_type, 60);
+  const latitude = parseNumber(raw.latitude, { min: -90, max: 90, allowNull: true });
+  const longitude = parseNumber(raw.longitude, { min: -180, max: 180, allowNull: true });
+  const weed = normalizeText(raw.weed, 100);
+  const rig = normalizeText(raw.rig, 100);
+  const bait = normalizeText(raw.bait, 100);
   const note = normalizeText(raw.note, 500);
   const obstacles = normalizeText(raw.obstacles, 120);
   const best_time = normalizeText(raw.best_time, 60);
@@ -850,6 +887,8 @@ function validateSpotPayload(raw) {
   if (!name) return { ok: false, message: "Podaj nazwę spotu." };
   if (Number.isNaN(distance_m)) return { ok: false, message: "Odległość musi być liczbą 0 lub większą." };
   if (Number.isNaN(depth_m)) return { ok: false, message: "Głębokość musi być liczbą 0 lub większą." };
+  if (Number.isNaN(latitude)) return { ok: false, message: "Szerokość GPS musi być liczbą od -90 do 90." };
+  if (Number.isNaN(longitude)) return { ok: false, message: "Długość GPS musi być liczbą od -180 do 180." };
 
   return {
     ok: true,
@@ -858,6 +897,11 @@ function validateSpotPayload(raw) {
       distance_m,
       depth_m,
       bottom_type: bottom_type || null,
+      latitude,
+      longitude,
+      weed: weed || null,
+      rig: rig || null,
+      bait: bait || null,
       note: note || null,
       obstacles: obstacles || null,
       best_time: best_time || null,
@@ -872,6 +916,11 @@ function fillSpotFormForEdit(item) {
   $("spot-distance").value = item.distance_m ?? "";
   $("spot-depth").value = item.depth_m ?? "";
   $("spot-bottom").value = item.bottom_type || "";
+  if ($("spot-latitude")) $("spot-latitude").value = item.latitude ?? "";
+  if ($("spot-longitude")) $("spot-longitude").value = item.longitude ?? "";
+  if ($("spot-weed")) $("spot-weed").value = item.weed || "";
+  if ($("spot-rig")) $("spot-rig").value = item.rig || "";
+  if ($("spot-bait")) $("spot-bait").value = item.bait || "";
   $("spot-note").value = item.note || "";
   if ($("spot-obstacles")) $("spot-obstacles").value = item.obstacles || "";
   if ($("spot-best-time")) $("spot-best-time").value = item.best_time || "";
@@ -900,6 +949,11 @@ async function handleSpotSubmit(event) {
     distance_m: $("spot-distance")?.value,
     depth_m: $("spot-depth")?.value,
     bottom_type: $("spot-bottom")?.value,
+    latitude: $("spot-latitude")?.value,
+    longitude: $("spot-longitude")?.value,
+    weed: $("spot-weed")?.value,
+    rig: $("spot-rig")?.value,
+    bait: $("spot-bait")?.value,
     note: $("spot-note")?.value,
     obstacles: $("spot-obstacles")?.value,
     best_time: $("spot-best-time")?.value,
@@ -955,9 +1009,13 @@ async function deleteSpot(id) {
 }
 
 async function editSpot(id) {
-  const spots = await loadSpotsFromD1();
-  const item = spots.find(spot => Number(spot.id) === Number(id));
-  if (item) fillSpotFormForEdit(item);
+  const controls=[...$("spot-form").querySelectorAll("input,select,button")],disabled=controls.map(control=>control.disabled);
+  controls.forEach(control=>control.disabled=true);
+  try {
+    const spots = await loadSpotsFromD1();
+    const item = spots.find(spot => Number(spot.id) === Number(id));
+    if (item) fillSpotFormForEdit(item);
+  } finally {controls.forEach((control,index)=>control.disabled=control.type==="submit"?$("spot-form").dataset.saving==="true":disabled[index]);}
 }
 
 function renderSpotsSummary(spots) {
@@ -985,7 +1043,7 @@ function renderSpotsList(spots) {
     const top = el("div", "spot-card-top");
     const left = el("div");
     left.appendChild(el("h4", "", item.name));
-    left.appendChild(el("div", "catch-meta", `Dodano: ${formatCaughtAt(item.created_at)}`));
+    left.appendChild(el("div", "catch-meta", `Dodano: ${formatCaughtAt(item.created_at)}${item.pendingSync?" · Oczekuje na synchronizację":""}`));
 
     const actions = el("div", "inline-actions");
     const editBtn = el("button", "edit-btn", "Edytuj");
@@ -994,6 +1052,7 @@ function renderSpotsList(spots) {
     const deleteBtn = el("button", "danger-btn", "Usuń");
     deleteBtn.type = "button";
     deleteBtn.addEventListener("click", () => deleteSpot(item.id));
+    editBtn.disabled=deleteBtn.disabled=Boolean(item.pendingSync);
     actions.append(editBtn, deleteBtn);
     top.append(left, actions);
 
@@ -1001,6 +1060,7 @@ function renderSpotsList(spots) {
     badges.appendChild(el("span", "badge", `Odległość: ${item.distance_m !== null && item.distance_m !== undefined ? `${Number(item.distance_m).toFixed(1)} m` : "brak"}`));
     badges.appendChild(el("span", "badge", `Głębokość: ${item.depth_m !== null && item.depth_m !== undefined ? `${Number(item.depth_m).toFixed(1)} m` : "brak"}`));
     badges.appendChild(el("span", "badge", `Dno: ${normalizeText(item.bottom_type || "brak", 60)}`));
+    if (item.latitude != null && item.longitude != null) badges.appendChild(el("span", "badge", `GPS: ${Number(item.latitude).toFixed(5)}, ${Number(item.longitude).toFixed(5)}`));
 
     article.append(top, badges);
 
@@ -1008,6 +1068,9 @@ function renderSpotsList(spots) {
     if (item.obstacles) meta.push(`Zaczepy: ${normalizeText(item.obstacles, 120)}`);
     if (item.best_time) meta.push(`Najlepsza pora: ${normalizeText(item.best_time, 60)}`);
     if (item.best_wind) meta.push(`Najlepszy wiatr: ${normalizeText(item.best_wind, 60)}`);
+    if (item.weed) meta.push(`Zielsko: ${normalizeText(item.weed, 100)}`);
+    if (item.rig) meta.push(`Rig: ${normalizeText(item.rig, 100)}`);
+    if (item.bait) meta.push(`Przynęta: ${normalizeText(item.bait, 100)}`);
     if (meta.length) {
       article.appendChild(el("div", "catch-note", meta.join(" • ")));
     }

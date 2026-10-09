@@ -4,6 +4,7 @@
   "main": "src/worker.js",
   "secrets": { "required": ["TAVILY_API_KEY"] },
   "compatibility_date": "2026-09-03",
+  "vars": { "AI_FREE_ONLY": "false" },
   "triggers": { "crons": ["0 6 * * *"] },
   "assets": {
     "directory": "./public",
@@ -17,5 +18,10 @@
       "database_name": "dream-team-db",
       "database_id": "b64c7a2c-8694-41c6-b54a-857b88bf2c96"
     }
+  ],
+  "ai": { "binding": "AI" },
+  "r2_buckets": [
+    { "binding": "MEDIA", "bucket_name": "dream-team-media" },
+    { "binding": "BACKUP_STATUS", "bucket_name": "dream-team-d1-backups" }
   ]
 }

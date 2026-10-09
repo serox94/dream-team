@@ -1,0 +1,135 @@
+{
+  "version": "2026-10-06.en.1",
+  "categories": {
+    "Przynęty": "Baits",
+    "Dno i miejsce": "Bottom and location",
+    "Warunki": "Conditions",
+    "Taktyka": "Tactics",
+    "Bezpieczeństwo": "Fish safety"
+  },
+  "articles": {
+    "przynety": {
+      "title": "Baits: presentation before flavour",
+      "lead": "First confirm that fish are present and that the rig lands cleanly. A flavour name cannot compensate for poor presentation or location.",
+      "sections": [
+        ["Bottom bait, wafter, pop-up", "A sinking boilie is a starting point on clear hard or slightly soft bottom. Balance a wafter with the actual hook; its near-neutral buoyancy can make it easier to take. Use a pop-up to lift the hook above low weed, debris or silt, setting its height to the obstacle you have checked."],
+        ["Small and natural baits", "Pellet breakdown depends on its ingredients, size and water temperature. Corn, cooked particles, hemp and tiger nuts offer small food items but can also attract bream and other fish. Worms and larvae may work, yet are attractive to other species. Check the rules and prepare particles safely."],
+        ["Run a controlled test", "Change one thing at a time: location, presentation, feed amount, then hookbait size, colour or profile. A single hookbait can be useful in a short session or under pressure. Feed regularly only when fish activity and consumption justify it."]
+      ]
+    },
+    "profile": {
+      "title": "Flavour profiles are hypotheses, not a calendar",
+      "lead": "Flavour is one signal among many. Solubility, freshness, food size and angling pressure matter; no flavour is proven to work in every water during a particular month.",
+      "sections": [
+        ["Food base and signal", "Fishmeal, krill, squid, crab and liver describe ingredients or a marine/meaty profile, but the label does not prove composition or digestibility. Garlic, spice and Robin Red style can contrast with a fish base. Scopex, creamy, vanilla, nut and tiger nut lean sweet or nutty; fruit and citrus can be conspicuous hookbait signals. Do not assume carp share human taste preferences."],
+        ["Cool and warm water", "In cool water start with a small amount and check how a bait releases attractants. Oil content and solubility vary between products; fishmeal itself does not make a bait unsuitable for winter. In warmer water increase food only when fish are actually feeding."],
+        ["When to switch", "Try a different profile after confirming fish and a clean rig, when comparable presentations produce no response. Under pressure compare size, food amount and a muted appearance as well. One bite cannot isolate the effect of flavour."]
+      ]
+    },
+    "kombinacje": {
+      "title": "Combining hookbaits and flavours",
+      "lead": "Combine baits for contrast, buoyancy or release rate. There is no universally effective flavour pair.",
+      "sections": [
+        ["Combinations to compare", "Fishmeal with garlic or spice, krill with garlic, or squid with fruit pair a food base with a distinct signal. A bright fruit topper against natural fishmeal boilies adds visual contrast. Tiger nut with creamy or nutty notes is another comparison. Colour and buoyancy may explain a result better than scent."],
+        ["Presentation mechanics", "A snowman combines a sinking boilie and smaller pop-up to change hook balance. A wafter over a little pellet or a pop-up over a small food patch is easy to test. Check where the hooklink settles. Above silt or weed, keep the hookbait accessible and the rig safe."],
+        ["Compare fairly", "Do not change location, depth, colour and smell together. With two rigs in comparable spots, allow enough time to observe and record the conditions, not just the apparent winning flavour."]
+      ]
+    },
+    "kolory": {
+      "title": "Hookbait colour and visibility",
+      "lead": "Colour tests visibility and contrast under the actual light, water clarity, depth and background. No colour guarantees a take.",
+      "sections": [
+        ["Bright and contrasting", "White, yellow, pink or orange may stand out against dark silt or weed. In murky water or low light, a bright hookbait still needs to be close to fish. Red may contrast on a pale bottom, but its appearance changes with depth and light."],
+        ["Subtle choices", "Brown, dark, natural or washed-out baits reduce contrast on some pressured waters. Do not assume fish fear a particular colour. Compare one conspicuous bait with one that blends into the bottom under similar conditions."]
+      ]
+    },
+    "dno": {
+      "title": "Bottom type and rig presentation",
+      "lead": "Sonar shows shape and strength of the return; a lead or marker helps check the actual bottom. Verify how the hook, hooklink and lead settle.",
+      "sections": [
+        ["Check the bottom", "Save the depth and track, scan again with a narrower beam, then feel the bottom with a lead or marker where permitted. A sharp tap or vibration suggests firm contact; a dull drop and sediment on the lead suggest softness. Weed can catch on the rig. These are clues, not laboratory identification of gravel or clay from a pixel."],
+        ["Match the rig", "On clean hard bottom, begin with a controlled, shorter presentation. In soft silt, consider a lighter lead or a hookbait that remains clear of the sediment; set hooklink length after checking how far the lead sinks. In weed, find a clean hole or edge and ensure the rig releases the lead safely. No single hooklink length suits every bottom."],
+        ["Firm bottom or natural food?", "A bare hard patch makes rig placement easy but may hold little natural food. Compare fertile shallow silt or a weed edge with clean gravel. Feel the bottom, watch for fish and then select a presentation rather than choosing the brightest sonar return automatically."]
+      ]
+    },
+    "temperatura": {
+      "title": "Water temperature and the seasons",
+      "lead": "Temperature bands are observation points, not automatic behaviour switches. Track the trend, measurement depth, oxygen and this particular water.",
+      "sections": [
+        ["Cold water and warming", "Below 6°C and around 6–8°C, locate fish first and start with little food. At 8–12°C and 12–16°C, compare areas warming over several days, without assuming every shallow bay holds fish. Metabolism and digestion respond to temperature, and the direction of change can matter more than one reading."],
+        ["Spawning and summer", "Around 16–20°C carp may gather in shallow weedy areas to spawn; local conditions and restrictions take priority. Feeding after spawning varies. Around 20–24°C more food can be justified by observed feeding. Above 24°C watch for low oxygen, especially overnight and after heat, and minimise handling."],
+        ["Autumn", "Late summer and autumn change temperature and food distribution. Do not automatically fish the deepest water; look for fish, oxygenated areas and bottom transitions. A large deep gravel pit may cool more slowly than a shallow pond."]
+      ]
+    },
+    "necenie": {
+      "title": "Feeding: amount, spread and response",
+      "lead": "Adjust food to active fish and observed consumption. Starting with kilograms without knowing the water can make the situation harder to read.",
+      "sections": [
+        ["Small patch or wide spread", "PVA, a solid bag or a stick mix puts a small amount close to the hook on a short, cold or uncertain session. Whole and chopped boilies, pellet, spod mixes and particles spread across an area can encourage movement. Scattering bait into dense weed or deep silt may make clean rig placement difficult."],
+        ["Stock and other species", "On a water with many feeding carp, top up after a response. With few fish or high pressure, a smaller, less frequent portion is often a better test. Fine pellets, hemp and corn can draw bream. Crayfish can damage soft hookbaits; use a tougher bait and check it. Prepare tiger nuts and other particles safely and within the rules."],
+        ["Bottom layer", "On gravel it is easier to judge the spread. On silt check whether food sinks or takes on the sediment smell. In weed target clean openings or edges. Topping up without a response can obscure what is happening; first confirm fish are there."]
+      ]
+    },
+    "pogoda": {
+      "title": "Weather, oxygen and bites: what we know",
+      "lead": "Water temperature and oxygen availability have clear physiological effects. Wind direction and pressure changes are location clues, not automatic bite forecasts.",
+      "sections": [
+        ["Mechanisms", "Water temperature affects metabolism and digestion. Warmer water holds less dissolved oxygen; wind, waves, inflows and mixing can change local conditions. Cloud and light affect visibility and fish exposure. During a thunderstorm, human safety comes first: remove rods and leave exposed areas."],
+        ["Practical clues, not laws", "A windward bank may gather food and oxygenate water, yet a cold wind, lake shape and earlier trend can reverse the effect. Pressure changes arrive with fronts, rain, temperature and wind: a particular hPa value does not cause a bite. Dawn and dusk are useful observation windows, not mandatory feeding hours."],
+        ["Record and compare", "Note water temperature at a similar depth, the weather trend, wind, visible fish and bite times. Compare several sessions on the same water rather than learning an allegedly ideal pressure threshold."]
+      ]
+    },
+    "ksiezyc": {
+      "title": "The moon: observe, do not promise",
+      "lead": "There is no strong practical rule that a full or new moon guarantees carp feeding in freshwater.",
+      "sections": [
+        ["Possible mechanisms", "Moonlight can affect visibility and behaviour. Moonrise and moonset change nighttime light. In tidal waters the lunar cycle alters current and food access; this usually does not apply to a lake. One successful full-moon catch cannot separate moonlight from season, weather and the chosen spot."],
+        ["Useful notes", "Record phase and moon times alongside actual water temperature, wind and fish activity. Base location and rig decisions primarily on observations at the water."]
+      ]
+    },
+    "lokalizacja": {
+      "title": "Locate fish before changing bait",
+      "lead": "Watch the water first. A single roll, bubble or cloud of sediment is a clue to check again in time and place.",
+      "sections": [
+        ["Signs", "Repeated rolls, reeds moving, disturbed silt, fish wakes and bubbles can indicate activity. Bubbles can also rise from decomposing sediment. Check margins, islands, fallen trees, sheltered bays, shelves, humps, channels and gravel–silt or weed–clear transitions."],
+        ["Choose depth", "In spring sunny shallows can attract fish; in summer consider oxygen and safe cover, as well as layers in stratified water. Deep water is not always better oxygenated. Wind direction is one clue, never a substitute for looking."],
+        ["Place the rig", "A clean opening next to fish can be better than a badly presented rig directly among them. Distinguish travel routes, holding areas and feeding areas. After scanning, confirm firmness with a lead if the rules allow it."]
+      ]
+    },
+    "presja": {
+      "title": "Angling pressure and cautious carp",
+      "lead": "Caution does not mean a carp recognises a flavour. Pressure can change where fish stay and how they respond to disturbance; not every difficult day is caused by pressure.",
+      "sections": [
+        ["Reduce disturbance", "Limit repeated casts, noise, bait boat passes and commotion at the bank. Before recasting, check that the rig is settled and fish are nearby. A quiet edge near a popular spot can offer less disturbance."],
+        ["Presentation", "A single hookbait, small feed amount and natural or washed-out colour are options to compare. On some waters, regular larger feeding can also work when the stock and session length support it. A forum anecdote is not a permanent rule."]
+      ]
+    },
+    "problemy": {
+      "title": "Other species and missing bait",
+      "lead": "First identify what removes food or damages the hookbait. Each cause calls for a different compromise.",
+      "sections": [
+        ["Bream and small fish", "Repeated indications without carp and quickly disappearing small particles suggest other fish. Compare a larger or tougher hookbait, fewer fine particles and less frequent feeding; moving one rig may be better. There is no flavour that bream cannot eat."],
+        ["Crayfish and catfish", "A nibbled hookbait or shortened hooklink after a check suggests mechanical damage. A rule-permitted bait mesh, tougher bait, shorter checks or a different spot may help. Do not leave material that an animal could swallow."],
+        ["Water birds", "Do not feed birds. Reduce visible surface food and avoid baiting where diving birds reach rigs. Their safety and local rules take priority over a bite."]
+      ]
+    },
+    "bezpieczenstwo": {
+      "title": "Carp safety",
+      "lead": "Prepare a wet mat or cradle and a landing net before casting. Keep time out of water short, particularly in hot weather.",
+      "sections": [
+        ["From net to release", "Check lake rules. Wet your hands, mat or cradle, weighing sling and contact surfaces. Support a fish low over the mat; never lift by gills or vertically by the jaw. Tare the scale and prepare photos in advance. Use wound treatment as directed when appropriate, without prolonging handling unnecessarily."],
+        ["Heat, cold and recovery", "Hot, poorly oxygenated water increases stress; shorten or stop fishing if conditions are poor. In cold weather protect fish from frost and dry ground. Release in calm water, supporting the fish until it recovers rather than pushing it away."],
+        ["Rigs", "Choose a rig that can shed the lead after a break and does not leave a fish trailing line. Local rules and conservation requirements always take priority."]
+      ]
+    },
+    "sezony": {
+      "title": "The season is not a strategy: an observation plan",
+      "lead": "A month describes the calendar; water temperature, oxygen and the fish describe the lake.",
+      "sections": [
+        ["Winter and early spring", "Winter feeding windows may be brief and local. Reduce food without assuming all fish are immobile. In early spring compare sun-warmed bays with deeper water and account for cold nights."],
+        ["Before, during and after spawning", "Before spawning, fish may gather in weedy shallows. During spawning respect closures and leave fish undisturbed. Their condition and feeding afterwards vary, so increase food gradually only after observing a response."],
+        ["Summer and autumn", "In heat look for oxygen and minimise time on the bank for landed fish. In autumn compare areas with stable temperature and accessible food. A large deep lake cools differently from a shallow pond."]
+      ]
+    }
+  }
+}
