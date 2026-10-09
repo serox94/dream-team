@@ -123,7 +123,7 @@ jobs:
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/live-preview-extras.mjs
       - name: Final real preview PL EN regression at 390 and desktop
-        if: ${{ !cancelled() && steps.language.outcome == 'success' && steps.media.outcome == 'success' && steps.offline.outcome == 'success' && steps.extras.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.language.outcome == 'success' && steps.media.outcome == 'success' && steps.offline.outcome == 'success' }}
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}

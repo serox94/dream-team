@@ -5,11 +5,11 @@ const base='https://dream-team-preview.sewerynski00.workers.dev';
 const browser=await chromium.launch();
 const login=async(locale,lang)=>{
   const context=await browser.newContext({viewport:{width:390,height:844},locale});
-  const page=await context.newPage();
+  let page=await context.newPage();
   const pageErrors=[];page.on('pageerror',error=>pageErrors.push(error.message));
   for(let attempt=0;attempt<2;attempt++){
     let response;try{response=await page.goto(base+'/login',{waitUntil:'commit',timeout:30000});assert.equal(response.status(),200);await page.locator('html[data-i18n-ready]').waitFor({state:'attached',timeout:30000});break;}
-    catch(error){console.warn('EXTRAS login readiness',{attempt,status:response?.status(),url:page.url(),pageErrors});if(attempt)throw error;}
+    catch(error){console.warn('EXTRAS login readiness',{attempt,status:response?.status(),url:page.url(),pageErrors});if(attempt)throw error;await page.close();page=await context.newPage();page.on('pageerror',error=>pageErrors.push(error.message));}
   }
   await Promise.all([page.waitForNavigation({waitUntil:'commit',timeout:30000}),page.locator('.language-selector select').selectOption(lang)]);
   await page.locator(`html[data-i18n-ready="${lang}"]`).waitFor({timeout:30000});
