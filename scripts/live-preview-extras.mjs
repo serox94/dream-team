@@ -11,12 +11,12 @@ const login=async(locale,lang)=>{
     let response;try{response=await page.goto(base+'/login',{waitUntil:'commit',timeout:30000});assert.equal(response.status(),200);await page.locator('html[data-i18n-ready]').waitFor({state:'attached',timeout:30000});break;}
     catch(error){console.warn('EXTRAS login readiness',{attempt,status:response?.status(),url:page.url(),pageErrors});if(attempt)throw error;}
   }
-  await Promise.all([page.waitForNavigation({waitUntil:'domcontentloaded',timeout:30000}),page.locator('.language-selector select').selectOption(lang)]);
+  await Promise.all([page.waitForNavigation({waitUntil:'commit',timeout:30000}),page.locator('.language-selector select').selectOption(lang)]);
   await page.locator(`html[data-i18n-ready="${lang}"]`).waitFor({timeout:30000});
   await page.locator('input[name="username"]').fill(process.env.RYBY_LOGIN_USERNAME);
   await page.locator('input[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);
   await page.locator('button[type="submit"]').click({noWaitAfter:true});
-  await page.waitForURL(url=>new URL(url).pathname==='/',{waitUntil:'domcontentloaded',timeout:60000});
+  await page.waitForURL(url=>new URL(url).pathname==='/',{waitUntil:'commit',timeout:60000});
   await page.locator(`html[data-ready="true"][data-i18n-ready="${lang}"]`).waitFor({timeout:30000});
   return {context,page};
 };
@@ -25,7 +25,7 @@ try{
   const pl=await login('pl-PL','pl'),en=await login('en-GB','en');
   assert.equal(await pl.page.evaluate(()=>localStorage.getItem('dreamteam.language')),'pl');
   assert.equal(await en.page.evaluate(()=>localStorage.getItem('dreamteam.language')),'en');
-  await Promise.all([pl.page.reload({waitUntil:'domcontentloaded'}),en.page.reload({waitUntil:'domcontentloaded'})]);
+  await Promise.all([pl.page.reload({waitUntil:'commit'}),en.page.reload({waitUntil:'commit'})]);
   await pl.page.locator('html[data-ready="true"][data-i18n-ready="pl"]').waitFor({timeout:30000});
   await en.page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
   console.log('LIVE TWO-DEVICE LANGUAGE: PASS independent PL/EN preferences persist.');
@@ -41,7 +41,7 @@ try{
   const cats=(await api('/api/checklist-categories')).categories.filter(c=>c.active);assert.ok(cats.length,'preview must have an active checklist category');
   const stamp=Date.now(),seedLabel='QA template seed '+stamp,nameA='QA template A '+stamp,nameB='QA template B '+stamp,renamed=nameA+' edited';
   const seed=(await api('/api/checklist',{method:'POST',body:JSON.stringify({tripId:trip.id,category:cats[0].name,label:seedLabel,packed:false})})).id;
-  await page.goto(base+'/pages/checklisty.html',{waitUntil:'domcontentloaded',timeout:60000});
+  await page.goto(base+'/pages/checklisty.html',{waitUntil:'commit',timeout:60000});
   await page.locator('html[data-ready="true"]').waitFor({timeout:30000});
   await page.locator('#checklist-templates').waitFor({timeout:30000});
   for(const box of await page.locator('#template-categories input').all())await box.uncheck();
@@ -78,7 +78,7 @@ try{
   }finally{await api(`/api/checklist/${seed}?tripId=${encodeURIComponent(trip.id)}`,{method:'DELETE',body:'{}'}).catch(()=>{});}
 
   // Participant profile: persist one reversible change and restore it.
-  await page.goto(base+'/pages/ustawienia.html',{waitUntil:'domcontentloaded',timeout:60000});
+  await page.goto(base+'/pages/ustawienia.html',{waitUntil:'commit',timeout:60000});
   await page.locator('html[data-ready="true"]').waitFor({timeout:30000});
   await page.locator('#participant-profile-list .participant-profile').first().waitFor({timeout:30000});
   const bootstrap=await page.request.get(base+'/api/bootstrap').then(r=>r.json());
