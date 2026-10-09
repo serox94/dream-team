@@ -21,7 +21,7 @@
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
   const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings)(?:\?|$)/;
   const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1';
-  let synchronizing=false;
+  let synchronizing=false,syncRetryTimer=null,syncRetryDelay=1000;
   function readQueue(){try{const value=JSON.parse(localStorage.getItem(queueKey)||'[]');return Array.isArray(value)?value:[];}catch{return [];}}
   function writeQueue(items){localStorage.setItem(queueKey,JSON.stringify(items));showOfflineState();}
   function pendingCount(){return readQueue().length;}
@@ -60,20 +60,22 @@
   }
   async function syncQueue(){
     if(synchronizing||navigator.onLine===false||!readQueue().length)return;
-    synchronizing=true;let synced=0;
+    if(syncRetryTimer){clearTimeout(syncRetryTimer);syncRetryTimer=null;}
+    synchronizing=true;let synced=0,retry=false;
     try{for(const item of readQueue()){
       if(item.status==='conflict')continue;
       try{const response=await authorizedFetch('/api/offline-sync',{method:'POST',body:JSON.stringify(item)},AbortSignal.timeout(20000));
         if(response.status===401)break;
         const result=await response.json();
         if(response.status===409){item.status='conflict';item.serverRevision=result.serverRevision;item.serverValue=result.serverValue;item.error=result.error;writeQueue(readQueue().map(q=>q.key===item.key?item:q));continue;}
-        if(!response.ok){item.status='error';item.error=result.error||`HTTP ${response.status}`;writeQueue(readQueue().map(q=>q.key===item.key?item:q));break;}
-        const remaining=readQueue().filter(q=>q.key!==item.key);writeQueue(remaining);synced++;
+        if(!response.ok){retry=response.status>=500||response.status===429;item.status='error';item.error=result.error||`HTTP ${response.status}`;writeQueue(readQueue().map(q=>q.key===item.key?item:q));break;}
+        const remaining=readQueue().filter(q=>q.key!==item.key);writeQueue(remaining);synced++;syncRetryDelay=1000;
         const tripId=item.payload.tripId||new URL(item.path,location.origin).searchParams.get('tripId');
         const resource=item.path.match(/^\/api\/(catches|spots|checklist|notes)/)?.[1];
         if(resource&&tripId){const entries=readEntries();delete entries[`/api/${resource}?tripId=${tripId}`];localStorage.setItem(readCacheKey,JSON.stringify(entries));}
-      }catch{break;}
+      }catch{retry=true;break;}
     }}finally{synchronizing=false;showOfflineState();}
+    if(retry&&pendingCount()&&navigator.onLine!==false){syncRetryTimer=setTimeout(()=>{syncRetryTimer=null;syncQueue();},syncRetryDelay);syncRetryDelay=Math.min(syncRetryDelay*2,60000);}
     if(synced){document.dispatchEvent(new Event('dream:synced'));if(!pendingCount())setTimeout(()=>location.reload(),100);}
   }
   function resolveConflict(key,choice){const queue=readQueue(),item=queue.find(q=>q.key===key);if(!item)return;

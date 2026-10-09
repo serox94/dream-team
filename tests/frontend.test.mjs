@@ -234,7 +234,11 @@ test('offline write queue updates checklist immediately and syncs once when conn
   assert.equal(s.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(before.id).packed,0);
   const pending=await p.w.Dream.api('/api/checklist?tripId=next-trip');assert.equal(pending.items.find(x=>x.id===before.id).packed,true);
   assert.match(p.d.getElementById('offline-banner').textContent,/oczekuj.*synchronizację/i);
-  p.w.fetch=live;await p.w.Dream.syncQueue();await waitFor(()=>p.w.Dream.pendingCount()===0);
+  let attempts=0;const keys=[];
+  p.w.fetch=async(url,options)=>{if(url==='/api/offline-sync'){attempts++;keys.push(JSON.parse(options.body).key);const response=await live(url,options);if(attempts===1)throw new TypeError('response lost after server commit');return response;}return live(url,options);};
+  await p.w.Dream.syncQueue();assert.equal(p.w.Dream.pendingCount(),1);
+  await waitFor(()=>p.w.Dream.pendingCount()===0,'automatic retry after lost response');
+  assert.equal(attempts,2);assert.equal(keys[0],keys[1]);
   assert.equal(s.DB.sqlite.prepare('SELECT packed,revision FROM checklist_items WHERE id=?').get(before.id).packed,1);
   assert.equal(s.DB.sqlite.prepare('SELECT revision FROM checklist_items WHERE id=?').get(before.id).revision,before.revision+1);
   assert.deepEqual(p.errors,[]);
