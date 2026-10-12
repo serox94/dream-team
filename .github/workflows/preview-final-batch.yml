@@ -316,8 +316,40 @@ jobs:
           name: live-preview-weather
           path: live-preview-qa
 
+  qa-knowledge:
+    needs: [qa-accounts]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Actual encyclopedia evidence, unmeasured water and safe decisions at 390/1280 PL/EN
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-knowledge.mjs
+      - name: Preserve knowledge evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-knowledge
+          path: live-preview-qa
+
   qa-user-language:
-    needs: [qa-language, qa-media, qa-offline, qa-extras, qa-weather]
+    needs: [qa-language, qa-media, qa-offline, qa-extras, qa-weather, qa-knowledge]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

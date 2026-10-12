@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-05.1",
+  "version": "2026-10-12.encyclopedia-2",
   "accessed": "2026-10-05",
   "sources": [
     {
@@ -8,7 +8,8 @@
       "name": "Temperature induced metabolic costs in carp",
       "lang": "EN / DE",
       "url": "https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1439-0426.1992.tb00664.x",
-      "published": "1992"
+      "published": "1992",
+      "verified": "2026-10-12"
     },
     {
       "id": "s02",
@@ -32,7 +33,8 @@
       "name": "Carp response to oxygen deficiency in winter",
       "lang": "EN",
       "url": "https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2109.2005.01426.x",
-      "published": "2006"
+      "published": "2006",
+      "verified": "2026-10-12"
     },
     {
       "id": "s05",
@@ -53,7 +55,8 @@
       "type": "practice",
       "name": "Angling Trust: Freshwater best practice and fish welfare",
       "lang": "EN / UK",
-      "url": "https://anglingtrust.net/get-involved/best-practice-freshwater/"
+      "url": "https://anglingtrust.net/get-involved/best-practice-freshwater/",
+      "verified": "2026-10-12"
     },
     {
       "id": "s08",
@@ -61,7 +64,8 @@
       "name": "Angling Trust: Fishing during hot weather",
       "lang": "EN / UK",
       "url": "https://anglingtrust.net/2025/07/16/fishing-during-hot-weather/",
-      "published": "2025"
+      "published": "2025",
+      "verified": "2026-10-12"
     },
     {
       "id": "s09",
@@ -77,14 +81,15 @@
       "name": "CC Moore: Fishmeals and oils in winter (stanowisko producenta)",
       "lang": "EN / UK",
       "url": "https://ccmoore.com/blog/post/26-do-fishmeals-oils-work-in-the-winter",
-      "published": "2017"
+      "published": "2017",
+      "verification": "publisher_search_excerpt"
     },
     {
       "id": "s11",
       "type": "manufacturer",
       "name": "CC Moore: Cold water PVA bag guidance (stanowisko producenta)",
       "lang": "EN / UK",
-      "url": "https://ccmoore.com/pva-bag-mixes/29035-132921-all-season-bag-mix"
+      "url": "https://ccmoore.com/pva-bag-mixes/29035-all-season-bag-mix"
     },
     {
       "id": "s12",
@@ -95,11 +100,12 @@
     },
     {
       "id": "s13",
-      "type": "practice",
+      "type": "manufacturer",
       "name": "Gardner Tackle: Roddie Rig over silt and weed",
       "lang": "EN / UK",
       "url": "https://gardnertackle.co.uk/2017/10/the-roddie-rig/",
-      "published": "2017"
+      "published": "2017",
+      "verified": "2026-10-12"
     },
     {
       "id": "s14",
@@ -351,6 +357,47 @@
       "name": "Fish Deeper — palety i twardość na ekranie",
       "lang": "EN / LT",
       "url": "https://support.deeper.eu/760937-What-screen-color-modes-are-available-on-the-Deeper-App-and-how-to-use-them-Deeper-PRO--PRO--CHIRP"
+    },
+    {
+      "id": "s49",
+      "type": "science",
+      "name": "FAO: Improving Pond Water Quality — temperature, stratification and dissolved oxygen",
+      "lang": "EN",
+      "url": "https://www.fao.org/fishery/static/FAO_Training/FAO_Training/General/x6709e/x6709e02.htm",
+      "verified": "2026-10-12"
+    },
+    {
+      "id": "s50",
+      "type": "science",
+      "name": "FAO / Peteri 2009: Cyprinus carpio — cultured species fact sheet",
+      "lang": "EN",
+      "url": "https://www.fao.org/fishery/docs/CDrom/aquaculture/I1129m/file/en/en_commoncarp.htm",
+      "published": "2009",
+      "verified": "2026-10-12"
+    },
+    {
+      "id": "s51",
+      "type": "rules",
+      "name": "Wody Polskie: Łowiska RZGW — właściwy użytkownik, zezwolenia i regulaminy",
+      "lang": "PL",
+      "url": "https://www.gov.pl/web/wody-polskie/lowiska-rzgw",
+      "verified": "2026-10-12"
+    },
+    {
+      "id": "s52",
+      "type": "science",
+      "name": "NASA: Moon Phases — astronomical context, not a carp feeding model",
+      "lang": "EN",
+      "url": "https://science.nasa.gov/moon/moon-phases/",
+      "verified": "2026-10-12"
+    },
+    {
+      "id": "s53",
+      "type": "practice",
+      "name": "NWS: Lightning Safety Overview — immediate safe shelter",
+      "lang": "EN / US",
+      "url": "https://www.weather.gov/safety/lightning-safety-overview",
+      "verified": "2026-10-12"
     }
   ]
 }

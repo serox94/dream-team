@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-05.1",
+  "version": "2026-10-12.encyclopedia-2",
   "articles": [
     {
       "id": "przynety",
@@ -16,15 +16,30 @@
       "sections": [
         {
           "h": "Tonąca, zbalansowana, pływająca",
-          "p": "Boilie tonące pasuje do twardego lub lekko miękkiego, czystego dna i rozproszonego nęcenia podobnymi kulkami. Wafter ma neutralną wyporność i może łatwiej wejść do pyska, ale musi być wyważony z konkretnym haczykiem. Pop-up unosi haczyk nad niskim zielem, detrytusem lub mułem; wysokość ustaw do rzeczywistej przeszkody, nie na ślepo."
+          "p": "Boilie tonące pasuje do twardego lub lekko miękkiego, czystego dna i rozproszonego nęcenia podobnymi kulkami. Wafter ma neutralną wyporność i może łatwiej wejść do pyska, ale musi być wyważony z konkretnym haczykiem. Pop-up unosi haczyk nad niskim zielem, detrytusem lub mułem; wysokość ustaw do rzeczywistej przeszkody, nie na ślepo.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Drobne i naturalne",
-          "p": "Pellet rozpada się w różnym tempie zależnie od składu, średnicy i temperatury. Kukurydza, gotowane ziarna, konopie i orzech tygrysi tworzą drobny pokarm, lecz mogą silnie ściągać leszcza i drobnicę. Robaki, larwy i inne naturalne przynęty bywają skuteczne, ale także łowne dla gatunków nietargetowych. Sprawdź regulamin, przygotowanie ziaren i lokalne ograniczenia."
+          "p": "Pellet rozpada się w różnym tempie zależnie od składu, średnicy i temperatury. Kukurydza, gotowane ziarna, konopie i orzech tygrysi tworzą drobny pokarm, lecz mogą silnie ściągać leszcza i drobnicę. Robaki, larwy i inne naturalne przynęty bywają skuteczne, ale także łowne dla gatunków nietargetowych. Sprawdź regulamin, przygotowanie ziaren i lokalne ograniczenia.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Test",
-          "p": "Porównuj jedną zmianę naraz: lokalizacja → prezentacja → ilość zanęty → rozmiar/kolor/profil. Przynęta solo może być dobrym testem na krótkiej sesji lub przy wysokiej presji; łowisko o licznej populacji może uzasadnić regularny, obserwowany dopływ pokarmu."
+          "p": "Porównuj jedną zmianę naraz: lokalizacja → prezentacja → ilość zanęty → rozmiar/kolor/profil. Przynęta solo może być dobrym testem na krótkiej sesji lub przy wysokiej presji; łowisko o licznej populacji może uzasadnić regularny, obserwowany dopływ pokarmu.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Instrukcja produktu, nie dowód skuteczności",
+          "p": "Gardner zaleca sprawdzanie wyważenia konkretnej przynęty z montażem. CC Moore omawia skład i olejowość zimowych przynęt. To wskazówki producentów, nie niezależne porównanie aromatów.",
+          "type": "manufacturer",
+          "sourceIds": [
+            "s13",
+            "s10"
+          ]
         }
       ],
       "sourceIds": [
@@ -57,15 +72,29 @@
       "sections": [
         {
           "h": "Baza i sygnał",
-          "p": "Fishmeal, krill, squid, crab i liver opisują skład lub profil morski/mięsny, choć sam napis na opakowaniu nie mówi o składzie ani strawności. Garlic, spicy i Robin Red style to pikantny sygnał, który można zestawić z bazą rybną. Scopex, creamy, vanilla, nutty i tiger nut są słodko-orzechowe; fruit, pineapple, citrus, plum, strawberry i banana zwykle pracują jako rozpoznawalny sygnał lub kontrast. Nie przypisuj karpiom ludzkiego gustu smakowego."
+          "p": "Fishmeal, krill, squid, crab i liver opisują skład lub profil morski/mięsny, choć sam napis na opakowaniu nie mówi o składzie ani strawności. Garlic, spicy i Robin Red style to pikantny sygnał, który można zestawić z bazą rybną. Scopex, creamy, vanilla, nutty i tiger nut są słodko-orzechowe; fruit, pineapple, citrus, plum, strawberry i banana zwykle pracują jako rozpoznawalny sygnał lub kontrast. Nie przypisuj karpiom ludzkiego gustu smakowego.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Woda chłodna i ciepła",
-          "p": "Przy chłodnej wodzie zacznij od małej porcji i sprawdź, czy składniki uwalniają sygnał; zawartość oleju oraz rozpuszczalność różnią się między produktami. Sam fishmeal nie oznacza automatycznie złej zimowej przynęty: producent CC Moore wskazuje, że oleistość nie pokrywa się prosto z nazwą bazy. W cieplejszej wodzie większe karmienie ma sens dopiero, gdy ryby rzeczywiście żerują."
+          "p": "Przy chłodnej wodzie zacznij od małej porcji i sprawdź, czy składniki uwalniają sygnał; zawartość oleju oraz rozpuszczalność różnią się między produktami. Sam fishmeal nie oznacza automatycznie złej zimowej przynęty: producent CC Moore wskazuje, że oleistość nie pokrywa się prosto z nazwą bazy. W cieplejszej wodzie większe karmienie ma sens dopiero, gdy ryby rzeczywiście żerują.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Kiedy zmienić",
-          "p": "Zmiana profilu jest rozsądną próbą po potwierdzeniu ryb i poprawnego zestawu, gdy porównywalne prezentacje nie dają reakcji. Na wodzie presyjnej testuj również rozmiar, ilość i neutralny wygląd; nie przypisuj sukcesu wyłącznie aromatowi."
+          "p": "Zmiana profilu jest rozsądną próbą po potwierdzeniu ryb i poprawnego zestawu, gdy porównywalne prezentacje nie dają reakcji. Na wodzie presyjnej testuj również rozmiar, ilość i neutralny wygląd; nie przypisuj sukcesu wyłącznie aromatowi.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Uczciwe porównanie",
+          "p": "Zapisz także brak brania, czas zestawu w wodzie i oznaki obecności ryb. Dwa różne miejsca nie są uczciwym testem dwóch aromatów. Przykłady profili w tej bazie to hipotezy praktyczne.",
+          "type": "practice",
+          "sourceIds": [
+            "s10"
+          ]
         }
       ],
       "sourceIds": [
@@ -94,15 +123,21 @@
       "sections": [
         {
           "h": "Przykłady do sprawdzenia",
-          "p": "Fishmeal + garlic/spice, krill + garlic albo squid + fruit łączą bazę pokarmową z wyraźnym sygnałem. Fishmeal + jasny owocowy topper daje punkt widoczny na tle naturalnych kulek. Tiger nut + creamy/scopex/nut to spójny profil orzechowo-słodki. Zmiana koloru lub wyporności może wyjaśniać rezultat lepiej niż sam zapach."
+          "p": "Fishmeal + garlic/spice, krill + garlic albo squid + fruit łączą bazę pokarmową z wyraźnym sygnałem. Fishmeal + jasny owocowy topper daje punkt widoczny na tle naturalnych kulek. Tiger nut + creamy/scopex/nut to spójny profil orzechowo-słodki. Zmiana koloru lub wyporności może wyjaśniać rezultat lepiej niż sam zapach.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Mechanika prezentacji",
-          "p": "Snowman: tonąca kulka z mniejszym pop-upem może skorygować wagę haczyka. Wafter nad drobnym pelletem lub pop-up nad małym skupiskiem pokarmu daje łatwy punkt testowy; sprawdź, czy przypon leży ponad zanętą. Przy podnoszeniu zestawu nad mułem/wodorostami niech pop-up pozostaje dostępny dla ryby, a montaż bezpieczny."
+          "p": "Snowman: tonąca kulka z mniejszym pop-upem może skorygować wagę haczyka. Wafter nad drobnym pelletem lub pop-up nad małym skupiskiem pokarmu daje łatwy punkt testowy; sprawdź, czy przypon leży ponad zanętą. Przy podnoszeniu zestawu nad mułem/wodorostami niech pop-up pozostaje dostępny dla ryby, a montaż bezpieczny.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Porównanie",
-          "p": "Nie zmieniaj równocześnie miejsca, głębokości, koloru i zapachu. Jeśli dwa zestawy pracują w porównywalnych miejscach, obserwuj reakcję przez odpowiedni czas i zapisuj warunki, a nie tylko „zwycięski smak”."
+          "p": "Nie zmieniaj równocześnie miejsca, głębokości, koloru i zapachu. Jeśli dwa zestawy pracują w porównywalnych miejscach, obserwuj reakcję przez odpowiedni czas i zapisuj warunki, a nie tylko „zwycięski smak”.",
+          "type": "practice",
+          "sourceIds": []
         }
       ],
       "sourceIds": [
@@ -132,11 +167,15 @@
       "sections": [
         {
           "h": "Jasne i kontrastowe",
-          "p": "Biały, żółty, różowy i pomarańczowy bywają łatwiej zauważalne na ciemnym mule lub w zielsku. Przy mętnej wodzie i słabym świetle sam jaskrawy kolor nie zastąpi bliskiego położenia zestawu przy rybach. Czerwony może kontrastować na jasnym dnie, ale jego wygląd zmienia się wraz z głębokością i oświetleniem."
+          "p": "Biały, żółty, różowy i pomarańczowy bywają łatwiej zauważalne na ciemnym mule lub w zielsku. Przy mętnej wodzie i słabym świetle sam jaskrawy kolor nie zastąpi bliskiego położenia zestawu przy rybach. Czerwony może kontrastować na jasnym dnie, ale jego wygląd zmienia się wraz z głębokością i oświetleniem.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Subtelne",
-          "p": "Brąz, naturalny, ciemny lub washed-out mogą ograniczyć kontrast na presyjnej wodzie, ale nie zakładaj, że ryby „boją się różu”. Testuj jeden sygnał z wyraźnym kontrastem i drugi dopasowany do dna; oceniaj wynik w podobnych warunkach."
+          "p": "Brąz, naturalny, ciemny lub washed-out mogą ograniczyć kontrast na presyjnej wodzie, ale nie zakładaj, że ryby „boją się różu”. Testuj jeden sygnał z wyraźnym kontrastem i drugi dopasowany do dna; oceniaj wynik w podobnych warunkach.",
+          "type": "practice",
+          "sourceIds": []
         }
       ],
       "sourceIds": [
@@ -165,15 +204,30 @@
       "sections": [
         {
           "h": "Metoda",
-          "p": "Zapisz głębokość i trasę, przeskanuj ponownie węższą wiązką, a następnie przeciągnij ciężarek lub użyj markera tam, gdzie wolno. Twardy „stuk” i drgania sugerują twardy kontakt; głuchy opad i osad na ciężarku miękkie dno. Rośliny zaczepiają o zestaw. To wskazówki, nie laboratoryjna identyfikacja żwiru, gliny lub rośliny z jednego piksela."
+          "p": "Zapisz głębokość i trasę, przeskanuj ponownie węższą wiązką, a następnie przeciągnij ciężarek lub użyj markera tam, gdzie wolno. Twardy „stuk” i drgania sugerują twardy kontakt; głuchy opad i osad na ciężarku miękkie dno. Rośliny zaczepiają o zestaw. To wskazówki, nie laboratoryjna identyfikacja żwiru, gliny lub rośliny z jednego piksela.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Zasada montażu",
-          "p": "Na czystym twardym dnie zacznij od krótszej, kontrolowanej prezentacji. W miękkim osadzie użyj lżejszego ciężarka lub prezentacji nieciągniętej w muł, a długość przyponu dopasuj do głębokości zapadania. W zielsku szukaj czystego oczka lub krawędzi i używaj wyłącznie bezpiecznych zestawów uwalniających ciężarek. Nie istnieje jedna właściwa długość przyponu dla każdego dna."
+          "p": "Na czystym twardym dnie zacznij od krótszej, kontrolowanej prezentacji. W miękkim osadzie użyj lżejszego ciężarka lub prezentacji nieciągniętej w muł, a długość przyponu dopasuj do głębokości zapadania. W zielsku szukaj czystego oczka lub krawędzi i używaj wyłącznie bezpiecznych zestawów uwalniających ciężarek. Nie istnieje jedna właściwa długość przyponu dla każdego dna.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Twarde dno czy pokarm?",
-          "p": "Twarda, goła płyta ułatwia kontrolę opadu, ale może być uboga w naturalny pokarm. Żyzny, płytki muł lub skraj zielska warto porównać z czystym żwirem, zamiast wybierać najjaśniejszy pas echa. Sprawdź zawartość podłoża ciężarkiem, obserwuj ryby i dopiero potem dobierz prezentację."
+          "p": "Twarda, goła płyta ułatwia kontrolę opadu, ale może być uboga w naturalny pokarm. Żyzny, płytki muł lub skraj zielska warto porównać z czystym żwirem, zamiast wybierać najjaśniejszy pas echa. Sprawdź zawartość podłoża ciężarkiem, obserwuj ryby i dopiero potem dobierz prezentację.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Trzy osobne decyzje",
+          "p": "Oddziel rozpoznanie dna, prezentację haka i bezpieczeństwo holu. Mocne echo nie dowodzi czystego żwiru. Przed zarzuceniem sprawdź przypon z przynętą w wodzie oraz działanie uwalniania po zerwaniu.",
+          "type": "practice",
+          "sourceIds": [
+            "s13",
+            "s19"
+          ]
         }
       ],
       "sourceIds": [
@@ -208,15 +262,39 @@
       "sections": [
         {
           "h": "Zimno i ocieplenie",
-          "p": "Poniżej 6°C i przy 6–8°C zacznij od znalezienia ryb oraz małej porcji pokarmu. Przy 8–12°C i 12–16°C obserwuj miejsca ogrzewające się przez kilka dni, ale nie zakładaj, że każda płytka zatoka jest zajęta. Metabolizm i trawienie są zależne od temperatury; tempo zmiany może być ważniejsze niż pojedynczy odczyt."
+          "p": "Poniżej 6°C i przy 6–8°C zacznij od znalezienia ryb oraz małej porcji pokarmu. Przy 8–12°C i 12–16°C obserwuj miejsca ogrzewające się przez kilka dni, ale nie zakładaj, że każda płytka zatoka jest zajęta. Metabolizm i trawienie są zależne od temperatury; pojedynczy odczyt nie opisuje całej sesji.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Tarło i lato",
-          "p": "W okolicy 16–20°C karpie mogą koncentrować się w płytkich, roślinnych miejscach na tarło, choć lokalne warunki i zakazy decydują o zachowaniu. Po tarle aktywność jest zmienna. Przy 20–24°C większa podaż pokarmu może mieć sens, jeśli widać żerowanie; powyżej 24°C obserwuj ryzyko niskiego tlenu, zwłaszcza nocą i po upałach, i ogranicz manipulowanie rybą."
+          "p": "W okolicy 16–20°C karpie mogą koncentrować się w płytkich, roślinnych miejscach na tarło, choć lokalne warunki i zakazy decydują o zachowaniu. Po tarle aktywność jest zmienna. Przy 20–24°C większa podaż pokarmu może mieć sens, jeśli widać żerowanie; powyżej 24°C obserwuj ryzyko niskiego tlenu, zwłaszcza nocą i po upałach, i ogranicz manipulowanie rybą.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Jesień",
-          "p": "Późne lato i jesień to okres zmian termiki i pokarmu. Nie wybieraj automatycznie najgłębszego miejsca: szukaj oznak ryb, tlenowych stref i przejść dna. Duża, głęboka żwirownia może stygnąć wolniej niż mały płytki staw."
+          "p": "Późne lato i jesień to okres zmian termiki i pokarmu. Nie wybieraj automatycznie najgłębszego miejsca: szukaj oznak ryb, tlenowych stref i przejść dna. Duża, głęboka żwirownia może stygnąć wolniej niż mały płytki staw.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Co potwierdzono w badaniach",
+          "p": "Eksperymenty dotyczą metabolizmu, trawienia i wzrostu, często młodych karpi w kontrolowanych warunkach. Nie wyznaczają uniwersalnej temperatury brania dorosłych ryb ani dawki zanęty.",
+          "type": "science",
+          "sourceIds": [
+            "s01",
+            "s02",
+            "s03"
+          ]
+        },
+        {
+          "h": "Pomiar z opisem",
+          "p": "Zapisz temperaturę wody, godzinę, miejsce i głębokość czujnika. Porównuj podobne pomiary. Prognoza powietrza i czujnik przy powierzchni nie opisują automatycznie miejsca zestawu.",
+          "type": "practice",
+          "sourceIds": [
+            "s49"
+          ]
         }
       ],
       "sourceIds": [
@@ -226,7 +304,8 @@
         "s04",
         "s05",
         "s08",
-        "s09"
+        "s09",
+        "s49"
       ],
       "related": [
         "pogoda",
@@ -249,15 +328,29 @@
       "sections": [
         {
           "h": "Punkt czy dywan",
-          "p": "Punktowy PVA, solid bag lub stick mix podaje mało pokarmu blisko haczyka i pomaga przy krótkiej sesji, zimnie lub niepewnym stanie ryb. Rozproszone całe i kruszone kulki, pellet, spod mix i cząstki mogą skłonić ryby do ruchu po obszarze. Na gęstym zielsku lub głębokim mule rozrzut na niewidoczne dno może utrudnić skuteczne położenie zestawu."
+          "p": "Punktowy PVA, solid bag lub stick mix podaje mało pokarmu blisko haczyka i pomaga przy krótkiej sesji, zimnie lub niepewnym stanie ryb. Rozproszone całe i kruszone kulki, pellet, spod mix i cząstki mogą skłonić ryby do ruchu po obszarze. Na gęstym zielsku lub głębokim mule rozrzut na niewidoczne dno może utrudnić skuteczne położenie zestawu.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Populacja i gatunki uboczne",
-          "p": "Na wodzie z dużą liczbą żerujących karpi donęcaj po reakcji; na małej populacji lub pod presją mniejsza, rzadsza porcja często jest rozsądniejszym testem. Drobny pellet, konopie i kukurydza przyciągają leszcza i drobnicę. Raki mogą zniszczyć miękką przynętę; stosuj odporniejszy hakowy i kontroluj zestaw. Tiger nuts i inne ziarna przygotuj bezpiecznie i zgodnie z regulaminem."
+          "p": "Na wodzie z dużą liczbą żerujących karpi donęcaj po reakcji; na małej populacji lub pod presją mniejsza, rzadsza porcja często jest rozsądniejszym testem. Drobny pellet, konopie i kukurydza przyciągają leszcza i drobnicę. Raki mogą zniszczyć miękką przynętę; stosuj odporniejszy hakowy i kontroluj zestaw. Tiger nuts i inne ziarna przygotuj bezpiecznie i zgodnie z regulaminem.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Warstwa dna",
-          "p": "Na żwirze łatwo ocenić rozkład. Na miękkim mule sprawdź, czy pokarm nie tonie i nie przenika zapachem osadu. W zielsku celuj w czyste oczka lub krawędzie. Donęcanie bez reakcji może pogorszyć interpretację; najpierw potwierdź, że ryby są na miejscu."
+          "p": "Na żwirze łatwo ocenić rozkład. Na miękkim mule sprawdź, czy pokarm nie tonie i nie przenika zapachem osadu. W zielsku celuj w czyste oczka lub krawędzie. Donęcanie bez reakcji może pogorszyć interpretację; najpierw potwierdź, że ryby są na miejscu.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Pokarm naturalny a kulki",
+          "p": "FAO opisuje karpia jako wszystkożernego, korzystającego m.in. z bezkręgowców. Zalecenia żywienia w hodowli nie są dawką zanęty na prywatnym wyjeździe.",
+          "type": "science",
+          "sourceIds": [
+            "s50"
+          ]
         }
       ],
       "sourceIds": [
@@ -267,7 +360,8 @@
         "s16",
         "s17",
         "s40",
-        "s43"
+        "s43",
+        "s50"
       ],
       "related": [
         "przynety",
@@ -291,15 +385,38 @@
       "sections": [
         {
           "h": "Mechanizmy",
-          "p": "Temperatura wody wpływa na metabolizm i trawienie. Ciepła woda zawiera mniej rozpuszczonego tlenu; wiatr, falowanie, dopływy i mieszanie mogą zmieniać lokalne warunki. Zachmurzenie i światło zmieniają warunki obserwacji i ekspozycji ryb. Burza to przede wszystkim kwestia bezpieczeństwa człowieka: wyjmij wędki i opuść zagrożone miejsce."
+          "p": "Temperatura wody wpływa na metabolizm i trawienie. Ciepła woda zawiera mniej rozpuszczonego tlenu; wiatr, falowanie, dopływy i mieszanie mogą zmieniać lokalne warunki. Zachmurzenie i światło zmieniają warunki obserwacji i ekspozycji ryb.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Grzmot: przerwij łowienie",
+          "p": "Gdy słyszysz grzmot, od razu szukaj bezpiecznego budynku lub zamkniętego samochodu. Nie opóźniaj schronienia zbieraniem sprzętu. Namiot i otwarte zadaszenie nie są schronieniem przed piorunem.",
+          "type": "practice",
+          "sourceIds": [
+            "s53"
+          ]
         },
         {
           "h": "Praktyka, nie prawo",
-          "p": "Wiatr nawietrzny może kumulować pokarm i napowietrzać wodę, ale zimny wiatr, kształt zbiornika i wcześniejszy trend mogą dać odwrotny efekt. Ciśnienie i jego zmiany współwystępują z frontem, opadem, temperaturą i wiatrem; nie przypisuj brania samej liczbie hPa. Świt i zmierzch to dobre okna obserwacji, nie obowiązkowe godziny brań."
+          "p": "Wiatr nawietrzny może kumulować pokarm i napowietrzać wodę, ale zimny wiatr, kształt zbiornika i wcześniejszy trend mogą dać odwrotny efekt. Ciśnienie i jego zmiany współwystępują z frontem, opadem, temperaturą i wiatrem; nie przypisuj brania samej liczbie hPa. Świt i zmierzch to dobre okna obserwacji, nie obowiązkowe godziny brań.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Jak testować",
-          "p": "Notuj temperaturę wody na podobnej głębokości, trend pogody, wiatr, widoczne ryby i godziny brań. Porównuj wiele sesji na tej samej wodzie zamiast uczyć się progu „idealnego” ciśnienia."
+          "p": "Notuj temperaturę wody na podobnej głębokości, trend pogody, wiatr, widoczne ryby i godziny brań. Porównuj wiele sesji na tej samej wodzie zamiast uczyć się progu „idealnego” ciśnienia.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Rośliny nie natleniają całą dobę",
+          "p": "Fotosynteza wymaga światła; nocą oddychanie zużywa tlen. Poranny chłód nie gwarantuje dobrego natlenienia po zakwicie. Podejrzenie niedotlenienia sprawdź pomiarem i u zarządcy.",
+          "type": "science",
+          "sourceIds": [
+            "s49",
+            "s08"
+          ]
         }
       ],
       "sourceIds": [
@@ -309,7 +426,9 @@
         "s08",
         "s09",
         "s15",
-        "s44"
+        "s44",
+        "s49",
+        "s53"
       ],
       "related": [
         "temperatura",
@@ -331,16 +450,29 @@
       "sections": [
         {
           "h": "Możliwe mechanizmy",
-          "p": "Światło nocy może wpływać na widoczność i zachowanie, a wschód i zachód księżyca wyznaczają zmianę oświetlenia. W wodach pływowych cykl księżyca zmienia prąd i dostęp do pokarmu; na jeziorze tego mechanizmu zwykle nie ma. Obserwacja jednego udanego połowu przy pełni nie oddziela wpływu pory roku, pogody i wyboru miejscówki."
+          "p": "Światło nocy może wpływać na widoczność i zachowanie, a wschód i zachód księżyca wyznaczają zmianę oświetlenia. W wodach pływowych cykl księżyca zmienia prąd i dostęp do pokarmu; na jeziorze tego mechanizmu zwykle nie ma. Obserwacja jednego udanego połowu przy pełni nie oddziela wpływu pory roku, pogody i wyboru miejscówki.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Praktyczna notatka",
-          "p": "Zapisuj fazę i godziny księżyca razem z realną temperaturą wody, wiatrem i aktywnością ryb, ale decyzje o miejscu i prezentacji opieraj najpierw na obserwacji wody."
+          "p": "Zapisuj fazę i godziny księżyca razem z realną temperaturą wody, wiatrem i aktywnością ryb, ale decyzje o miejscu i prezentacji opieraj najpierw na obserwacji wody.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Faza astronomiczna a decyzja nad wodą",
+          "p": "NASA wyjaśnia zmianę oświetlenia Księżyca w cyklu. Orientacyjna faza w aplikacji nie jest modelem żerowania. Porównuj zapis sesji z obserwacją ryb; pojedynczy udany wyjazd nie oddziela wpływu Księżyca od wyboru miejsca i pogody.",
+          "type": "practice",
+          "sourceIds": [
+            "s52"
+          ]
         }
       ],
       "sourceIds": [
         "s05",
-        "s09"
+        "s09",
+        "s52"
       ],
       "related": [
         "pogoda",
@@ -362,15 +494,29 @@
       "sections": [
         {
           "h": "Sygnały",
-          "p": "Spławy, ruch trzcin, mulenie, fale od ryb i powtarzalne bąble mogą wskazać aktywność, ale bąble mogą też pochodzić z rozkładu osadu. Sprawdź brzegi, wyspy, zwalone drzewa, osłonięte zatoki, półki, plateau, rowy, krawędzie i przejścia żwir–muł oraz zielsko–czysto."
+          "p": "Spławy, ruch trzcin, mulenie, fale od ryb i powtarzalne bąble mogą wskazać aktywność, ale bąble mogą też pochodzić z rozkładu osadu. Sprawdź brzegi, wyspy, zwalone drzewa, osłonięte zatoki, półki, plateau, rowy, krawędzie i przejścia żwir–muł oraz zielsko–czysto.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Wybór głębokości",
-          "p": "Wiosną płytkie, ogrzewane strefy mogą być atrakcyjne; latem szukaj tlenu i bezpiecznej osłony, a w wodzie warstwowej również granicy termicznej. Głęboka woda nie zawsze ma więcej tlenu. Kierunek wiatru potraktuj jako jedną z przesłanek, nie zamiennik obserwacji."
+          "p": "Wiosną płytkie, ogrzewane strefy mogą być atrakcyjne; latem szukaj tlenu i bezpiecznej osłony, a w wodzie warstwowej również granicy termicznej. Głęboka woda nie zawsze ma więcej tlenu. Kierunek wiatru potraktuj jako jedną z przesłanek, nie zamiennik obserwacji.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Położenie",
-          "p": "Miejsce z rybami i źle leżącym przyponem daje mniej niż czyste oczko tuż obok. Rozdziel drogę migracji, miejsce postoju i obszar żerowania; po skanie potwierdź twardość ciężarkiem, jeśli regulamin pozwala."
+          "p": "Miejsce z rybami i źle leżącym przyponem daje mniej niż czyste oczko tuż obok. Rozdziel drogę migracji, miejsce postoju i obszar żerowania; po skanie potwierdź twardość ciężarkiem, jeśli regulamin pozwala.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Chłodna głębia może być uboga w tlen",
+          "p": "Warstwowanie może ograniczać wymianę między powierzchnią a głębią. Rozkład materii zużywa tlen na dole. Sama niska temperatura lub głębokość nie potwierdza bezpiecznych warunków.",
+          "type": "science",
+          "sourceIds": [
+            "s49"
+          ]
         }
       ],
       "sourceIds": [
@@ -378,7 +524,8 @@
         "s15",
         "s16",
         "s19",
-        "s04"
+        "s04",
+        "s49"
       ],
       "related": [
         "dno",
@@ -400,11 +547,15 @@
       "sections": [
         {
           "h": "Mniej bodźców",
-          "p": "Ogranicz częste rzucanie, hałas, przejazdy łódką zanętową i zamieszanie przy brzegu. Zanim znowu przerzucisz, upewnij się, czy zestaw leży poprawnie i czy ryby są w pobliżu. Nietypowa linia brzegowa lub krawędź popularnej miejscówki może dawać spokój."
+          "p": "Ogranicz częste rzucanie, hałas, przejazdy łódką zanętową i zamieszanie przy brzegu. Zanim znowu przerzucisz, upewnij się, czy zestaw leży poprawnie i czy ryby są w pobliżu. Nietypowa linia brzegowa lub krawędź popularnej miejscówki może dawać spokój.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Prezentacja",
-          "p": "Pojedynczy hakowy, mała porcja, naturalny albo washed-out kolor są alternatywami do testu. Na wodzie z przyzwyczajonymi rybami duża, regularna porcja może również działać, jeśli łowisko i czas sesji ją uzasadniają. Nie zamieniaj opinii z forum w stałe prawo."
+          "p": "Pojedynczy hakowy, mała porcja, naturalny albo washed-out kolor są alternatywami do testu. Na wodzie z przyzwyczajonymi rybami duża, regularna porcja może również działać, jeśli łowisko i czas sesji ją uzasadniają. Nie zamieniaj opinii z forum w stałe prawo.",
+          "type": "practice",
+          "sourceIds": []
         }
       ],
       "sourceIds": [
@@ -433,15 +584,21 @@
       "sections": [
         {
           "h": "Leszcze i drobnica",
-          "p": "Częste wskazania bez karpia i szybko znikające drobne ziarna sugerują udział białorybu. Spróbuj większego/odporniejszego hakowego, mniej drobnicy w zanęcie i rzadszego donęcania; czasem lepiej przenieść zestaw. Nie ma „leszczoodpornego” aromatu."
+          "p": "Częste wskazania bez karpia i szybko znikające drobne ziarna sugerują udział białorybu. Spróbuj większego/odporniejszego hakowego, mniej drobnicy w zanęcie i rzadszego donęcania; czasem lepiej przenieść zestaw. Nie ma „leszczoodpornego” aromatu.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Raki i sumiki",
-          "p": "Obgryziony hakowy lub skrócony przypon po kontroli wskazuje mechaniczny problem. Siatka ochronna dopuszczona regulaminem, twardszy hakowy, krótszy interwał kontroli albo zmiana miejsca mogą pomóc. Nie zostawiaj materiałów, które ryba lub rak może połknąć."
+          "p": "Obgryziony hakowy lub skrócony przypon po kontroli wskazuje mechaniczny problem. Siatka ochronna dopuszczona regulaminem, twardszy hakowy, krótszy interwał kontroli albo zmiana miejsca mogą pomóc. Nie zostawiaj materiałów, które ryba lub rak może połknąć.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Ptaki wodne",
-          "p": "Nie karm ptaków. Zmniejsz widoczną na powierzchni zanętę i unikaj nęcenia tam, gdzie nurkujące ptaki wchodzą w zestawy. Bezpieczeństwo ptaka i lokalny regulamin mają pierwszeństwo przed braniem."
+          "p": "Nie karm ptaków. Zmniejsz widoczną na powierzchni zanętę i unikaj nęcenia tam, gdzie nurkujące ptaki wchodzą w zestawy. Bezpieczeństwo ptaka i lokalny regulamin mają pierwszeństwo przed braniem.",
+          "type": "practice",
+          "sourceIds": []
         }
       ],
       "sourceIds": [
@@ -469,15 +626,38 @@
       "sections": [
         {
           "h": "Od podbieraka do wody",
-          "p": "Sprawdź wymagania łowiska. Zwilż ręce, matę lub kołyskę, sling i powierzchnie kontaktu. Podpieraj rybę nisko nad matą, nie podnoś za skrzela ani pionowo za szczękę. Waż w odpowiednim worku, wcześniej tarując wagę; zdjęcie przygotuj zawczasu. Środek do pielęgnacji ran użyj według instrukcji i tylko gdy jest sens, zamiast wydłużać obsługę."
+          "p": "Sprawdź wymagania łowiska. Zwilż ręce, matę lub kołyskę, sling i powierzchnie kontaktu. Podpieraj rybę nisko nad matą, nie podnoś za skrzela ani pionowo za szczękę. Waż w odpowiednim worku, wcześniej tarując wagę; zdjęcie przygotuj zawczasu. Środek do pielęgnacji ran użyj według instrukcji i tylko gdy jest sens, zamiast wydłużać obsługę.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Temperatura i wypuszczenie",
-          "p": "W upał ciepła, słabo natleniona woda zwiększa obciążenie ryby; ogranicz sesję lub łowienie, jeśli warunki są złe. W zimnie chroń rybę przed mrozem i suchym podłożem. Wypuszczaj w spokojnym miejscu, wspierając ją w wodzie do odzyskania sił; nie wypychaj gwałtownie."
+          "p": "W upał ciepła, słabo natleniona woda zwiększa obciążenie ryby; ogranicz sesję lub łowienie, jeśli warunki są złe. W zimnie chroń rybę przed mrozem i suchym podłożem. Wypuszczaj w spokojnym miejscu, wspierając ją w wodzie do odzyskania sił; nie wypychaj gwałtownie.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Zestawy",
-          "p": "Wybieraj montaż, który po zerwaniu uwolni ciężarek i nie pozostawi ryby z ciągnącą się żyłką. Regulamin i lokalne zasady ochrony przyrody zawsze mają pierwszeństwo."
+          "p": "Wybieraj montaż, który po zerwaniu uwolni ciężarek i nie pozostawi ryby z ciągnącą się żyłką. Regulamin i lokalne zasady ochrony przyrody zawsze mają pierwszeństwo.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Objawy wymagają przerwania łowienia",
+          "p": "Ryby chwytające powietrze, śnięcia lub brak regeneracji po holu wymagają reakcji zarządcy i przerwania łowienia. Przygotuj odhaczanie i zdjęcie zawczasu; ogranicz czas poza wodą. Nie stosuj uniwersalnego progu tlenu dla każdej ryby.",
+          "type": "practice",
+          "sourceIds": [
+            "s07",
+            "s08"
+          ]
+        },
+        {
+          "h": "Regulamin konkretnej wody i roku",
+          "p": "Przed wyjazdem potwierdź zarządcę, wymagane dokumenty, datę regulaminu, liczbę wędek, nocne łowienie, łódki/sonar, zanęty, haki i sprzęt opieki nad rybą. Zapisz źródło w profilu łowiska. Zasady z innej wody lub starszego roku nie są potwierdzeniem zgody.",
+          "type": "rules",
+          "sourceIds": [
+            "s51"
+          ]
         }
       ],
       "sourceIds": [
@@ -485,7 +665,8 @@
         "s08",
         "s09",
         "s43",
-        "s44"
+        "s44",
+        "s51"
       ],
       "related": [
         "problemy",
@@ -508,15 +689,30 @@
       "sections": [
         {
           "h": "Zima i wczesna wiosna",
-          "p": "Zimowe brania mogą być krótkie i lokalne. Ogranicz porcję, ale nie zakładaj bezruchu wszystkich ryb. Wczesną wiosną porównaj zatoki ogrzewane słońcem z głębszymi strefami, uwzględniając nocny spadek temperatury."
+          "p": "Zimowe brania mogą być krótkie i lokalne. Ogranicz porcję, ale nie zakładaj bezruchu wszystkich ryb. Wczesną wiosną porównaj zatoki ogrzewane słońcem z głębszymi strefami, uwzględniając nocny spadek temperatury.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Przed, podczas i po tarle",
-          "p": "Przed tarłem ryby mogą skupiać się w roślinnej płyciźnie. W czasie tarła uszanuj zakazy i zostaw ryby w spokoju. Po tarle ich kondycja i żerowanie są zmienne, więc stopniowo testuj ilość zanęty."
+          "p": "Przed tarłem ryby mogą skupiać się w roślinnej płyciźnie. W czasie tarła uszanuj zakazy i zostaw ryby w spokoju. Po tarle ich kondycja i żerowanie są zmienne, więc stopniowo testuj ilość zanęty.",
+          "type": "practice",
+          "sourceIds": []
         },
         {
           "h": "Lato i jesień",
-          "p": "W upał szukaj tlenu i unikaj długiego trzymania ryb na brzegu. Jesienią porównuj strefy o stabilniejszej temperaturze i dostępności pokarmu; duża głęboka woda stygnie inaczej niż płytki staw."
+          "p": "W upał szukaj tlenu i unikaj długiego trzymania ryb na brzegu. Jesienią porównuj strefy o stabilniejszej temperaturze i dostępności pokarmu; duża głęboka woda stygnie inaczej niż płytki staw.",
+          "type": "practice",
+          "sourceIds": []
+        },
+        {
+          "h": "Scenariusz zamiast daty",
+          "p": "Zimą porównaj znane stanowiska ryb, wiosną kilka stref z rzeczywistym pomiarem wody, latem tlen i bezpieczeństwo, jesienią trend kilku dni. Jeżeli obserwacja przeczy kalendarzowi, zmień hipotezę. Tarło i lokalny zakaz mają pierwszeństwo.",
+          "type": "practice",
+          "sourceIds": [
+            "s04",
+            "s50"
+          ]
         }
       ],
       "sourceIds": [
@@ -524,7 +720,9 @@
         "s03",
         "s05",
         "s06",
-        "s08"
+        "s08",
+        "s04",
+        "s50"
       ],
       "related": [
         "temperatura",
