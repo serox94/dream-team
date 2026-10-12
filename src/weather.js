@@ -18,16 +18,23 @@ export async function weatherForTrip(env, tripId) {
     latitude:String(location.latitude), longitude:String(location.longitude),
     ...variables, timezone:'auto', forecast_days:'7'
   });
-  try {
-    const response = await (env.WEATHER_FETCH || fetch)(`https://api.open-meteo.com/v1/forecast?${params}`,{
-      signal:AbortSignal.timeout(15000)
-    });
-    if (!response.ok) fail(`Dostawca pogody zwrócił HTTP ${response.status}.`,502);
-    const data = await response.json();
-    if (!data.current || !data.hourly?.time || !data.daily?.time) fail('Dostawca pogody zwrócił niepełne dane.',502);
-    return data;
-  } catch (error) {
-    if (error?.status === 502) throw error;
-    fail('Nie udało się pobrać prognozy od dostawcy.',502);
+  // Two bounded, read-only attempts fit inside the client request budget.
+  for (let attempt=0;attempt<2;attempt++) {
+    try {
+      const response = await (env.WEATHER_FETCH || fetch)(`https://api.open-meteo.com/v1/forecast?${params}`,{
+        signal:AbortSignal.timeout(attempt===0?9000:6000)
+      });
+      if (!response.ok) {
+        if(attempt===0&&response.status>=500){await response.body?.cancel().catch(()=>{});continue;}
+        fail(`Dostawca pogody zwrócił HTTP ${response.status}.`,502);
+      }
+      const data = await response.json();
+      if (!data.current || !data.hourly?.time || !data.daily?.time) fail('Dostawca pogody zwrócił niepełne dane.',502);
+      return data;
+    } catch (error) {
+      if (error?.status === 502) throw error;
+      if(attempt===0&&['AbortError','TimeoutError','TypeError'].includes(error?.name))continue;
+      fail('Nie udało się pobrać prognozy od dostawcy.',502);
+    }
   }
 }

@@ -1,5 +1,12 @@
 # Modernizacja DreamTeam — stan i kontynuacja
 
+## Aktualny checkpoint (czytać przed historią poniżej)
+
+- Etapy 0, 1 i 2: zakończone. Etap 2 wdrożony, schema 28; konta/PB/dane/offline mają realne dowody testowe opisane niżej.
+- Etap 3: W TOKU. Na `5991fb6` Validate/Responsive, konta, media, offline, extras i audyt EN PASS. Test dwóch kont FAIL na widocznym błędzie pogody w wariancie Patryk/1280/PL; finalna regresja SKIPPED. Nie traktować wcześniejszych udanych prób jako dowodu braku tego błędu.
+- Etapy 4–7: NOT TESTED / do wykonania, w tej kolejności. Zebrano źródła i przygotowanie pogody; model naukowy nie jest jeszcze wdrożony.
+- READY TO MERGE TO MAIN: NO. Produkcja/main bez zmian.
+
 ## Punkt wyjścia i przywracanie
 
 - Gałąź: `feat/final-batch`.
@@ -157,3 +164,8 @@ Dalszy audyt etapu 3: PL używa „zrzut ekranu”, polskich komunikatów wyszuk
 Run `38244262366` / `f9e2b3b`: Validate/Responsive, konta, extras (CRUD na obu szerokościach), media i offline PASS. Media przeszły pełny cykl (11:45:36Z), bez diagnozy poprzedniego timeoutu; brak dowodu trwałej usterki UI. Language: mobilne Ustawienia PL→EN→reload→PL PASS, później FAIL przed odpowiedzią HTTP na /login w nowym profilu przeglądarki (trzy próby tej samej karty). Osobny pełny audyt EN uruchamia teraz świeży proces przeglądarki, zachowując wszystkie asercje logowania; błędy nawigacji zapisują diagnostykę. Tę poprawkę należy ocenić na kolejnym CI, a nie traktować jako już dowiedzioną naprawę. Etap 3 nie jest zamknięty.
 
 `593f7a2` / run `38245188775`: Validate i Responsive PASS; pełny live audyt EN (15 widoków × 5 szerokości), konta, media, offline i extras PASS. Test dwóch użytkowników pozostał uruchomiony ponad 6 minut bez checkpointu wyniku. Analiza wykryła nieograniczone, równoległe pobieranie całego shell przy każdej nawigacji. Naprawa SW: jeden współdzielony refresh oraz marker generacji z 10-minutowym odstępem, timeout pobrań i zachowanie wpisów przy braku sieci. Unit dowodzi deduplikacji przy trzech jednoczesnych żądaniach i odczytu offline po nieudanym odświeżeniu; nie dowodzi, że wyjaśnia wszystkie poprzednie timeouty. 88/88 lokalnie PASS. Do testu dwóch użytkowników dodano checkpoint każdej nawigacji, diagnostykę i ograniczenie zamykania przeglądarki. Nowy commit zastąpi tylko pozostające read-only testy języka/regresji; wszystkie operacje CRUD i rotacja/przywrócenie hasła już zakończyły się PASS.
+
+
+### Etap 3 — wykryta regresja pogody
+
+Run `38247029441` / `5991fb6`: test użytkowników `114806355754` doszedł do Patryk/1280/PL/Pogoda i wykrył 1 rzeczywisty `#app-notice.status-danger`; brak zapisanej treści komunikatu uniemożliwia przypisanie konkretnego HTTP/native timeoutu. Nowa asercja pokazuje pełny komunikat, rejestruje status/error API pogody i nieudane requesty. Przegląd kodu dodatkowo potwierdził brak polskiej obsługi natywnych `TimeoutError/AbortError` w pogodzie. Poprawiono lokalizację tych błędów i wprowadzono maksymalnie dwie ograniczone próby samego odczytu dostawcy (9 s + 6 s; wyłącznie transport/5xx, bez ponawiania 429 i niepełnych danych); klient ma 22 s limitu. 90/90 testów lokalnych PASS, w tym rzeczywisty frontendowy timeout po polsku i kontrola liczby prób. Przyczyny pierwszego błędu nie przedstawiać jako dowiedzionej; wynik live poprawki: NOT TESTED do zakończenia nowego CI.

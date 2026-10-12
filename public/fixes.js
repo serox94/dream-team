@@ -497,7 +497,7 @@
   async function fetchWeatherDataEnhanced() {
     const spot = getFishingSpotSafe();
     if (spot.latitude == null || spot.longitude == null) throw new Error("Uzupełnij GPS łowiska w panelu wyjazdów.");
-    const response = await fetch(`/api/weather?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`, { signal: AbortSignal.timeout(18000),headers:{'accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl'} });
+    let response;try{response = await fetch(`/api/weather?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`, { signal: AbortSignal.timeout(22000),headers:{'accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl'} });}catch(error){if(['AbortError','TimeoutError'].includes(error.name))throw new Error(tr('Pobieranie prognozy trwa zbyt długo. Spróbuj ponownie.'));if(error.name==='TypeError')throw new Error(tr('Brak połączenia z internetem. Spróbuj ponownie.'));throw error;}
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.error || `Błąd pobierania pogody: ${response.status}`);

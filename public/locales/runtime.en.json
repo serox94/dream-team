@@ -779,5 +779,7 @@
   "Sprawdź źródła ponownie": "Refresh research",
   "Automatyczne wyszukiwanie źródeł: dostawca skonfigurowany.": "Automated research: provider configured.",
   "AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.": "AUTOMATED RESEARCH: WAITING FOR TAVILY_API_KEY. Preferences will be saved; automation will work after configuration.",
-  "AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Możesz utworzyć wyjazd i uzupełnić źródło później.": "AUTOMATED RESEARCH: WAITING FOR TAVILY_API_KEY. Create the trip and add a source later."
+  "AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Możesz utworzyć wyjazd i uzupełnić źródło później.": "AUTOMATED RESEARCH: WAITING FOR TAVILY_API_KEY. Create the trip and add a source later.",
+  "Pobieranie prognozy trwa zbyt długo. Spróbuj ponownie.": "The forecast request timed out. Try again.",
+  "Brak połączenia z internetem. Spróbuj ponownie.": "No internet connection. Try again."
 }
