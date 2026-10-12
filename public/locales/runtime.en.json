@@ -821,5 +821,6 @@
   "Prognoza dla łowiska i praktyczne ograniczenia zasiadki. Ocena warunków nie zastępuje obserwacji ryb ani pomiarów wody.": "Lake forecast and practical session constraints. This assessment does not replace observing fish or measuring water conditions.",
   "prognoza": "forecast",
   "Brak danych do oceny warunków.": "No data to assess conditions.",
-  "🧭 Ciśnienie (poziom morza)": "🧭 Sea level pressure"
+  "🧭 Ciśnienie (poziom morza)": "🧭 Sea level pressure",
+  "🧭 Kierunek wiatru (skąd wieje)": "🧭 Wind direction (from)"
 }
