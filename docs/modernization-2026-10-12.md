@@ -3,8 +3,8 @@
 ## Aktualny checkpoint (czytać przed historią poniżej)
 
 - Etapy 0, 1 i 2: zakończone. Etap 2 wdrożony, schema 28; konta/PB/dane/offline mają realne dowody testowe opisane niżej.
-- Etap 3: W TOKU. Na `5991fb6` Validate/Responsive, konta, media, offline, extras i audyt EN PASS. Test dwóch kont FAIL na widocznym błędzie pogody w wariancie Patryk/1280/PL; finalna regresja SKIPPED. Nie traktować wcześniejszych udanych prób jako dowodu braku tego błędu.
-- Etapy 4–7: NOT TESTED / do wykonania, w tej kolejności. Zebrano źródła i przygotowanie pogody; model naukowy nie jest jeszcze wdrożony.
+- Etap 3: PASS na kodzie `6a9fce35226d685755c4ec9892e7c63c75ad4f3a`, wszystkie joby preview run `38249894300` PASS. 90/90 lokalnie + build + Validate/Responsive PASS.
+- Etap 4: rozpoczęte przygotowanie; implementacja/live NOT TESTED. Etapy 5–7: do wykonania w tej kolejności.
 - READY TO MERGE TO MAIN: NO. Produkcja/main bez zmian.
 
 ## Punkt wyjścia i przywracanie
@@ -169,3 +169,27 @@ Run `38244262366` / `f9e2b3b`: Validate/Responsive, konta, extras (CRUD na obu s
 ### Etap 3 — wykryta regresja pogody
 
 Run `38247029441` / `5991fb6`: test użytkowników `114806355754` doszedł do Patryk/1280/PL/Pogoda i wykrył 1 rzeczywisty `#app-notice.status-danger`; brak zapisanej treści komunikatu uniemożliwia przypisanie konkretnego HTTP/native timeoutu. Nowa asercja pokazuje pełny komunikat, rejestruje status/error API pogody i nieudane requesty. Przegląd kodu dodatkowo potwierdził brak polskiej obsługi natywnych `TimeoutError/AbortError` w pogodzie. Poprawiono lokalizację tych błędów i wprowadzono maksymalnie dwie ograniczone próby samego odczytu dostawcy (9 s + 6 s; wyłącznie transport/5xx, bez ponawiania 429 i niepełnych danych); klient ma 22 s limitu. 90/90 testów lokalnych PASS, w tym rzeczywisty frontendowy timeout po polsku i kontrola liczby prób. Przyczyny pierwszego błędu nie przedstawiać jako dowiedzionej; wynik live poprawki: NOT TESTED do zakończenia nowego CI.
+
+
+## Zamknięcie Etapu 3 — 12.10.2026
+
+Kod: `6a9fce35226d685755c4ec9892e7c63c75ad4f3a`. Run preview `38249894300`: wszystkie osiem jobów PASS. Validate `38249898998` / Responsive `38249899036` PASS. Lokalnie 90/90 + Worker dry-run PASS. Brak migracji w tym etapie, schema pozostaje 28. Nie wywołano Workers AI.
+
+- `114815977563`, 12:45:08Z / 12:46:41Z: Patryk PL, Maciek EN na tym samym urządzeniu (390/1280), PL→EN→PL, reload i relogin, po 15 widoków na konto, błędy API PL/EN. Zarejestrowane żądania pogody HTTP 200, brak widocznych błędów aplikacji.
+- `114814840952`: 15 widoków × 360/390/412/768/1280, audyt EN bez polskich etykiet, mobilne Więcej→Ustawienia i pojedynczy przełącznik.
+- `114817571697`, 12:50:35Z: finalna regresja 24 kombinacji (6 widoków × PL/EN × 390/1280), PASS, sprawdzana właściwa klasa błędu notice.
+- Konta, offline, media i extras ponownie PASS na tym HEAD. Zrzuty poprzedniego bieżącego kodu (`593f7a2`) rzeczywiście obejrzano: domyślny Maciek/390 i Patryk/1280 oraz Ustawienia obu szerokości; nowe artefakty dostępne w powyższym run.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+|---|---|---|---|---|---|
+| PL/EN w Ustawieniach na telefonie | Jeden selector, stary test/angielskie etykiety PL | Polski Panel główny, wyszukiwanie, media; pojedynczy selector w Ustawieniach | Responsive + live More→Settings | PASS | — |
+| Preferencje dwóch kont | Wspólna preferencja urządzenia | Osobna preferencja konta na urządzeniu, osobny login | Real Patryk/Maciek PL/EN + reload/relogin 390/1280 | PASS | Preferencja interfejsu jest lokalna dla urządzenia, opisano to w UI |
+| API i błędy połączenia | Braki etykiet EN; natywny timeout angielski w PL | Język żądania, komplet etykiet walidacji, lokalizowane błędy pogody/loadera | Unit + live błędy API + prognoza HTTP 200 | PASS | Dostawca może być niedostępny; awaria ma czytelny komunikat, bez fałszywych danych |
+| Wiedza/quizy/dane źródłowe | Część modułów czytała tylko globalną preferencję | Wspólny odczyt języka konta; źródła i własne wartości pozostają oznaczone | Audyt EN 5 szerokości + Responsive interakcje + unit | PASS | Rzetelność merytoryczna nadal do etapów 4–6 |
+| PWA/cache | Wielokrotne pełne warming przy każdej nawigacji | Jedno współdzielone odświeżenie, 10-minutowy odstęp, zachowanie cache po błędzie | Unit deduplication + real offline/owner queue + regresja | PASS | Nie udowodniono, że warming wyjaśniał wszystkie wcześniejsze timeouty |
+
+Pliki etapu 3:
+
+`.github/workflows/preview-final-batch.yml`, `docs/modernization-2026-10-12.md`, `public/app-plus.js`, `public/deeper-media.js`, `public/dream-core.js`, `public/dream-loader-v2.js`, `public/fixes.js`, `public/i18n.js`, `public/index.html`, `public/knowledge.js`, `public/language-preference.js`, `public/locales/pl.json`, `public/locales/runtime.en.json`, `public/login.html`, `public/pages/checklisty.html`, `public/pages/dojazd.html`, `public/pages/encyklopedia.html`, `public/pages/mapa.html`, `public/pages/pogoda.html`, `public/pages/polowy.html`, `public/pages/porady.html`, `public/pages/regulamin.html`, `public/pages/rigi.html`, `public/pages/sonar.html`, `public/pages/teren.html`, `public/pages/ustawienia.html`, `public/pages/wezly.html`, `public/pages/wyjazdy.html`, `public/settings.js`, `public/sw.js`, `public/trip-manager.js`, `public/trip-renderer-v2.js`, `scripts/live-preview-extras.mjs`, `scripts/live-preview-language.mjs`, `scripts/live-preview-media.mjs`, `scripts/live-preview-offline.mjs`, `scripts/live-preview-regression.mjs`, `scripts/live-preview-user-language.mjs`, `scripts/responsive-qa.mjs`, `scripts/wait-preview-build.mjs`, `src/api-language.js`, `src/auth.js`, `src/lake-research.js`, `src/weather.js`, `src/worker.js`, `tests/frontend.test.mjs`, `tests/i18n.test.mjs`, `tests/language-accounts.test.mjs`, `tests/shell-warming.test.mjs`, `tests/weather-failures.test.mjs`
+
+Etap 3 zamknięty. Następny: Etap 4 — jednostki/GPS/czas/odświeżanie, braki pomiarów wody, naukowa korekta miernika warunków. READY TO MERGE TO MAIN: NO — etapy 4–7 jeszcze niezaliczone. Produkcja i main bez zmian.
