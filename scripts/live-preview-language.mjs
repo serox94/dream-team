@@ -50,21 +50,23 @@ const verifyMobileMoreLanguage=async()=>{
   const more=page.locator('#bottom-more');
   assert.ok(await more.isVisible(),'390px More button visible');
   await more.click();
-  const menuLanguage=page.locator('#main-nav > .language-selector');
-  assert.ok(await menuLanguage.isVisible(),'390px More language visible');
-  assert.ok(await menuLanguage.evaluate(el=>{const r=el.getBoundingClientRect(),m=el.parentElement.getBoundingClientRect();return r.top>=m.top&&r.bottom<=m.bottom&&r.bottom<innerHeight;}),'390px More language is immediately visible without scrolling');
-  await safeShot(page,'live-preview-qa/more-language-390-pl.png');
-  await menuLanguage.locator('select').selectOption('en');
+  const settingsLink=page.locator('#main-nav a[href="/pages/ustawienia.html"]');
+  assert.ok(await settingsLink.isVisible(),'390px Settings accessible from More');
+  await settingsLink.click();await page.locator('html[data-ready="true"][data-i18n-ready="pl"]').waitFor({timeout:30000});
+  const settingsLanguage=page.locator('.language-selector select');
+  assert.equal(await settingsLanguage.count(),1,'only one language control on authenticated Settings');
+  await settingsLanguage.selectOption('en');
   await page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
-  assert.equal(await page.locator('#main-nav > .language-selector select').inputValue(),'en','More selector changes UI to EN');
   await page.reload({waitUntil:'commit',timeout:30000});
   await page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
-  assert.equal(await page.locator('#main-nav > .language-selector select').inputValue(),'en','EN persists after reload');
-  await page.locator('#bottom-more').click();
-  assert.ok(await page.locator('#main-nav > .language-selector').isVisible(),'More language remains visible after EN reload');
-  await safeShot(page,'live-preview-qa/more-language-390-en-after-reload.png');
+  assert.equal(await page.locator('.language-selector select').inputValue(),'en','EN persists after reload');
+  await safeShot(page,'live-preview-qa/settings-language-390-en.png');
+  await page.locator('.language-selector select').selectOption('pl');
+  await page.locator('html[data-ready="true"][data-i18n-ready="pl"]').waitFor({timeout:30000});
+  assert.equal(await page.locator('.language-selector select').inputValue(),'pl');
+
  }finally{await context.close();}
- console.log('LIVE MOBILE MORE LANGUAGE: PASS (390px Dashboard -> More -> EN -> reload -> EN).');
+ console.log('LIVE SETTINGS LANGUAGE: PASS (390px More -> Settings -> EN -> reload -> EN -> PL).');
 };
 try{
  await verifyMobileMoreLanguage();
@@ -82,7 +84,7 @@ try{
   if(route.includes('ustawienia'))assert.ok(await page.locator('#settings-form').locator('..').locator('.language-selector').isVisible(),'settings language visible');
   for(const width of [360,390,412,768,1280]){
    await page.setViewportSize({width,height:844});
-   if(width===390&&route==='/'){assert.ok(await page.locator('.header-top > .language-selector').isVisible(),'phone header language visible');await page.locator('#bottom-more').click();assert.ok(await page.locator('#main-nav > .language-selector').evaluate(el=>{const r=el.getBoundingClientRect(),m=el.parentElement.getBoundingClientRect();return r.top>=m.top&&r.bottom<=m.bottom&&r.bottom<innerHeight;}),'More language is immediately in viewport without scrolling');assert.ok(await page.locator('#main-nav .language-selector').isVisible(),'More language visible');await page.locator('#bottom-more').click();}
+   if(width===390&&route==='/'){assert.equal(await page.locator('.language-selector').count(),0,'language control stays in Settings');await page.locator('#bottom-more').click();assert.ok(await page.locator('#main-nav a[href="/pages/ustawienia.html"]').isVisible(),'Settings accessible on phone');await page.locator('#bottom-more').click();}
    const leftovers=await page.evaluate(originals=>{const known=new Set(originals);const skip='script,style,textarea,[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dream-trip-select option,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew,.subtitle';const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){const p=n.parentElement,s=n.textContent.trim();if(!s||p.closest(skip)||!p.getClientRects().length||getComputedStyle(p).visibility==='hidden')continue;if(/[ąćęłńóśźż]/i.test(s)||(known.has(s)&&!['Data'].includes(s))||/\bryb\b/.test(s))out.push(s);}for(const el of document.querySelectorAll('[placeholder],[aria-label],[title],[alt]')){if(el.closest(skip)||!el.getClientRects().length)continue;for(const attr of ['placeholder','aria-label','title','alt']){const v=el.getAttribute(attr);if(attr==='aria-label'&&/^(Packed:|Move .+ (up|down)|Open full image:|Select template )/.test(v||''))continue;if(v&&v!=='Language / Język'&&(/[ąćęłńóśźż]/i.test(v)||(known.has(v)&&v!=='Data')||/\bryb\b/.test(v)))out.push(attr+': '+v);}}return [...new Set(out)];},originals);
    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
    assert.equal(overflow,false,String(width)+' EN '+route+' overflows');

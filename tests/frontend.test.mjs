@@ -162,7 +162,7 @@ test('signed session saves checklist without exposing credentials to frontend st
  }finally{p.close();await s.close();}
 });
 test('management screen offers logout and revokes the active device session',async()=>{
- const s=await testServe(),p=await page(s,'/pages/wyjazdy.html');
+ const s=await testServe(),p=await page(s,'/pages/ustawienia.html');
  try{
   const deleted=[];p.w.caches={keys:async()=>['ryby-shell-old','unrelated'],delete:async key=>{deleted.push(key);return true;}};
   const button=p.d.getElementById('ryby-logout');assert.ok(button);button.click();
@@ -175,13 +175,13 @@ test('management screen offers logout and revokes the active device session',asy
  }finally{p.close();await s.close();}
 });
 test('management page downloads a complete JSON backup through the Worker without writing rows',async()=>{
- const s=await testServe({seed:true}),p=await page(s,'/pages/wyjazdy.html');
+ const s=await testServe({seed:true}),p=await page(s,'/pages/ustawienia.html');
  try{
   let content=null,filename=null;
   p.w.URL.createObjectURL=blob=>{content=blob;return 'blob:ryby-test';};
   p.w.URL.revokeObjectURL=()=>{};
   p.w.HTMLAnchorElement.prototype.click=function(){filename=this.download;};
-  p.d.getElementById('backup-download').click();
+  p.d.getElementById('settings-export').click();
   await waitFor(()=>content&&filename,'backup download');
   assert.match(filename,/^dream-team-backup-\d{4}-\d{2}-\d{2}\.json$/);
   const data=JSON.parse(await content.text());
@@ -194,7 +194,8 @@ test('management page downloads a complete JSON backup through the Worker withou
 test('new participant and year can be managed in UI; no date fallback; lake knowledge isolated',async()=>{
  const s=await testServe(),p=await page(s,'/pages/wyjazdy.html');
  try{
-  fill(p,'angler-name','Ania');fill(p,'angler-pb','7.5');submit(p,'angler-edit');await waitFor(()=>p.d.querySelector('.participant-options')?.textContent.includes('Ania'));
+  const settings=await page(s,'/pages/ustawienia.html');try{fill(settings,'angler-name','Ania');fill(settings,'angler-pb','7.5');submit(settings,'angler-edit');await waitFor(()=>settings.d.querySelector('#participant-profile-list')?.textContent.includes('Ania'));}finally{settings.close();}
+  await p.w.Dream.refreshModel();p.close();const tripPage=await page(s,'/pages/wyjazdy.html');p.dom=tripPage.dom;p.w=tripPage.w;p.d=tripPage.d;p.errors=tripPage.errors;p.close=()=>tripPage.close();
   fill(p,'trip-name','Wspólny wyjazd 2029');fill(p,'trip-year','2029');fill(p,'trip-lake','wygonin');submit(p,'trip-edit');
   await waitFor(()=>[...p.d.querySelectorAll('[data-edit]')].length===5);
   const t=s.DB.sqlite.prepare('SELECT * FROM trips WHERE name=?').get('Wspólny wyjazd 2029');assert.equal(t.start_at,null);assert.equal(t.year,2029);

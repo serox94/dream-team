@@ -1,4 +1,4 @@
-document.addEventListener('dream:ready',async()=>{
+window.initDreamSettings=async()=>{
   const $=id=>document.getElementById(id), t=value=>window.DreamI18n?.t(value)||value, locale=window.DreamI18n?.lang==='en'?'en-GB':'pl-PL', say=(message,error=false)=>Dream.notice(t(message),error);
   const languages=['PL','EN','FR','DE','NL'];
   const saved=await Dream.api('/api/settings');
@@ -26,7 +26,7 @@ document.addEventListener('dream:ready',async()=>{
     const save=document.createElement('button');save.type='submit';save.textContent='Zapisz profil';form.append(save);
     form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await Dream.api(`/api/anglers/${encodeURIComponent(person.id)}`,{method:'PATCH',body:JSON.stringify({name:name.value,baselinePbKg:Number(pb.value),active:active.checked,defaultLanguage:language.value})});await Dream.refreshModel();renderProfiles();say('Profil zapisany.');}catch(error){say(error.message,true);save.disabled=false;}};
     host.append(form);
-  }}renderProfiles();
+  }}renderProfiles();document.addEventListener('dream:participants-changed',renderProfiles);
   const categorySection=$('category-list').closest('section'),categoryDetails=document.createElement('details');categoryDetails.className='settings-category-details';categoryDetails.innerHTML='<summary>Zarządzaj kategoriami checklisty</summary>';
   for(const child of [...categorySection.children].filter(node=>node.tagName!=='H3'))categoryDetails.append(child);
   categorySection.append(categoryDetails);
@@ -44,4 +44,4 @@ document.addEventListener('dream:ready',async()=>{
   $('clear-offline').onclick=async()=>{Dream.clearReadCache();if('caches'in window)for(const key of await caches.keys())if(key.startsWith('ryby-shell-'))await caches.delete(key);await offlineStatus();say('Wyczyszczono dane offline.');};
   $('settings-export').onclick=async()=>{try{await Dream.downloadBackup();}catch(e){say(e.message,true);}};
   await offlineStatus();
-});
+};

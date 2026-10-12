@@ -1,6 +1,7 @@
 // Live preview checks for two-device language isolation, checklist templates and participant editing.
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import {verifyNavigation} from './live-preview-navigation.mjs';
 const base='https://dream-team-preview.sewerynski00.workers.dev';
 const browser=await chromium.launch();
 const login=async(locale,lang)=>{
@@ -111,5 +112,6 @@ try{
   assert.ok(!/ryby_session=/i.test(storage.cookies),'session cookie must remain HttpOnly');
   console.log('LIVE STORAGE SAFETY: PASS no credential/session exposure in web storage or document.cookie.');
 
+  await verifyNavigation(page,pl.context);
   await pl.context.close();await en.context.close();
 }finally{await browser.close();}

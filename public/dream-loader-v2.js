@@ -1,5 +1,5 @@
 (async () => {
-  const VERSION='20261012-11';
+  const VERSION='20261012-modernization-1';
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
@@ -33,11 +33,12 @@
     await window.DreamTripRenderer.render({model,trip,documents});
     window.initDreamPlus();
     if(document.getElementById('weather-current-temp'))await loadScript('fixes.js');
-    if(document.getElementById('trip-manager'))await loadScript('trip-manager.js');
+    if(document.getElementById('trip-manager')||document.getElementById('settings-management'))await loadScript('trip-manager.js');
     await window.initDreamApp();
     if(document.body.dataset.page==='teren')await loadScript('trip-notes.js');
     if(document.body.dataset.page==='checklisty')await loadScript('checklist-templates.js');
     if(document.querySelector('.location-photo-card'))await loadScript('trip-peg-enhancer.js');
+    if(document.getElementById('settings-form')){await loadScript('settings.js');await window.initDreamSettings();}
     document.documentElement.dataset.ready='true';
     Dream.registerShell();
     document.dispatchEvent(new Event('dream:ready'));
