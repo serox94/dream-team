@@ -59,3 +59,9 @@ Ustawienia są inicjalizowane przed oznaczeniem aplikacji jako gotowej: eksport 
 Run `38213090052` potwierdził CRUD wyjazdu i administrację na 390 px, media, offline, profile i system. Wykrył: nieprzetłumaczony prefiks przywracania i wyścig ponownej edycji podczas odświeżenia po zapisie na desktopie. Poprawki: jawna etykieta PL/EN, blokada interakcji `inert` na czas zapisu/odświeżenia i test opóźnionego odświeżenia oraz podwójnego submitu. Wynik ponownego live dla tych poprawek: NOT TESTED do zakończenia CI.
 
 Bramka preview wymaga zgodności `APP_BUILD` i generacji `sw.js`; samo nowe API mogło wcześniej współistnieć ze starym assetem podczas propagacji wydania.
+
+### Wznowienie po przerwaniu — 12 października
+
+HEAD zweryfikowany bezpośrednio przez GitHub: `6707961ed655b7c99e7d8e107ca863903bd698d5`. Validate PASS. Preview run `38213892935`: language, extras (nawigacja 390/1280) i offline PASS; media FAIL podczas `page.reload` czekającego na `load`, regresja SKIPPED. Responsive run `38213895382` FAIL: stary selektor na Dashboardzie.
+
+Naprawy testów: przejście do Ustawień i dokładnie jeden selektor; reload mediów czeka na commit nawigacji, gotowość aplikacji i kartę z zapisanym obrazem. Nie zmieniono bramek danych ani lokalizacji przełącznika. Test nawigacji rozszerzony o rzeczywiste tworzenie uczestnika/edycję PB oraz tworzenie/edycję łowiska na obu szerokościach; sprzątanie wyłącznie dokładnych ID/nazw nowych obiektów QA na izolowanym preview. Lokalne 76/76 PASS. Wynik nowych testów live: NOT TESTED do zakończenia nowego CI. Etap 1 pozostaje otwarty; migracji kont jeszcze nie wykonano.

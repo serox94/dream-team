@@ -348,11 +348,16 @@ try{
   const first=await polish.newPage(),second=await english.newPage();
   await Promise.all([first.goto(preview.url+'/'),second.goto(preview.url+'/')]);
   await Promise.all([first.waitForFunction(()=>window.DreamI18n?.lang==='pl'),second.waitForFunction(()=>window.DreamI18n?.lang==='en')]);
-  await first.locator('.language-selector select').first().selectOption('en');
+  assert.equal(await first.locator('.language-selector').count(),0,'Dashboard has no language control');
+  await Promise.all([first.goto(preview.url+'/pages/ustawienia.html'),second.goto(preview.url+'/pages/ustawienia.html')]);
+  await Promise.all([first.locator('html[data-ready="true"]').waitFor(),second.locator('html[data-ready="true"]').waitFor()]);
+  assert.equal(await first.locator('.language-selector select').count(),1,'one language control in Settings');
+  assert.equal(await second.locator('.language-selector select').count(),1,'one language control in Settings');
+  await first.locator('.language-selector select').selectOption('en');
   await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
   await first.reload();await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
   assert.equal(await second.locator('html').getAttribute('lang'),'en','independent device preference');
-  await second.locator('.language-selector select').first().selectOption('pl');
+  await second.locator('.language-selector select').selectOption('pl');
   await second.waitForFunction(()=>window.DreamI18n?.lang==='pl');
   assert.equal(await first.locator('html').getAttribute('lang'),'en','device language is not global');
   await Promise.all([polish.close(),english.close()]);
