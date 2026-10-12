@@ -412,7 +412,7 @@ function validateCatchPayload(raw) {
   const spotId = raw.spot_id ? Number(raw.spot_id) : null;
   const caughtAt = raw.caught_at;
 
-  if (!window.DREAM_TRIP.participants.some(a => a.name === person)) return { ok: false, message: "Wybierz osobę." };
+  if (!window.DREAM_TRIP.participants.some(a => a.name === person)&&!window.DREAM_MODEL.anglers.some(a=>a.name===person&&a.login)) return { ok: false, message: "Wybierz osobę." };
   if (!species) return { ok: false, message: "Podaj gatunek." };
   if (!Number.isFinite(weight)) return { ok: false, message: "Podaj poprawną wagę od 0.01 do 99.99 kg." };
   if (!bait) return { ok: false, message: "Podaj przynętę." };

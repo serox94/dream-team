@@ -334,3 +334,11 @@ test('account author defaults survive reset and logout preserves owned queue; ca
   Object.defineProperty(p.w.navigator,'onLine',{configurable:true,value:true});p.w.DREAM_MODEL.currentUser={id:'account-maciek',anglerId:'maciek'};const previous=s.requests.filter(r=>r.url==='/api/offline-sync').length;await p.w.Dream.syncQueue();assert.equal(s.requests.filter(r=>r.url==='/api/offline-sync').length,previous,'different account cannot send the preserved queue');
  }finally{p.close();await s.close();}
 });
+
+test('shared account author can be selected on an older trip before joining its participants',async()=>{
+ const s=await testServe({seed:true});
+ const response=await fetch(s.url+'/api/anglers',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'Third',username:'Third'})});assert.equal(response.status,201);const {id}=await response.json();
+ const p=await page(s,'/pages/polowy.html','poland-2027');
+ try{fill(p,'person','Third');fill(p,'weight','7.5');fill(p,'bait','test');fill(p,'caught_at','2026-10-07T12:00');submit(p,'catch-form');await waitFor(()=>s.DB.sqlite.prepare('SELECT id FROM catches WHERE trip_id=? AND angler_id=?').get('poland-2027',id),'new shared author');assert.ok(s.DB.sqlite.prepare('SELECT angler_id FROM trip_participants WHERE trip_id=? AND angler_id=?').get('poland-2027',id));}
+ finally{p.close();await s.close();}
+});
