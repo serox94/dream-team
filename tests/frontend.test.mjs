@@ -305,3 +305,19 @@ test('participant settings edit persists without changing the device language',a
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
+
+test('trip editor waits for save refresh before the next edit or archive',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/wyjazdy.html');
+ let release;try{
+  p.d.querySelector('[data-edit="next-trip"]').click();fill(p,'trip-peg','QA delayed refresh');
+  const live=p.w.fetch;let held=false;
+  p.w.fetch=async(url,options)=>{if(String(url)==='/api/bootstrap'&&!held){held=true;await new Promise(resolve=>{release=resolve;});}return live(url,options);};
+  submit(p,'trip-edit');submit(p,'trip-edit');await waitFor(()=>held,'save reached bootstrap refresh');
+  assert.equal(p.d.getElementById('trip-manager').inert,true,'editing remains unavailable during refresh');
+  assert.equal(s.requests.filter(r=>r.method==='PUT'&&r.url==='/api/trips/next-trip').length,1);
+  release();await waitFor(()=>!p.d.getElementById('trip-manager').inert,'refresh settled');
+  p.d.querySelector('[data-edit="next-trip"]').click();assert.equal(p.d.querySelector('#trip-edit [name="id"]').value,'next-trip');
+  fill(p,'trip-status','archived');submit(p,'trip-edit');await waitFor(()=>s.DB.sqlite.prepare("SELECT status FROM trips WHERE id='next-trip'").get().status==='archived');
+  await waitFor(()=>!p.d.getElementById('trip-manager').inert);assert.deepEqual(p.errors,[]);
+ }finally{release?.();p.close();await s.close();}
+});

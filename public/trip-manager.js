@@ -7,11 +7,11 @@
   const empty=value=>value===''?null:value;
   const chosenZone=lake=>(window.DREAM_MODEL?.app?.timeZonePreference==='auto'?null:window.DREAM_MODEL?.app?.timeZonePreference)||lake?.facts?.timeZone||'Europe/Paris';
   function bind(form,fn){form.addEventListener('submit',async e=>{
-    e.preventDefault();if(form.dataset.saving)return;form.dataset.saving='true';
+    e.preventDefault();if(form.dataset.saving)return;form.dataset.saving='true';root.inert=true;
     const button=form.querySelector('[type="submit"]');button.disabled=true;
     try{await fn(values(form),form);Dream.notice('Zapisano.');}
     catch(error){Dream.notice(error.message,true);}
-    finally{delete form.dataset.saving;button.disabled=false;}
+    finally{delete form.dataset.saving;button.disabled=false;root.inert=false;}
   });}
   async function refresh(){await Dream.refreshModel();render();}
   function tripEditor(trip=null){
@@ -21,7 +21,7 @@
       <h3>${trip?'Edytuj wyjazd':'Nowy wyjazd'}</h3><div class="form-row">
       ${field('trip-name','Nazwa','text',trip?.name||'','required maxlength="150"')}
       ${field('trip-year','Rok','number',trip?.year||new Date().getFullYear(),'required min="2000" max="2200" step="1"')}</div>
-      <div><label for="trip-lake">Łowisko</label><select id="trip-lake" name="lakeId" ${trip?'disabled':''}>${options(m.lakes,lake?.id)}</select><small>Nowe łowisko możesz dodać poniżej. Historia istniejącego wyjazdu pozostaje przy jego łowisku.</small></div>
+      <div><label for="trip-lake">Łowisko</label><select id="trip-lake" name="lakeId" ${trip?'disabled':''}>${options(m.lakes,lake?.id)}</select><small>${T('Nowe łowisko dodasz w kreatorze lub Ustawieniach. Historia istniejącego wyjazdu pozostaje przy jego łowisku.','Add a lake in the wizard or Settings. Existing trip history stays with its lake.')}</small></div>
       <div class="form-row">${field('trip-start','Początek','datetime-local',trip?.start?Dream.dateInput(trip.start,zone):'')}${field('trip-end','Powrót','datetime-local',trip?.end?Dream.dateInput(trip.end,zone):'')}</div>
       <small id="trip-zone">Godziny łowiska: ${E(zone)}. Termin może pozostać pusty.</small>
       ${field('trip-peg','Stanowisko','text',trip?.peg||'','maxlength="200"')}
@@ -150,7 +150,7 @@
     if(isSettings){
       root.innerHTML=`<section class="panel-card" id="lake-catalog"><h2>${T('Katalog łowisk','Lake catalogue')}</h2><p>${T('Wspólne profile łowisk, źródła i research dla wszystkich lat.','Shared lake profiles, sources and research across all years.')}</p><div class="form-actions">${m.lakes.map(l=>`<button type="button" data-lake="${E(l.id)}" data-user-content class="secondary-btn">${E(l.name)}</button>`).join('')}</div><div id="lake-profile"></div><details class="management-details" id="lake-editor-panel"><summary>Dodaj lub edytuj łowisko</summary><div id="lake-editor"></div></details></section>
       <section class="panel-card"><h2>${T('Dodaj uczestnika','Add participant')}</h2><p>${T('Profile i PB istniejących wędkarzy edytujesz powyżej.','Edit existing angler profiles and personal bests above.')}</p><form id="angler-edit" class="form-grid"><div class="form-row">${field('angler-name','Nowy uczestnik','text','','required maxlength="60"')}${field('angler-pb','PB sprzed zapisów w aplikacji (kg)','number',0,'required min="0" max="150" step="0.01"')}</div><button type="submit">Dodaj uczestnika</button></form></section>
-      <details class="panel-card management-details"><summary>Przywracanie wpisów</summary><p>Usunięte wpisy z wyjazdu <span data-user-content>${E(window.DREAM_TRIP.name)}</span>.</p><div id="trash-list"></div></details>
+      <details class="panel-card management-details"><summary>Przywracanie wpisów</summary><p>${T('Usunięte wpisy z wyjazdu','Deleted entries from trip')} <span data-user-content>${E(window.DREAM_TRIP.name)}</span>.</p><div id="trash-list"></div></details>
       <section class="panel-card"><h2>Dostęp na tym urządzeniu</h2><p>Pozostajesz zalogowany, dopóki nie wylogujesz się lub nie usuniesz danych przeglądarki.</p><button type="button" id="ryby-logout" class="secondary-btn">Wyloguj</button></section>`;
       wireLake();
       root.querySelectorAll('[data-lake]').forEach(b=>b.onclick=()=>{wireLake(m.lakes.find(l=>l.id===b.dataset.lake));void lakeProfile(b.dataset.lake);document.getElementById('lake-profile').scrollIntoView({behavior:'smooth',block:'start'});});
