@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {JSDOM} from 'jsdom';import {readFile} from 'node:fs/promises';import {database} from './db.mjs';import {weatherForTrip} from '../src/weather.js';
 test('weather retries transient transport/5xx once, but does not retry quota or malformed forecast',async()=>{
- const DB=database(),data={current:{temperature_2m:15},hourly:{time:['2026-10-12T12:00']},daily:{time:['2026-10-12']}};
+ const DB=database(),data={timezone:'Europe/Paris',current:{time:'2026-10-12T12:00',temperature_2m:15},hourly:{time:['2026-10-12T12:00']},daily:{time:['2026-10-12']}};
  try{for(const failure of ['transport','server']){let attempts=0;const result=await weatherForTrip({DB,WEATHER_FETCH:async()=>{attempts++;if(attempts===1){if(failure==='transport')throw new TypeError('connection reset');return new Response('',{status:503});}return Response.json(data);}},'next-trip');assert.equal(attempts,2);assert.equal(result.current.temperature_2m,15);}
  let attempts=0;await assert.rejects(weatherForTrip({DB,WEATHER_FETCH:async()=>{attempts++;return new Response('',{status:429});}},'next-trip'));assert.equal(attempts,1,'do not hammer provider quota');
  attempts=0;await assert.rejects(weatherForTrip({DB,WEATHER_FETCH:async()=>{attempts++;return Response.json({current:{}});}},'next-trip'));assert.equal(attempts,1,'invalid data remains an error');

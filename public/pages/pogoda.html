@@ -64,14 +64,14 @@
           <div class="eyebrow">🌦️ Pogoda i warunki na zasiadkę</div>
           <h2>Pogoda PRO</h2>
           <p>
-            Bieżące warunki nad łowiskiem, najbliższe okna aktywności i prognoza na kolejne dni. Indeks brań jest orientacyjny.
+            Prognoza dla łowiska i praktyczne ograniczenia zasiadki. Ocena warunków nie zastępuje obserwacji ryb ani pomiarów wody.
           </p>
 
           <div class="weather-hero-pills">
             <span class="hero-pill">📍 <span id="weather-summary-location">Miejsce zasiadki</span></span>
             <span class="hero-pill">🕒 <span id="weather-summary-updated">Ładowanie danych...</span></span>
             <span class="hero-pill">🎣 <span id="weather-rating-hero">Ocena: --</span></span>
-            <span class="hero-pill">🐟 <span id="bite-chance-hero">Brania: --</span></span>
+            <span class="hero-pill">🐟 <span id="bite-chance-hero">Warunki: --</span></span>
           </div>
         </div>
       </div>
@@ -99,7 +99,7 @@
       <article class="stat-card weather-stat-card weather-score-card">
         <span class="label">🎣 Ocena warunków</span>
         <strong id="weather-rating">--</strong>
-        <small id="weather-rating-note" class="weather-stat-sub">Analiza pod brania</small>
+        <small id="weather-rating-note" class="weather-stat-sub">Komfort i ograniczenia zasiadki</small>
       </article>
     </section>
 
@@ -107,17 +107,17 @@
       <article class="stat-card weather-stat-card">
         <span class="label">🐟 Indeks warunków</span>
         <strong id="bite-chance-main">--</strong>
-        <small id="bite-score-note" class="weather-stat-sub">Punktacja aktywności</small>
+        <small id="bite-score-note" class="weather-stat-sub">Bez prognozy brań</small>
       </article>
 
       <article class="stat-card weather-stat-card">
-        <span class="label">⏰ Najlepsze okno</span>
+        <span class="label">⏰ Łatwiejsze warunki</span>
         <strong id="best-bite-window">--</strong>
-        <small id="best-bite-window-note" class="weather-stat-sub">Godziny największej aktywności</small>
+        <small id="best-bite-window-note" class="weather-stat-sub">Prognoza warunków na brzegu</small>
       </article>
 
       <article class="stat-card weather-stat-card">
-        <span class="label">📈 Trend aktywności</span>
+        <span class="label">📈 Zmiany warunków</span>
         <strong id="bite-trend">--</strong>
         <small id="bite-trend-note" class="weather-stat-sub">Czy warunki się poprawiają</small>
       </article>
@@ -132,14 +132,14 @@
     <section class="two-column weather-main-grid">
       <article class="panel-card">
         <div class="section-head">
-          <h3>🎣 Brania — teraz</h3>
-          <span class="section-chip">live</span>
+          <h3>🎣 Warunki — teraz</h3>
+          <span class="section-chip">prognoza</span>
         </div>
 
         <div class="mini-stats">
           <div><span>☁️ Opis</span><strong id="weather-description-copy">--</strong></div>
           <div><span>🌡️ Odczuwalna</span><strong id="weather-apparent-temp">--</strong></div>
-          <div><span>🧭 Kierunek wiatru</span><strong id="weather-wind-direction-copy">--</strong></div>
+          <div><span>🧭 Kierunek wiatru (skąd wieje)</span><strong id="weather-wind-direction-copy">--</strong></div>
           <div><span>☁️ Zachmurzenie</span><strong id="weather-cloud-cover">--</strong></div>
           <div><span>🌧️ Opad</span><strong id="weather-precipitation">--</strong></div>
           <div><span>💧 Wilgotność</span><strong id="weather-humidity">--</strong></div>
@@ -147,6 +147,8 @@
           <div><span>👀 Widzialność</span><strong id="weather-visibility">--</strong></div>
           <div><span>☀️ UV</span><strong id="weather-uv">--</strong></div>
           <div><span>🌞 Nasłonecznienie dziś</span><strong id="weather-sunshine">--</strong></div>
+          <div><span>🌅 Wschód słońca</span><strong id="weather-sunrise">--</strong></div>
+          <div><span>🌇 Zachód słońca</span><strong id="weather-sunset">--</strong></div>
         </div>
       </article>
 
@@ -163,7 +165,7 @@
           <div><span>💧 Wilgotność nocą</span><strong id="camp-night-humidity">--</strong></div>
           <div><span>🌫️ Mgła / widzialność</span><strong id="camp-night-visibility">--</strong></div>
           <div><span>🏕️ Komfort nocny</span><strong id="camp-night-rating">--</strong></div>
-          <div><span>🌕 Faza księżyca</span><strong id="moon-phase">--</strong></div>
+          <div><span>🌕 Faza Księżyca (orientacyjnie)</span><strong id="moon-phase">--</strong></div>
           <div><span>✨ Oświetlenie księżyca</span><strong id="moon-illumination">--</strong></div>
         </div>
       </article>
@@ -211,8 +213,8 @@
         </div>
 
         <div class="mini-stats">
-          <div><span>🌡️ Temp. gleby 0–10 cm</span><strong id="soil-temp">--</strong></div>
-          <div><span>💦 Wilgotność gleby 0–10 cm</span><strong id="soil-moisture">--</strong></div>
+          <div><span>🌡️ Temp. powierzchni modelu (0 cm)</span><strong id="soil-temp">--</strong></div>
+          <div><span>💦 Wilgotność gleby (0–1 cm)</span><strong id="soil-moisture">--</strong></div>
         </div>
 
         <div class="shore-note">
@@ -222,10 +224,22 @@
       </article>
     </section>
 
+    <section class="panel-card">
+      <h3>Woda i źródło prognozy</h3><p id="weather-source-status" class="weather-note">Ładowanie źródła prognozy…</p>
+      <div class="weather-chip-grid"><div><span>Temperatura wody</span><strong id="water-temp">--</strong></div><div><span>Tlen rozpuszczony</span><strong id="water-oxygen">--</strong></div></div>
+      <p>Temperatura powietrza i powierzchni modelu nie zastępują pomiarów wody w łowisku. Odczyty Open-Meteo są danymi modelowymi dla siatki prognozy.</p>
+      <details><summary>Źródła i ograniczenia oceny</summary><ul>
+       <li><a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener noreferrer"><span data-user-content>Open-Meteo</span></a> — dokumentacja dostawcy</li>
+       <li><a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2109.2005.01426.x" target="_blank" rel="noopener noreferrer"><span data-user-content>Bauer & Schlott (2006)</span></a> — badanie niedotlenienia karpia zimą; nie model pogody i brań</li>
+       <li><a href="https://www.weather.gov/safety/lightning-safety-overview" target="_blank" rel="noopener noreferrer"><span data-user-content>NWS</span></a> — bezpieczeństwo podczas burzy</li>
+       <li><a href="https://science.nasa.gov/moon/moon-phases/" target="_blank" rel="noopener noreferrer"><span data-user-content>NASA</span></a> — fazy Księżyca; aplikacja podaje przybliżenie</li>
+      </ul><p>Brak zweryfikowanego modelu statystycznego dla tego łowiska. Ocena opisuje praktyczne ograniczenia zasiadki, a nie prawdopodobieństwo brania. Dane odświeżaj przyciskiem; w aktywnym widoku odświeżenie następuje co 10 minut.</p></details>
+    </section>
+
     <section class="two-column">
       <article class="panel-card">
         <div class="section-head">
-          <h3>🧠 Interpretacja pod brania</h3>
+          <h3>🧠 Interpretacja warunków</h3>
           <span class="section-chip">analiza</span>
         </div>
         <div id="weather-interpretation" class="weather-interpretation">
@@ -247,11 +261,11 @@
     <section class="two-column">
       <article class="panel-card">
         <div class="section-head">
-          <h3>🐟 Analiza brań — plusy i minusy</h3>
-          <span class="section-chip">brania</span>
+          <h3>🐟 Warunki — plusy i minusy</h3>
+          <span class="section-chip">warunki</span>
         </div>
         <div id="bite-analysis" class="weather-interpretation">
-          Ładowanie analizy brań...
+          Ładowanie oceny warunków...
         </div>
       </article>
 

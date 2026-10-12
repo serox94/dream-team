@@ -100,6 +100,7 @@
   }
 
   function getWeatherStatusByRating(text) {
+    if(/Zagrożenie|hazard/i.test(text))return 'danger';if(/Utrudnione|Challenging/i.test(text))return 'warn';
     const value = String(text || "").toLowerCase();
     if (value.includes("bardzo") || value.includes("wysoka") || value.includes("dobre")) return "success";
     if (value.includes("dobra") || value.includes("średnia") || value.includes("średnie")) return "warn";
@@ -174,76 +175,24 @@
 
   let dashboardWeatherCache=null;
   async function fetchDashboardWeatherAlerts() {
-    if(dashboardWeatherCache && Date.now()-dashboardWeatherCache.at<600000)return dashboardWeatherCache.data;
+    const weatherKey=`${window.DREAM_TRIP.id}:${getSpotCoordsSafe().latitude}:${getSpotCoordsSafe().longitude}`;
+    if(dashboardWeatherCache?.key===weatherKey&&Date.now()-dashboardWeatherCache.at<600000)return dashboardWeatherCache.data;
     const spot = getSpotCoordsSafe();
     if (spot.latitude == null || spot.longitude == null) throw new Error("Brak GPS łowiska.");
     const response = await fetch(`/api/weather?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`, {signal:AbortSignal.timeout(18000),headers:{'accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl'}});
     if (!response.ok) throw new Error(`Weather ${response.status}`);
     const data=await response.json();
-    dashboardWeatherCache={at:Date.now(),data};
+    dashboardWeatherCache={key:weatherKey,at:Date.now(),data};
     return data;
   }
 
-  function getPressureTrend(pressures, currentIndex) {
-    const prev = Number(pressures?.[Math.max(0, currentIndex - 3)] ?? 0);
-    const current = Number(pressures?.[currentIndex] ?? 0);
-    const diff = current - prev;
-    if (diff > 2) return "rośnie";
-    if (diff < -2) return "spada";
-    return "stabilne";
-  }
+  function getPressureTrend(p,index){return window.DreamConditions.trend(p,index)?.direction||'brak danych';}
 
-  function getHourWeightForBites(hour) {
-    if ((hour >= 4 && hour <= 8) || (hour >= 19 && hour <= 23)) return 2;
-    if ((hour >= 9 && hour <= 11) || (hour >= 16 && hour <= 18)) return 1;
-    return 0;
-  }
 
-  function getBiteScore(snapshot, trend, hour) {
-    let score = 0;
-    const temp = Number(snapshot.temperature_2m || 0);
-    const wind = Number(snapshot.wind_speed_10m || 0);
-    const gusts = Number(snapshot.wind_gusts_10m || 0);
-    const pressure = Number(snapshot.pressure_msl || 0);
-    const cloud = Number(snapshot.cloud_cover || 0);
-    const rain = Number(snapshot.precipitation || 0);
 
-    if (pressure >= 1002 && pressure <= 1022) score += 2;
-    else if (pressure >= 995 && pressure <= 1028) score += 1;
-    else score -= 1;
+  function getBiteScore(snapshot){return window.DreamConditions.assess(snapshot,document.documentElement.lang).grade;}
 
-    if (trend === "stabilne") score += 2;
-    else if (trend === "rośnie") score += 1;
-    else score -= 1;
-
-    if (temp >= 12 && temp <= 23) score += 2;
-    else if (temp >= 8 && temp <= 27) score += 1;
-    else score -= 1;
-
-    if (wind >= 8 && wind <= 22) score += 2;
-    else if (wind >= 4 && wind < 8) score += 1;
-    else if (wind > 30) score -= 1;
-
-    if (gusts <= 30) score += 1;
-    else if (gusts > 40) score -= 1;
-
-    if (cloud >= 25 && cloud <= 85) score += 2;
-    else if (cloud > 85) score += 1;
-
-    if (rain > 0 && rain <= 1.5) score += 1;
-    else if (rain > 4) score -= 1;
-
-    score += getHourWeightForBites(hour);
-    return score;
-  }
-
-  function biteScoreLabel(score) {
-    if (score >= 10) return "Bardzo wysoka";
-    if (score >= 8) return "Wysoka";
-    if (score >= 6) return "Dobra";
-    if (score >= 4) return "Średnia";
-    return "Słaba";
-  }
+  function biteScoreLabel(grade){return window.DreamConditions.label(grade,document.documentElement.lang);}
 
   function createAlertsSection() {
     let section = $("dashboard-alerts");
@@ -353,42 +302,16 @@
 
       try {
         const weather = await fetchDashboardWeatherAlerts();
-        const temp=Number(weather.current?.temperature_2m),wind=Number(weather.current?.wind_speed_10m);
-        if(Number.isFinite(temp)&&Number.isFinite(wind))currentWeather=`${temp.toFixed(0)}°C · wiatr ${wind.toFixed(0)} km/h`;
+        const temp=window.DreamConditions.finite(weather.current?.temperature_2m),wind=window.DreamConditions.finite(weather.current?.wind_speed_10m);
+        if(temp!==null&&wind!==null)currentWeather=`${temp.toFixed(0)}°C · wiatr ${wind.toFixed(0)} km/h`;
         setText('dashboard-weather-now',currentWeather);
-        const localNow = Dream.dateInput(new Date().toISOString(), weather.timezone || Dream.zone());
-        const nowIndex = Math.max(0, weather.hourly.time.findIndex(t => t >= localNow.slice(0,13)+':00'));
-        const limit = Math.min(weather.hourly.time.length, nowIndex + 24);
-        let bestScore = -999;
-        let bestIndex = 0;
+        const nowIndex=window.DreamConditions.hourIndex(weather),limit=Math.min(weather.hourly.time.length,nowIndex+24);let bestGrade=null,bestIndex=null;
+        for(let i=nowIndex;i<limit;i++){const grade=getBiteScore(window.DreamConditions.snapshot(weather.hourly,i));if(grade!==null&&grade>0&&(bestGrade===null||grade>bestGrade)){bestGrade=grade;bestIndex=i;}}
+        if(bestIndex!==null){const start=weather.hourly.time[bestIndex].slice(11,16),end=String((Number(start.slice(0,2))+1)%24).padStart(2,'0')+':00';bestBiteWindow=`${start}–${end} (${biteScoreLabel(bestGrade)})`;}
 
-        for (let i = nowIndex; i < limit; i += 1) {
-          const hour = new Date(weather.hourly.time[i]).getHours();
-          const trend = getPressureTrend(weather.hourly.pressure_msl, i);
-          const score = getBiteScore({
-            temperature_2m: weather.hourly.temperature_2m[i],
-            wind_speed_10m: weather.hourly.wind_speed_10m[i],
-            wind_gusts_10m: weather.hourly.wind_gusts_10m[i],
-            pressure_msl: weather.hourly.pressure_msl[i],
-            cloud_cover: weather.hourly.cloud_cover[i],
-            precipitation: weather.hourly.precipitation[i]
-          }, trend, hour);
-
-          if (score > bestScore) {
-            bestScore = score;
-            bestIndex = i;
-          }
-        }
-
-        const bestDate = new Date(weather.hourly.time[bestIndex]);
-        const bestHourStart = bestDate.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-        const bestHourEndDate = new Date(bestDate.getTime() + 60 * 60 * 1000);
-        const bestHourEnd = bestHourEndDate.toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
-        bestBiteWindow = `${bestHourStart}–${bestHourEnd} (${biteScoreLabel(bestScore)})`;
-
-        const tomorrowWindValue = Number(weather.daily.wind_speed_10m_max?.[1] || 0);
-        const tomorrowGustsValue = Number(weather.daily.wind_gusts_10m_max?.[1] || 0);
-        tomorrowWind = `${tomorrowWindValue.toFixed(1)} km/h • ${describeWind(tomorrowWindValue, tomorrowGustsValue)}`;
+        const tomorrowWindValue = window.DreamConditions.finite(weather.daily.wind_speed_10m_max?.[1]);
+        const tomorrowGustsValue = window.DreamConditions.finite(weather.daily.wind_gusts_10m_max?.[1]);
+        if(tomorrowWindValue!==null&&tomorrowGustsValue!==null)tomorrowWind = `${tomorrowWindValue.toFixed(1)} km/h • ${describeWind(tomorrowWindValue, tomorrowGustsValue)}`;
         if (tomorrowWindValue >= 28 || tomorrowGustsValue >= 40) {
           dashboardWarning = `Uwaga: jutro wiatr będzie mocny i wyraźnie porywisty.`;
         } else if (tomorrowWindValue >= 20 || tomorrowGustsValue >= 30) {
@@ -405,7 +328,7 @@
           status: currentWeather === "Brak prognozy" ? "info" : "success"
         },
         {
-          title: "🎣 Najbliższe 24 h · orientacyjne warunki",
+          title: "🎣 Najbliższe 24 h · warunki na brzegu",
           value: bestBiteWindow,
           status: bestBiteWindow === "Brak danych" ? "info" : "success"
         },

@@ -1,5 +1,9 @@
 (function () {
   const $ = (id) => document.getElementById(id);
+  const language=()=>window.DreamLanguage?.get()||document.documentElement.lang||'pl';
+  const say=(pl,en)=>language()==='en'?en:pl;
+  const value=n=>window.DreamConditions.finite(n);
+  const fmt=(n,dec=1,unit='')=>value(n)===null?'--':Number(n).toFixed(dec)+unit;
   const tr = value => window.DreamI18n?.t(value) || value;
 
   function getFishingSpotSafe() {
@@ -30,29 +34,14 @@
     return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, max);
   }
 
-  function formatVisibility(value) {
-    const num = Number(value || 0);
-    if (num >= 1000) return `${(num / 1000).toFixed(1)} km`;
-    return `${Math.round(num)} m`;
-  }
+  function formatVisibility(v){const n=value(v);return n===null?'--':n>=1000?fmt(n/1000,1,' km'):fmt(n,0,' m');}
 
-  function formatHour(dateString) {
-    const date = new Date(dateString);
-    const language=window.DreamLanguage?.get()||window.DreamI18n?.lang||localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
-    return date.toLocaleTimeString(language==='en'?'en-GB':'pl-PL', { hour: "2-digit", minute: "2-digit" });
-  }
+  function formatHour(v,epoch){if(!v)return '--';if(value(epoch)!==null)return new Date(epoch*1000).toLocaleTimeString(language()==='en'?'en-GB':'pl-PL',{timeZone:window.DREAM_WEATHER_ZONE||'UTC',hour:'2-digit',minute:'2-digit',timeZoneName:'shortOffset'});return String(v).slice(11,16);}
 
-  function formatDay(dateString) {
-    const date = new Date(dateString);
-    const language=window.DreamLanguage?.get()||window.DreamI18n?.lang||localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
-    return date.toLocaleDateString(language==='en'?'en-GB':'pl-PL', {
-      weekday: "long",
-      day: "2-digit",
-      month: "2-digit"
-    });
-  }
+  function formatDay(v){return new Date(v+'T12:00:00Z').toLocaleDateString(language()==='en'?'en-GB':'pl-PL',{timeZone:'UTC',weekday:'long',day:'2-digit',month:'2-digit'});}
 
   function weatherCodeToText(code) {
+    if(value(code)===null)return say('Brak danych','No data');
     const map = {
       0: "Bezchmurnie",
       1: "Prawie bezchmurnie",
@@ -87,6 +76,7 @@
   }
 
   function weatherCodeToIcon(code) {
+    if(value(code)===null)return '❔';
     const num = Number(code);
     if (num === 0) return "☀️";
     if ([1, 2].includes(num)) return "⛅";
@@ -99,15 +89,11 @@
     return "🌤️";
   }
 
-  function windDirectionToText(deg) {
-    const value = Number(deg || 0);
-    const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
-    const index = Math.round(value / 45) % 8;
-    return `${dirs[index]} (${Math.round(value)}°)`;
-  }
+  function windDirectionToText(deg){if(value(deg)===null||deg<0||deg>360)return '--';const dirs=['N','NE','E','SE','S','SW','W','NW'];return `${dirs[Math.round(deg/45)%8]} (${Math.round(deg)}°)`;}
 
   function getWindStrengthLabel(speed) {
-    const value = Number(speed || 0);
+    if(window.DreamConditions.finite(speed)===null)return say('brak danych','no data');
+    const value = Number(speed);
     if (value < 5) return "bardzo słaby";
     if (value < 12) return "słaby";
     if (value < 20) return "umiarkowany";
@@ -118,7 +104,8 @@
   }
 
   function getWindGustLabel(gusts) {
-    const value = Number(gusts || 0);
+    if(window.DreamConditions.finite(gusts)===null)return say('brak danych','no data');
+    const value = Number(gusts);
     if (value < 20) return "mało porywisty";
     if (value < 30) return "lekko porywisty";
     if (value < 40) return "porywisty";
@@ -127,7 +114,7 @@
   }
 
   function describeWind(speed, gusts) {
-    return `${getWindStrengthLabel(speed)}, ${getWindGustLabel(gusts)}`;
+    return `${tr(getWindStrengthLabel(speed))}, ${tr(getWindGustLabel(gusts))}`;
   }
 
   function moonPhaseInfo(date = new Date()) {
@@ -147,24 +134,9 @@
     return { name: "Ubywający sierp", illumination: `${illumination}%` };
   }
 
-  function getPressureTrend(pressures, currentIndex) {
-    const prev = Number(pressures?.[Math.max(0, currentIndex - 3)] ?? 0);
-    const current = Number(pressures?.[currentIndex] ?? 0);
-    const diff = current - prev;
-    if (diff > 2) return "rośnie";
-    if (diff < -2) return "spada";
-    return "stabilne";
-  }
+  function getPressureTrend(p,index){return window.DreamConditions.trend(p,index)?.direction||say('brak danych','no data');}
 
-  function getHourlyIndexForNow(data) {
-    const times=data?.hourly?.time||[], current=data?.current?.time;
-    if(!current || !times.length) throw new Error('Brak czasu prognozy.');
-    const hour=current.slice(0,13)+':00';
-    const index=times.indexOf(hour);
-    if(index>=0)return index;
-    const next=times.findIndex(t=>t>=hour);
-    return next<0?times.length-1:next;
-  }
+  function getHourlyIndexForNow(data){return window.DreamConditions.hourIndex(data);}
 
   function pickNearestNightWindow(hourly,startIndex) {
     const indices=[];
@@ -174,313 +146,54 @@
       else if(indices.length)break;
     }
     if(!indices.length)indices.push(startIndex);
-    const vals=key=>indices.map(i=>hourly[key]?.[i]).filter(v=>v!=null).map(Number);
-    const min=key=>Math.min(...vals(key)),max=key=>Math.max(...vals(key));
+    const vals=key=>indices.map(i=>hourly[key]?.[i]).map(v=>value(v)).filter(v=>v!==null);
+    const min=key=>vals(key).length?Math.min(...vals(key)):null,max=key=>vals(key).length?Math.max(...vals(key)):null;
     return {temp:min('temperature_2m'),wind:max('wind_speed_10m'),gusts:max('wind_gusts_10m'),humidity:max('relative_humidity_2m'),visibility:min('visibility'),cloud:max('cloud_cover')};
   }
 
   function getNightCampRating(night) {
+    if(Object.values(night).some(v=>v===null))return say('Niepełne dane','Incomplete data');
     if (night.gusts >= 45 || night.visibility < 300) return "Trudna noc";
     if (night.temp < 6 || night.wind > 25 || night.humidity > 92) return "Średnio komfortowo";
     return "Dobra noc";
   }
 
-  function getHourWeightForBites(hour) {
-    if ((hour >= 4 && hour <= 8) || (hour >= 19 && hour <= 23)) return 2;
-    if ((hour >= 9 && hour <= 11) || (hour >= 16 && hour <= 18)) return 1;
-    return 0;
-  }
 
-  function getBiteScore(snapshot, trend, hour) {
-    let score = 0;
 
-    const temp = Number(snapshot.temperature_2m || 0);
-    const wind = Number(snapshot.wind_speed_10m || 0);
-    const gusts = Number(snapshot.wind_gusts_10m || 0);
-    const pressure = Number(snapshot.pressure_msl || 0);
-    const cloud = Number(snapshot.cloud_cover || 0);
-    const rain = Number(snapshot.precipitation || 0);
+  function getBiteScore(snapshot){return window.DreamConditions.assess(snapshot,language()).grade;}
 
-    if (pressure >= 1002 && pressure <= 1022) score += 2;
-    else if (pressure >= 995 && pressure <= 1028) score += 1;
-    else score -= 1;
+  function biteScoreToLabel(grade){return window.DreamConditions.label(grade,language());}
 
-    if (trend === "stabilne") score += 2;
-    else if (trend === "rośnie") score += 1;
-    else score -= 1;
+  function biteScoreToShortTactic(grade){return grade===0?say('Zadbaj o bezpieczeństwo','Prioritise safety'):say('Obserwuj wodę','Observe the water');}
 
-    if (temp >= 12 && temp <= 23) score += 2;
-    else if (temp >= 8 && temp <= 27) score += 1;
-    else score -= 1;
+  function getWeatherRating(current){return window.DreamConditions.assess(current,language()).label;}
 
-    if (wind >= 8 && wind <= 22) score += 2;
-    else if (wind >= 4 && wind < 8) score += 1;
-    else if (wind > 30) score -= 1;
+  function getDailyAmplitude(hourly,index){const t=(hourly.temperature_2m||[]).slice(Math.max(0,index-6),index+18).filter(v=>value(v)!==null);return t.length>1?Math.max(...t)-Math.min(...t):null;}
 
-    if (gusts <= 30) score += 1;
-    else if (gusts > 40) score -= 1;
-
-    if (cloud >= 25 && cloud <= 85) score += 2;
-    else if (cloud > 85) score += 1;
-
-    if (rain > 0 && rain <= 1.5) score += 1;
-    else if (rain > 4) score -= 1;
-
-    score += getHourWeightForBites(hour);
-
-    return score;
-  }
-
-  function biteScoreToLabel(score) {
-    if (score >= 10) return "Bardzo wysoka";
-    if (score >= 8) return "Wysoka";
-    if (score >= 6) return "Dobra";
-    if (score >= 4) return "Średnia";
-    return "Słaba";
-  }
-
-  function biteScoreToShortTactic(score) {
-    if (score >= 10) return "Mocno naciskaj";
-    if (score >= 8) return "Dobra zasiadka";
-    if (score >= 6) return "Warto pilnować";
-    if (score >= 4) return "Warunki średnie";
-    return "Trudniejsze warunki";
-  }
-
-  function getWeatherRating(current, hourly, currentIndex) {
-    let score = 0;
-    const pressureTrend = getPressureTrend(hourly.pressure_msl, currentIndex);
-    const wind = Number(current.wind_speed_10m || 0);
-    const gusts = Number(current.wind_gusts_10m || 0);
-    const cloud = Number(current.cloud_cover || 0);
-    const rain = Number(current.precipitation || 0);
-    const pressure = Number(current.pressure_msl || 0);
-
-    if (wind >= 8 && wind <= 24) score += 2;
-    if (gusts <= 35) score += 1;
-    if (cloud >= 20 && cloud <= 85) score += 2;
-    if (rain <= 1.5) score += 1;
-    if (pressure >= 1000 && pressure <= 1024) score += 1;
-    if (pressureTrend === "stabilne") score += 2;
-    if (pressureTrend === "rośnie") score += 1;
-
-    if (score >= 8) return "Bardzo dobre";
-    if (score >= 6) return "Dobre";
-    if (score >= 4) return "Średnie";
-    return "Słabe";
-  }
-
-  function getDailyAmplitude(hourly, currentIndex) {
-    const start = Math.max(0, currentIndex - 6);
-    const end = Math.min(hourly.temperature_2m.length, currentIndex + 18);
-    const slice = hourly.temperature_2m.slice(start, end).map(Number);
-    if (!slice.length) return 0;
-    return Math.max(...slice) - Math.min(...slice);
-  }
-
-  function buildWeatherInterpretation(current, hourly, currentIndex) {
-    const notes = [];
-    const wind = Number(current.wind_speed_10m || 0);
-    const gusts = Number(current.wind_gusts_10m || 0);
-    const trend = getPressureTrend(hourly.pressure_msl, currentIndex);
-    const cloud = Number(current.cloud_cover || 0);
-    const rain = Number(current.precipitation || 0);
-
-    if (trend === "stabilne") notes.push("Stabilne ciśnienie wygląda dobrze pod spokojniejsze żerowanie ryb.");
-    else if (trend === "rośnie") notes.push("Ciśnienie rośnie — warunki mogą się porządkować, warto obserwować aktywność.");
-    else notes.push("Ciśnienie spada — możliwa zmiana pogody, pilnuj frontu i reakcji ryb.");
-
-    if (wind >= 8 && wind <= 24) notes.push("Wiatr jest w sensownym zakresie i może pracować na wodzie na plus.");
-    else if (wind < 8) notes.push("Słaby wiatr — woda może być zbyt spokojna i mniej żywa.");
-    else notes.push("Wiatr jest już dość mocny — ustawienie zestawów i komfort łowienia mogą być gorsze.");
-
-    if (gusts > 35) notes.push("Mocniejsze porywy mogą pogarszać kontrolę nad zestawem i sygnalizacją.");
-    if (cloud >= 20 && cloud <= 85) notes.push("Umiarkowane zachmurzenie zwykle daje przyjemniejsze światło i lepszy komfort.");
-    if (rain > 1.5) notes.push("Wyższy opad — przygotuj osłonę stanowiska i pilnuj elektroniki.");
-
-    if (!notes.length) notes.push("Warunki są dość neutralne — obserwuj wodę i reaguj na zmiany.");
-    return notes;
-  }
+  function buildWeatherInterpretation(current){const a=window.DreamConditions.assess(current,language());return [a.explanation,a.rule];}
 
   function buildCampInterpretation(night, moon) {
     const notes = [];
 
-    if (night.temp < 6) notes.push("Noc zapowiada się chłodna — przyda się cieplejszy śpiwór i dodatkowa warstwa.");
+    if(night.temp===null)notes.push(say('Brak prognozy temperatury nocnej.','Night temperature forecast is unavailable.'));
+    else if (night.temp < 6) notes.push("Noc zapowiada się chłodna — przyda się cieplejszy śpiwór i dodatkowa warstwa.");
     else if (night.temp < 11) notes.push("Temperatura nocna umiarkowana — komfortowo, ale warto mieć bluzę pod ręką.");
     else notes.push("Temperatura nocą wygląda całkiem przyjaźnie dla dłuższego siedzenia na stanowisku.");
 
     if (night.gusts > 40) notes.push("Porywy będą wyraźnie odczuwalne — dobrze poprawić namiot, pokrowce i lekkie rzeczy.");
     if (night.humidity > 90) notes.push("Bardzo wysoka wilgotność — rano może być mokro, cięższe powietrze i więcej rosy.");
-    if (night.visibility < 500) notes.push("Niższa widzialność może oznaczać mgłę przy brzegu i bardziej surową noc.");
+    if (night.visibility!==null&&night.visibility < 500) notes.push("Niższa widzialność może oznaczać mgłę przy brzegu i bardziej surową noc.");
 
     notes.push(`Faza księżyca: ${moon.name}, oświetlenie około ${moon.illumination}.`);
 
     return notes;
   }
 
-  function buildBiteAnalysis(data, currentIndex) {
-    const hourly = data.hourly;
-    const current = data.current;
-    const hour = new Date(data.current.time).getHours();
-    const trend = getPressureTrend(hourly.pressure_msl, currentIndex);
-    const currentScore = getBiteScore(current, trend, hour);
-    const label = biteScoreToLabel(currentScore);
-    const amplitude = getDailyAmplitude(hourly, currentIndex);
+  function buildBiteAnalysis(data){const a=window.DreamConditions.assess(data.current,language());return {score:a.grade,label:a.label,notes:[say('Czynniki pozytywne:','Positive factors:'),...(a.positive.length?a.positive:[say('Brak w dostępnych danych.','None in the available data.')]),say('Czynniki negatywne:','Negative factors:'),...(a.negative.length?a.negative:[say('Nie wykryto istotnych utrudnień w tych danych.','No significant constraints found in these data.')]),a.uncertaintyText]};}
 
-    const notes = [];
-    const pressure = Number(current.pressure_msl || 0);
-    const temp = Number(current.temperature_2m || 0);
-    const wind = Number(current.wind_speed_10m || 0);
-    const gusts = Number(current.wind_gusts_10m || 0);
-    const cloud = Number(current.cloud_cover || 0);
-    const rain = Number(current.precipitation || 0);
+  function buildBestBiteWindow(data,index){let best=null,worst=null;const grades=[];for(let i=index;i<Math.min(data.hourly.time.length,index+24);i++){const score=getBiteScore(window.DreamConditions.snapshot(data.hourly,i));if(score===null)continue;grades.push(score);const item={index:i,time:data.hourly.time?.[i],epoch:data.hourly.time_epoch?.[i],score,label:biteScoreToLabel(score)};if(!best||score>best.score)best=item;if(!worst||score<worst.score)worst=item;}if(best?.score===0)best=null;const activityTrend=grades.length?Math.max(...grades)===Math.min(...grades)?'stabilna':'zmienne':'brak danych';return {best,worst,activityTrend};}
 
-    notes.push(`Obecna szansa na branie: ${label}. Punktacja aktywności: ${currentScore}.`);
-
-    if (pressure >= 1002 && pressure <= 1022) {
-      notes.push(`Ciśnienie ${Math.round(pressure)} hPa jest w dobrym zakresie pod aktywność ryb.`);
-    } else if (pressure < 995 || pressure > 1028) {
-      notes.push(`Ciśnienie ${Math.round(pressure)} hPa jest mniej korzystne i może osłabiać żerowanie.`);
-    } else {
-      notes.push(`Ciśnienie ${Math.round(pressure)} hPa jest jeszcze akceptowalne, ale nie idealne.`);
-    }
-
-    if (trend === "stabilne") {
-      notes.push("Trend ciśnienia jest stabilny, co zwykle pomaga utrzymać bardziej przewidywalne żerowanie.");
-    } else if (trend === "rośnie") {
-      notes.push("Ciśnienie rośnie, więc warunki mogą iść w stronę poprawy.");
-    } else {
-      notes.push("Ciśnienie spada, więc aktywność może być nierówna i zależna od zmiany pogody.");
-    }
-
-    if (temp >= 12 && temp <= 23) {
-      notes.push(`Temperatura ${temp.toFixed(1)}°C jest bardzo dobra pod regularne brania.`);
-    } else if (temp >= 8 && temp <= 27) {
-      notes.push(`Temperatura ${temp.toFixed(1)}°C jest jeszcze sensowna, choć nie idealna.`);
-    } else {
-      notes.push(`Temperatura ${temp.toFixed(1)}°C może ograniczać aktywność ryb.`);
-    }
-
-    if (amplitude <= 6) {
-      notes.push(`Amplituda temperatury około ${amplitude.toFixed(1)}°C wygląda stabilnie i sprzyja spokojniejszym warunkom.`);
-    } else {
-      notes.push(`Amplituda temperatury około ${amplitude.toFixed(1)}°C jest dość duża, więc zachowanie ryb może się szybciej zmieniać.`);
-    }
-
-    if (wind >= 8 && wind <= 22) {
-      notes.push(`Wiatr ${wind.toFixed(1)} km/h wygląda korzystnie — pracuje na powierzchni i może poprawiać aktywność.`);
-    } else if (wind < 4) {
-      notes.push(`Wiatr ${wind.toFixed(1)} km/h jest słaby — woda może być zbyt spokojna.`);
-    } else if (wind > 30) {
-      notes.push(`Wiatr ${wind.toFixed(1)} km/h jest mocny i może utrudniać łowienie.`);
-    } else {
-      notes.push(`Wiatr ${wind.toFixed(1)} km/h jest neutralny.`);
-    }
-
-    if (gusts > 40) {
-      notes.push(`Porywy ${gusts.toFixed(1)} km/h są wysokie i mogą pogarszać kontrolę nad zestawem.`);
-    } else {
-      notes.push(`Porywy ${gusts.toFixed(1)} km/h nie powinny mocno przeszkadzać.`);
-    }
-
-    if (cloud >= 25 && cloud <= 85) {
-      notes.push(`Zachmurzenie ${Math.round(cloud)}% wygląda dobrze — światło jest bardziej miękkie, co bywa korzystne.`);
-    } else if (cloud < 20) {
-      notes.push(`Małe zachmurzenie (${Math.round(cloud)}%) oznacza sporo światła, więc ryby mogą być ostrożniejsze.`);
-    } else {
-      notes.push(`Duże zachmurzenie (${Math.round(cloud)}%) może pomagać, o ile nie towarzyszy temu załamanie pogody.`);
-    }
-
-    if (rain > 0 && rain <= 1.5) {
-      notes.push(`Lekki opad (${rain.toFixed(1)} mm) może działać na plus i pobudzać wodę.`);
-    } else if (rain > 4) {
-      notes.push(`Silniejszy opad (${rain.toFixed(1)} mm) może pogarszać komfort i rozbijać rytm łowienia.`);
-    } else {
-      notes.push("Brak istotnych opadów — warunki są spokojniejsze i bardziej stabilne.");
-    }
-
-    if (getHourWeightForBites(hour) === 2) {
-      notes.push("Aktualna pora dnia należy do najlepszych okien aktywności ryb.");
-    } else if (getHourWeightForBites(hour) === 1) {
-      notes.push("Pora dnia jest umiarkowanie dobra i warto pilnować sygnałów z wody.");
-    } else {
-      notes.push("To nie jest najmocniejsze okno aktywności — większe szanse mogą pojawić się rano lub wieczorem.");
-    }
-
-    return { notes, score: currentScore, label, amplitude };
-  }
-
-  function buildBestBiteWindow(data, currentIndex) {
-    const hourly = data.hourly;
-    const limit = Math.min(hourly.time.length, currentIndex + 24);
-
-    let best = null;
-    let worst = null;
-
-    for (let i = currentIndex; i < limit; i += 1) {
-      const hour = new Date(hourly.time[i]).getHours();
-      const snapshot = {
-        temperature_2m: hourly.temperature_2m[i],
-        wind_speed_10m: hourly.wind_speed_10m[i],
-        wind_gusts_10m: hourly.wind_gusts_10m[i],
-        pressure_msl: hourly.pressure_msl[i],
-        cloud_cover: hourly.cloud_cover[i],
-        precipitation: hourly.precipitation[i]
-      };
-
-      const trend = getPressureTrend(hourly.pressure_msl, i);
-      const score = getBiteScore(snapshot, trend, hour);
-
-      const item = {
-        index: i,
-        time: hourly.time[i],
-        score,
-        label: biteScoreToLabel(score)
-      };
-
-      if (!best || item.score > best.score) best = item;
-      if (!worst || item.score < worst.score) worst = item;
-    }
-
-    let activityTrend = "stabilna";
-    if (best && worst) {
-      if (best.index - currentIndex <= 6 && best.score - worst.score >= 2) activityTrend = "poprawa";
-      else if (worst.index - currentIndex <= 6 && worst.score < best.score) activityTrend = "pogorszenie";
-    }
-
-    return { best, worst, activityTrend };
-  }
-
-  function buildBiteTactic(score, bestWindow, current) {
-    const notes = [];
-    const wind = Number(current.wind_speed_10m || 0);
-    const rain = Number(current.precipitation || 0);
-    const cloud = Number(current.cloud_cover || 0);
-
-    if (score >= 10) {
-      notes.push("Warunki są bardzo mocne pod aktywność ryb — warto być gotowym na szybszą reakcję i częściej kontrolować zestawy.");
-      notes.push("To dobry moment na pełne skupienie na łowieniu, szczególnie w aktywnych godzinach.");
-    } else if (score >= 8) {
-      notes.push("Warunki są dobre — warto pilnować brań i nie odpuszczać bardziej perspektywicznych miejsc.");
-      notes.push("To sensowny czas na regularne dokładanie towaru i utrzymanie stanowiska w pracy.");
-    } else if (score >= 6) {
-      notes.push("Warunki są umiarkowanie dobre — łowić warto, ale trzeba bardziej liczyć na cierpliwość i poprawne podanie zestawu.");
-      notes.push("Najwięcej sensu ma polowanie na lepsze godziny i utrzymanie porządku w taktyce.");
-    } else {
-      notes.push("Warunki są słabsze — nastaw się bardziej na przeczekanie i wykorzystanie lepszego okna pogodowego.");
-      notes.push("Teraz kluczowa będzie cierpliwość, prostota i dobra obserwacja wody.");
-    }
-
-    if (wind >= 8 && wind <= 22) notes.push("Wiatr pracuje na plus, więc warto wykorzystać bardziej aktywną stronę wody.");
-    if (rain > 0 && rain <= 1.5) notes.push("Lekki opad może poprawić aktywność — dobrze zachować gotowość szczególnie przy zmianie światła.");
-    if (cloud < 20) notes.push("Przy małym zachmurzeniu warto liczyć się z ostrożniejszym zachowaniem ryb w pełnym świetle.");
-
-    if (bestWindow?.best) {
-      notes.push(`Najmocniejsze przewidywane okno aktywności: ${formatHour(bestWindow.best.time)} (${bestWindow.best.label}).`);
-    }
-
-    return notes;
-  }
+  function buildBiteTactic(score,bestWindow,current){return [window.DreamConditions.assess(current,language()).suggestion];}
 
   function setNotes(containerId, notes) {
     const container = $(containerId);
@@ -506,7 +219,9 @@
   }
 
   function renderCurrentWeatherEnhanced(data) {
-    const current = data.current;
+    window.DREAM_WEATHER_ZONE=data.timezone;
+    const current=data.current;
+    const dayIndex=Math.max(0,data.daily.time.indexOf(current.time.slice(0,10)));
     const hourly = data.hourly;
     const daily = data.daily;
     const currentIndex = getHourlyIndexForNow(data);
@@ -517,7 +232,7 @@
     const windDirection = windDirectionToText(current.wind_direction_10m);
     const windSummary = describeWind(current.wind_speed_10m, current.wind_gusts_10m);
     const spot = getFishingSpotSafe();
-    const moon = moonPhaseInfo(new Date());
+    const moon = moonPhaseInfo(new Date((data.current.time_epoch??Date.now()/1000)*1000));
     const night = pickNearestNightWindow(hourly, currentIndex);
 
     const biteAnalysis = buildBiteAnalysis(data, currentIndex);
@@ -530,73 +245,61 @@
       $("weather-summary-updated").textContent = `Dane: ${current.time.replace("T", " ")} · ${data.timezone || Dream.zone()}`;
     }
     if ($("weather-rating-hero")) $("weather-rating-hero").textContent = `Ocena: ${rating}`;
-    if ($("bite-chance-hero")) $("bite-chance-hero").textContent = `Brania: ${biteAnalysis.label}`;
+    if ($("bite-chance-hero")) $("bite-chance-hero").textContent = `${say("Warunki","Conditions")}: ${biteAnalysis.label}`;
 
-    if ($("weather-current-temp")) $("weather-current-temp").textContent = `${Number(current.temperature_2m).toFixed(1)}°C`;
-    if ($("weather-current-wind")) $("weather-current-wind").textContent = `${Number(current.wind_speed_10m).toFixed(1)} / ${Number(current.wind_gusts_10m).toFixed(1)} km/h`;
-    if ($("weather-current-pressure")) $("weather-current-pressure").textContent = `${Number(current.pressure_msl).toFixed(0)} hPa / ${trend}`;
+    if ($("weather-current-temp")) $("weather-current-temp").textContent = fmt(current.temperature_2m,1,'°C');
+    if ($("weather-current-wind")) $("weather-current-wind").textContent = `${fmt(current.wind_speed_10m)} / ${fmt(current.wind_gusts_10m)} km/h`;
+    if ($("weather-current-pressure")) $("weather-current-pressure").textContent = `${fmt(current.pressure_msl,0)} hPa / ${tr(trend)}`;
     if ($("weather-rating")) $("weather-rating").textContent = rating;
     if ($("weather-description")) $("weather-description").textContent = `${icon} ${tr(description)}`;
     if ($("weather-description-copy")) $("weather-description-copy").textContent = description;
     if ($("weather-pressure-note")) $("weather-pressure-note").textContent = `Trend: ${trend}`;
     if ($("weather-rating-note")) $("weather-rating-note").textContent = `Warunki: ${rating}`;
 
-    if ($("weather-apparent-temp")) $("weather-apparent-temp").textContent = `${Number(current.apparent_temperature).toFixed(1)}°C`;
+    if ($("weather-apparent-temp")) $("weather-apparent-temp").textContent = fmt(current.apparent_temperature,1,'°C');
     if ($("weather-wind-direction")) $("weather-wind-direction").textContent = `${windDirection} • ${windSummary}`;
     if ($("weather-wind-direction-copy")) $("weather-wind-direction-copy").textContent = `${windDirection} • ${windSummary}`;
-    if ($("weather-cloud-cover")) $("weather-cloud-cover").textContent = `${Math.round(Number(current.cloud_cover || 0))}%`;
-    if ($("weather-precipitation")) $("weather-precipitation").textContent = `${Number(current.precipitation || 0).toFixed(1)} mm`;
-    if ($("weather-humidity")) $("weather-humidity").textContent = `${Math.round(Number(current.relative_humidity_2m || 0))}%`;
-    if ($("weather-dew-point")) $("weather-dew-point").textContent = `${Number(current.dew_point_2m || 0).toFixed(1)}°C`;
+    if ($("weather-cloud-cover")) $("weather-cloud-cover").textContent = fmt(current.cloud_cover,0,'%');
+    if ($("weather-precipitation")) $("weather-precipitation").textContent = fmt(current.precipitation,1,' mm');
+    if ($("weather-humidity")) $("weather-humidity").textContent = fmt(current.relative_humidity_2m,0,'%');
+    if ($("weather-dew-point")) $("weather-dew-point").textContent = fmt(current.dew_point_2m,1,'°C');
     if ($("weather-visibility")) $("weather-visibility").textContent = formatVisibility(current.visibility);
-    if ($("weather-uv")) $("weather-uv").textContent = current.uv_index !== null && current.uv_index !== undefined ? Number(current.uv_index).toFixed(1) : "--";
-    if ($("weather-sunshine")) $("weather-sunshine").textContent = `${Math.round((daily.sunshine_duration?.[0] || 0) / 3600)} h`;
+    if ($("weather-uv")) $("weather-uv").textContent = fmt(current.uv_index);
+    if ($("weather-sunshine")) $("weather-sunshine").textContent = value(daily.sunshine_duration?.[dayIndex])===null?'--':fmt(daily.sunshine_duration[dayIndex]/3600,0,' h');
 
-    if ($("camp-night-temp")) $("camp-night-temp").textContent = `${night.temp.toFixed(1)}°C`;
-    if ($("camp-night-wind")) $("camp-night-wind").textContent = `${night.wind.toFixed(1)} km/h`;
-    if ($("camp-night-gusts")) $("camp-night-gusts").textContent = `${night.gusts.toFixed(1)} km/h`;
-    if ($("camp-night-humidity")) $("camp-night-humidity").textContent = `${Math.round(night.humidity)}%`;
+    if ($("camp-night-temp")) $("camp-night-temp").textContent = fmt(night.temp,1,'°C');
+    if ($("camp-night-wind")) $("camp-night-wind").textContent = fmt(night.wind,1,' km/h');
+    if ($("camp-night-gusts")) $("camp-night-gusts").textContent = fmt(night.gusts,1,' km/h');
+    if ($("camp-night-humidity")) $("camp-night-humidity").textContent = fmt(night.humidity,0,'%');
     if ($("camp-night-visibility")) $("camp-night-visibility").textContent = formatVisibility(night.visibility);
     if ($("camp-night-rating")) $("camp-night-rating").textContent = getNightCampRating(night);
     if ($("moon-phase")) $("moon-phase").textContent = moon.name;
     if ($("moon-illumination")) $("moon-illumination").textContent = moon.illumination;
 
-    if ($("soil-temp")) $("soil-temp").textContent = `${Number(hourly.soil_temperature_0cm?.[currentIndex] || 0).toFixed(1)}°C`;
-    if ($("soil-moisture")) $("soil-moisture").textContent = `${Math.round(Number(hourly.soil_moisture_0_to_1cm?.[currentIndex] || 0) * 100)}%`;
+    if ($("soil-temp")) $("soil-temp").textContent = fmt(hourly.soil_temperature_0cm?.[currentIndex],1,'°C');
+    if ($("soil-moisture")) $("soil-moisture").textContent = value(hourly.soil_moisture_0_to_1cm?.[currentIndex])===null?'--':fmt(hourly.soil_moisture_0_to_1cm[currentIndex]*100,0,'%');
 
-    if ($("wind-arrow")) {
-      $("wind-arrow").style.transform = `translate(-50%, -86%) rotate(${Number(current.wind_direction_10m || 0)}deg)`;
+    if($('wind-arrow')) {
+      $('wind-arrow').hidden=value(current.wind_direction_10m)===null;
+      $("wind-arrow").style.transform = `translate(-50%, -86%) rotate(${value(current.wind_direction_10m)??0}deg)`;
     }
     if ($("wind-compass-text")) $("wind-compass-text").textContent = windDirection;
     if ($("wind-direction-long")) $("wind-direction-long").textContent = `${windDirection} • ${getWindStrengthLabel(current.wind_speed_10m)}`;
-    if ($("wind-gusts-inline")) $("wind-gusts-inline").textContent = `${Number(current.wind_gusts_10m || 0).toFixed(1)} km/h • ${getWindGustLabel(current.wind_gusts_10m)}`;
+    if ($("wind-gusts-inline")) $("wind-gusts-inline").textContent = `${fmt(current.wind_gusts_10m,1," km/h")} • ${tr(getWindGustLabel(current.wind_gusts_10m))}`;
     if ($("wind-score-inline")) $("wind-score-inline").textContent = windSummary;
 
     if ($("bite-chance-main")) $("bite-chance-main").textContent = biteAnalysis.label;
-    if ($("bite-score-note")) $("bite-score-note").textContent = `Punktacja: ${biteAnalysis.score}`;
-    if ($("best-bite-window")) $("best-bite-window").textContent = bestWindow.best ? formatHour(bestWindow.best.time) : "--";
+    if ($("bite-score-note")) $("bite-score-note").textContent = say('Bez prognozy brań','No bite prediction');
+    if ($("best-bite-window")) $("best-bite-window").textContent = bestWindow.best ? formatHour(bestWindow.best.time,bestWindow.best.epoch) : "--";
     if ($("best-bite-window-note")) $("best-bite-window-note").textContent = bestWindow.best ? `Ocena: ${bestWindow.best.label}` : "Brak danych";
-    if ($("bite-trend")) {
-      $("bite-trend").textContent =
-        bestWindow.activityTrend === "poprawa"
-          ? "Poprawa"
-          : bestWindow.activityTrend === "pogorszenie"
-            ? "Pogorszenie"
-            : "Stabilnie";
-    }
-    if ($("bite-trend-note")) {
-      $("bite-trend-note").textContent =
-        bestWindow.activityTrend === "poprawa"
-          ? "Najbliższe godziny wyglądają lepiej"
-          : bestWindow.activityTrend === "pogorszenie"
-            ? "Warunki mogą osłabnąć"
-            : "Bez dużych zmian";
-    }
+    if($('bite-trend'))$('bite-trend').textContent=tr(bestWindow.activityTrend);
+    if($('bite-trend-note'))$('bite-trend-note').textContent=say('Zmiany warunków pogodowych, nie aktywności ryb','Changes in weather conditions, not fish activity');
     if ($("bite-tactic-short")) $("bite-tactic-short").textContent = biteScoreToShortTactic(biteAnalysis.score);
-    if ($("bite-tactic-note")) {
-      $("bite-tactic-note").textContent = bestWindow.best ? `Pilnuj szczególnie około ${formatHour(bestWindow.best.time)}` : "Obserwuj wodę";
-    }
-
+    if($('bite-tactic-note'))$('bite-tactic-note').textContent=say('Obserwuj ryby i sprawdzaj prezentację zestawu','Observe fish and verify rig presentation');
+    for(const [id,v]of [['weather-sunrise',daily.sunrise?.[dayIndex]],['weather-sunset',daily.sunset?.[dayIndex]]])if($(id))$(id).textContent=formatHour(v);
+    if($('water-temp'))$('water-temp').textContent=say('Brak pomiaru','Not measured');
+    if($('water-oxygen'))$('water-oxygen').textContent=say('Brak pomiaru','Not measured');
+    if($('weather-source-status'))$('weather-source-status').textContent=`Open-Meteo · ${data.timezone} · GPS ${data.dreamteam?.requestedCoordinates?.latitude??spot.latitude}, ${data.dreamteam?.requestedCoordinates?.longitude??spot.longitude} · ${say('pobrano','fetched')} ${data.dreamteam?.fetchedAt?new Date(data.dreamteam.fetchedAt).toLocaleString(language()==='en'?'en-GB':'pl-PL',{timeZone:data.timezone}):current.time}`;
     setNotes("weather-interpretation", buildWeatherInterpretation(current, hourly, currentIndex));
     setNotes("camp-interpretation", buildCampInterpretation(night, moon));
     setNotes("bite-analysis", biteAnalysis.notes);
@@ -622,23 +325,24 @@
       const card = el("article", "weather-hour-card");
       const top = el("div", "weather-row-top");
       const title = el("div", "weather-row-title");
-      const icon = el("div", "weather-row-icon", weatherCodeToIcon(data.hourly.weather_code[i]));
+      const icon = el("div", "weather-row-icon", weatherCodeToIcon(data.hourly.weather_code?.[i]));
 
       const textWrap = el("div");
-      textWrap.appendChild(el("div", "weather-row-time", formatHour(data.hourly.time[i])));
-      textWrap.appendChild(el("div", "weather-row-desc", weatherCodeToText(data.hourly.weather_code[i])));
+      textWrap.appendChild(el("div", "weather-row-time", formatHour(data.hourly.time?.[i],data.hourly.time_epoch?.[i])));
+      textWrap.appendChild(el("div", "weather-row-desc", weatherCodeToText(data.hourly.weather_code?.[i])));
       title.appendChild(icon);
       title.appendChild(textWrap);
 
       const trend = getPressureTrend(data.hourly.pressure_msl, i);
-      const hour = new Date(data.hourly.time[i]).getHours();
+      const hour = new Date(data.hourly.time?.[i]).getHours();
       const biteScore = getBiteScore({
-        temperature_2m: data.hourly.temperature_2m[i],
-        wind_speed_10m: data.hourly.wind_speed_10m[i],
-        wind_gusts_10m: data.hourly.wind_gusts_10m[i],
-        pressure_msl: data.hourly.pressure_msl[i],
-        cloud_cover: data.hourly.cloud_cover[i],
-        precipitation: data.hourly.precipitation[i]
+        temperature_2m: data.hourly.temperature_2m?.[i],
+        wind_speed_10m: data.hourly.wind_speed_10m?.[i],
+        wind_gusts_10m: data.hourly.wind_gusts_10m?.[i],
+        pressure_msl: data.hourly.pressure_msl?.[i],
+        cloud_cover: data.hourly.cloud_cover?.[i],
+        weather_code:data.hourly.weather_code?.[i],
+        precipitation: data.hourly.precipitation?.[i]
       }, trend, hour);
 
       const rating = el("div", "section-chip", `${biteScoreToLabel(biteScore)}`);
@@ -647,20 +351,20 @@
       card.appendChild(top);
 
       const grid = el("div", "weather-chip-grid");
-      grid.appendChild(createWeatherChip("🌡️ Temp.", `${Number(data.hourly.temperature_2m[i]).toFixed(1)}°C`, true));
-      grid.appendChild(createWeatherChip("🐟 Brania", biteScoreToLabel(biteScore), true));
-      grid.appendChild(createWeatherChip("🌬️ Wiatr", `${Number(data.hourly.wind_speed_10m[i]).toFixed(1)} km/h`));
-      grid.appendChild(createWeatherChip("💨 Porywy", `${Number(data.hourly.wind_gusts_10m[i]).toFixed(1)} km/h`));
-      grid.appendChild(createWeatherChip("🧭 Kierunek", windDirectionToText(data.hourly.wind_direction_10m[i])));
-      grid.appendChild(createWeatherChip("🧭 Ciśnienie", `${Number(data.hourly.pressure_msl[i]).toFixed(0)} hPa`));
+      grid.appendChild(createWeatherChip("🌡️ Temp.", `${fmt(data.hourly.temperature_2m?.[i],1)}°C`, true));
+      grid.appendChild(createWeatherChip(say("🐟 Warunki","🐟 Conditions"), biteScoreToLabel(biteScore), true));
+      grid.appendChild(createWeatherChip("🌬️ Wiatr", `${fmt(data.hourly.wind_speed_10m?.[i],1)} km/h`));
+      grid.appendChild(createWeatherChip("💨 Porywy", `${fmt(data.hourly.wind_gusts_10m?.[i],1)} km/h`));
+      grid.appendChild(createWeatherChip("🧭 Kierunek", windDirectionToText(data.hourly.wind_direction_10m?.[i])));
+      grid.appendChild(createWeatherChip("🧭 Ciśnienie", `${fmt(data.hourly.pressure_msl?.[i],0)} hPa`));
       grid.appendChild(createWeatherChip("📈 Trend", trend));
-      grid.appendChild(createWeatherChip("🌧️ Opad", `${Number(data.hourly.precipitation[i] || 0).toFixed(1)} mm`));
-      grid.appendChild(createWeatherChip("☁️ Chmury", `${Math.round(Number(data.hourly.cloud_cover[i] || 0))}%`));
-      grid.appendChild(createWeatherChip("💧 Wilgotność", `${Math.round(Number(data.hourly.relative_humidity_2m[i] || 0))}%`));
-      grid.appendChild(createWeatherChip("🌫️ Rosa", `${Number(data.hourly.dew_point_2m[i] || 0).toFixed(1)}°C`));
-      grid.appendChild(createWeatherChip("👀 Widzialność", formatVisibility(data.hourly.visibility[i])));
-      grid.appendChild(createWeatherChip("☀️ UV", `${Number(data.hourly.uv_index?.[i] || 0).toFixed(1)}`));
-      grid.appendChild(createWeatherChip("🌱 Gleba", `${Number(data.hourly.soil_temperature_0cm?.[i] || 0).toFixed(1)}°C`));
+      grid.appendChild(createWeatherChip("🌧️ Opad", `${fmt(data.hourly.precipitation?.[i],1)} mm`));
+      grid.appendChild(createWeatherChip("☁️ Chmury", `${fmt(data.hourly.cloud_cover?.[i],0)}%`));
+      grid.appendChild(createWeatherChip("💧 Wilgotność", `${fmt(data.hourly.relative_humidity_2m?.[i],0)}%`));
+      grid.appendChild(createWeatherChip("🌫️ Rosa", `${fmt(data.hourly.dew_point_2m?.[i],1)}°C`));
+      grid.appendChild(createWeatherChip("👀 Widzialność", formatVisibility(data.hourly.visibility?.[i])));
+      grid.appendChild(createWeatherChip("☀️ UV", `${fmt(data.hourly.uv_index?.[i],1)}`));
+      grid.appendChild(createWeatherChip("🌱 Gleba", `${fmt(data.hourly.soil_temperature_0cm?.[i],1)}°C`));
 
       card.appendChild(grid);
       container.appendChild(card);
@@ -676,38 +380,39 @@
       const card = el("article", "weather-day-card");
       const top = el("div", "weather-row-top");
       const title = el("div", "weather-row-title");
-      const icon = el("div", "weather-row-icon", weatherCodeToIcon(data.daily.weather_code[index]));
+      const icon = el("div", "weather-row-icon", weatherCodeToIcon(data.daily.weather_code?.[index]));
 
       const textWrap = el("div");
       textWrap.appendChild(el("div", "weather-row-time", formatDay(time)));
-      textWrap.appendChild(el("div", "weather-row-desc", weatherCodeToText(data.daily.weather_code[index])));
+      textWrap.appendChild(el("div", "weather-row-desc", weatherCodeToText(data.daily.weather_code?.[index])));
       title.appendChild(icon);
       title.appendChild(textWrap);
 
-      const tag = el("div", "section-chip", `UV max ${Number(data.daily.uv_index_max?.[index] || 0).toFixed(1)}`);
+      const tag = el("div", "section-chip", `UV max ${fmt(data.daily.uv_index_max?.[index],1)}`);
       top.appendChild(title);
       top.appendChild(tag);
       card.appendChild(top);
 
       const grid = el("div", "weather-chip-grid");
-      grid.appendChild(createWeatherChip("🌡️ Min / Max", `${Number(data.daily.temperature_2m_min[index]).toFixed(1)}°C / ${Number(data.daily.temperature_2m_max[index]).toFixed(1)}°C`, true));
-      grid.appendChild(createWeatherChip("🌧️ Opad", `${Number(data.daily.precipitation_sum[index] || 0).toFixed(1)} mm`));
-      grid.appendChild(createWeatherChip("🌬️ Wiatr max", `${Number(data.daily.wind_speed_10m_max[index] || 0).toFixed(1)} km/h`));
-      grid.appendChild(createWeatherChip("💨 Porywy", `${Number(data.daily.wind_gusts_10m_max[index] || 0).toFixed(1)} km/h`));
-      grid.appendChild(createWeatherChip("🧭 Kierunek", windDirectionToText(data.daily.wind_direction_10m_dominant[index] || 0)));
-      grid.appendChild(createWeatherChip("🌞 Słońce", `${Math.round((data.daily.sunshine_duration[index] || 0) / 3600)} h`));
+      grid.appendChild(createWeatherChip("🌡️ Min / Max", `${fmt(data.daily.temperature_2m_min?.[index],1)}°C / ${fmt(data.daily.temperature_2m_max?.[index],1)}°C`, true));
+      grid.appendChild(createWeatherChip("🌧️ Opad", `${fmt(data.daily.precipitation_sum?.[index],1)} mm`));
+      grid.appendChild(createWeatherChip("🌬️ Wiatr max", `${fmt(data.daily.wind_speed_10m_max?.[index],1)} km/h`));
+      grid.appendChild(createWeatherChip("💨 Porywy", `${fmt(data.daily.wind_gusts_10m_max?.[index],1)} km/h`));
+      grid.appendChild(createWeatherChip("🧭 Kierunek", windDirectionToText(data.daily.wind_direction_10m_dominant?.[index])));
+      grid.appendChild(createWeatherChip("🌞 Słońce", value(data.daily.sunshine_duration?.[index])===null?'--':fmt(data.daily.sunshine_duration[index]/3600,0,' h')));
 
       card.appendChild(grid);
       container.appendChild(card);
     });
   }
 
-  async function renderEnhancedWeatherPage() {
+  async function performWeatherRender() {
     if (!$("weather-current-temp")) return;
 
     try {
       $("weather-current-temp").textContent = "Ładowanie...";
       const data = await fetchWeatherDataEnhanced();
+      if(/^(Pogoda niedostępna:|Weather unavailable:)/.test($("app-notice")?.textContent||""))Dream.notice("");
       renderCurrentWeatherEnhanced(data);
       renderHourlyWeatherEnhanced(data);
       renderDailyWeatherEnhanced(data);
@@ -731,10 +436,13 @@
       });
       setNotes("weather-interpretation", ["Nie udało się pobrać danych pogodowych."]);
       setNotes("camp-interpretation", ["Brak danych do oceny obozowania."]);
-      setNotes("bite-analysis", ["Brak danych do analizy brań."]);
+      setNotes("bite-analysis", ["Brak danych do oceny warunków."]);
       setNotes("bite-tactic-box", ["Brak danych do rekomendacji."]);
     }
   }
+
+  let weatherRenderPending=null;
+  function renderEnhancedWeatherPage(){if(weatherRenderPending)return weatherRenderPending;const button=$('refresh-weather-btn');if(button)button.disabled=true;weatherRenderPending=performWeatherRender().finally(()=>{weatherRenderPending=null;if(button)button.disabled=false;});return weatherRenderPending;}
 
   function enhanceNavigationIcons() {
     const nav = document.querySelector(".main-nav");
@@ -750,11 +458,12 @@
   async function init() {
     enhanceNavigationIcons();
     bindRefreshButton();
+    if($("weather-current-temp"))setInterval(()=>{if(navigator.onLine!==false&&document.visibilityState!=="hidden")renderEnhancedWeatherPage();},600000);
 
     if ($("weather-current-temp")) {
       await renderEnhancedWeatherPage();
     }
   }
 
-  window.DreamWeather = { init, render: renderEnhancedWeatherPage, getHourlyIndexForNow, pickNearestNightWindow };
+  window.DreamWeather = { init, render: renderEnhancedWeatherPage, getHourlyIndexForNow, pickNearestNightWindow, moonPhaseInfo };
 })();

@@ -1,5 +1,5 @@
 (async () => {
-  const VERSION='20261012-language-accounts-3';
+  const VERSION='20261012-weather-conditions-1';
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
@@ -25,6 +25,7 @@
     });
     await loadScript('d1-api-compat.js');
     await loadScript('app.js');
+    await loadScript('weather-conditions.js');
     await loadScript('app-plus.js');
     await loadScript('field-mode.js');
     if(document.getElementById('trip-score-charts'))await loadScript('dashboard-chart.js');

@@ -102,10 +102,11 @@
       const words=english?await fetch('/locales/trip-advice.en.json',{cache:'force-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})):{};
       const t=value=>words[value]||value;
       const restriction=value=>Object.entries(words).filter(([source])=>source.includes('niezweryfikowany:')||source.startsWith('Status łódki')||source.startsWith('Liczba wędek nie jest')).reduce((text,[source,target])=>text.replaceAll(source,target),value).replace(/(Środki pływające|Łódka zanętowa|Leadcore|Regulamin):/g,(_,label)=>t(label)+':');
+      const factValue=f=>f.field==='weather'&&english?String(f.value).replace('Prognoza powietrza na początek:','Air forecast at trip start:').replace('°C, wiatr do','°C, wind up to'):f.value;
       const source=f=>f.url?` · <a href="${E(f.url)}" target="_blank" rel="noopener noreferrer">źródło</a>`:'';
       box.innerHTML=`<div class="section-head"><h2>Porady: ${E(data.tripName)}</h2><button type="button" class="secondary-btn" id="close-trip-advice">Zamknij</button></div>
         ${data.incomplete?`<div class="weather-note status-warn"><strong>Brakuje danych do pełnej rekomendacji</strong><ul>${data.missing.map(x=>`<li>${E(t(x))}</li>`).join('')}</ul></div>`:''}
-        <div class="trip-advice-grid"><section><h3>Fakty z łowiska / regulaminu</h3><ul>${data.facts.map(f=>`<li><strong>${E(t(f.label||f.field))}:</strong> <span data-user-content>${E(f.value)}</span> <small>(${E(t(f.origin))}${f.confidence?' · '+E(t(f.confidence)):''})${source(f)}</small></li>`).join('')}</ul></section>
+        <div class="trip-advice-grid"><section><h3>Fakty z łowiska / regulaminu</h3><ul>${data.facts.map(f=>`<li><strong>${E(t(f.label||f.field))}:</strong> <span data-user-content>${E(factValue(f))}</span> <small>(${E(t(f.origin))}${f.confidence?' · '+E(t(f.confidence)):''})${source(f)}</small></li>`).join('')}</ul></section>
         <section><h3>Sugestie wędkarskie</h3><p>${E(t(data.disclaimer))}</p><dl>${data.suggestions.map(x=>`<div><dt><strong>${E(t(x.name))}</strong></dt><dd>${E(x.name==='Ograniczenia'?restriction(t(x.value)):t(x.value))} <small>${E(t(x.basis))}${x.reference?` · <a href="${E(x.reference.url)}">Encyklopedia</a>`:''}</small></dd></div>`).join('')}</dl></section></div>`;
       box.querySelector('#close-trip-advice').onclick=()=>{box.hidden=true;box.replaceChildren();};
     }catch(error){box.textContent=error.message;}

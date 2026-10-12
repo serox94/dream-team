@@ -26,14 +26,17 @@ export function generateTripAdvice({trip,lake,researchedFacts=[],weather=null}){
   }
   if(trip.peg)add('peg',trip.peg,'Wyjazd');
   const forecast=weather?.daily?.time?.indexOf(trip.start?.slice(0,10));
-  const forecastTemp=forecast>=0?((weather.daily.temperature_2m_min?.[forecast]+weather.daily.temperature_2m_max?.[forecast])/2):null;
-  if(Number.isFinite(forecastTemp))add('weather',`Prognoza na początek: ${weather.daily.temperature_2m_min[forecast]}–${weather.daily.temperature_2m_max[forecast]}°C, wiatr do ${weather.daily.wind_speed_10m_max?.[forecast]??'?'} km/h`,'Prognoza Open-Meteo');
+  const minAir=forecast>=0?weather.daily.temperature_2m_min?.[forecast]:null,maxAir=forecast>=0?weather.daily.temperature_2m_max?.[forecast]:null;
+  const forecastTemp=Number.isFinite(minAir)&&Number.isFinite(maxAir)?(minAir+maxAir)/2:null;
+  if(Number.isFinite(forecastTemp))add('weather',`Prognoza powietrza na początek: ${weather.daily.temperature_2m_min[forecast]}–${weather.daily.temperature_2m_max[forecast]}°C, wiatr do ${weather.daily.wind_speed_10m_max?.[forecast]??'?'} km/h`,'Prognoza Open-Meteo');
   if(!trip.start||!trip.end)missing.push('termin wyjazdu');
   if(!lake.country&&!trip.country)missing.push('kraj');
   for(const field of ['depth','bottom','weed','rules','rods','bait_boats'])if(!resolved[field]&&!missing.some(x=>x.startsWith(label[field])))missing.push(label[field].toLowerCase());
   if(!Number.isFinite(forecastTemp))missing.push('prognoza na termin (lub GPS / termin poza 7 dniami)');
   const bottom=lower(resolved.bottom+' '+tripFacts.pegBottom),weed=lower(resolved.weed),depth=lower(resolved.depth),rules=lower(resolved.rules),boat=lower(resolved.bait_boats),rods=lower(resolved.rods);
-  const cold=Number.isFinite(forecastTemp)?forecastTemp<12:[11,12,1,2,3,4].includes(Number(trip.start?.slice(5,7)));
+  // Air forecasts are not measurements of water or a feeding predictor.
+  const month=Number(trip.start?.slice(5,7));
+  const cold=(lake.latitude<0?[5,6,7,8,9,10]:[11,12,1,2,3,4]).includes(month);
   const soft=/muł|mul|osad|silt|vase|schlamm/.test(bottom),hard=/żwir|zwir|tward|gravel|gravier|kies|hart/.test(bottom),vegetated=/gęst|dużo|wysok|dense|strong|stark/.test(weed),deep=/\b(?:1[5-9]|2\d|3\d)\s*m\b/.test(depth);
   const suggestions=[];
   const put=(name,value,basis,reference)=>suggestions.push({name,value,basis,reference:reference&&guide(({kulki:'przynety',kolor:'kolory','brak-bran':'problemy'})[reference]||reference)});
