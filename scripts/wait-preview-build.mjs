@@ -1,5 +1,7 @@
 // Wait until the public preview URL serves the exact commit deployed by this workflow.
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const expectedShell=(await readFile('public/sw.js','utf8')).match(/const shell='([^']+)'/)?.[1];assert.ok(expectedShell,'Expected Service Worker generation is required');
 const base='https://dream-team-preview.sewerynski00.workers.dev',expected=process.env.GITHUB_SHA;
 assert.ok(expected,'GITHUB_SHA is required');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -12,7 +14,7 @@ for(let attempt=1;attempt<=24;attempt++){
       const response=await fetch(base+'/api/settings?build='+encodeURIComponent(expected),{headers:{cookie,'cache-control':'no-cache'}});
       if(response.ok){
         last=await response.json();
-        if(last.environment==='preview'&&last.build===expected){console.log('PREVIEW BUILD READY:',expected);process.exit(0);}
+        if(last.environment==='preview'&&last.build===expected){const asset=await fetch(base+'/sw.js',{headers:{cookie,'cache-control':'no-cache'},cache:'no-store',signal:AbortSignal.timeout(12000)});const shell=asset.ok?(await asset.text()).match(/const shell='([^']+)'/)?.[1]:null;if(shell===expectedShell){console.log('PREVIEW BUILD AND SHELL READY:',expected,expectedShell);process.exit(0);}last={build:last.build,status:asset.status,shell:shell||'missing'};}
       }else last={status:response.status};
     }else last={loginStatus:login.status};
   }catch(error){last={error:error.message};}
