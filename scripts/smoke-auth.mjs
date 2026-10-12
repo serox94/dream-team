@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+
+const expectedSources=JSON.parse(await readFile(new URL('../public/data/knowledge/sources.json',import.meta.url),'utf8'));
 
 const base=process.env.RYBY_PRODUCTION_URL||'https://dream-team.sewerynski00.workers.dev';
 const username=process.env.RYBY_LOGIN_USERNAME;
@@ -42,7 +45,12 @@ for(const page of ['/pages/polowy.html','/pages/checklisty.html','/pages/pogoda.
 for(const name of ['sources','encyclopedia','sonar','tools','field-guides','chirp2-practice']){
   const response=await request(`/data/knowledge/${name}.json`,{headers});assert.equal(response.status,200,name);
   const data=await response.json();assert.ok(data.version,`${name} version`);
-  if(name==='sources')assert.equal(data.sources.length,48);
+  if(name==='sources'){
+    assert.deepEqual(data.sources,expectedSources.sources,'deployed source catalog matches this exact release');
+    const ids=new Set(data.sources.map(source=>source.id));
+    assert.equal(ids.size,data.sources.length,'source IDs are unique');
+    for(let i=1;i<=48;i++)assert.ok(ids.has('s'+String(i).padStart(2,'0')),'original source retained: '+i);
+  }
   if(name==='encyclopedia')assert.equal(data.articles.length,14);
   if(name==='sonar')assert.equal(data.articles.length,17);
   if(name==='field-guides')assert.equal(data.guides.length,14);
