@@ -213,7 +213,7 @@ try{
         await page.locator('#wizard-candidates').getByText(/OCZEKUJE NA TAVILY_API_KEY/).waitFor();
         await page.locator('#trip-wizard-form button[type="submit"]').click();
         await page.locator('#wizard-result').waitFor();
-        assert.match(await page.locator('#wizard-result').innerText(),/Research: \d+\/38 pól znalezionych/,'D: visible coverage');
+        assert.match(await page.locator('#wizard-result').innerText(),/Wyszukiwanie źródeł: \d+\/38 pól znalezionych/,'D: visible coverage');
         assert.match(await page.locator('#wizard-result').innerText(),/Regulamin.*brak danych/s,'D: missing facts shown');
         await page.locator('#wizard-result').screenshot({path:`${screenshotDir}/new-lake-result-390.png`});
       }

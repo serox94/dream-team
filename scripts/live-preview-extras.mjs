@@ -99,7 +99,7 @@ try{
   // System: every release status is user-visible and the endpoint exposes status only, never secret values.
   const system=page.locator('#system-health');await system.waitFor({timeout:30000});assert.ok(await system.isVisible(),'System section visible');
   const systemText=await system.innerText();
-  for(const label of ['Wersja DreamTeam','Schemat D1','Ostatnia udana kopia zapasowa','Research provider','Workers AI','Media R2','Offline / cache','Zmiany do synchronizacji'])assert.ok(systemText.includes(label),'System must show '+label);
+  for(const label of ['Wersja DreamTeam','Schemat D1','Ostatnia udana kopia zapasowa','Dostawca wyszukiwania','Workers AI','Media R2','Offline / cache','Zmiany do synchronizacji'])assert.ok(systemText.includes(label),'System must show '+label);
   const systemValues=await system.locator('dd').allTextContents();assert.equal(systemValues.length,8,'System must render eight status values');assert.ok(systemValues.every(value=>value.trim().length>0),'System status values must not be blank');
   const settingsResponse=await page.request.get(base+'/api/settings');assert.equal(settingsResponse.status(),200);const settingsPayload=await settingsResponse.json(),serializedSettings=JSON.stringify(settingsPayload);
   for(const forbidden of ['TAVILY_API_KEY','RYBY_SESSION_SECRET','RYBY_LOGIN_PASSWORD','dream-team-preview-media'])assert.ok(!serializedSettings.includes(forbidden),'System endpoint must not expose '+forbidden);
