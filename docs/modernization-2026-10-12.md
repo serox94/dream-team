@@ -268,3 +268,20 @@ Etap 5, `747c4c2` / run `38283192466`: 97/97 i Validate PASS; oba Responsive run
 
 
 Etap 5, `f0c6819` / run `38283714415`: Validate/Responsive, integralność/deploy/smoke, konta, media, offline, pogoda i nawigacja PASS. Knowledge E2E FAIL przy kliknięciu tematu w celowo zwiniętej bibliotece; wymagane rzeczywiste kliknięcie „Wszystkie tematy”, bez force/evaluate(click) i bez rozwijania biblioteki domyślnie w produkcie. EN audit FAIL na jednym węźle katalogu mieszającym angielską kategorię z oryginalnym polskim tytułem Wody Polskie, na 5 szerokościach Encyklopedii/Sonaru. Tytuł jest teraz osobnym elementem cite treści źródłowej, tak samo jak cytowane tytuły wewnątrz artykułów; kategoria i język nadal są interfejsem PL/EN. Test renderera potwierdza źródłową nazwę, semantykę cytowania i dwujęzyczną kategorię. Nie oznaczono całej karty jako danych użytkownika i nie usunięto tytułu ani polskiej nazwy źródła. Cache 110, loader encyclopedia-3. Nowa bramka live jest wymagana; etap nadal IN PROGRESS.
+
+
+## Zamknięcie Etapu 5 — 12.10.2026
+
+Kod `965c408a598d4d6b244dc6d665f4886bbf7db0d6`; run preview `38285045680`, wszystkie 10 jobów PASS po jednym ponowieniu samej końcowej regresji (pierwszy transport do /login nie zwrócił HTTP i pozostał about:blank). Nie powtarzano wtedy CRUD ani rotacji hasła. Validate `38285050648`/`38285045671` i Responsive `38285050521`/`38285045666` PASS. Lokalnie 97/97.
+
+Knowledge `114932579374`, 17:38:31Z–17:39:09Z: PL/EN × 390/1280 — 14 tematów, kategorie i źródła sekcji, water-not-measured, safety stop bez nęcenia, poprawny ponowny wybór, 8 kroków/restart, EN wyniku bez polskich etykiet, brak overflow PASS. Pełny audyt EN na 5 szerokościach PASS; dane źródłowe pozostają jednoznacznie cytowane. User language `114933720937`: 17:43:31Z/17:45:44Z, dwa konta na jednym urządzeniu i 15 widoków na konto PASS. Final regression `114937208799`: 17:52:32Z, 24 kombinacje PASS. Konta, media/R2, offline i nawigacja także PASS. Brak migracji danych Etapu 5, schema 28.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+|---|---|---|---|---|---|
+| 14 tematów Encyklopedii | Tematy i źródła bez kategorii dla każdej sekcji | 13 nowych krótkich sekcji w tych samych ID, kategorie i cytowania | Unit + live PL/EN 390/1280 | PASS | Dawne doświadczenia praktyczne nie są niezależnym badaniem skuteczności |
+| Temperatura/termika/tlen | Ryzyko przyjęcia domyślnego przedziału bez pomiaru | Domyślnie niezmierzona woda, jawna wysoka niepewność; treści o warstwach i nocy | Renderer + real wybór i zmiana | PASS | Brak pomiaru wymaga obserwacji/czujnika |
+| Ryby i regulaminy | Ogólna porada; nieprecyzyjne polecenie przy burzy | Zasady konkretnej wody/roku, przerwanie przy stresie/zakazie, schronienie ma pierwszeństwo | Real safety stop i źródła NWS/Wody Polskie | PASS | Portal RZGW nie zastępuje lokalnego zezwolenia ani zasad innego kraju |
+| Diagnostyka i taktyka | 8 kroków i kreator | Zachowane kroki, restart i linki; poprawne przekarmienie, stan nieznany i safety stop | Real 8-step + renderer obu języków | PASS | Punkty startowe do sprawdzenia, bez gwarancji brania |
+| PL/EN i cytowania | Jeden mieszany węzeł katalogu nowych źródeł | Oryginalny tytuł w cite, kategoria jako interfejs; wszystkie 48 dawnych źródeł zachowane | EN audit × 5 widths, exact live catalog + unit | PASS | Nie oznaczono wszystkich 53 źródeł jako przeczytanych w całości; zakres dostępu opisany wyżej |
+
+Główna implementacja Etapu 5 `747c4c2`, korekta smoke `f0c6819`, kod końcowy `965c408`. Do listy plików etapu należy także `scripts/smoke-auth.mjs`. Etap 5 zamknięty. Następny Etap 6: Deeper; odczytane już oficjalne specyfikacje/ustawienia/twardość/palety/zakłócenia oraz obejrzane wszystkie 17 niezmienionych obrazów. Wykryto błędną jednostkę w opisach echo-10 (24.2 ft) i echo-052356 (23.0 ft) — do korekty w Etapie 6. READY TO MERGE TO MAIN: NO — Etapy 6–7 pozostają. Produkcja/main bez zmian.
