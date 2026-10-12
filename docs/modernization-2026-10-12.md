@@ -225,3 +225,25 @@ Executor lokalny wrócił: aktualny kod Etapu 4 95/95 PASS, dry-run Worker PASS 
 
 
 `9f68802` / run `38279443887`: QA pogody wykryło konkretny błąd zbierania dowodu, EN/390 — `Network.getResponseBody: No resource with given identifier found`. Odczyt Playwright Response po zmianie dokumentu nie ma gwarancji zachowania body. Nowy test kopiuje odpowiedź rzeczywistego window.fetch na stronie Pogody do zmiennej bieżącego dokumentu, bez dodatkowego GET, proxy, fixture lub zmiany danych; oryginalną odpowiedź oddaje aplikacji od razu. Kopia poprzedniej strony nie przechodzi do nowego dokumentu. Wymóg rzeczywistego HTTP 200, identyfikacji dostawcy i wszystkich metadanych pozostaje. Nie jest to jeszcze PASS Etapu 4: kolejna bramka live jest wymagana. Lokalny browser install również BLOCKED (pobierany ZIP Chromium ma 0 MiB/niepoprawną strukturę); CI dostarcza działający Chromium. Zrzuty `39e264a` dla PL/390 i PL/1280 rzeczywiście obejrzano: brak overflow, wynik opisany jako warunki na brzegu, bez procentowej prognozy brań.
+
+
+## Zamknięcie Etapu 4 — 12.10.2026
+
+Przetestowany kod: `31274bf20c68e91511b7e67ed17f0759c4050876`; preview run `38280317473`, wszystkie dziewięć jobów PASS. Validate `38280325323`/`38280317501` i Responsive `38280325626` PASS. Lokalny kod Etapu 4: 95/95 i Worker dry-run PASS. Schema pozostaje 28, bez migracji danych tego etapu; produkcja/main bez zmian.
+
+- Pogoda `114917369861`: 16:56:45Z–16:57:16Z, PL/EN × 390/1280 — rzeczywisty fetch widoku z Open-Meteo, GPS przechowywanego łowiska, °C/km/h/mm/hPa, epoki i strefa IANA, słońce, brak pomiarów wody/tlenu, wysoka niepewność brań i pojedyncze żądanie po podwójnym kliknięciu PASS. Burza/brakujące pola to osobno oznaczone symulacje renderera, PASS.
+- Media: pierwsza próba FAIL po reload z oczekującymi plikami; sam job ponowiono raz, `114919268379` PASS pełny lifecycle D1/R2/clipboard i usunięcie własnego obiektu. Nie udowodniono przyczyny wszystkich timeoutów sieci; pozostaje do kontroli odporności cache w Etapie 7.
+- `114919753098`: 17:05:32Z / 17:08:38Z, dwa konta na jednym urządzeniu, 15 widoków na konto, PL/EN/PL/reload/relogin i błędy API PASS dla 390/1280.
+- `114922086736`: 17:11:21Z, finalna regresja 24 kombinacji (6 widoków × PL/EN × 390/1280) PASS. Konta, EN audit, offline, media i nawigacja również PASS.
+- Naprawiono jeden konkretny błąd QA: opóźniony odczyt body z poprzedniego dokumentu przez CDP; kopia rzeczywistego window.fetch w bieżącym dokumencie zachowuje sprawdzany payload. Nie przedstawiać tego jako dowodu przyczyny innych timeoutów. Zrzuty PL/390 i PL/1280 faktycznie obejrzano; aktualny kod interfejsu pogody pozostawał ten sam, kolejne commity korygowały QA i raport.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+|---|---|---|---|---|---|
+| Ocena warunków | Niezweryfikowane wagi pogody/ciśnienia/godziny | Kategorie komfortu/ograniczeń, plusy/minusy, praktyczna sugestia i niepewność; bez procentu brań | Unit: invariance, braki, skrajności; real UI PL/EN 390/1280 | PASS | Brak zweryfikowanego modelu brań dla łowiska jest jawny |
+| GPS/jednostki/czas | Część parametrów domyślna, brak absolutnych epok | Jedna kompletna para GPS, jawne jednostki, epoch + IANA/DST, sunrise/sunset | Unit jesiennego DST; live API/rendered response | PASS | Dane są prognozą modelową dla siatki |
+| Woda/tlen | Możliwość pomylenia powierzchni modelu z wodą | Osobny brak pomiarów; powierzchnia 0 cm i gleba 0–1 cm opisane właściwie | Real UI i missing/zero renderer | PASS | Aplikacja nie ma czujnika wody/tlenu |
+| Odświeżanie | Ryzyko równoległych kliknięć | Jedno aktywne żądanie; widoczny widok co 10 min, cache dashboardu po wyjeździe/GPS | Unit + live double click | PASS | Dostawca i transport mogą czasowo zawodzić; błędy jawne |
+| Księżyc | Brak wyraźnej granicy znaczenia/dokładności | Przybliżenie astronomiczne, nie predyktor brań | 3 próbki NASA + oznaczenie w UI | PASS | Nie jest pełną efemerydą; porównanie próbek nie jest globalną gwarancją |
+| Nęcenie w poradach | Zimowa dawka z temperatury powietrza | Air forecast jawnie opisany; przybliżony sezon i obserwacja, bez zastępowania pomiaru wody | Unit: różne powietrze, te same rekomendacje | PASS | Punkt startowy praktyczny, nie kalibracja biologiczna |
+
+Pliki Etapu 4: `.github/workflows/preview-final-batch.yml`, `public/app-plus.js`, `public/dream-loader-v2.js`, `public/fixes.js`, `public/locales/runtime.en.json`, `public/pages/pogoda.html`, `public/sw.js`, `scripts/live-preview-offline.mjs`, `scripts/qa-weather.mjs`, `src/weather.js`, `tests/api.test.mjs`, `tests/weather-failures.test.mjs`, `src/trip-advice.js`, `public/trip-manager.js`, `public/locales/trip-advice.en.json`, `public/weather-conditions.js`, `tests/weather-conditions.test.mjs`, `scripts/live-preview-weather.mjs`, `tests/trip-advice.test.mjs`, `docs/modernization-2026-10-12.md`. Główna implementacja `58fefdd`, korekty `c9af092`, `cedec898`; dowód końcowy na `31274bf`. Etap 4 zamknięty. READY TO MERGE TO MAIN: NO — Etapy 5–7 pozostają.
