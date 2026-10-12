@@ -65,3 +65,39 @@ Bramka preview wymaga zgodności `APP_BUILD` i generacji `sw.js`; samo nowe API 
 HEAD zweryfikowany bezpośrednio przez GitHub: `6707961ed655b7c99e7d8e107ca863903bd698d5`. Validate PASS. Preview run `38213892935`: language, extras (nawigacja 390/1280) i offline PASS; media FAIL podczas `page.reload` czekającego na `load`, regresja SKIPPED. Responsive run `38213895382` FAIL: stary selektor na Dashboardzie.
 
 Naprawy testów: przejście do Ustawień i dokładnie jeden selektor; reload mediów czeka na commit nawigacji, gotowość aplikacji i kartę z zapisanym obrazem. Nie zmieniono bramek danych ani lokalizacji przełącznika. Test nawigacji rozszerzony o rzeczywiste tworzenie uczestnika/edycję PB oraz tworzenie/edycję łowiska na obu szerokościach; sprzątanie wyłącznie dokładnych ID/nazw nowych obiektów QA na izolowanym preview. Lokalne 76/76 PASS. Wynik nowych testów live: NOT TESTED do zakończenia nowego CI. Etap 1 pozostaje otwarty; migracji kont jeszcze nie wykonano.
+
+### Etap 2 — projekt wdrożenia (bez migracji danych)
+
+- Oddzielna tabela `auth_accounts`: ID konta, unikalny login bez rozróżniania wielkości liter, unikalne `angler_id` wskazujące obecny profil, aktywność. Limit trzech aktywnych kont egzekwowany przez trigger D1 przy INSERT/UPDATE, nie tylko przez UI. Nieaktywne/historyczne profile i połowy pozostają zachowane.
+- Oddzielna prywatna tabela wspólnego poświadczenia: solony PBKDF2-SHA256 i wersja hasła. Żadnych hashy ani sekretów w `app_settings`, bootstrap lub eksporcie JSON. Pierwsza inicjalizacja ze skonfigurowanego sekretu Workers; brak hasła w migracji SQL/repozytorium.
+- Sesja wskazuje konto i wersję poświadczenia. Login Patryk/Maciek wiąże się z obecnym `angler_id`, nigdy z nowym profilem. Trzeci uczestnik otrzymuje konto przez autoryzowaną funkcję Ustawień. Istniejący login techniczny może być wyłącznie jawnie skonfigurowanym aliasem jednego konta na preview dla CI, bez czwartego konta.
+- Nowy połów wybiera wędkarza z tożsamości sesji; ręczny wybór innego autora pozostaje. Dane historyczne nie zmieniają autora ani PB.
+- Wylogowanie: najpierw obsługa oczekującej kolejki, dopiero potem unieważnienie sesji. Obecny kod robi odwrotnie i usuwa kolejkę po potwierdzeniu. Kolejka musi zachować oryginalny payload i tożsamość właściciela; po zmianie konta nie wysyłać jej jako innego użytkownika. Zmiana hasła unieważnia stare sesje, ale nie usuwa oczekujących zapisów.
+- Przed aktywacją: prywatny punkt przywracania preview i zestawienie istniejących ID/liczebności/PB; po migracji porównanie. Testy: dwa loginy, trzecie konto, odmowa czwartego/równoległych żądań, błędne hasło/rate-limit, zmiana wspólnego hasła, brak hashy w odpowiedziach, domyślny i ręczny autor, offline i ponowne logowanie na 390/1280. Produkcja bez zmian.
+
+Stan etapu 2: PROJEKT, implementacja i migracja NOT TESTED. Nie przedstawiać tego projektu jako działającego logowania.
+
+### Dowody nowego CI
+
+Kod testów: `ff16701decfe387ee7676817ab4e18439d2b5e4d`; automatyczne bramki gałęzi: `e9cc8bce3a5086bf26ac4328b332216f2fd164d0` (`.github/workflows/responsive-qa.yml`, `.github/workflows/validate.yml`). Validate run `38215471208` PASS; Responsive run `38215471185` PASS (15 ekranów × 5 szerokości w PL/EN, przełączenie w Ustawieniach i niezależne urządzenia).
+
+Preview run `38215466844`: language/media/extras/offline PASS. Log extras: rzeczywiste CRUD uczestnika/PB/łowiska/wyjazdu na 390 px o 07:04:33Z i 1280 px o 07:05:05Z; cleanup wyłącznie własnych obiektów zakończony. Media potwierdziły plik/schowek/reopen/edit/spot/full image/delete oraz D1/R2 i ochronę sesji; AI wyłączone. Regresja job `114700164869` FAIL w czwartym wariancie logowania (1280 EN): dwa GET /login timeout przed commit nawigacji, brak odpowiedzi HTTP; poprzednie trzy warianty po sześć widoków przeszły. Ponowiono wyłącznie ten job, bez zmiany testu i bez powtarzania CRUD. Wynik ponowienia: NOT TESTED do zakończenia.
+
+Ręczny odczyt preview również potwierdził wyjazdy bez administracji i dokładnie jeden selektor w Ustawieniach, zero w nagłówku. Zauważony stary obiekt `QA navigation 1280 1791786983262` z poprzedniego wykonania pozostał na preview; nie usunięto go bez odrębnego potwierdzenia ID/powiązań. Nie należy mieszać go z obiektami nowego testu, które zostały posprzątane.
+
+### Zamknięcie bramki etapu 1
+
+Ponowienie regresji job `114701094610` w run `38215466844`: PASS — wszystkie 24 kombinacje (6 widoków × PL/EN × 390/1280), bez widocznych błędów aplikacji. Kod nie został zmieniony między próbami. Pierwszy timeout sieciowy pozostaje udokumentowany; jedno ponowienie przeszło.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+| --- | --- | --- | --- | --- | --- |
+| Język w Ustawieniach | UI przeniesione, stary test Dashboard FAIL | Jeden przełącznik, poprawny test lokalizacji/persistencji | Responsive `38215471185` + live language/extras | PASS | Preferencje osobnych kont do etapu 2/3 |
+| Media Deeper | Reload czekał na load, FAIL | Commit + gotowość UI + karta zapisanego pliku | Live media, D1/R2/schowek/401/17 obrazów | PASS | AI wyłączone zgodnie z bramką kosztową |
+| Wyjazdy/archiwum | Rozdzielenie w kodzie, niedomknięta bramka | Tworzenie/edycja/archiwizacja i szczegóły łowiska na obu szerokościach | Live extras 390/1280 | PASS | Stary obiekt QA wymaga odrębnego sprawdzenia i sprzątania |
+| Uczestnicy/PB/katalog łowisk | Formularze przeniesione | Rzeczywiste dodawanie i edycja w Ustawieniach | Live extras 390/1280 + serwerowa persistencja | PASS | Limit kont/login jeszcze niezaimplementowany |
+| Offline | Istniejąca kolejka i sync | Regresja operacji i konfliktów nadal przechodzi | Live offline + Responsive fixture | PASS | Właściciel kolejki/logout przy zmianie kont do etapu 2 |
+| Responsywność/regresja | Responsive FAIL; final regression SKIPPED | 15 ekranów/5 szerokości PL/EN; final preview 390/1280 PL/EN | Responsive + `114701094610` | PASS | Pierwsza próba live timeout /login; retry PASS |
+| Konta maks. 3 i domyślny autor | Niezaimplementowane | Projekt migracji zapisany, bez aktywacji | Brak E2E kont | NOT TESTED | Cały etap 2 do wdrożenia po prywatnym checkpoint preview |
+| Pełny audyt języka/warunków/content/security | Niezakończony | Brak deklaracji wykonania | Etapy 3–7 | NOT TESTED | Pozostaje zgodnie z kolejnością |
+
+Etap 1: PASS dla przetestowanego zakresu, zamknięty. Etap 2: rozpoczęty projekt, implementacja/migracja do wykonania. READY TO MERGE TO MAIN: NO — etapy 2–7 pozostają; produkcja i main bez zmian. Ten checkpoint dokumentacji nie zmienia przetestowanego kodu (`e9cc8bce3a5086bf26ac4328b332216f2fd164d0`).
