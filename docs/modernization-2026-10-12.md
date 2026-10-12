@@ -101,3 +101,11 @@ Ponowienie regresji job `114701094610` w run `38215466844`: PASS — wszystkie 2
 | Pełny audyt języka/warunków/content/security | Niezakończony | Brak deklaracji wykonania | Etapy 3–7 | NOT TESTED | Pozostaje zgodnie z kolejnością |
 
 Etap 1: PASS dla przetestowanego zakresu, zamknięty. Etap 2: rozpoczęty projekt, implementacja/migracja do wykonania. READY TO MERGE TO MAIN: NO — etapy 2–7 pozostają; produkcja i main bez zmian. Ten checkpoint dokumentacji nie zmienia przetestowanego kodu (`e9cc8bce3a5086bf26ac4328b332216f2fd164d0`).
+
+## Etap 2 — implementacja w toku
+
+Zaimplementowano: migracja 0028 (konta na oryginalnych ID, atomowy limit 3), prywatne poświadczenie wspólnego hasła PBKDF2-SHA256/100000 + solony sekret Workers, sesje powiązane z kontem i wersją hasła, login Patryk/Maciek (alias istniejącego loginu CI tylko na preview), tworzenie profilu/loginu w jednej transakcji, konto i zmiana wspólnego hasła w Ustawieniach, domyślny autor połowu z możliwością zmiany, kolejka z właścicielem zachowana po wylogowaniu. Starsze zmiany bez właściciela wymagają jawnego przypisania w Ustawieniach; nie zgadywać tożsamości.
+
+Przed migracją pipeline musi wykonać `preview-account-checkpoint.mjs`: Time Travel bookmark i kompletny prywatny snapshot (schemat+dane, również sesje) w prywatnym R2 `private-checkpoints/`; niezależny odczyt i SHA256 pliku. Dane nie trafiają do logów ani artefaktów. Po migracji pełne porównanie liczby i SHA256 każdej istniejącej tabeli biznesowej. Bez PASS tych kroków deployment preview nie jest wykonywany.
+
+Lokalnie: 80/80 testów PASS; Worker dry-run build PASS. Nowe testy sprawdzają trzy loginy, równoległą próbę przekroczenia limitu/rollback profilu, historyczne ID/PB/połowy, zmianę hasła/unieważnienie sesji, brak hashy w eksporcie, właściciela offline i anulowanie logout przed unieważnieniem sesji. Realne preview/migracja/konta: NOT TESTED do zakończenia CI. Nowy job `qa-accounts` uruchamia rzeczywiste UI trzech kont/połowów na 390/1280, zmianę hasła z przywróceniem oryginalnego prywatnego hasha, logout/relogin/offline/replay; sprząta wyłącznie własne rekordy QA. Etap 2 nie jest jeszcze PASS.

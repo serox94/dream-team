@@ -50,7 +50,7 @@ export async function verifyNavigation(page,context){
     await d1('DELETE FROM trip_participants WHERE trip_id=? AND EXISTS(SELECT 1 FROM trips WHERE id=? AND name=?)',[tripId,tripId,name]);
     const removed=await d1('DELETE FROM trips WHERE id=? AND name=?',[tripId,name]);assert.equal(removed.meta.changes,1,'remove only exact disposable QA trip');
    }
-   if(anglerId){const records=await d1('SELECT COUNT(*) n FROM catches WHERE angler_id=?',[anglerId]);assert.equal(records.results[0].n,0);const removed=await d1('DELETE FROM anglers WHERE id=? AND name=?',[anglerId,anglerName]);assert.equal(removed.meta.changes,1);}
+   if(anglerId){await d1('DELETE FROM auth_sessions WHERE account_id=?',['account-'+anglerId]);await d1('DELETE FROM auth_accounts WHERE angler_id=?',[anglerId]);await d1('DELETE FROM trip_participants WHERE angler_id=?',[anglerId]);const records=await d1('SELECT COUNT(*) n FROM catches WHERE angler_id=?',[anglerId]);assert.equal(records.results[0].n,0);const removed=await d1('DELETE FROM anglers WHERE id=? AND name=?',[anglerId,anglerName]);assert.equal(removed.meta.changes,1);}
    if(lakeId){const trips=await d1('SELECT COUNT(*) n FROM trips WHERE lake_id=?',[lakeId]);assert.equal(trips.results[0].n,0);const removed=await d1('DELETE FROM lakes WHERE id=? AND name=?',[lakeId,lakeName]);assert.equal(removed.meta.changes,1);}
   }
  }

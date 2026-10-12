@@ -12,7 +12,7 @@ export async function serve({port=0,seed=false,weatherFetch,testSession=true}={}
  const mediaObjects=new Map();
  const MEDIA={async put(key,body){mediaObjects.set(key,new Uint8Array(body));},async get(key){const bytes=mediaObjects.get(key);return bytes?{body:bytes,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)}:null;},async delete(key){mediaObjects.delete(key);}};
  const AI={async run(){return {response:JSON.stringify({observed:'A change in the bottom profile',bottom:'uncertain',hardness:'uncertain',weed:'uncertain',structure:'possible drop-off',fishEcho:'uncertain',interference:'uncertain',spotsA:'edge',spotsB:'base',spotsC:'top',confidence:'low'})};}};
- const env={DB,MEDIA,AI,AI_FREE_ONLY:'true',ASSETS:null,WEATHER_FETCH:weatherFetch,RYBY_LOGIN_USERNAME:'local-fixture-user',RYBY_LOGIN_PASSWORD:'local-fixture-password',RYBY_SESSION_SECRET:'local-fixture-session-secret-with-32-chars'};
+ const env={INDIVIDUAL_ACCOUNTS:'true',APP_ENV:'preview',AUTH_LEGACY_ALIAS:'Patryk',DB,MEDIA,AI,AI_FREE_ONLY:'true',ASSETS:null,WEATHER_FETCH:weatherFetch,RYBY_LOGIN_USERNAME:'local-fixture-user',RYBY_LOGIN_PASSWORD:'local-fixture-password',RYBY_SESSION_SECRET:'local-fixture-session-secret-with-32-chars'};
  let testCookie='';
  if(seed){
   DB.sqlite.exec("INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,bait) VALUES('next-trip','maciek','2026-09-03T10:00:00Z',18,'Karp','tuti'),('next-trip','patryk','2026-09-03T11:00:00Z',5,'Karp','coco');");

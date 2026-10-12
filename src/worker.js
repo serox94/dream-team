@@ -5,7 +5,7 @@ import {handleTripAdvice} from './trip-advice.js';
 import {handleDeeperMedia} from './deeper-media.js';
 import {handleDeeperAI} from './deeper-ai.js';
 import {checklistTemplates,applyChecklistTemplates} from './checklist-templates.js';
-import {authConfigured,session,login,logout,loginAssets} from './auth.js';
+import {authConfigured,session,login,logout,loginAssets,individualAccounts,accountUsername,accountList,changeSharedPassword} from './auth.js';
 import {handleLakeResearch,handleLakeCandidates,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
 
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
@@ -35,6 +35,7 @@ async function bootstrap(env) {
   const anglers = await all(env,`SELECT a.id,a.name,a.active,a.default_language defaultLanguage,COALESCE(a.baseline_pb_kg,a.pb_kg) baselinePbKg,
     MAX(COALESCE(a.baseline_pb_kg,a.pb_kg),COALESCE(MAX(c.weight_kg),0)) pbKg
     FROM anglers a LEFT JOIN catches c ON c.angler_id=a.id AND c.deleted_at IS NULL GROUP BY a.id ORDER BY a.name`);
+  if(individualAccounts(env)){const accounts=await accountList(env);for(const a of anglers)a.login=accounts.find(u=>u.anglerId===a.id&&u.active)?.username||null;}
   const rawLakes = await all(env,'SELECT id,name,country,latitude,longitude,image_url imageUrl,facts_json factsJson,source_url sourceUrl FROM lakes ORDER BY name');
   const lakes = rawLakes.map(({factsJson,...l})=>({...l,facts:parseFacts(factsJson)}));
   const rawTrips = await all(env,`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at start,end_at end,peg,latitude,longitude,lake_image lakeImage,facts_json factsJson,is_active isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`);
@@ -125,8 +126,18 @@ async function createAngler(request,env){
   const x=await body(request),name=text(x.name,'Imię',60,true),pb=number(x.baselinePbKg??0,'Dotychczasowe PB',0,150,false),language=x.defaultLanguage||'pl';
   if(!['pl','en'].includes(language))fail('Wybierz język PL lub EN.');
   if(await one(env,'SELECT id FROM anglers WHERE lower(name)=lower(?)',name)) fail('Osoba o tej nazwie już istnieje.',409);
-  const id=crypto.randomUUID();await run(env,'INSERT INTO anglers(id,name,pb_kg,baseline_pb_kg,default_language) VALUES(?,?,?,?,?)',id,name,pb,pb,language);
-  return json({ok:true,id},201);
+  const id=crypto.randomUUID(),username=individualAccounts(env)?accountUsername(x.username||name.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9._-]/g,'')):null;
+  const statements=[stmt(env,'INSERT INTO anglers(id,name,pb_kg,baseline_pb_kg,default_language) VALUES(?,?,?,?,?)',id,name,pb,pb,language)];
+  if(username){
+    statements.push(stmt(env,'INSERT INTO auth_accounts(id,username,angler_id) VALUES(?,?,?)','account-'+id,username,id));
+    statements.push(stmt(env,'INSERT INTO trip_participants(trip_id,angler_id) SELECT id,? FROM trips WHERE is_active=1 AND status<>?',id,'archived'));
+  }
+  try{await env.DB.batch(statements);}catch(error){
+    if(/MAX_ACTIVE_ACCOUNTS/.test(error.message))fail('Maksymalnie trzy aktywne konta.',409);
+    if(/auth_accounts.username/.test(error.message))fail('Ten login jest już zajęty.',409);
+    throw error;
+  }
+  return json({ok:true,id,username},201);
 }
 async function updateAngler(request,env,id){
   const current=await one(env,'SELECT * FROM anglers WHERE id=?',id);if(!current)fail('Nie znaleziono uczestnika.',404);
@@ -150,7 +161,9 @@ async function saveCatch(request,env,id){
   const c=id?await scopedRow(request,env,'catches',id):{};
   const tripId=id?c.trip_id:text(x.tripId,'Wyjazd',100,true);await tripExists(env,tripId);
   const anglerId=text(pick(x,'anglerId',c.angler_id),'Uczestnik',100,true);
-  if(!await one(env,'SELECT angler_id FROM trip_participants WHERE trip_id=? AND angler_id=?',tripId,anglerId)) fail('Ta osoba nie jest uczestnikiem wyjazdu.');
+  const member=await one(env,'SELECT angler_id FROM trip_participants WHERE trip_id=? AND angler_id=?',tripId,anglerId);
+  const teamMember=individualAccounts(env)&&await one(env,'SELECT id FROM auth_accounts WHERE angler_id=? AND active=1',anglerId);
+  if(!member&&!teamMember)fail('Ta osoba nie jest uczestnikiem wyjazdu.');
   const weight=number(pick(x,'weightKg',c.weight_kg),'Waga',0.01,99.99,false);
   const caughtAt=date(pick(x,'caughtAt',c.caught_at||new Date().toISOString()),'Data połowu',false);
   if(Date.parse(caughtAt)>Date.now()+300000) fail('Data połowu nie może być z przyszłości.');
@@ -163,7 +176,7 @@ async function saveCatch(request,env,id){
   const rig=text(pick(x,'rig',c.rig),'Rig',100),depth=number(pick(x,'depthM',c.depth_m),'Głębokość',0,100);
   const notes=text(pick(x,'notes',c.notes),'Notatka',2000),photo=webUrl(pick(x,'photoUrl',c.photo_url),'Zdjęcie');
   if(id) await run(env,`UPDATE catches SET angler_id=?,caught_at=?,weight_kg=?,species=?,spot=?,spot_id=?,bait=?,rig=?,depth_m=?,notes=?,photo_url=?,revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=?`,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo,id);
-  else {const q=await run(env,`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,spot_id,bait,rig,depth_m,notes,photo_url,client_mutation_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,tripId,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo,key);id=q.meta.last_row_id;}
+  else {const statements=[];if(!member)statements.push(stmt(env,'INSERT OR IGNORE INTO trip_participants(trip_id,angler_id) VALUES(?,?)',tripId,anglerId));statements.push(stmt(env,`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,spot_id,bait,rig,depth_m,notes,photo_url,client_mutation_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,tripId,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo,key));const result=await env.DB.batch(statements);id=result.at(-1).meta.last_row_id;}
   return json({ok:true,id},c.id?200:201);
 }
 async function saveSpot(request,env,id){
@@ -305,7 +318,7 @@ async function exportData(env){
   for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
   return json(data,200,{'content-disposition':`attachment; filename="dream-team-backup-${new Date().toISOString().slice(0,10)}.json"`});
 }
-async function privateFetch(request,env,ctx){
+async function privateFetch(request,env,ctx,active){
     const url=new URL(request.url),method=request.method,path=url.pathname;
     try{
       if(!path.startsWith('/api/'))return env.ASSETS.fetch(path==='/'?new Request(new URL('/index.html',url),request):request);
@@ -313,14 +326,19 @@ async function privateFetch(request,env,ctx){
         const version=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
         return json({ok:true,app:'dream-team',version:'1.2.0',database:'connected',schemaVersion:version?.value||null});
       }
-      if(path==='/api/bootstrap'&&method==='GET')return json(await bootstrap(env));
+      if(path==='/api/bootstrap'&&method==='GET')return json({...await bootstrap(env),currentUser:active?.account||null});
       if(path==='/api/weather'&&method==='GET')return json(await weatherForTrip(env,url.searchParams.get('tripId')));
       const adviceMatch=path.match(/^\/api\/trips\/([^/]+)\/advice$/);
       if(adviceMatch&&method==='GET')return json(await handleTripAdvice(env,decodeURIComponent(adviceMatch[1])));
+      if(individualAccounts(env)&&path==='/api/accounts'&&method==='GET')return json({ok:true,accounts:await accountList(env),currentUser:active.account});
+      if(individualAccounts(env)&&path==='/api/account/password'&&method==='POST')return await changeSharedPassword(request,env,active);
       if(path==='/api/export'&&method==='GET')return await exportData(env);
       if(path==='/api/checklist-categories'&&['GET','POST'].includes(method))return await categories(request,env);
       if(path==='/api/notes'&&['GET','POST'].includes(method))return await notes(request,env);
-      if(path==='/api/offline-sync'&&method==='POST')return await offlineSync(request,env);
+      if(path==='/api/offline-sync'&&method==='POST'){
+        if(individualAccounts(env)){const item=await body(request.clone());if(item.accountId!==active.account.id)fail('Zaloguj się jako właściciel zmian offline.',403);}
+        return await offlineSync(request,env);
+      }
       const templateMatch=path.match(/^\/api\/checklist-templates(?:\/([a-f0-9-]{36}))?$/);
       if(templateMatch)return await checklistTemplates(request,env,templateMatch[1]||null);
       const applyMatch=path.match(/^\/api\/trips\/([^/]+)\/checklist-templates\/apply$/);
@@ -381,7 +399,7 @@ function protectedResponse(result,active){
   wrapped.headers.set('cache-control','private, no-store');
   wrapped.headers.set('x-content-type-options','nosniff');
   wrapped.headers.set('referrer-policy','no-referrer');
-  if(active?.refreshCookie)wrapped.headers.set('set-cookie',active.refreshCookie);
+  if(active?.refreshCookie&&!wrapped.headers.has('set-cookie'))wrapped.headers.set('set-cookie',active.refreshCookie);
   return wrapped;
 }
 export default {
@@ -415,7 +433,7 @@ export default {
         return protectedResponse(Response.redirect(url.origin+'/login',302));
       }
       if(path==='/api/logout'&&method==='POST')return await logout(env,active);
-      return protectedResponse(await privateFetch(request,env,ctx),active);
+      return protectedResponse(await privateFetch(request,env,ctx,active),active);
     }catch(error){
       console.error('Private request failed:',error);
       return json({ok:false,error:'Błąd serwera. Spróbuj ponownie.'},500);

@@ -38,7 +38,7 @@ const aiFreeOnly='false';
 const preview={...production,name:'dream-team-preview',workers_dev:true,triggers:{crons:[]},secrets:undefined,
  d1_databases:[{binding:'DB',database_name:databaseName,database_id:database.uuid}],
  r2_buckets:[{binding:'MEDIA',bucket_name:bucketName}],
- vars:{AI_FREE_ONLY:aiFreeOnly,APP_ENV:'preview',APP_BUILD:process.env.GITHUB_SHA||'unknown'}};
+ vars:{INDIVIDUAL_ACCOUNTS:'true',AUTH_LEGACY_ALIAS:'Patryk',AI_FREE_ONLY:aiFreeOnly,APP_ENV:'preview',APP_BUILD:process.env.GITHUB_SHA||'unknown'}};
 delete preview.secrets;
 await writeFile('wrangler.preview.generated.jsonc',JSON.stringify(preview,null,2));
 console.log(`Isolated preview configuration ready: separate D1 and private media R2; AI_FREE_ONLY=${aiFreeOnly}.`);

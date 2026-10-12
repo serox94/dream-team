@@ -321,3 +321,16 @@ test('trip editor waits for save refresh before the next edit or archive',async(
   await waitFor(()=>!p.d.getElementById('trip-manager').inert);assert.deepEqual(p.errors,[]);
  }finally{release?.();p.close();await s.close();}
 });
+
+test('account author defaults survive reset and logout preserves owned queue; cancelling never revokes session',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/polowy.html');
+ try{
+  assert.equal(p.d.getElementById('person').value,'Patryk');
+  p.d.getElementById('person').value='Maciek';p.d.getElementById('catch-form').reset();assert.equal(p.d.getElementById('person').value,'Patryk');
+  Object.defineProperty(p.w.navigator,'onLine',{configurable:true,value:false});fill(p,'caught_at','2026-10-07T12:00');fill(p,'species','Karp');fill(p,'weight','6.5');fill(p,'bait','queue-owner');submit(p,'catch-form');await waitFor(()=>p.w.Dream.pendingCount()===1,'owned offline mutation');
+  const queue=JSON.parse(p.w.localStorage.getItem('dreamteam.offline.queue.v1'));assert.equal(queue[0].accountId,'account-patryk');assert.equal(queue[0].payload.anglerId,'patryk');
+  p.w.confirm=()=>false;await p.w.Dream.logout();assert.equal(s.requests.filter(r=>r.url==='/api/logout').length,0,'cancel before revoking session');
+  p.w.confirm=()=>true;await p.w.Dream.logout();assert.deepEqual(JSON.parse(p.w.localStorage.getItem('dreamteam.offline.queue.v1')),queue,'logout never discards unsynced payload');
+  Object.defineProperty(p.w.navigator,'onLine',{configurable:true,value:true});p.w.DREAM_MODEL.currentUser={id:'account-maciek',anglerId:'maciek'};const previous=s.requests.filter(r=>r.url==='/api/offline-sync').length;await p.w.Dream.syncQueue();assert.equal(s.requests.filter(r=>r.url==='/api/offline-sync').length,previous,'different account cannot send the preserved queue');
+ }finally{p.close();await s.close();}
+});

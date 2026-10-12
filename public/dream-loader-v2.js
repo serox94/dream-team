@@ -1,5 +1,5 @@
 (async () => {
-  const VERSION='20261012-modernization-2';
+  const VERSION='20261012-accounts-1';
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
@@ -15,7 +15,7 @@
       categorySelect.replaceChildren(...categories.filter(c=>c.active).map(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=c.name;return o;}));
     }
     const person=document.getElementById('person');
-    if(person){person.replaceChildren(...trip.participants.map(a=>{const o=document.createElement('option');o.value=a.name;o.textContent=a.name;return o;}));}
+    if(person){const authors=[...trip.participants,...model.anglers.filter(a=>a.login&&!trip.participants.some(p=>p.id===a.id))];person.replaceChildren(...authors.map(a=>{const o=document.createElement('option');o.value=a.name;o.textContent=a.name;o.defaultSelected=a.id===model.currentUser?.anglerId;return o;}));}
     const assigned=document.getElementById('check-assigned');
     if(assigned){for(const member of trip.participants){const option=document.createElement('option');option.value=member.name;option.textContent=member.name;assigned.append(option);}}
     document.querySelectorAll('.main-nav a').forEach(a=>{

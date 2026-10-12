@@ -27,6 +27,17 @@ window.initDreamSettings=async()=>{
     form.onsubmit=async event=>{event.preventDefault();save.disabled=true;try{await Dream.api(`/api/anglers/${encodeURIComponent(person.id)}`,{method:'PATCH',body:JSON.stringify({name:name.value,baselinePbKg:Number(pb.value),active:active.checked,defaultLanguage:language.value})});await Dream.refreshModel();renderProfiles();say('Profil zapisany.');}catch(error){say(error.message,true);save.disabled=false;}};
     host.append(form);
   }}renderProfiles();document.addEventListener('dream:participants-changed',renderProfiles);
+  if(window.DREAM_MODEL.currentUser){
+    const me=window.DREAM_MODEL.currentUser,english=window.DreamI18n?.lang==='en',tr=(pl,en)=>english?en:pl;
+    const section=document.createElement('section');section.className='panel-card';section.id='account-settings';
+    section.innerHTML=`<h3>${tr('Moje konto','My account')}</h3><p>${tr('Zalogowano jako','Signed in as')}: <strong data-user-content>${Dream.esc(me.username)} · ${Dream.esc(me.name)}</strong></p><p>${tr('Maksymalnie trzy konta. Dodaj uczestnika poniżej, aby utworzyć jego login. Wszyscy korzystają ze wspólnego hasła.','Maximum three accounts. Add a participant below to create their login. Everyone uses the shared password.')}</p><div id="account-list"></div><form id="account-password-form" class="form-grid"><h4>${tr('Zmień wspólne hasło','Change shared password')}</h4><label>${tr('Obecne hasło','Current password')}<input id="account-current-password" type="password" autocomplete="current-password" required maxlength="256"></label><label>${tr('Nowe hasło (minimum 8 znaków)','New password (minimum 8 characters)')}<input id="account-new-password" type="password" autocomplete="new-password" required minlength="8" maxlength="256"></label><button type="submit">${tr('Zmień hasło i wyloguj wszystkie urządzenia','Change password and sign out all devices')}</button></form><button type="button" id="claim-legacy-queue" class="secondary-btn">${tr('Przypisz stare zmiany offline do mojego konta','Assign legacy offline changes to my account')}</button>`;
+    participantsSection.before(section);
+    const accounts=await Dream.api('/api/accounts');$('account-list').textContent=accounts.accounts.map(a=>`${a.username} (${a.name})`).join(' · ');
+    $('claim-legacy-queue').onclick=()=>Dream.claimLegacyQueue();
+    $('account-password-form').onsubmit=async event=>{event.preventDefault();const button=event.target.querySelector('button');if(button.disabled)return;button.disabled=true;try{
+      await Dream.api('/api/account/password',{method:'POST',body:JSON.stringify({currentPassword:$('account-current-password').value,newPassword:$('account-new-password').value})});event.target.reset();await Dream.finishLogout();
+    }catch(error){say(error.message,true);button.disabled=false;}};
+  }
   const categorySection=$('category-list').closest('section'),categoryDetails=document.createElement('details');categoryDetails.className='settings-category-details';categoryDetails.innerHTML='<summary>Zarządzaj kategoriami checklisty</summary>';
   for(const child of [...categorySection.children].filter(node=>node.tagName!=='H3'))categoryDetails.append(child);
   categorySection.append(categoryDetails);

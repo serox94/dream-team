@@ -459,6 +459,7 @@ function resetCatchForm() {
   const form = $("catch-form");
   if (!form) return;
   form.reset();
+  const author=window.DREAM_MODEL?.anglers?.find(a=>a.id===window.DREAM_MODEL?.currentUser?.anglerId);if(author&&$("person"))$("person").value=author.name;
   $("edit-catch-id").value = "";
   if($("species")) $("species").value=defaultCarpSpecies();
   $("catch-form-title").textContent = "Dodaj połów";

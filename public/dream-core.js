@@ -20,7 +20,8 @@
   const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json',...options.headers},signal});
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
   const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings)(?:\?|$)/;
-  const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1';
+  const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1',accountKey='dreamteam.account.v1';
+  const accountId=()=>window.DREAM_MODEL?.currentUser?.id||localStorage.getItem(accountKey)||null;
   let synchronizing=false,syncRetryTimer=null,syncRetryDelay=1000;
   function readQueue(){try{const value=JSON.parse(localStorage.getItem(queueKey)||'[]');return Array.isArray(value)?value:[];}catch{return [];}}
   function writeQueue(items){localStorage.setItem(queueKey,JSON.stringify(items));showOfflineState();}
@@ -55,7 +56,7 @@
         cached[list].unshift(row);saveReadCache(cachePath,cached);
       }
     }
-    queue.push({key,path,method,payload,baseRevision,at:Date.now(),status:'pending'});writeQueue(queue);
+    queue.push({key,path,method,payload,baseRevision,accountId:accountId(),at:Date.now(),status:'pending'});writeQueue(queue);
     return {ok:true,pendingSync:true,id:-Date.now()};
   }
   async function syncQueue(){
@@ -63,7 +64,7 @@
     if(syncRetryTimer){clearTimeout(syncRetryTimer);syncRetryTimer=null;}
     synchronizing=true;let synced=0,retry=false;
     try{for(const item of readQueue()){
-      if(item.status==='conflict')continue;
+      if(item.status==='conflict'||(accountId()&&item.accountId!==accountId()))continue;
       try{const response=await authorizedFetch('/api/offline-sync',{method:'POST',body:JSON.stringify(item)},AbortSignal.timeout(20000));
         if(response.status===401)break;
         const result=await response.json();
@@ -78,7 +79,7 @@
     if(retry&&pendingCount()&&navigator.onLine!==false){syncRetryTimer=setTimeout(()=>{syncRetryTimer=null;syncQueue();},syncRetryDelay);syncRetryDelay=Math.min(syncRetryDelay*2,60000);}
     if(synced){document.dispatchEvent(new Event('dream:synced'));if(!pendingCount())setTimeout(()=>location.reload(),100);}
   }
-  function resolveConflict(key,choice){const queue=readQueue(),item=queue.find(q=>q.key===key);if(!item)return;
+  function resolveConflict(key,choice){const queue=readQueue(),item=queue.find(q=>q.key===key);if(!item||(accountId()&&item.accountId!==accountId()))return;
     if(choice==='server'){
       const match=item.path.match(/^\/api\/(checklist|spots)\/(\d+)\?tripId=([a-zA-Z0-9_-]+)$/);
       if(match){const [,resource,id,tripId]=match,path=`/api/${resource}?tripId=${tripId}`,cached=readEntries()[path]?.data;
@@ -92,7 +93,7 @@
   }
   window.addEventListener('online',syncQueue);
   document.addEventListener('click',event=>{if(event.target?.id!=='offline-banner')return;
-    const conflict=readQueue().find(item=>item.status==='conflict');if(!conflict)return;
+    const conflict=readQueue().find(item=>item.status==='conflict'&&(!accountId()||item.accountId===accountId()));if(!conflict)return;
     if(confirm(`${window.DreamI18n?.t(conflict.error)||conflict.error}\n${window.DreamI18n?.t('OK: ponów swoją zmianę. Anuluj: zachowaj wersję serwera.')||'OK: ponów swoją zmianę. Anuluj: zachowaj wersję serwera.'}`))resolveConflict(conflict.key,'mine');else resolveConflict(conflict.key,'server');
   });
   async function clearShell(){
@@ -103,6 +104,11 @@
   function readEntries(){try{return JSON.parse(localStorage.getItem(readCacheKey)||'{}')||{};}catch{return {};}}
   function saveReadCache(path,data){
     if(!offlinePaths.test(path))return;
+    if(path==='/api/bootstrap'&&data.currentUser?.id){
+      const previous=localStorage.getItem(accountKey);
+      if(previous&&previous!==data.currentUser.id)clearReadCache();
+      localStorage.setItem(accountKey,data.currentUser.id);
+    }
     try{
       const entries=readEntries();entries[path]={at:Date.now(),data};
       const recent=Object.entries(entries).filter(([,entry])=>entry?.at>Date.now()-maxAge).sort((a,b)=>b[1].at-a[1].at).slice(0,25);
@@ -128,7 +134,8 @@
     const english=window.DreamI18n?.lang==='en';
     const stale=offlineEntries.size?`${english?'Offline data / last sync':'Dane offline / ostatnia synchronizacja'} ${new Date(Math.min(...offlineEntries.values())).toLocaleString(english?'en-GB':(document.documentElement.lang==='en'?'en-GB':'pl-PL'),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
     const conflicts=readQueue().filter(item=>item.status==='conflict').length;
-    banner.textContent=stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — tap here to resolve.`:''}`:`Oczekuje na synchronizację: ${count}.${conflicts?` ${conflicts} konflikt(y) — dotknij tutaj, aby rozstrzygnąć.`:''}`:'');
+    const other=readQueue().some(item=>accountId()&&item.accountId!==accountId());
+    banner.textContent=(other?(english?'Some pending changes belong to another login. Sign in as their owner. ':'Część oczekujących zmian należy do innego loginu. Zaloguj się jako ich właściciel. '):'')+stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — tap here to resolve.`:''}`:`Oczekuje na synchronizację: ${count}.${conflicts?` ${conflicts} konflikt(y) — dotknij tutaj, aby rozstrzygnąć.`:''}`:'');
   }
   async function api(path,options={}){
     const get=!options.method||options.method==='GET';
@@ -174,13 +181,21 @@
       document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(href),60000);
     }finally{clearTimeout(timeout);}
   }
+  async function finishLogout(){
+    if(syncRetryTimer){clearTimeout(syncRetryTimer);syncRetryTimer=null;}
+    clearReadCache();localStorage.removeItem(accountKey);
+    await clearShell();location.assign('/login');
+  }
   async function logout(){
+    if(pendingCount()&&!confirm(window.DreamI18n?.lang==='en'?'Pending changes will stay on this device. Sign in as their owner to sync them. Sign out?':'Oczekujące zmiany pozostaną na tym urządzeniu. Zaloguj się jako ich właściciel, aby je zsynchronizować. Wylogować?'))return;
     const response=await authorizedFetch('/api/logout',{method:'POST',body:'{}'});
     if(!response.ok)throw new Error('Nie udało się wylogować. Spróbuj ponownie.');
-    if(pendingCount()&&!confirm(window.DreamI18n?.t('Masz zmiany oczekujące na synchronizację. Wylogowanie usunie je z tego urządzenia. Kontynuować?')||'Masz zmiany oczekujące na synchronizację. Wylogowanie usunie je z tego urządzenia. Kontynuować?'))return;
-    localStorage.removeItem(queueKey);clearReadCache();
-    await clearShell();
-    location.assign('/login');
+    await finishLogout();
+  }
+  function claimLegacyQueue(){
+    if(!accountId())return;
+    if(!confirm(window.DreamI18n?.lang==='en'?'Assign changes saved before individual logins to your account? Their original authors will stay unchanged.':'Przypisać do Twojego konta zmiany zapisane przed wprowadzeniem indywidualnych loginów? Autorzy połowów pozostaną bez zmian.'))return;
+    writeQueue(readQueue().map(item=>item.accountId?item:{...item,accountId:accountId()}));syncQueue();
   }
   async function registerShell(){
     showOfflineState();syncQueue();
@@ -256,7 +271,7 @@
     b.addEventListener('click',async()=>{b.disabled=true;try{await api(`/api/${kind}/${id}/restore?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`,{method:'POST',body:'{}'});await refreshModel();await refresh();notice('Wpis przywrócony.');}catch(e){notice(e.message,true);b.disabled=false;}});
     document.getElementById('app-notice')?.append(b);
   }
-  window.Dream={renderHeader,api,downloadBackup,logout,clearReadCache,registerShell,pendingCount,syncQueue,esc,zone,dateInput,fromInput,format,safeUrl,notice,refreshModel,rememberTrip,readTrip,undo,
+  window.Dream={renderHeader,api,downloadBackup,logout,finishLogout,claimLegacyQueue,clearReadCache,registerShell,pendingCount,syncQueue,esc,zone,dateInput,fromInput,format,safeUrl,notice,refreshModel,rememberTrip,readTrip,undo,
     hour:value=>Number(new Intl.DateTimeFormat('en-GB',{timeZone:zone(),hour:'2-digit',hourCycle:'h23'}).format(new Date(value))),
     day:value=>new Date(value).toLocaleDateString((document.documentElement.lang==='en'?'en-GB':'pl-PL'),{timeZone:zone()})};
 })();
