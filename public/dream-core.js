@@ -186,9 +186,19 @@
     showOfflineState();syncQueue();
     if(!('serviceWorker' in navigator))return;
     try{
-      await navigator.serviceWorker.register('/sw.js',{scope:'/'});
-      const registration=await navigator.serviceWorker.ready;
-      if(navigator.onLine!==false)registration.active?.postMessage({type:'WARM_SHELL'});
+      const hadController=Boolean(navigator.serviceWorker.controller);
+      let reloading=false;
+      if(hadController){
+        navigator.serviceWorker.addEventListener('controllerchange',()=>{
+          if(reloading)return;
+          reloading=true;
+          location.reload();
+        },{once:true});
+      }
+      const registration=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
+      if(navigator.onLine!==false)await registration.update().catch(()=>{});
+      const ready=await navigator.serviceWorker.ready;
+      if(navigator.onLine!==false)ready.active?.postMessage({type:'WARM_SHELL'});
       showOfflineState();syncQueue();
     }catch(error){console.warn('Offline shell unavailable:',error);}
   }

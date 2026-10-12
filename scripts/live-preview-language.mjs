@@ -31,7 +31,43 @@ const login=async page=>{
  await page.waitForURL(url=>new URL(url).pathname==='/',{waitUntil:'commit',timeout:60000});
  await page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
 };
+const verifyMobileMoreLanguage=async()=>{
+ const context=await browser.newContext({viewport:{width:390,height:844},locale:'pl-PL',hasTouch:true});
+ const page=await context.newPage();
+ try{
+  await open(page,'/login','html[data-i18n-ready]');
+  const loginLanguage=page.locator('.login-card .language-selector select');
+  assert.ok(await page.locator('.login-card .language-selector').isVisible(),'login language visible');
+  if(await loginLanguage.inputValue()!=='pl'){
+   await loginLanguage.selectOption('pl');
+   await page.locator('html[data-i18n-ready="pl"]').waitFor({timeout:30000});
+  }
+  await page.locator('input[name="username"]').fill(process.env.RYBY_LOGIN_USERNAME);
+  await page.locator('input[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);
+  await page.locator('button[type="submit"]').click({noWaitAfter:true});
+  await page.waitForURL(url=>new URL(url).pathname==='/',{waitUntil:'commit',timeout:60000});
+  await page.locator('html[data-ready="true"][data-i18n-ready="pl"]').waitFor({timeout:30000});
+  const more=page.locator('#bottom-more');
+  assert.ok(await more.isVisible(),'390px More button visible');
+  await more.click();
+  const menuLanguage=page.locator('#main-nav > .language-selector');
+  assert.ok(await menuLanguage.isVisible(),'390px More language visible');
+  assert.ok(await menuLanguage.evaluate(el=>{const r=el.getBoundingClientRect(),m=el.parentElement.getBoundingClientRect();return r.top>=m.top&&r.bottom<=m.bottom&&r.bottom<innerHeight;}),'390px More language is immediately visible without scrolling');
+  await safeShot(page,'live-preview-qa/more-language-390-pl.png');
+  await menuLanguage.locator('select').selectOption('en');
+  await page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
+  assert.equal(await page.locator('#main-nav > .language-selector select').inputValue(),'en','More selector changes UI to EN');
+  await page.reload({waitUntil:'commit',timeout:30000});
+  await page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
+  assert.equal(await page.locator('#main-nav > .language-selector select').inputValue(),'en','EN persists after reload');
+  await page.locator('#bottom-more').click();
+  assert.ok(await page.locator('#main-nav > .language-selector').isVisible(),'More language remains visible after EN reload');
+  await safeShot(page,'live-preview-qa/more-language-390-en-after-reload.png');
+ }finally{await context.close();}
+ console.log('LIVE MOBILE MORE LANGUAGE: PASS (390px Dashboard -> More -> EN -> reload -> EN).');
+};
 try{
+ await verifyMobileMoreLanguage();
  const context=await browser.newContext({viewport:{width:390,height:844},locale:'pl-PL',hasTouch:true});
  const page=await context.newPage();
  await login(page);
