@@ -1,6 +1,6 @@
 {
   "Wyjazdy i archiwum": "Wyjazdy i archiwum",
-  "Dashboard": "Dashboard",
+  "Dashboard": "Panel główny",
   "Połowy": "Połowy",
   "Pogoda PRO": "Pogoda PRO",
   "Najważniejsze nad wodą": "Najważniejsze nad wodą",
@@ -108,7 +108,7 @@
   "Łowiska": "Łowiska",
   "Nowe łowisko": "Nowe łowisko",
   "Znajdź kandydatów": "Znajdź kandydatów",
-  "Research": "Research",
+  "Research": "Wyszukiwanie źródeł",
   "Wyszukiwanie": "Wyszukiwanie",
   "Nazwa łowiska": "Nazwa łowiska",
   "Kraj": "Kraj",
@@ -464,5 +464,7 @@
   "Następny przykład": "Następny przykład",
   "Powtórz poziom": "Powtórz poziom",
   "Porównaj własne ekrany →": "Porównaj własne ekrany →",
-  "Potwierdź miejsce →": "Potwierdź miejsce →"
+  "Potwierdź miejsce →": "Potwierdź miejsce →",
+  "DreamTeam | Dashboard": "DreamTeam | Panel główny",
+  "Research provider": "Dostawca wyszukiwania"
 }

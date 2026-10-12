@@ -1,3 +1,4 @@
+import {localizeApiResponse} from './api-language.js';
 import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
 import { weatherForTrip } from './weather.js';
@@ -402,8 +403,7 @@ function protectedResponse(result,active){
   if(active?.refreshCookie&&!wrapped.headers.has('set-cookie'))wrapped.headers.set('set-cookie',active.refreshCookie);
   return wrapped;
 }
-export default {
-  async fetch(request,env,ctx){
+async function handleRequest(request,env,ctx){
     const url=new URL(request.url),path=url.pathname,method=request.method;
     if(loginAssets.has(path)&&method==='GET'){
       if(authConfigured(env)){
@@ -423,7 +423,7 @@ export default {
       // mutations still require same-origin requests and a valid session.
       if(path!=='/api/login'&&['POST','PUT','PATCH','DELETE'].includes(method)){
         const origin=request.headers.get('origin');
-        if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return json({ok:false,error:'Cross-origin write blocked'},403);
+        if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return json({ok:false,error:'Zablokowano zapis z innej witryny.'},403);
       }
       await ensureSchema(env);
       if(path==='/api/login'&&method==='POST')return await login(request,env);
@@ -438,6 +438,8 @@ export default {
       console.error('Private request failed:',error);
       return json({ok:false,error:'Błąd serwera. Spróbuj ponownie.'},500);
     }
-  },
+}
+export default {
+  async fetch(request,env,ctx){return localizeApiResponse(await handleRequest(request,env,ctx),request);},
   async scheduled(_event,env,ctx){await ensureSchema(env);ctx.waitUntil(scheduledResearch(env));}
 };

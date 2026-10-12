@@ -55,9 +55,9 @@ export async function session(request,env){
 }
 
 export async function login(request,env){
-  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/x-www-form-urlencoded'))return response(415,'Unsupported Media Type');
-  if(Number(request.headers.get('content-length')||0)>4096)return response(413,'Payload Too Large');
-  const raw=await request.text();if(raw.length>4096)return response(413,'Payload Too Large');
+  if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/x-www-form-urlencoded'))return response(415,JSON.stringify({ok:false,error:'Wymagany Content-Type: application/x-www-form-urlencoded.'}),{'content-type':'application/json'});
+  if(Number(request.headers.get('content-length')||0)>4096)return response(413,JSON.stringify({ok:false,error:'Żądanie jest zbyt duże.'}),{'content-type':'application/json'});
+  const raw=await request.text();if(raw.length>4096)return response(413,JSON.stringify({ok:false,error:'Żądanie jest zbyt duże.'}),{'content-type':'application/json'});
   const data=new URLSearchParams(raw),username=data.get('username')||'',password=data.get('password')||'';
   const ip=request.headers.get('cf-connecting-ip')||'unknown';
   const ipHash=hex(await digest(`${env.RYBY_SESSION_SECRET}\0${ip}`)),current=now();
@@ -90,7 +90,7 @@ export async function logout(env,active){
   await env.DB.prepare('DELETE FROM auth_sessions WHERE id_hash=?').bind(active.idHash).run();
   return response(200,JSON.stringify({ok:true}),{'content-type':'application/json; charset=utf-8','set-cookie':formatCookie('',0)});
 }
-export const loginAssets=new Set(['/login','/login.html','/login.css','/login.js','/i18n.js','/locales/pl.json','/locales/en.json','/locales/runtime.en.json','/manifest.webmanifest','/icons/ryby-192.png','/icons/ryby-512.png']);
+export const loginAssets=new Set(['/login','/login.html','/login.css','/login.js','/i18n.js','/language-preference.js','/locales/pl.json','/locales/en.json','/locales/runtime.en.json','/manifest.webmanifest','/icons/ryby-192.png','/icons/ryby-512.png']);
 
 export const individualAccounts=env=>env.INDIVIDUAL_ACCOUNTS==='true';
 const iterations=100000;

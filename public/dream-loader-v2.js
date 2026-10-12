@@ -1,9 +1,10 @@
 (async () => {
-  const VERSION='20261012-accounts-2';
+  const VERSION='20261012-language-accounts-1';
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
     const model=await Dream.api('/api/bootstrap');
+    if(model.currentUser&&window.DreamLanguage?.activate(model.currentUser)){location.reload();return;}
     const trip=model.trips.find(t=>t.id===Dream.readTrip())||model.trips.find(t=>t.id===model.app.activeTripId)||model.trips.find(t=>t.status!=='archived')||model.trips[0];
     if(!trip)throw new Error('Brak wyjazdów w bazie.');
     window.DREAM_MODEL=model;window.DREAM_TRIP=trip;window.DREAM_VIEWED_TRIP_ID=trip.id;

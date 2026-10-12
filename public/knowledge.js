@@ -2,7 +2,7 @@
 const root=document.getElementById('knowledge-root');
 if(root){
 const module=root.dataset.module, sonar=module==='sonar';
-const deviceLanguage=localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
+const deviceLanguage=window.DreamLanguage?.get()||window.DreamI18n?.lang||localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
 const english=deviceLanguage==='en';
 const say=(pl,en)=>english?en:pl;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

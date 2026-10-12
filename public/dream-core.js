@@ -17,7 +17,7 @@
     if(!value)return '';
     try {const u=new URL(value,location.origin);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}
   }
-  const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json',...options.headers},signal});
+  const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json','accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl',...options.headers},signal});
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
   const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings)(?:\?|$)/;
   const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1',accountKey='dreamteam.account.v1';

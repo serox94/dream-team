@@ -284,8 +284,39 @@ jobs:
           name: live-preview-accounts
           path: live-preview-qa
 
-  qa-regression:
+  qa-user-language:
     needs: [qa-language, qa-media, qa-offline, qa-extras]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Real two users PL EN on the same device
+        env:
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-user-language.mjs
+      - name: Preserve user language evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-user-language
+          path: live-preview-qa
+
+  qa-regression:
+    needs: [qa-user-language]
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

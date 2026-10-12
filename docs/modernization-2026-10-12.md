@@ -139,3 +139,11 @@ Run `38221484979` zakończony PASS po ponowieniu wyłącznie końcowej regresji 
 | Autoryzacja/regresja | Jedno konto | Konta chronią API i zachowują wspólny dostęp drużyny | Unit 82/82; Validate/Responsive PASS; wszystkie joby preview PASS | PASS | Native preflight timeout do ograniczenia w QA |
 
 Etap 2: PASS i wdrożony na izolowanym preview. Przetestowany kod: `5e2456dd4b694298c713a9288f0689d238ecd832`, schema 28, cache 20261012-103. Etapy 3–7 pozostają do wykonania. READY TO MERGE TO MAIN: NO. Produkcja/main bez zmian.
+
+## Etap 3 — implementacja i audyt w toku
+
+Dodano jedną wspólną obsługę preferencji języka (`language-preference.js`) dla interfejsu konta na urządzeniu; anon/login zachowuje osobną preferencję. Patryk i Maciek na jednym telefonie mogą zachować różne PL/EN bez zmiany cudzego języka. Moduły Encyklopedii/Deepera, pogody i porad odczytują tę samą preferencję. Kontrolka pozostaje pojedyncza w Ustawieniach (oraz osobna na ekranie loginu); nie wróciła do nagłówka.
+
+Błędy API otrzymują język żądania. Audyt statycznych komunikatów i etykiet walidacji wykrył m.in. brak tłumaczenia słowa „Waga” oraz nowe błędy kont; uzupełniono je bez tłumaczenia danych użytkownika. PL: „Dashboard” i „Research provider” mają polskie etykiety. Nazwy użytkowników i wartości źródłowe pozostają oznaczone jako dane/treść źródłowa. Preflight CI ma teraz własne 12-sekundowe limity dla login/settings/SW; zgodność SHA i generacji cache nadal obowiązuje.
+
+Lokalnie 85/85 PASS + Worker dry-run PASS. Nowy live E2E `live-preview-user-language.mjs`: PL→EN→PL, reload, Patryk PL/Maciek EN na jednym urządzeniu, 15 widoków dla każdego konta na 390/1280, błędy API PL/EN. Do tego dotychczasowe 15 ekranów × pięć szerokości, interakcje/quizy i source-preservation w istniejących testach. Live nowego kodu: NOT TESTED do zakończenia CI. Nie oznaczać całego etapu 3 jako PASS na podstawie istnienia kodu i testów lokalnych.

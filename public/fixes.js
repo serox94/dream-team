@@ -38,13 +38,13 @@
 
   function formatHour(dateString) {
     const date = new Date(dateString);
-    const language=localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
+    const language=window.DreamLanguage?.get()||window.DreamI18n?.lang||localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
     return date.toLocaleTimeString(language==='en'?'en-GB':'pl-PL', { hour: "2-digit", minute: "2-digit" });
   }
 
   function formatDay(dateString) {
     const date = new Date(dateString);
-    const language=localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
+    const language=window.DreamLanguage?.get()||window.DreamI18n?.lang||localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
     return date.toLocaleDateString(language==='en'?'en-GB':'pl-PL', {
       weekday: "long",
       day: "2-digit",

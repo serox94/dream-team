@@ -1,6 +1,5 @@
 // Device preference only. No account-wide language setting and no user text sent to a translator.
-const key='dreamteam.language';
-const stored=localStorage.getItem(key),lang=stored==='pl'||stored==='en'?stored:/^pl\b/i.test(navigator.language)?'pl':'en';
+const lang=window.DreamLanguage?.get()||localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
 document.documentElement.lang=lang;
 const dictionary=await fetch(`/locales/${lang}.json`,{cache:'no-cache'}).then(r=>r.json()).catch(()=>({}));
 if(lang==='en')Object.assign(dictionary,await fetch('/locales/runtime.en.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
@@ -116,7 +115,7 @@ const dynamic=string=>{
  return null;
 };
 const translate=string=>dictionary[string]||dictionary[string?.replace(/\s+/g,' ').trim()]||(lang==='en'&&string?.startsWith('#')&&dictionary[string.slice(1)]?'#'+dictionary[string.slice(1)]:null)||dynamic(string)||string;
-window.DreamI18n={lang,t:translate,set(next){if(next!=='pl'&&next!=='en')return;localStorage.setItem(key,next);location.reload();}};
+window.DreamI18n={lang,t:translate,set(next){if(next!=='pl'&&next!=='en')return;if(window.DreamLanguage)window.DreamLanguage.persist(next);else localStorage.setItem('dreamteam.language',next);location.reload();}};
 const personal='[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew';
 const walk=node=>{
  if(node.nodeType===Node.TEXT_NODE){if(node.parentElement?.closest(`script,style,textarea,${personal}`))return;const original=node.textContent.trim(),translated=translate(original);if(original&&translated!==original)node.textContent=node.textContent.replace(original,translated);return;}
@@ -131,10 +130,10 @@ const speciesInput=document.getElementById('species'),editCatch=document.getElem
 if(lang==='en'&&speciesInput&&!editCatch?.value&&speciesInput.value==='Karp')speciesInput.value='Carp';
 const observer=new MutationObserver(records=>{for(const record of records){if(record.type==='attributes'||record.type==='characterData')walk(record.target);else for(const node of record.addedNodes)walk(node);}});
 observer.observe(document.body,{childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title','label','alt'],subtree:true});
-function selector(locationNode){if(!locationNode)return;const label=document.createElement('label');label.className='language-selector';label.textContent='PL / EN ';const select=document.createElement('select');select.setAttribute('aria-label','Language / Język');for(const [value,name] of [['pl','PL'],['en','EN']]){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}select.value=lang;select.addEventListener('change',()=>window.DreamI18n.set(select.value));label.append(select);locationNode.append(label);return label;}
+function selector(locationNode){if(!locationNode)return;const label=document.createElement('label');label.className='language-selector';label.textContent='PL / EN ';const select=document.createElement('select');select.setAttribute('aria-label',lang==='pl'?'Język':'Language');for(const [value,name] of [['pl','PL'],['en','EN']]){const option=document.createElement('option');option.value=value;option.textContent=name;select.append(option);}select.value=lang;select.addEventListener('change',()=>window.DreamI18n.set(select.value));label.append(select);locationNode.append(label);return label;}
 selector(document.querySelector('.login-card'));
 // Native dialogs are outside the DOM observer. Only known UI messages are translated.
 for(const name of ['alert','confirm','prompt']){const native=window[name].bind(window);window[name]=(message,...args)=>native(translate(String(message)),...args);}
-if(location.pathname.endsWith('/ustawienia.html')){const section=document.querySelector('#settings-form')?.closest('section');if(section){const row=document.createElement('p');row.textContent=lang==='pl'?'Język tego urządzenia: ':'Language on this device: ';selector(row);section.insertBefore(row,section.querySelector('form'));}}
+if(location.pathname.endsWith('/ustawienia.html')){const section=document.querySelector('#settings-form')?.closest('section');if(section){const row=document.createElement('p');row.textContent=lang==='pl'?'Język mojego konta na tym urządzeniu: ':'My account language on this device: ';selector(row);section.insertBefore(row,section.querySelector('form'));}}
 document.documentElement.dataset.i18nReady=lang;
 document.dispatchEvent(new Event('dream:i18n-ready'));
