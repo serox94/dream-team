@@ -3,17 +3,18 @@ import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
 const base='https://dream-team-preview.sewerynski00.workers.dev';
-const browser=await chromium.launch();await mkdir('live-preview-qa',{recursive:true});
-try {
- for(const width of [390,1280])for(const lang of ['pl','en']){
+await mkdir('live-preview-qa',{recursive:true});
+for(const width of [390,1280])for(const lang of ['pl','en']){
+  const browser=await chromium.launch();
   const context=await browser.newContext({viewport:{width,height:844},locale:lang==='pl'?'pl-PL':'en-GB'});
   const page=await context.newPage();page.setDefaultTimeout(25000);
+  const open=async(path,ready)=>{for(let attempt=0;attempt<2;attempt++){try{await page.goto(base+path,{waitUntil:'commit',timeout:30000});await page.locator(ready).waitFor({timeout:30000});return;}catch(error){console.warn('KNOWLEDGE NAVIGATION',path,lang,width,attempt+1,String(error.message).split('\n')[0]);if(attempt||error.name!=='TimeoutError')throw error;}}};
   try{
-   await page.goto(base+'/login',{waitUntil:'commit',timeout:30000});await page.locator('html[data-i18n-ready]').waitFor();
+   await open('/login','html[data-i18n-ready]');
    if(await page.locator('html').getAttribute('lang')!==lang){await page.locator('.language-selector select').selectOption(lang);await page.locator('html[data-i18n-ready="'+lang+'"]').waitFor();}
    await page.locator('[name="username"]').fill(process.env.RYBY_LOGIN_USERNAME);await page.locator('[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);
    await page.locator('[type="submit"]').click({noWaitAfter:true});await page.waitForURL('**/',{waitUntil:'commit',timeout:60000});await page.locator('html[data-ready="true"]').waitFor();
-   await page.goto(base+'/pages/encyklopedia.html',{waitUntil:'commit',timeout:30000});await page.locator('html[data-ready="true"][data-i18n-ready="'+lang+'"]').waitFor();await page.locator('#tactic-form').waitFor();
+   await open('/pages/encyklopedia.html','html[data-ready="true"][data-i18n-ready="'+lang+'"]');await page.locator('#tactic-form').waitFor();
    assert.equal(await page.locator('.knowledge-entry').count(),14);
    assert.equal(await page.locator('#t-temp').inputValue(),'unknown');
    await page.locator('#tactic-form button[type="submit"]').click();
@@ -33,6 +34,5 @@ try {
    assert.deepEqual(await page.locator('#app-notice.status-danger').allTextContents(),[]);
    await page.screenshot({path:'live-preview-qa/encyclopedia-'+lang+'-'+width+'.png',timeout:10000});
    console.log('LIVE ENCYCLOPEDIA '+lang+' '+width+': PASS preserved 14 topics, evidence/source links, unmeasured water, safety stop, 8-step diagnostic, no overflow.');
-  }catch(error){console.error('KNOWLEDGE QA failure',lang,width,error.message);throw error;}finally{await context.close();}
- }
-}finally{await Promise.race([browser.close(),new Promise(resolve=>setTimeout(resolve,20000))]);}
+  }catch(error){console.error('KNOWLEDGE QA failure',lang,width,String(error.message).split('\n')[0]);throw new Error('Knowledge QA '+lang+'/'+width+': '+String(error.message).split('\n')[0]);}finally{await context.request.post(base+'/api/logout',{data:{},headers:{origin:base},timeout:10000}).catch(()=>{});await context.close();await Promise.race([browser.close(),new Promise(resolve=>setTimeout(resolve,20000))]);}
+}

@@ -32,6 +32,7 @@ test('actual sonar renderer calculates units/footprints, rejects invalid inputs 
   assert.equal(d.querySelector('#s-temp').value,'unknown');d.querySelector('#s-depth').value='mid';d.querySelector('#spot-form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true}));assert.equal(d.querySelectorAll('#spot-result li').length,3);assert.doesNotMatch(d.querySelector('#spot-result').textContent,/undefined/);assert.match(d.querySelector('#spot-result').textContent,lang==='pl'?/Temperatura wody niezmierzona/:/Water temperature is not measured/);
   const level=d.querySelector('#quiz-level');
   for(const n of [1,2,3]){level.value=String(n);level.dispatchEvent(new dom.window.Event('change'));const group=questions.filter(q=>q.level===n);for(const q of group){d.querySelector('[data-quiz="'+q.correct+'"]').click();assert.ok([...d.querySelectorAll('[data-quiz]')].every(b=>b.disabled));d.querySelector('[data-quiz="'+q.correct+'"]').click();d.querySelector('#quiz-next').click();}assert.match(d.querySelector('#quiz-stage').textContent,new RegExp(group.length+' / '+group.length));d.querySelector('#quiz-restart').click();assert.ok(d.querySelector('[data-quiz]'));}
+  if(lang==='en')assert.doesNotMatch(d.querySelector('#sonar-gallery > p').textContent,/[ąćęłńóśźż]/i);
   assert.equal(d.querySelectorAll('#atlas-overview .deeper-shot').length,17);assert.match(d.querySelector('#atlas-overview p').textContent,lang==='pl'?/jednostki/i:/Reference screens/i);
   dom.window.close();
  }
