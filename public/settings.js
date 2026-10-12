@@ -7,7 +7,7 @@ window.initDreamSettings=async()=>{
   $('research-last').textContent=saved.lastResearchAt?new Date(saved.lastResearchAt).toLocaleString(locale):t('brak');
   const profile=$('settings-version').closest('section');
   profile.querySelector('p:nth-of-type(2)').insertAdjacentHTML('beforeend',` <small>${t('(profil informacyjny; instrukcje Deeper są napisane dla tego zestawu)')}</small>`);
-  const providerStatus=document.createElement('p');providerStatus.id='research-provider-status';providerStatus.textContent=saved.researchProviderConfigured?'Automatyczny research: dostawca skonfigurowany.':'AUTOMATYCZNY RESEARCH: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.';
+  const providerStatus=document.createElement('p');providerStatus.id='research-provider-status';providerStatus.textContent=saved.researchProviderConfigured?'Automatyczne wyszukiwanie źródeł: dostawca skonfigurowany.':'AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.';
   $('research-auto').closest('label').before(providerStatus);
   $('research-official').closest('label').lastChild.textContent=' Preferuj oficjalne strony w wyszukiwaniu';
   const system=document.createElement('section');system.className='panel-card';system.id='system-health';

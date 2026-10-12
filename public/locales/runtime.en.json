@@ -769,5 +769,15 @@
   "Waga": "Weight",
   "Wiatr": "Wind",
   "Zaczepy": "Snags",
-  "Zdjęcie": "Photo"
+  "Zdjęcie": "Photo",
+  "Automatyczne wyszukiwanie źródeł jest wyłączone w Ustawieniach.": "Automated research is disabled in Settings.",
+  "Profil łowiska będzie uzupełniony po sprawdzeniu źródeł.": "The lake profile will be filled after research.",
+  "Limit automatycznego wyszukiwania źródeł wykorzystany — spróbuj później lub dodaj źródło ręcznie.": "The automated research limit has been reached. Try later or add a source manually.",
+  "Dostawca wyszukiwania źródeł jest chwilowo niedostępny.": "The research provider is temporarily unavailable.",
+  "Automatyczne wyszukiwanie źródeł wymaga konfiguracji dostawcy. Możesz dodać oficjalny URL ręcznie.": "Automated research requires provider configuration. Add the official URL manually.",
+  "Automatyczne wyszukiwanie źródeł nie jest skonfigurowane. Zapisz źródło i fakty ręcznie.": "Automated research is not configured. Save the source and facts manually.",
+  "Sprawdź źródła ponownie": "Refresh research",
+  "Automatyczne wyszukiwanie źródeł: dostawca skonfigurowany.": "Automated research: provider configured.",
+  "AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.": "AUTOMATED RESEARCH: WAITING FOR TAVILY_API_KEY. Preferences will be saved; automation will work after configuration.",
+  "AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Możesz utworzyć wyjazd i uzupełnić źródło później.": "AUTOMATED RESEARCH: WAITING FOR TAVILY_API_KEY. Create the trip and add a source later."
 }

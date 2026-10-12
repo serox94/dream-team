@@ -1,4 +1,4 @@
-// Device preference only. No account-wide language setting and no user text sent to a translator.
+// Account preference on this device; user/source text remains in its original language.
 const lang=window.DreamLanguage?.get()||localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
 document.documentElement.lang=lang;
 const dictionary=await fetch(`/locales/${lang}.json`,{cache:'no-cache'}).then(r=>r.json()).catch(()=>({}));
@@ -13,6 +13,11 @@ if(lang==='en'&&guide){
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^Nie udało się wczytać ([\w/-]+\.js)\.$/,(_,file)=>`Could not load ${file}.`],
+  [/^Nie udało się wczytać aplikacji: (.+) Odśwież stronę\.$/,(_,message)=>`Could not load the application: ${translate(message)} Refresh the page.`],
+  [/^Nie udało się odczytać (.+) \((\d+)\)(?:\. Sprawdź połączenie i odśwież stronę\.)?$/,(_,name,code)=>`Could not read ${name} (${code}). Check the connection and refresh the page.`],
+  [/^(Sprawdzono źródło\. )?Zapisano (\d+) jawnie oznaczonych faktów\.$/,(_,prefix,count)=>`${prefix?'Source checked. ':''}Saved ${count} explicitly labelled facts.`],
+
   [/^(🎣 field practice|🏭 manufacturer|💬 community) · (.+)$/,(_,kind,title)=>`${kind} · ${translate(title)}`],
 
   [/^(bardzo słaby|słaby|umiarkowany|odczuwalny|mocny|bardzo mocny|bardzo silny), (mało porywisty|lekko porywisty|porywisty|mocno porywisty|bardzo porywisty)$/,(_,strength,gusts)=>`${translate(strength)}, ${translate(gusts)}`],

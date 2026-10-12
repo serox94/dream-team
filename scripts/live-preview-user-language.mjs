@@ -17,7 +17,7 @@ try{
   assert.equal(await page.evaluate(()=>localStorage.getItem('dreamteam.language.account-patryk')),'pl');assert.equal(await page.evaluate(()=>localStorage.getItem('dreamteam.language.account-maciek')),'en');
   for(const [username,lang] of [['Maciek','en'],['Patryk','pl']]){
    if(username==='Patryk'){await logout(page,'en');await login(page,username,lang);}
-   for(const route of routes){await open(page,route,lang);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),false,`${username} ${width} ${route} overflow`);assert.equal(await page.locator('#app-notice.error').count(),0);}
+   for(const route of routes){await open(page,route,lang);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),false,`${username} ${width} ${route} overflow`);assert.equal(await page.locator('#app-notice.status-danger').count(),0);if(lang==='pl'){const foreign=await page.locator('main').evaluate(main=>{const w=document.createTreeWalker(main,NodeFilter.SHOW_TEXT),out=[];let n;while(n=w.nextNode()){if(n.parentElement.closest('[data-user-content],script,style,textarea'))continue;if(/\b(?:Research|Dashboard|Screenshot)\b/.test(n.textContent)&&n.parentElement.getClientRects().length)out.push(n.textContent.trim());}return out;});assert.deepEqual(foreign,[],`Polish UI ${route} still has English labels`);}}
    await page.screenshot({path:`live-preview-qa/user-language-${username}-${width}.png`});
   }
   const cookie=context;const enError=await cookie.request.post(base+'/api/catches',{headers:{origin:base,'accept-language':'en'},data:{tripId:'missing',anglerId:'patryk',weightKg:0}});assert.equal(enError.status(),404);assert.equal((await enError.json()).error,'Trip not found.');

@@ -61,7 +61,7 @@ export function provider(env){
   const call=async(path,payload)=>{
     const response=await fetch('https://api.tavily.com/'+path,{method:'POST',headers:{authorization:'Bearer '+env.TAVILY_API_KEY,'content-type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(14000)});
     if(response.status===429||response.status===402)fail(limitMessage,429);
-    if(!response.ok)throw new Error('Dostawca researchu jest chwilowo niedostępny.');
+    if(!response.ok)throw new Error('Dostawca wyszukiwania źródeł jest chwilowo niedostępny.');
     return response.json();
   };
   return {
@@ -136,7 +136,7 @@ export async function handleLakeCandidates(request,env){
   const x=await request.json(),name=String(x.name||'').trim(),country=String(x.country||'').trim();
   if(name.length<2||name.length>150||country.length<2||country.length>100)fail('Wpisz nazwę łowiska i kraj.');
   const web=provider(env);
-  if(!web)return reply({ok:true,candidates:[],providerConfigured:false,message:'AUTOMATYCZNY RESEARCH: OCZEKUJE NA TAVILY_API_KEY. Możesz utworzyć wyjazd i uzupełnić źródło później.'});
+  if(!web)return reply({ok:true,candidates:[],providerConfigured:false,message:'AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Możesz utworzyć wyjazd i uzupełnić źródło później.'});
   const key=(name+'|'+country).toLocaleLowerCase('pl').normalize('NFKC'),month=new Date().toISOString().slice(0,7),since=new Date(Date.now()-10*60*1000).toISOString(),id=crypto.randomUUID();
   const reserved=await run(env.DB,`INSERT INTO lake_candidate_searches(id,query_key,status,credits_used) SELECT ?,?,'reserved',1 WHERE
     (SELECT COALESCE(SUM(credits_used),0) FROM lake_candidate_searches WHERE substr(started_at,1,7)=?) < 100
@@ -152,14 +152,14 @@ export async function handleLakeResearch(request,env,lakeId,action){
   if(request.method!=='POST')fail('Nieprawidłowa metoda.',405);
   const x=await request.json(),web=provider(env);
   if(action==='candidates'){
-    if(!web)return reply({ok:true,candidates:[],message:'Automatyczny research wymaga konfiguracji dostawcy. Możesz dodać oficjalny URL ręcznie.'});
+    if(!web)return reply({ok:true,candidates:[],message:'Automatyczne wyszukiwanie źródeł wymaga konfiguracji dostawcy. Możesz dodać oficjalny URL ręcznie.'});
     const id=await reserve(db,lakeId,'candidates',1);
     try{const rows=await all(db,"SELECT key,value FROM app_settings WHERE key IN ('research_languages','research_official_first')"),values=Object.fromEntries(rows.map(r=>[r.key,r.value]));const candidates=await web.candidates(lake.name,lake.country||'',{languages:values.research_languages,official:values.research_official_first});await finish(db,id,'completed',`${candidates.length} kandydatów`);return reply({ok:true,candidates});}
     catch(error){await finish(db,id,'failed',error.message);throw error;}
   }
   if(action==='research'){
     const url=safeSourceUrl(x.url||lake.source_url),title=String(x.title||lake.name).slice(0,150),sourceType=['official','regulation','operator','manual'].includes(x.sourceType)?x.sourceType:'manual';
-    if(!web)return reply({ok:false,error:'Automatyczny research nie jest skonfigurowany. Zapisz źródło i fakty ręcznie.'},503);
+    if(!web)return reply({ok:false,error:'Automatyczne wyszukiwanie źródeł nie jest skonfigurowane. Zapisz źródło i fakty ręcznie.'},503);
     const id=await reserve(db,lakeId,'extract',2);
     try{
       const rows=await all(db,"SELECT key,value FROM app_settings WHERE key IN ('research_languages','research_official_first')");

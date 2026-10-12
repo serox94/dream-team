@@ -117,3 +117,18 @@ test('all twenty substrate and flavour profiles plus seven temperature bands hav
 test('in-place dynamic text changes translate while personally entered notes and native dialogs retain values',async()=>{
  const d=await device('en-GB');const text=d.window.document.createElement('p');text.textContent='Zapisz profil';d.window.document.body.append(text);await new Promise(r=>setTimeout(r,0));assert.equal(text.textContent,'Save profile');text.firstChild.data='Wiatr 2.5 km/h jest słaby — woda może być zbyt spokojna.';await new Promise(r=>setTimeout(r,0));assert.equal(text.textContent,'Wind at 2.5 km/h is weak; the water may be too calm.');assert.equal(d.window.DreamI18n.t('Porady: Moje łowisko'),'Trip advice: Moje łowisko');d.window.close();
 });
+
+test('failure paths and source-check counts are localized, while filenames and errors remain readable',async()=>{
+ const d=await device('en-GB'),t=d.window.DreamI18n.t;
+ try{assert.equal(t('Nie udało się wczytać aplikacji: Brak wyjazdów w bazie. Odśwież stronę.'),'Could not load the application: No trips in the database. Refresh the page.');
+ assert.equal(t('Nie udało się wczytać app.js.'),'Could not load app.js.');
+ assert.equal(t('Nie udało się odczytać sources (503). Sprawdź połączenie i odśwież stronę.'),'Could not read sources (503). Check the connection and refresh the page.');
+ assert.equal(t('Sprawdzono źródło. Zapisano 3 jawnie oznaczonych faktów.'),'Source checked. Saved 3 explicitly labelled facts.');
+ }finally{d.window.close();}
+});
+test('Polish menus and media controls have Polish labels; source and user text is preserved',async()=>{
+ const d=await device('pl-PL');
+ try{const root=d.window.document.createElement('section');root.innerHTML='<a>Dashboard</a><button>Przeanalizuj screenshot</button><p>Research provider</p><span data-user-content>Screenshot research</span>';d.window.document.body.append(root);await new Promise(r=>setTimeout(r,0));
+ assert.equal(root.querySelector('a').textContent,'Panel główny');assert.equal(root.querySelector('button').textContent,'Przeanalizuj zrzut ekranu');assert.equal(root.querySelector('p').textContent,'Dostawca wyszukiwania');assert.equal(root.querySelector('[data-user-content]').textContent,'Screenshot research');
+ }finally{d.window.close();}
+});

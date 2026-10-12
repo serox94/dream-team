@@ -193,7 +193,7 @@ try{
           await page.locator('.media-card form input[name="name"]').fill('Mój spot sonarowy');
           await page.locator('.media-card form button[type="submit"]').click();
           await page.locator('#media-status').getByText(/Spot utworzony/).waitFor();
-          await page.locator('.media-card button').filter({hasText:'Przeanalizuj screenshot'}).click();
+          await page.locator('.media-card button').filter({hasText:'Przeanalizuj zrzut ekranu'}).click();
           await page.locator('.media-analysis button').filter({hasText:'Zapisz analizę'}).click();
           await page.locator('.media-card details.media-analysis').waitFor();
           page.once('dialog',dialog=>dialog.accept());

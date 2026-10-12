@@ -5,7 +5,7 @@ import {chromium} from 'playwright';
 const base='https://dream-team-preview.sewerynski00.workers.dev';
 const routes=['/','/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/mapa.html','/pages/regulamin.html','/pages/dojazd.html','/pages/teren.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/rigi.html','/pages/wezly.html','/pages/ustawienia.html'];
 const dictionaries=Object.assign({},...await Promise.all(['en','runtime.en','legacy.en','porady.en','guides.en','knots.en'].map(name=>import('node:fs/promises').then(fs=>fs.readFile(`public/locales/${name}.json`,'utf8')).then(JSON.parse))));const originals=Object.keys(dictionaries).filter(k=>k!==dictionaries[k]);
-const browser=await chromium.launch();await mkdir('live-preview-qa',{recursive:true});const report=[];
+let browser=await chromium.launch();await mkdir('live-preview-qa',{recursive:true});const report=[];
 const safeShot=async(page,path)=>{try{await page.screenshot({path,fullPage:false,timeout:10000});}catch(error){console.warn('QA screenshot skipped:',path,error.message);}};
 const open=async(page,path,ready)=>{
  let lastError;
@@ -14,7 +14,7 @@ const open=async(page,path,ready)=>{
    await page.goto(base+path,{waitUntil:'commit',timeout:30000});
    if(ready)await page.locator(ready).waitFor({state:'attached',timeout:30000});
    return;
-  }catch(error){lastError=error;if(attempt<2)await page.waitForTimeout(750*(attempt+1));}
+  }catch(error){lastError=error;console.warn('LANGUAGE NAVIGATION DIAGNOSTIC',JSON.stringify({attempt,path,url:page.url(),ready:await page.locator('html').getAttribute('data-ready').catch(()=>null),notice:await page.locator('#app-notice').allTextContents().catch(()=>[])}));if(attempt<2)await page.waitForTimeout(750*(attempt+1));}
  }
  throw lastError;
 };
@@ -70,6 +70,8 @@ const verifyMobileMoreLanguage=async()=>{
 };
 try{
  await verifyMobileMoreLanguage();
+ // Start a fresh browser connection pool for the separate EN audit; keep all login assertions.
+ await browser.close();browser=await chromium.launch();
  const context=await browser.newContext({viewport:{width:390,height:844},locale:'pl-PL',hasTouch:true});
  const page=await context.newPage();
  await login(page);

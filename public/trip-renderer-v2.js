@@ -154,7 +154,7 @@
     const rods = strategy.filter(d => /kij|wędk/i.test(d.title));
     const rest = strategy.filter(d => ![...start,...where,...bait,...rigs,...rods].includes(d));
 
-    const practical = overview.length ? overview.map(d => knowledge(`🧠 ${esc(d.title)}`, `<p>${esc(d.content)}</p>`)).join('') : knowledge('🌊 Charakter wody', `<p>${esc(f.waterType || 'Profil łowiska będzie uzupełniony po researchu.')}</p>`);
+    const practical = overview.length ? overview.map(d => knowledge(`🧠 ${esc(d.title)}`, `<p>${esc(d.content)}</p>`)).join('') : knowledge('🌊 Charakter wody', `<p>${esc(f.waterType || 'Profil łowiska będzie uzupełniony po sprawdzeniu źródeł.')}</p>`);
     const strategyPanel = (title, chip, group, fallback) => panel(title, chip, `<div class="weather-interpretation">${group.flatMap(d => sentences(d.content)).map(x => note(x)).join('') || note(fallback,'info')}</div>`);
 
     m.innerHTML = `<section class="hero-card"><h2>💡 Porady na ${esc(trip.lake)}</h2><p>Encyklopedia praktyczna pod ten konkretny wyjazd: charakter wody, lokalizacja ryb, nęcenie, zestawy, reakcja na warunki i plan działania.</p></section>

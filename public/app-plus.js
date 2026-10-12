@@ -177,7 +177,7 @@
     if(dashboardWeatherCache && Date.now()-dashboardWeatherCache.at<600000)return dashboardWeatherCache.data;
     const spot = getSpotCoordsSafe();
     if (spot.latitude == null || spot.longitude == null) throw new Error("Brak GPS łowiska.");
-    const response = await fetch(`/api/weather?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`, {signal:AbortSignal.timeout(18000)});
+    const response = await fetch(`/api/weather?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`, {signal:AbortSignal.timeout(18000),headers:{'accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl'}});
     if (!response.ok) throw new Error(`Weather ${response.status}`);
     const data=await response.json();
     dashboardWeatherCache={at:Date.now(),data};
