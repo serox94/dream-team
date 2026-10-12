@@ -341,6 +341,11 @@ jobs:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/live-preview-knowledge.mjs
+      - name: Actual Deeper beam units, all quiz levels and reference images at 390/1280 PL/EN
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-sonar.mjs
       - name: Preserve knowledge evidence
         if: always()
         uses: actions/upload-artifact@v4

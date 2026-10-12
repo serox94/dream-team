@@ -112,3 +112,8 @@
   .knowledge-chips{flex-wrap:wrap;overflow:visible}.knowledge-chips button{flex:1 1 42%;white-space:normal;text-align:center}
 }
 @media (max-width:390px) { .sonar-gallery { grid-template-columns:1fr; }.knowledge-home-grid{grid-template-columns:1fr 1fr}.knowledge-home-grid a{padding:11px;min-height:90px} }
+
+.beam-table { width:100%; border-collapse:collapse; margin:12px 0; font-size:0.95rem; }
+.beam-table caption { text-align:left; font-weight:700; padding:8px 0; }
+.beam-table th,.beam-table td { padding:8px 5px; border-bottom:1px solid var(--border); text-align:left; overflow-wrap:anywhere; }
+#beam-depth[aria-invalid="true"] { border-color:#ef9c91; }

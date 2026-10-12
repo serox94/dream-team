@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-12.encyclopedia-2",
+  "version": "2026-10-12.sonar-2",
   "diagnostic": [
     {
       "q": "Have you seen fish or repeated feeding signs within range?",
@@ -143,7 +143,8 @@
     },
     "depth": {
       "shallow": "Shallows can warm or lose oxygen quickly; compare nearby deep water.",
-      "deep": "Deep water guarantees neither fish nor oxygen; check water layers."
+      "deep": "Deep water guarantees neither fish nor oxygen; check water layers.",
+      "mid": "Compare an intermediate shelf with nearby shallow and deep water; the depth category alone confirms neither fish nor oxygen."
     }
   },
   "spots": {

@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-12.encyclopedia-2",
+  "version": "2026-10-12.sonar-2",
   "diagnostic": [
     {
       "q": "Czy widziałeś ryby lub powtarzalne oznaki żerowania w zasięgu?",
@@ -151,7 +151,8 @@
     },
     "depth": {
       "shallow": "Płytkość może się szybko ogrzać lub odtlenić; porównaj z pobliską głębią.",
-      "deep": "Głębia nie gwarantuje tlenu ani ryb; sprawdź warstwy wody."
+      "deep": "Głębia nie gwarantuje tlenu ani ryb; sprawdź warstwy wody.",
+      "mid": "Porównaj pośrednią półkę z sąsiednią płycizną i głębią; sam przedział głębokości nie potwierdza ryb ani tlenu."
     }
   },
   "spots": {

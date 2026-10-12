@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-12.encyclopedia-2",
+  "version": "2026-10-12.sonar-2",
   "accessed": "2026-10-05",
   "sources": [
     {
@@ -184,21 +184,24 @@
       "name": "Deeper Support: Sonar settings (model dependent)",
       "lang": "EN / LT",
       "url": "https://support.deeper.eu/636573-Sonar-settings",
-      "published": "2023 update"
+      "published": "2023 update",
+      "verified": "2026-10-12"
     },
     {
       "id": "s25",
       "type": "sonar",
       "name": "Deeper Support: Sonar display basics",
       "lang": "EN / LT",
-      "url": "https://support.deeper.eu/009852-Sonar-display-basics"
+      "url": "https://support.deeper.eu/009852-Sonar-display-basics",
+      "verified": "2026-10-12"
     },
     {
       "id": "s26",
       "type": "sonar",
       "name": "Deeper Support: Reading PRO and CHIRP sonar",
       "lang": "EN / LT",
-      "url": "https://support.deeper.eu/381287-Reading-the-Sonar-display-PRO-and-CHIRP-models"
+      "url": "https://support.deeper.eu/381287-Reading-the-Sonar-display-PRO-and-CHIRP-models",
+      "verified": "2026-10-12"
     },
     {
       "id": "s27",
@@ -226,28 +229,36 @@
       "type": "sonar",
       "name": "Deeper Support: CHIRP+ 4 fish detection, vegetation and bottom mapping",
       "lang": "EN / LT",
-      "url": "https://support.deeper.eu/476372-Deeper-CHIRP-4-AI-Fish-Detection-Vegetation--Bottom-Mapping-"
+      "url": "https://support.deeper.eu/476372-Deeper-CHIRP-4-AI-Fish-Detection-Vegetation--Bottom-Mapping-",
+      "verified": "2026-10-12",
+      "scope": "different-model"
     },
     {
       "id": "s31",
       "type": "sonar",
       "name": "Deeper CHIRP+ 3 product specification",
       "lang": "EN / LT",
-      "url": "https://deepersonar.com/products/deeper-chirp-3"
+      "url": "https://deepersonar.com/products/deeper-chirp-3",
+      "verified": "2026-10-12",
+      "scope": "different-model"
     },
     {
       "id": "s32",
       "type": "sonar",
       "name": "Deeper CHIRP+ 4 product specification",
       "lang": "EN / LT",
-      "url": "https://deepersonar.com/products/deeper-smart-sonar-chirp-4"
+      "url": "https://deepersonar.com/products/deeper-smart-sonar-chirp-4",
+      "verified": "2026-10-12",
+      "scope": "different-model"
     },
     {
       "id": "s33",
       "type": "sonar",
       "name": "Deeper Support: Bait Boat / Quest and Spark Autopilot",
       "lang": "EN / LT",
-      "url": "https://support.deeper.eu/884691-Deeper-Quest-and-Spark-Autopilot-Features"
+      "url": "https://support.deeper.eu/884691-Deeper-Quest-and-Spark-Autopilot-Features",
+      "verified": "2026-10-12",
+      "scope": "different-model"
     },
     {
       "id": "s34",
@@ -335,7 +346,8 @@
       "type": "sonar",
       "name": "Deeper CHIRP+ 2 — oficjalna specyfikacja",
       "lang": "EN / LT",
-      "url": "https://deepersonar.com/pages/deeper-chirp-2-tech-specs"
+      "url": "https://deepersonar.com/pages/deeper-chirp-2-tech-specs",
+      "verified": "2026-10-12"
     },
     {
       "id": "s46",
@@ -349,7 +361,8 @@
       "type": "sonar",
       "name": "Fish Deeper — ustawienia i przykłady ekranów",
       "lang": "EN / LT",
-      "url": "https://support.deeper.eu/636573-Sonar-settings"
+      "url": "https://support.deeper.eu/636573-Sonar-settings",
+      "verified": "2026-10-12"
     },
     {
       "id": "s48",
@@ -397,6 +410,38 @@
       "name": "NWS: Lightning Safety Overview — immediate safe shelter",
       "lang": "EN / US",
       "url": "https://www.weather.gov/safety/lightning-safety-overview",
+      "verified": "2026-10-12"
+    },
+    {
+      "id": "s54",
+      "type": "sonar",
+      "name": "Deeper: Set up a Smart Sonar — CHIRP+ 2 beams, geometry and sensitivity",
+      "lang": "EN / LT",
+      "url": "https://deepersonar.com/pages/how-to-set-up-a-smart-sonar",
+      "verified": "2026-10-12"
+    },
+    {
+      "id": "s55",
+      "type": "sonar",
+      "name": "Deeper: How to determine bottom hardness",
+      "lang": "EN / LT",
+      "url": "https://support.deeper.eu/683898-How-to-determine-bottom-hardness",
+      "verified": "2026-10-12"
+    },
+    {
+      "id": "s56",
+      "type": "sonar",
+      "name": "Deeper: Choosing the right color palette",
+      "lang": "EN / LT",
+      "url": "https://support.deeper.eu/628554-Choosing-the-right-color-palette",
+      "verified": "2026-10-12"
+    },
+    {
+      "id": "s57",
+      "type": "sonar",
+      "name": "Deeper: Inaccurate sonar readings — mounting and interference",
+      "lang": "EN / LT",
+      "url": "https://support.deeper.eu/754029-Inaccurate-sonar-readings",
       "verified": "2026-10-12"
     }
   ]
