@@ -109,3 +109,33 @@ Zaimplementowano: migracja 0028 (konta na oryginalnych ID, atomowy limit 3), pry
 Przed migracją pipeline musi wykonać `preview-account-checkpoint.mjs`: Time Travel bookmark i kompletny prywatny snapshot (schemat+dane, również sesje) w prywatnym R2 `private-checkpoints/`; niezależny odczyt i SHA256 pliku. Dane nie trafiają do logów ani artefaktów. Po migracji pełne porównanie liczby i SHA256 każdej istniejącej tabeli biznesowej. Bez PASS tych kroków deployment preview nie jest wykonywany.
 
 Lokalnie: 80/80 testów PASS; Worker dry-run build PASS. Nowe testy sprawdzają trzy loginy, równoległą próbę przekroczenia limitu/rollback profilu, historyczne ID/PB/połowy, zmianę hasła/unieważnienie sesji, brak hashy w eksporcie, właściciela offline i anulowanie logout przed unieważnieniem sesji. Realne preview/migracja/konta: NOT TESTED do zakończenia CI. Nowy job `qa-accounts` uruchamia rzeczywiste UI trzech kont/połowów na 390/1280, zmianę hasła z przywróceniem oryginalnego prywatnego hasha, logout/relogin/offline/replay; sprząta wyłącznie własne rekordy QA. Etap 2 nie jest jeszcze PASS.
+
+### Etap 2 — rzeczywiste wdrożenie i E2E
+
+Implementacja `72d4dfa00e8957127cb2b5f4ea6f96df850128b6`, poprawki `6927d9e` (Fetch checkpoint), `66448ce` (składnia QA + walidacja wszystkich skryptów), `5e5bf6a` (udział w wyjeździe przy edycji autora, kolejność QA i diagnostyka), `5e2456dd4b694298c713a9288f0689d238ecd832` (pełny formularz E2E, autor na starszych wyjazdach i generacja cache).
+
+Prywatny punkt przywracania przed migracją: run `38218928833`, job `114710197144`, 07:39:42Z — pełny schemat i dane D1 w prywatnym R2, odczyt zwrotny SHA256 `39c17d99ec93abde901aac9ffcf61eb76bd0850e9ab17af94a9912528e24cd49`, bookmark Time Travel przechowywany w tej prywatnej kopii. Obiekty mają prefiks `private-checkpoints/accounts-6927d9ea9c48dbccc9e1193ea58594556322288b-`; kolejne punkty nie nadpisują wcześniejszych. Liczby przed migracją: 2 wędkarzy, 4 łowiska, 5 wyjazdów (w tym stary QA), 10 powiązań uczestników, 0 połowów, 52 spoty, 63 pozycje checklisty, 84 dokumenty. Migracja 0028 PASS, pełne porównanie SHA256 wszystkich tabel biznesowych PASS. Dane produkcyjne nie były migrowane.
+
+Realne E2E kont na kodzie `5e2456d`: run `38221484979`, job `114719127670` PASS:
+
+- 08:11:25Z: trzy loginy, limit 3/rollback czwartego profilu, oryginalne ID/PB, automatyczny autor/reset i ręczny autor, 390/1280.
+- 08:11:47Z: anulowanie logout nie unieważnia sesji; logout zachowuje kolejkę; Maciek otrzymuje 403 przy próbie wysłania kolejki Patryka; właściciel po relogowaniu synchronizuje raz, replay nie duplikuje połowu.
+- 08:12:00Z: zmiana hasła przez Ustawienia, unieważnienie starych sesji, login nowym hasłem, brak hashy/sektretów w eksporcie. Przywrócono dokładnie oryginalny prywatny hash z kolejną wersją, więc stare sesje nie wracają. Tymczasowy trzeci profil i własne połowy/wyjazd QA usunięte.
+
+82/82 testów lokalnych PASS. Końcowe powiązane testy preview i regresja w tym run nadal IN PROGRESS — nie zamykać pełnej bramki etapu 2 przed ich wynikiem. Poprzedni powtarzający się timeout nawigacji ma dodaną diagnostykę: gotowość/notice/page errors oraz screenshot błędu. Nie zignorowano tej bramki.
+
+### Zamknięcie Etapu 2
+
+Run `38221484979` zakończony PASS po ponowieniu wyłącznie końcowej regresji (job `114726916334`). Pierwszy runner finalnej regresji anulowany po 12 minutach: dwa odczyty preflight bez własnego timeoutu czekały po ~5 minut na sieć, bez statusu HTTP. To nie był błąd formularza kont. Ponowienie na innym runnerze przeszło pełne 390/1280 PL/EN; nie powtarzano udanych operacji CRUD. Ograniczenia czasu preflight zostaną dołączone do następnego commitu QA.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+| --- | --- | --- | --- | --- | --- |
+| Loginy Patryk/Maciek | Jedna wspólna sesja bez tożsamości | Indywidualne konta na tych samych ID, wspólne hasło | Unit + real E2E `114719127670` na 390/1280 | PASS | Preferencje języka per konto — etap 3 |
+| Trzeci użytkownik | Profil bez loginu i limitu kont | Uczestnik i login atomowo; maks. 3 aktywne konta | D1 trigger, równoległy unit, UI trzeci + odmowa czwartego/rollback | PASS | Konto QA usunięte; rzeczywistego trzeciego dodaje użytkownik w Ustawieniach |
+| Autor połowu | Pierwsza osoba na liście | Zalogowany wędkarz; reset formularza zachowuje domyślnego autora; ręczny wybór pozostaje | Trzy konta × dwa ekrany, manual author; starszy wyjazd unit | PASS | — |
+| Hasło/sesje | Sekret Workers, wspólna sesja | Prywatny solony KDF + pepper; zmiana w Ustawieniach, wersja unieważnia sesje | Realna rotacja/relogin/401 starych sesji/restore, export bez hashy | PASS | Nie zmieniono hasła użytkowników po teście |
+| Dane/PB/historia | Istniejące dane D1 | Wszystkie istniejące wiersze biznesowe bez zmian po migracji | Prywatny checkpoint R2/Time Travel + SHA256 przed/po | PASS | Stary obiekt QA z wcześniejszego etapu nadal zachowany |
+| Offline/logout/zmiana konta | Logout usuwał kolejkę i unieważniał przed pytaniem | Właściciel w kolejce, zachowanie payloadu, odmowa obcego konta; jawne przypisanie legacy | Real UI cancel/logout/Maciek 403/Patryk relogin/sync/replay + unit | PASS | Starsze nieprzypisane zmiany wymagają potwierdzenia w Ustawieniach |
+| Autoryzacja/regresja | Jedno konto | Konta chronią API i zachowują wspólny dostęp drużyny | Unit 82/82; Validate/Responsive PASS; wszystkie joby preview PASS | PASS | Native preflight timeout do ograniczenia w QA |
+
+Etap 2: PASS i wdrożony na izolowanym preview. Przetestowany kod: `5e2456dd4b694298c713a9288f0689d238ecd832`, schema 28, cache 20261012-103. Etapy 3–7 pozostają do wykonania. READY TO MERGE TO MAIN: NO. Produkcja/main bez zmian.
