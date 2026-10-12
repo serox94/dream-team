@@ -25,18 +25,21 @@ const coordinatesFromText=value=>{
   const latitude=Number(match[1]),longitude=Number(match[2]);
   return Number.isFinite(latitude)&&Number.isFinite(longitude)&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180?{latitude,longitude}:null;
 };
+const labelLanguages={"pl":["nazwa łowiska","adres","telefon","powierzchnia","głębokość","maksymalna głębokość","dno","zielsko","stanowiska","liczba stanowisk","karpie","rekord","rekord karpia","gatunki","liczba wędek","limit wędek","łódki zanętowe","łódka zanętowa","pontony","leadery","haczyki","kołyska","podbierak","worek do ważenia","środek do dezynfekcji","przechowywanie ryb","godziny przyjazdu","godziny wyjazdu","prąd","prysznic","prysznice","woda pitna","zamrażarka","sklep","sklepy","dojazd","regulamin","mapa łowiska","lodówka"],"en":["official name","lake name","address","phone","area","lake size","water size","depth","maximum depth","max depth","bottom","lake bed","weed","weed level","pegs","number of pegs","swims","number of swims","carp stock","lake record","carp record","fish species","rods allowed","rod limit","number of rods","bait boats","bait boat","boat use","unhooking mat","landing net","weigh sling","disinfectant","fish retention","arrival","arrival time","departure","departure time","electricity","power","toilet","toilets","shower","showers","drinking water","potable water","freezer","shop","shops","access","road access","rules","lake map","fridge"],"fr":["nom du lac","adresse","téléphone","profondeur","fond","herbiers","postes","carpes","espèces","cannes autorisées","bateaux amorceurs","bateaux","hameçons","matelas de réception","épuisette","antiseptique","conservation des poissons","arrivée","départ","stationnement","électricité","toilettes","douche","eau potable","congélateur","magasin","accès","règlement","carte du lac","réfrigérateur"],"de":["name des sees","adresse","anschrift","fläche","tiefe","grund","kraut","plätze","karpfen","rekorde","arten","ruten erlaubt","futterboote","boote","vorfach","haken","ab hakmatte","kescher","desinfektionsmittel","hältern","anreise","abreise","parkplatz","strom","dusche","trinkwasser","gefriertruhe","geschäft","zufahrt","regeln","gewässerkarte","kühlschrank"],"nl":["naam van het meer","oppervlakte","diepte","bodem","waterplanten","stekken","karpers","soorten","hengels toegestaan","voerboten","onthaakmat","schepnet","aankomst","vertrek","elektriciteit","douche","drinkwater","diepvries","winkel","toegang","regels","kaart","koelkast"]};
 export function extractFacts(content){
   const escapedLabel=label=>label.replace(/[.*+?^$(){}|[\]\\]/g,'\\$&');
-  const rows=String(content||'').split(/\n+/).map(s=>s.replace(/^[\s>*#|–-]+/,'').trim()).filter(Boolean),out=[];
+  const labels=Object.values(fields).flat().sort((a,b)=>b.length-a.length).map(escapedLabel).join('|');
+  const compound=new RegExp('\\s+[–—|]\\s*(?=(?:'+labels+')\\s*:)', 'i');
+  const rows=String(content||'').split(/\n+/).map(s=>s.replace(/^[\s>*#|–-]+/,'').trim()).flatMap(row=>row.split(compound).map(s=>s.trim())).filter(Boolean),out=[];
   for(const [field,labels] of Object.entries(fields)){
     for(const row of rows){
       const found=labels.find(label=>new RegExp('^'+escapedLabel(label)+'\\s*(?::|\\||–|-)\\s*','i').test(row));
       if(!found)continue;
       const value=row.replace(new RegExp('^'+escapedLabel(found)+'\\s*(?::|\\||–|-)\\s*','i'),'').replace(/\s*\|\s*$/,'').trim();
       if(!value||value.length>240||/^(?:n\/a|brak|none|unknown)$/i.test(value))continue;
-      // Only unique localized labels identify a language; shared labels remain unknown.
-      const matches=labels.map((item,index)=>item===found?index:-1).filter(index=>index>=0);
-      out.push({field,value,evidence:row.slice(0,280),sourceLanguage:matches.length===1?['pl','en','fr','de','nl'][matches[0]]:null,confidence:.7});break;
+      // A label may have several synonyms per language; array position is not a language.
+      const languages=Object.entries(labelLanguages).filter(([,terms])=>terms.includes(found)).map(([language])=>language);
+      out.push({field,value,evidence:row.slice(0,280),sourceLanguage:languages.length===1?languages[0]:null,confidence:.7});break;
     }
   }
   for(const field of Object.keys(ruleGear)){

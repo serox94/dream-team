@@ -1,3 +1,4 @@
+import {extractFacts} from '../src/lake-research.js';
 // One real deployed Tavily extraction; durable preview marker prevents repeated provider calls.
 import assert from 'node:assert/strict';import {readFile,mkdir,writeFile} from 'node:fs/promises';
 const base='https://dream-team-preview.sewerynski00.workers.dev',source='https://lodgingcarp.com/en/destination/la-plaine-des-bois-etang-2/',marker='qa_stage7_direct_url_20261012';
@@ -19,6 +20,23 @@ async function main(){
   await query('UPDATE app_settings SET value=?,updated_at=CURRENT_TIMESTAMP WHERE key=?',[JSON.stringify(report),marker]);
  }else{report=JSON.parse((await query('SELECT value FROM app_settings WHERE key=?',[marker])).results[0].value);report={...report,requestCount:0,reusedProof:true};}
  await mkdir('live-preview-qa',{recursive:true});await writeFile('live-preview-qa/direct-research.json',JSON.stringify(report,null,2));console.log('LIVE DIRECT TAVILY '+JSON.stringify(report));assert.equal(report.result,'PASS','real extraction remains blocked or failed; do not repeat a reserved provider request');
- const profile=await call('/api/lakes/plaine2/profile');assert.equal(profile.status,200);assert.ok(profile.data.sources.some(s=>s.url===source),'current source provenance retained');
+ let profile=await call('/api/lakes/plaine2/profile');assert.equal(profile.status,200);assert.ok(profile.data.sources.some(s=>s.url===source),'current source provenance retained');
+ if(!report.normalizationVersion){
+  const completed=Date.parse(report.completedAt),original=profile.data.facts;
+  const owned=original.filter(f=>f.url===source&&Math.abs(Date.parse(f.checkedAt.includes('T')?f.checkedAt:f.checkedAt.replace(' ','T')+'Z')-completed)<3000);
+  let normalized=0;
+  for(const fact of owned)for(const piece of extractFacts(fact.originalText||fact.evidence)){
+   const existing=original.find(f=>f.url===source&&f.field===piece.field);
+   if(existing&&!owned.some(f=>f.id===existing.id))continue; // Preserve later manual edits.
+   const applied=await call('/api/lakes/plaine2/facts','POST',{url:source,title:lake.name,sourceType:'official',field:piece.field,value:piece.value,evidence:fact.originalText||fact.evidence,sourceLanguage:piece.sourceLanguage});
+   assert.equal(applied.status,201,'normalize only evidence collected by this controlled run');normalized++;
+  }
+  profile=await call('/api/lakes/plaine2/profile');assert.equal(profile.status,200);
+  report={...report,normalizationVersion:'2026-10-12.v2',normalizedEvidenceFields:normalized,currentCoverage:profile.data.coverage};
+  await query('UPDATE app_settings SET value=?,updated_at=CURRENT_TIMESTAMP WHERE key=?',[JSON.stringify(report),marker]);
+  await writeFile('live-preview-qa/direct-research.json',JSON.stringify(report,null,2));
+ }
+ console.log('LIVE SOURCE NORMALIZATION '+JSON.stringify({result:'PASS',version:report.normalizationVersion,fields:report.normalizedEvidenceFields,coverage:profile.data.coverage.found,total:profile.data.coverage.total,providerRequests:0,historyRetained:true}));
+
 }
 try{await main();}catch(error){console.error('DIRECT RESEARCH QA',String(error.message).split('\n')[0]);throw new Error('Direct research QA: '+String(error.message).split('\n')[0]);}finally{if(cookie)await fetch(base+'/api/logout',{method:'POST',headers:{cookie,origin:base,'content-type':'application/json'},body:'{}',signal:AbortSignal.timeout(10000)}).catch(()=>{});}
