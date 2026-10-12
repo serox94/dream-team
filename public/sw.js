@@ -1,5 +1,5 @@
 // Only static application files live here. API responses and writes never enter this cache.
-const shell='ryby-shell-20261012-105';
+const shell='ryby-shell-20261012-106';
 const warm=['/','/index.html','/pages/polowy.html','/pages/checklisty.html','/pages/teren.html','/pages/mapa.html','/pages/regulamin.html','/pages/pogoda.html',
   '/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html','/settings.js','/knowledge.js','/knowledge.css','/i18n.js','/language-preference.js','/locales/pl.json','/locales/en.json','/locales/runtime.en.json','/locales/guides.en.json','/locales/knots.en.json','/locales/trip-advice.en.json','/deeper-media.js','/deeper-media.css',
   '/data/knowledge/sources.json','/data/knowledge/encyclopedia.json','/data/knowledge/sonar.json','/data/knowledge/tools.json','/data/knowledge/field-guides.json','/data/knowledge/chirp2-practice.json','/data/knowledge/en/encyclopedia.json','/data/knowledge/en/sonar.json','/data/knowledge/en/field-guides.json','/data/knowledge/en/tools.json','/data/knowledge/en/chirp2-practice.json','/data/knowledge/en/quiz.json','/data/knowledge/en/matrices.json','/assets/deeper/chirp2/index.json','/assets/deeper/chirp2/index.en.json','/locales/legacy.en.json','/locales/porady.en.json',
@@ -14,22 +14,26 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
   await self.clients.claim();
 })()));
 
+// Several pages/tabs may request warming together. One shared refresh per generation
+// avoids repeatedly downloading the whole shell during normal navigation.
+let warming=null;
+const warmMarker='/__ryby_shell_warmed',warmInterval=10*60*1000;
+async function warmShell(){
+ const cache=await caches.open(shell),marker=await cache.match(warmMarker);
+ if(marker&&Date.now()-Number(await marker.text())<warmInterval)return;
+ for(const path of warm){
+  const request=new Request(path,{credentials:'same-origin'});
+  try{
+   const response=await fetch(request,{cache:'no-store',signal:AbortSignal.timeout(15000)});
+   if(response.ok&&!response.redirected)await cache.put(request,response);
+  }catch{} // Keep the previous static entry when the network fails.
+ }
+ await cache.put(warmMarker,new Response(String(Date.now())));
+}
 self.addEventListener('message',event=>{
-  if(event.data?.type!=='WARM_SHELL')return;
-  event.waitUntil((async()=>{
-    const cache=await caches.open(shell);
-    for(const path of warm){
-      const request=new Request(path,{credentials:'same-origin'});
-      try{
-        // Refresh every shell entry while online. Reusing a cache generation must
-        // never pin old JavaScript after a new deployment.
-        const response=await fetch(request,{cache:'no-store'});
-        if(response.ok&&!response.redirected)await cache.put(request,response);
-      }catch{
-        // Keep any previously cached entry when the refresh cannot reach the network.
-      }
-    }
-  })());
+ if(event.data?.type!=='WARM_SHELL')return;
+ if(!warming)warming=warmShell().finally(()=>{warming=null;});
+ event.waitUntil(warming);
 });
 
 self.addEventListener('fetch',event=>{

@@ -3,8 +3,12 @@ import assert from 'node:assert/strict';import {mkdir} from 'node:fs/promises';i
 const base='https://dream-team-preview.sewerynski00.workers.dev',browser=await chromium.launch();
 const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'];
 await mkdir('live-preview-qa',{recursive:true});
-async function open(page,path,lang){await page.goto(base+path,{waitUntil:'commit',timeout:30000});await page.locator(`html[data-ready="true"][data-i18n-ready="${lang}"]`).waitFor({state:'attached',timeout:30000});}
-async function login(page,username,lang,loginLanguage){await page.goto(base+'/login',{waitUntil:'commit',timeout:30000});await page.locator('html[data-i18n-ready]').waitFor();if(loginLanguage){await page.locator('.language-selector select').selectOption(loginLanguage);await page.locator(`html[data-i18n-ready="${loginLanguage}"]`).waitFor();}await page.locator('[name="username"]').fill(username);await page.locator('[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);await page.locator('[type="submit"]').click({noWaitAfter:true});await page.waitForURL(url=>new URL(url).pathname==='/',{waitUntil:'commit',timeout:30000});await page.locator(`html[data-ready="true"][data-i18n-ready="${lang}"]`).waitFor({state:'attached',timeout:30000});}
+async function open(page,path,lang){
+ console.log('USER LANGUAGE route',path,lang);
+ try{await page.goto(base+path,{waitUntil:'commit',timeout:30000});await page.locator(`html[data-ready="true"][data-i18n-ready="${lang}"]`).waitFor({state:'attached',timeout:30000});}
+ catch(error){console.warn('USER LANGUAGE DIAGNOSTIC',JSON.stringify({path,lang,url:page.url(),ready:await page.locator('html').getAttribute('data-ready').catch(()=>null),notice:await page.locator('#app-notice').allTextContents().catch(()=>[])}));await page.screenshot({path:'live-preview-qa/user-language-failure.png',timeout:10000}).catch(()=>{});throw error;}
+}
+async function login(page,username,lang,loginLanguage){console.log('USER LANGUAGE login',username,lang);await page.goto(base+'/login',{waitUntil:'commit',timeout:30000});await page.locator('html[data-i18n-ready]').waitFor();if(loginLanguage){await page.locator('.language-selector select').selectOption(loginLanguage);await page.locator(`html[data-i18n-ready="${loginLanguage}"]`).waitFor();}await page.locator('[name="username"]').fill(username);await page.locator('[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);await page.locator('[type="submit"]').click({noWaitAfter:true});await page.waitForURL(url=>new URL(url).pathname==='/',{waitUntil:'commit',timeout:30000});await page.locator(`html[data-ready="true"][data-i18n-ready="${lang}"]`).waitFor({state:'attached',timeout:30000});}
 async function logout(page,lang){await open(page,'/pages/ustawienia.html',lang);await page.locator('#ryby-logout').click();await page.waitForURL('**/login',{waitUntil:'commit',timeout:30000});}
 try{
  for(const width of [390,1280]){
@@ -24,4 +28,4 @@ try{
   const plError=await cookie.request.post(base+'/api/catches',{headers:{origin:base,'accept-language':'pl'},data:{tripId:'missing',anglerId:'patryk',weightKg:0}});assert.equal((await plError.json()).error,'Nie znaleziono wyjazdu.');
   console.log(`LIVE USER LANGUAGE ${width}: PASS PL/EN/PL + reload + Patryk PL/Maciek EN on one device; 15 routes per user; API errors PL/EN.`);await context.close();
  }
-}finally{await browser.close();}
+}finally{let closeTimer;try{await Promise.race([browser.close(),new Promise((_,reject)=>{closeTimer=setTimeout(()=>reject(new Error('Browser shutdown exceeded 20 seconds')),20000);})]);}catch(error){console.error(error.message);process.exit(1);}finally{clearTimeout(closeTimer);}}
