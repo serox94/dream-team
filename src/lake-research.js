@@ -25,13 +25,6 @@ const coordinatesFromText=value=>{
   const latitude=Number(match[1]),longitude=Number(match[2]);
   return Number.isFinite(latitude)&&Number.isFinite(longitude)&&Math.abs(latitude)<=90&&Math.abs(longitude)<=180?{latitude,longitude}:null;
 };
-const inferredSourceType=(url,title,confirmedHost,confirmedType)=>{
-  const host=new URL(url).hostname.replace(/^www\./,'').toLowerCase();
-  const same=host===confirmedHost||host.endsWith('.'+confirmedHost)||confirmedHost.endsWith('.'+host);
-  if(/regul|rules?|règlement|regeln|regels|terms|fishery-rules/i.test(String(title||'')+' '+url))return 'regulation';
-  if(same&&['official','regulation'].includes(confirmedType))return 'official';
-  return 'operator';
-};
 export function extractFacts(content){
   const escapedLabel=label=>label.replace(/[.*+?^$(){}|[\]\\]/g,'\\$&');
   const rows=String(content||'').split(/\n+/).map(s=>s.replace(/^[\s>*#|–-]+/,'').trim()).filter(Boolean),out=[];
@@ -72,21 +65,14 @@ export function provider(env){
       const data=await call('search',{query:`${name} ${country} ${terms} ${preferences.official==='off'?'fishing information':'official website regulations'}`,search_depth:'basic',max_results:5,include_answer:false,include_raw_content:false,include_usage:true});
       return (data.results||[]).map(item=>{let url;try{url=safeSourceUrl(item.url);}catch{return null;}const coords=coordinatesFromText(item.content);return {name:item.title?.slice(0,150)||name,region:(item.content||'').match(/(?:region|miejscowość|locality|commune|ort|plaats)\s*[:–-]\s*([^.,;\n]{2,80})/i)?.[1]||'Nieustalony region',country,url,location:coords?`${coords.latitude}, ${coords.longitude}`:null};}).filter(Boolean);
     },
-    async research(name,country,confirmedUrl,confirmedType='manual',preferences={}){
-      const safeConfirmed=safeSourceUrl(confirmedUrl),host=new URL(safeConfirmed).hostname.replace(/^www\./,'').toLowerCase();
-      const languageTerms={PL:'regulamin głębokość stanowiska prąd prysznic',EN:'rules depth swims electricity shower',FR:'règlement profondeur postes électricité douche',DE:'regeln tiefe plätze strom dusche',NL:'regels diepte stekken elektriciteit douche'};
-      const terms=(preferences.languages||'PL,EN,FR,DE,NL').split(',').map(lang=>languageTerms[lang]).filter(Boolean).join(' ');
-      const scoped=['official','regulation'].includes(confirmedType)?` site:${host}`:'';
-      const search=await call('search',{query:`${name} ${country} ${terms} carp record bait boat rods toilets parking map${scoped}`,search_depth:'basic',max_results:6,include_answer:false,include_raw_content:false,include_usage:true});
-      const discovered=(search.results||[]).map(item=>{try{return {url:safeSourceUrl(item.url),title:String(item.title||'').slice(0,150)};}catch{return null;}}).filter(Boolean);
-      const unique=[];
-      for(const item of [{url:safeConfirmed,title:name},...discovered])if(!unique.some(row=>row.url===item.url))unique.push(item);
-      const selected=unique.slice(0,5);
-      const extracted=await call('extract',{urls:selected.map(item=>item.url),extract_depth:'basic',format:'markdown',include_usage:true});
-      const byUrl=new Map(selected.map(item=>[item.url,item]));
-      return (extracted.results||[]).map(result=>{let url;try{url=safeSourceUrl(result.url);}catch{return null;}const base=byUrl.get(url)||{title:new URL(url).hostname};return {url,title:base.title||new URL(url).hostname,sourceType:url===safeConfirmed?confirmedType:inferredSourceType(url,base.title,host,confirmedType),content:String(result.raw_content||'').slice(0,160000)};}).filter(page=>page&&page.content);
+    async research(name,country,confirmedUrl,confirmedType='manual'){
+      const url=safeSourceUrl(confirmedUrl);
+      // Discovery is an explicit candidates action. A supplied URL means this URL only.
+      const data=await call('extract',{urls:[url],extract_depth:'basic',format:'markdown',timeout:10,include_usage:true});
+      const match=(data.results||[]).find(result=>{try{return safeSourceUrl(result.url)===url&&result.raw_content;}catch{return false;}});
+      return match?[{url,title:name,sourceType:confirmedType,content:String(match.raw_content).slice(0,160000)}]:[];
     },
-    async extract(url){const data=await call('extract',{urls:[url],extract_depth:'basic',format:'markdown',include_usage:true});return String(data.results?.[0]?.raw_content||'').slice(0,160000);}
+    async extract(value){const url=safeSourceUrl(value),data=await call('extract',{urls:[url],extract_depth:'basic',format:'markdown',timeout:10,include_usage:true});return String((data.results||[]).find(result=>{try{return safeSourceUrl(result.url)===url;}catch{return false;}})?.raw_content||'').slice(0,160000);}
   };
 }
 async function reserve(db,lakeId,type,credits){

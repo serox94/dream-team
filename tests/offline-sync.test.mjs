@@ -25,3 +25,13 @@ test('offline checklist and spot edits detect concurrent changes and respect tri
  assert.equal((await sync(s,packed)).status,200);assert.equal((await sync(s,packed)).status,200);assert.equal(s.DB.sqlite.prepare('SELECT revision FROM checklist_items WHERE id=?').get(item).revision,1);
  const stale={...packed,key:uuid(),payload:{packed:false}};assert.equal((await sync(s,stale)).status,409);
  }finally{s.DB.close();}});
+
+test('overlapping reads of one revision cannot overwrite the first offline spot update',async()=>{const s=fixture();try{
+ const id=(await s.req('spots','POST',{tripId:'next-trip',name:'Before'})).data.id;
+ const prepare=s.DB.prepare;let readCount=0,release;const gate=new Promise(resolve=>release=resolve);
+ s.DB.prepare=sql=>{const wrap=statement=>({bind(...args){return wrap(statement.bind(...args));},all:()=>statement.all(),run:()=>statement.run(),async first(){const row=await statement.first();if(sql==='SELECT * FROM spots WHERE id=? AND trip_id=? AND deleted_at IS NULL'&&readCount<2){if(++readCount===2)release();await gate;}return row;}});return wrap(prepare(sql));};
+ const operations=['A','B'].map(name=>({key:uuid(),path:`/api/spots/${id}?tripId=next-trip`,method:'PUT',baseRevision:0,payload:{name}}));
+ const results=await Promise.all(operations.map(op=>sync(s,op)));assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);
+ const winner=operations[results.findIndex(r=>r.status===200)].payload.name,row=s.DB.sqlite.prepare('SELECT name,revision FROM spots WHERE id=?').get(id);assert.equal(row.name,winner);assert.equal(row.revision,1);
+ const conflict=results.find(r=>r.status===409);assert.equal(conflict.data.serverRevision,1);assert.equal(conflict.data.serverValue.name,winner);
+ }finally{s.DB.close();}});

@@ -1,3 +1,4 @@
+import {verifyCheckpointRestore} from './checkpoint-restore.mjs';
 // Private preview-only recovery point. Never upload this file as a CI artifact.
 import assert from 'node:assert/strict';
 import {readFile,writeFile,mkdtemp,rm} from 'node:fs/promises';
@@ -22,12 +23,15 @@ if(process.argv.includes('--verify')){
   const bookmark=await api('/time_travel/bookmark');
   const schema=await query("SELECT name,type,sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type,name");
   const rows={};for(const table of schema.filter(row=>row.type==='table'&&!row.name.startsWith('sqlite_')&&!row.name.startsWith('_cf_'))){assert.match(table.name,/^[a-zA-Z0-9_]+$/);rows[table.name]=await query(`SELECT * FROM "${table.name}"`);}
-  const checkpoint={format:'dream-private-d1-checkpoint-v1',createdAt:new Date().toISOString(),database:config.d1_databases[0].database_id,bookmark,schema,rows,integrity:await integrity()};
+  const checkpoint={format:'dream-private-d1-checkpoint-v2',createdAt:new Date().toISOString(),database:config.d1_databases[0].database_id,bookmark,schema,rows,sequences:await query('SELECT name,seq FROM sqlite_sequence ORDER BY name'),integrity:await integrity()};
+  for(const [table,state] of Object.entries(checkpoint.integrity))assert.equal(hash(checkpoint.rows[table].map(row=>JSON.stringify(row)).sort()),state.sha256,'checkpoint snapshot consistency: '+table);
   const bytes=JSON.stringify(checkpoint),file=join(dir,'checkpoint.json'),verify=join(dir,'verify.json'),key=`private-checkpoints/accounts-${process.env.GITHUB_SHA||'manual'}-${Date.now()}.json`;
   await writeFile(file,bytes,{mode:0o600});
   execFileSync('npx',['wrangler','r2','object','put',`dream-team-preview-media/${key}`,'--remote','--file',file,'--content-type','application/json'],{stdio:'pipe'});
   execFileSync('npx',['wrangler','r2','object','get',`dream-team-preview-media/${key}`,'--remote','--file',verify],{stdio:'pipe'});
   assert.equal(hash(await readFile(verify,'utf8')),hash(bytes),'private checkpoint R2 round trip');
+  let restoration;try{restoration=verifyCheckpointRestore(JSON.parse(await readFile(verify,'utf8')));}catch(error){throw Error('Private checkpoint reconstruction failed ('+error.name+').');}
+  console.log('PRIVATE CHECKPOINT RESTORE: PASS disposable in-memory reconstruction, all table digests/FK/sequences; '+JSON.stringify(restoration));
   await writeFile(filename,JSON.stringify({integrity:checkpoint.integrity}),{mode:0o600});
   console.log(`PRIVATE PREVIEW CHECKPOINT: PASS R2 round trip + Time Travel bookmark; sha256=${hash(bytes)}; business counts=${JSON.stringify(Object.fromEntries(Object.entries(checkpoint.integrity).map(([t,v])=>[t,v.count])))}`);
  }finally{await rm(dir,{recursive:true,force:true});}

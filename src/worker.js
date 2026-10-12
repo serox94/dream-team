@@ -187,7 +187,12 @@ async function saveSpot(request,env,id){
   const c=id?await scopedRow(request,env,'spots',id):{};
   const tripId=id?c.trip_id:text(x.tripId,'Wyjazd',100,true);await tripExists(env,tripId);
   const fields=[text(pick(x,'name',c.name),'Nazwa spotu',100,true),number(pick(x,'latitude',c.latitude),'Szerokość GPS',-90,90),number(pick(x,'longitude',c.longitude),'Długość GPS',-180,180),number(pick(x,'depthM',c.depth_m),'Głębokość',0,100),text(pick(x,'bottomType',c.bottom_type),'Dno',100),number(pick(x,'distanceM',c.distance_m),'Odległość',0,5000),text(pick(x,'notes',c.notes),'Notatka',2000),text(pick(x,'obstacles',c.obstacles),'Zaczepy',300),text(pick(x,'bestTime',c.best_time),'Pora',100),text(pick(x,'bestWind',c.best_wind),'Wiatr',100),text(pick(x,'weed',c.weed),'Zielsko',100),text(pick(x,'rig',c.rig),'Rig',100),text(pick(x,'bait',c.bait),'Przynęta',100)];
-  if(id) await run(env,`UPDATE spots SET name=?,latitude=?,longitude=?,depth_m=?,bottom_type=?,distance_m=?,notes=?,obstacles=?,best_time=?,best_wind=?,weed=?,rig=?,bait=?,revision=revision+1,last_mutation_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,...fields,key,id);
+  if(id){
+    const expected=request.headers.get('x-offline-revision');
+    if(expected!==null&&(!Number.isSafeInteger(Number(expected))||Number(expected)<0))fail('Nieprawidłowa operacja offline.');
+    const changed=await run(env,`UPDATE spots SET name=?,latitude=?,longitude=?,depth_m=?,bottom_type=?,distance_m=?,notes=?,obstacles=?,best_time=?,best_wind=?,weed=?,rig=?,bait=?,revision=revision+1,last_mutation_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL${expected!==null?' AND revision=?':''}`,...fields,key,id,...(expected!==null?[Number(expected)]:[]));
+    if(!changed.meta.changes)return await mutationConflict(env,'spots',id,tripId,key);
+  }
   else {const q=await run(env,`INSERT INTO spots(trip_id,name,latitude,longitude,depth_m,bottom_type,distance_m,notes,obstacles,best_time,best_wind,weed,rig,bait,client_mutation_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,tripId,...fields,key);id=q.meta.last_row_id;}
   return json({ok:true,id},c.id?200:201);
 }
@@ -200,7 +205,12 @@ async function saveChecklist(request,env,id){
   if(has(x,'packed')&&typeof x.packed!=='boolean') fail('packed musi być wartością true/false.');
   const fields=[text(pick(x,'category',c.category||'sprzęt'),'Kategoria',100,true),text(pick(x,'label',c.label),'Nazwa pozycji',200,true),text(pick(x,'assignedTo',c.assigned_to),'Przypisanie',100),pick(x,'packed',Boolean(c.packed))?1:0,text(pick(x,'quantity',c.quantity),'Ilość',100),text(pick(x,'notes',c.notes),'Notatka',2000),number(pick(x,'sortOrder',c.sort_order??0),'Kolejność',0,100000,false)];
   if(!await one(env,'SELECT id FROM checklist_categories WHERE name=? AND active=1',fields[0]))fail('Wybierz aktywną kategorię checklisty.');
-  if(id) await run(env,`UPDATE checklist_items SET category=?,label=?,assigned_to=?,packed=?,quantity=?,notes=?,sort_order=?,revision=revision+1,last_mutation_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,...fields,key,id);
+  if(id){
+    const expected=request.headers.get('x-offline-revision');
+    if(expected!==null&&(!Number.isSafeInteger(Number(expected))||Number(expected)<0))fail('Nieprawidłowa operacja offline.');
+    const changed=await run(env,`UPDATE checklist_items SET category=?,label=?,assigned_to=?,packed=?,quantity=?,notes=?,sort_order=?,revision=revision+1,last_mutation_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL${expected!==null?' AND revision=?':''}`,...fields,key,id,...(expected!==null?[Number(expected)]:[]));
+    if(!changed.meta.changes)return await mutationConflict(env,'checklist_items',id,tripId,key);
+  }
   else {const q=await run(env,`INSERT INTO checklist_items(trip_id,category,label,assigned_to,packed,quantity,notes,sort_order) VALUES(?,?,?,?,?,?,?,?)`,tripId,...fields);id=q.meta.last_row_id;}
   return json({ok:true,id},c.id?200:201);
 }
@@ -242,6 +252,11 @@ async function notes(request,env){
   const result=await run(env,'INSERT INTO trip_notes(trip_id,section,title,content,client_mutation_id) VALUES(?,?,?,?,?)',tripId,section,title,content,key);
   return json({ok:true,id:result.meta.last_row_id},201);
 }
+async function mutationConflict(env,table,id,tripId,key){
+  const row=await one(env,`SELECT * FROM ${table} WHERE id=? AND trip_id=? AND deleted_at IS NULL`,id,tripId);
+  if(row?.last_mutation_id===key)return json({ok:true,id,alreadyApplied:true});
+  return json({ok:false,error:row?'Konflikt: ktoś zmienił ten rekord. Wybierz, czy zachować zmianę serwera, czy ponowić swoją.':'Rekord został usunięty albo należy do innego wyjazdu.',serverRevision:row?.revision??null,serverValue:row?(table==='checklist_items'?Boolean(row.packed):{name:row.name,depthM:row.depth_m,notes:row.notes}):null},409);
+}
 async function offlineSync(request,env){
   const op=await body(request),key=op.key,path=op.path,method=op.method,payload=op.payload;
   if(typeof key!=='string'||!/^[a-f0-9-]{36}$/.test(key)||typeof path!=='string'||!payload||typeof payload!=='object'||Array.isArray(payload))fail('Nieprawidłowa operacja offline.');
@@ -262,12 +277,13 @@ async function offlineSync(request,env){
     }
     if(table==='checklist_items'&&(Object.keys(payload).length!==1||typeof payload.packed!=='boolean'))fail('Offline można zmienić tylko stan spakowania.');
   }
-  const replay=new Request(new URL(path,request.url),{method,headers:{'content-type':'application/json','idempotency-key':key},body:JSON.stringify(payload)});
+  const replay=new Request(new URL(path,request.url),{method,headers:{'content-type':'application/json','idempotency-key':key,...(match?{'x-offline-revision':String(op.baseRevision)}:{})},body:JSON.stringify(payload)});
   let response;if(path==='/api/catches')response=await saveCatch(replay,env,null);
   else if(path==='/api/spots')response=await saveSpot(replay,env,null);
   else if(path==='/api/notes')response=await notes(replay,env);
   else if(match[1]==='spots')response=await saveSpot(replay,env,Number(match[2]));
   else response=await saveChecklist(replay,env,Number(match[2]));
+  if(!response.ok)return response;
   const result=await response.json();
   await run(env,'INSERT OR IGNORE INTO offline_receipts(id,path,request_json,result_json) VALUES(?,?,?,?)',key,path,signature,JSON.stringify(result));
   return json(result);

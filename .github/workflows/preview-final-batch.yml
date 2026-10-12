@@ -21,10 +21,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci && npm test
-      - name: Check current production runtime without reading secrets
-        env:
-          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
-          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+      - name: Read public production availability without credentials
         run: node scripts/check-production-runtime.mjs
       - name: Prepare isolated D1 and R2
         env:
@@ -95,6 +92,20 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/live-preview-bindings.mjs
+
+      - name: One real direct URL extraction on isolated preview, no discovery or AI
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/live-preview-direct-research.mjs
+      - name: Preserve safe provider status only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-provider-status
+          path: live-preview-qa
 
   qa-language:
     needs: qa-accounts

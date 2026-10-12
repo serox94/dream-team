@@ -14,7 +14,7 @@ try{
  const model=await req('/api/bootstrap');for(const priorName of ['QA offline 1791394020300','QA offline 1791394283053']){const prior=model.trips.find(t=>t.name===priorName);if(prior)await deleteTestTrip(prior.id,priorName);}
  const categories=(await req('/api/checklist-categories')).categories;tripId=(await req('/api/trips','POST',{name,year:2026,lakeId:model.lakes[0].id,participantIds:model.anglers.filter(a=>a.active).map(a=>a.id),researchNow:true})).id;
  const itemId=(await req('/api/checklist','POST',{tripId,category:categories.find(c=>c.active).name,label:'QA checkbox',packed:false})).id;const spotId=(await req('/api/spots','POST',{tripId,name:'QA existing spot',depthM:2})).id;
- await go('/');await page.locator('#dream-trip-select').selectOption(tripId);await page.waitForFunction(id=>window.DREAM_TRIP?.id===id,tripId);await page.locator('html[data-ready="true"]').waitFor();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);
+ await go('/');await page.locator('#dream-trip-select').selectOption(tripId);await page.waitForFunction(id=>window.DREAM_TRIP?.id===id,tripId);await page.locator('html[data-ready="true"]').waitFor();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);await page.waitForFunction(async()=>!!(await(await caches.open('ryby-shell-20261012-113')).match('/__ryby_shell_complete')),null,{timeout:60000});
  for(const route of ['/pages/checklisty.html','/pages/polowy.html','/pages/mapa.html','/pages/teren.html'])await go(route);
  await page.waitForFunction(id=>!!JSON.parse(localStorage.getItem('ryby_read_cache_v1')||'{}')[`/api/notes?tripId=${id}`],tripId,{timeout:25000});
  await page.waitForFunction(async()=>!!(await caches.match('/pages/polowy.html')));
@@ -35,8 +35,37 @@ try{
  for(const op of queue)await req('/api/offline-sync','POST',op);assert.equal((await req(`/api/catches?tripId=${tripId}`)).catches.length,1,'replay cannot duplicate the catch');
  await go('/pages/mapa.html');await context.setOffline(true);await old.getByRole('button',{name:'Edytuj',exact:true}).click();await page.waitForFunction(id=>document.getElementById('edit-spot-id').value===String(id),spotId);await page.locator('#spot-depth').fill('4.7');await page.locator('#save-spot-btn').click();await pending(1);await req(`/api/spots/${spotId}?tripId=${tripId}`,'PUT',{name:'QA existing spot',depthM:5.7});await context.setOffline(false);await page.waitForFunction(()=>JSON.parse(localStorage.getItem('dreamteam.offline.queue.v1'))[0]?.status==='conflict',null,{timeout:30000});console.log('OFFLINE QA conflict detected');await safeShot('live-preview-qa/offline-conflict-390.png');let dialogText;page.once('dialog',d=>{dialogText=d.message();d.dismiss();});await page.locator('#offline-banner').click();assert.match(dialogText,/Konflikt: ktoś zmienił ten rekord/);await page.waitForFunction(()=>window.Dream.pendingCount()===0);assert.equal((await req(`/api/spots?tripId=${tripId}`)).spots.find(s=>s.id===spotId).depthM,5.7);
  await old.getByText('Głębokość: 5.7 m',{exact:true}).waitFor({timeout:25000});
+ // Every private write family rejects anonymous requests before parsing or effects.
+ const anonymous=await browser.newContext(),writes=[
+ ['/api/trips','POST'],['/api/trips/not-a-trip','PUT'],['/api/trips/not-a-trip/activate','POST'],
+ ['/api/lakes','POST'],['/api/lakes/not-a-lake','PUT'],['/api/lakes/not-a-lake/candidates','POST'],['/api/lakes/not-a-lake/research','POST'],['/api/lakes/not-a-lake/facts','POST'],['/api/lakes/not-a-lake/sources','POST'],
+ ['/api/anglers','POST'],['/api/anglers/patryk','PATCH'],['/api/account/password','POST'],['/api/settings','PATCH'],
+ ['/api/catches','POST'],['/api/catches/1?tripId=not-a-trip','PUT'],['/api/catches/1?tripId=not-a-trip','DELETE'],['/api/catches/1/restore?tripId=not-a-trip','POST'],
+ ['/api/spots','POST'],['/api/spots/1?tripId=not-a-trip','PUT'],['/api/spots/1?tripId=not-a-trip','DELETE'],['/api/spots/1/restore?tripId=not-a-trip','POST'],
+ ['/api/checklist','POST'],['/api/checklist/1?tripId=not-a-trip','PATCH'],['/api/checklist/1?tripId=not-a-trip','DELETE'],['/api/checklist/1/restore?tripId=not-a-trip','POST'],
+ ['/api/checklist-categories','POST'],['/api/notes','POST'],['/api/offline-sync','POST'],['/api/checklist-templates','POST'],
+ ['/api/checklist-templates/00000000-0000-4000-8000-000000000000','PUT'],['/api/checklist-templates/00000000-0000-4000-8000-000000000000','DELETE'],['/api/trips/not-a-trip/checklist-templates/apply','POST'],
+ ['/api/deeper-media','POST'],['/api/deeper-media/00000000-0000-4000-8000-000000000000','PATCH'],['/api/deeper-media/00000000-0000-4000-8000-000000000000','DELETE'],['/api/deeper-media/00000000-0000-4000-8000-000000000000/analyze','POST']
+ ];
+ try{for(const [path,method] of writes){const denied=await anonymous.request.fetch(base+path,{method,data:{},headers:{origin:base},timeout:15000});assert.equal(denied.status(),401,path+' anonymous write');const cross=await context.request.fetch(base+path,{method,data:{},headers:{origin:'https://other.example'},timeout:15000});assert.equal(cross.status(),403,path+' cross-origin write');}}finally{await anonymous.close();}
+ console.log('LIVE WRITE AUTHORIZATION: PASS '+writes.length+' private write paths, anonymous 401 and cross-origin 403; no AI/provider requests.');
+ // Real concurrent clients: one version wins; the second receives the new server revision.
+ const owner=(await req('/api/bootstrap')).currentUser.id,raceSpot=(await req('/api/spots','POST',{tripId,name:'QA concurrent revision'})).id;
+ const operations=['A','B'].map(name=>({key:crypto.randomUUID(),accountId:owner,path:`/api/spots/${raceSpot}?tripId=${tripId}`,method:'PUT',baseRevision:0,payload:{name,depthM:6}}));
+ const races=await Promise.all(operations.map(data=>context.request.post(base+'/api/offline-sync',{data,headers:{origin:base},timeout:20000})));
+ assert.deepEqual(races.map(r=>r.status()).sort(),[200,409]);const lost=await races.find(r=>r.status()===409).json();assert.equal(lost.serverRevision,1);
+ const committed=(await req(`/api/spots?tripId=${tripId}`)).spots.find(s=>s.id===raceSpot);assert.equal(committed.name,operations[races.findIndex(r=>r.status()===200)].payload.name);
+ console.log('LIVE CONCURRENT OFFLINE: PASS two overlapping writes, one commit and one explicit conflict; winner preserved.');
+ // Explicit network-fault simulation in the actual deployed service worker.
+ const paused=[];let workerRequest=false;
+ await context.route(base+'/knowledge.js?qa-stall',route=>{workerRequest=!!route.request().serviceWorker();paused.push(route);});
+ try{
+  const start=Date.now(),body=await Promise.race([page.evaluate(async()=>await(await fetch('/knowledge.js?qa-stall')).text()),new Promise((_,reject)=>setTimeout(()=>reject(new Error('stalled static read exceeded 8s')),8000))]);
+  assert.ok(workerRequest,'fault affected the service worker network request');assert.ok(Date.now()-start<8000);assert.ok(body.includes('setupGeometry'),'complete cached script served after bounded network failure');
+  console.log('LIVE STALLED NETWORK: PASS actual service worker returns complete cached script within 8s; API is excluded.');
+ }finally{for(const route of paused)await route.abort().catch(()=>{});await context.unroute(base+'/knowledge.js?qa-stall');}
  console.log('LIVE OFFLINE: PASS 5 UI writes, pending count, automatic sync, catch replay and understandable conflict (preview D1 only).');
-}catch(error){console.error('LIVE OFFLINE failure:',error);console.error(await Promise.race([page.evaluate(()=>({url:location.href,pending:window.Dream?.pendingCount(),messages:[...document.querySelectorAll('#form-message,#spot-message,#app-notice')].map(n=>n.textContent)})),new Promise(resolve=>setTimeout(()=>resolve({diagnostic:'page evaluation timed out'}),5000))]));await safeShot('live-preview-qa/offline-failure-390.png');throw error;}finally{
+}catch(error){console.error('LIVE OFFLINE failure:',String(error.message).split('\n')[0]);console.error(await Promise.race([page.evaluate(()=>({url:location.href,pending:window.Dream?.pendingCount(),messages:[...document.querySelectorAll('#form-message,#spot-message,#app-notice')].map(n=>n.textContent)})),new Promise(resolve=>setTimeout(()=>resolve({diagnostic:'page evaluation timed out'}),5000))]));await safeShot('live-preview-qa/offline-failure-390.png');throw new Error('Offline QA: '+String(error.message).split('\n')[0]);}finally{
  await context.setOffline(false);try{if(tripId)await deleteTestTrip(tripId,name);}finally{await browser.close();}
 
 }

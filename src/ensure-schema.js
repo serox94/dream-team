@@ -6,11 +6,11 @@ const migrationName='0017_trip_management_and_recovery.sql';
 const sessionMigration='0018_private_sessions.sql';
 const exists=(rows,column)=>rows.some(row=>row.name===column);
 
-let pending=null;
+const ready=new WeakMap();
 export async function ensureSchema(env){
-  if(pending)return pending;
-  pending=applySchema(env);
-  try{return await pending;}finally{pending=null;}
+  let pending=ready.get(env.DB);
+  if(!pending){pending=applySchema(env);ready.set(env.DB,pending);}
+  try{return await pending;}catch(error){ready.delete(env.DB);throw error;}
 }
 async function applySchema(env){
   const version=await env.DB.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first();

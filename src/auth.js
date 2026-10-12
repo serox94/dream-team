@@ -37,14 +37,12 @@ export async function session(request,env){
   const key=await signingKey(env),expected=await signature(key,parts.slice(0,3).join('.'));
   if(!equal(encoder.encode(parts[3]),encoder.encode(expected)))return null;
   const idHash=hex(await digest(parts[1]));
-  const row=await env.DB.prepare('SELECT expires_at,account_id,auth_version FROM auth_sessions WHERE id_hash=?').bind(idHash).first();
+  const individual=individualAccounts(env);
+  const row=await env.DB.prepare(individual?
+    'SELECT s.expires_at,u.id,u.username,u.angler_id anglerId,a.name,a.default_language defaultLanguage FROM auth_sessions s JOIN auth_accounts u ON u.id=s.account_id AND u.active=1 JOIN anglers a ON a.id=u.angler_id JOIN auth_credential c ON c.id=1 AND c.version=s.auth_version WHERE s.id_hash=?':
+    'SELECT expires_at FROM auth_sessions WHERE id_hash=?').bind(idHash).first();
   if(!row||row.expires_at<current||row.expires_at<expires)return null;
-  let account=null;
-  if(individualAccounts(env)){
-    account=await env.DB.prepare('SELECT u.id,u.username,u.angler_id anglerId,a.name,a.default_language defaultLanguage FROM auth_accounts u JOIN anglers a ON a.id=u.angler_id WHERE u.id=? AND u.active=1').bind(row.account_id).first();
-    const credential=await env.DB.prepare('SELECT version FROM auth_credential WHERE id=1').first();
-    if(!account||!credential||credential.version!==row.auth_version)return null;
-  }
+  const account=individual?{id:row.id,username:row.username,anglerId:row.anglerId,name:row.name,defaultLanguage:row.defaultLanguage}:null;
   let refreshCookie=null;
   if(expires-current<ageSeconds-renewalSeconds){
     const next=current+ageSeconds;

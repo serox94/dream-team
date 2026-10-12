@@ -1,6 +1,7 @@
 // Live preview checks for two-device language isolation, checklist templates and participant editing.
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
+import {readFile} from 'node:fs/promises';
 import {verifyNavigation} from './live-preview-navigation.mjs';
 const base='https://dream-team-preview.sewerynski00.workers.dev';
 const browser=await chromium.launch();
@@ -76,7 +77,11 @@ try{
     await card.waitFor({state:'detached',timeout:30000});
   }
   console.log('LIVE CHECKLIST TEMPLATES: PASS create/rename/apply-multiple/dedupe/delete through UI.');
-  }finally{await api(`/api/checklist/${seed}?tripId=${encodeURIComponent(trip.id)}`,{method:'DELETE',body:'{}'}).catch(()=>{});}
+  }finally{
+   await api(`/api/checklist/${seed}?tripId=${encodeURIComponent(trip.id)}`,{method:'DELETE',body:'{}'}).catch(()=>{});
+   const config=JSON.parse(await readFile('wrangler.preview.generated.jsonc','utf8'));assert.equal(config.name,'dream-team-preview');assert.notEqual(config.d1_databases[0].database_id,'b64c7a2c-8694-41c6-b54a-857b88bf2c96');
+   const cleanup=await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${config.d1_databases[0].database_id}/query`,{method:'POST',headers:{authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,'content-type':'application/json'},body:JSON.stringify({sql:'DELETE FROM checklist_items WHERE id=? AND trip_id=? AND label=?',params:[seed,trip.id,seedLabel]}),signal:AbortSignal.timeout(15000)}).then(r=>r.json());assert.equal(cleanup.success,true,'cleanup only the exact newly-created QA seed');
+  }
 
   // Participant profile: persist one reversible change and restore it.
   await page.goto(base+'/pages/ustawienia.html',{waitUntil:'commit',timeout:60000});
