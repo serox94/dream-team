@@ -1,3 +1,4 @@
+import {authenticateReadOnly} from './preview-readonly-auth.mjs';
 // Real isolated preview; read-only knowledge, no inference/provider or business writes.
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
@@ -10,10 +11,7 @@ for(const width of [390,1280])for(const lang of ['pl','en']){
  page.setDefaultTimeout(25000);
  const open=async(path,ready)=>{for(let attempt=0;attempt<2;attempt++){try{await page.goto(base+path,{waitUntil:'commit',timeout:30000});await page.locator(ready).waitFor({timeout:30000});return;}catch(error){console.warn('SONAR NAVIGATION',phase,path,attempt+1,String(error.message).split('\n')[0]);if(attempt||error.name!=='TimeoutError')throw error;}}};
  try{
-  await open('/login','html[data-i18n-ready]');
-  if(await page.locator('html').getAttribute('lang')!==lang){await page.locator('.language-selector select').selectOption(lang);await page.locator('html[data-i18n-ready="'+lang+'"]').waitFor();}
-  await page.locator('[name="username"]').fill(process.env.RYBY_LOGIN_USERNAME);await page.locator('[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);
-  await page.locator('[type="submit"]').click({noWaitAfter:true});await page.waitForURL('**/',{waitUntil:'commit',timeout:60000});await page.locator('html[data-ready="true"]').waitFor();
+  await authenticateReadOnly(context,base,lang);
   phase='sonar navigation';await open('/pages/sonar.html',`html[data-ready="true"][data-i18n-ready="${lang}"]`);await page.locator('#beam-form').waitFor();
   assert.equal(await page.locator('.knowledge-entry').count(),17);assert.equal(await page.locator('#atlas-overview .deeper-shot').count(),17);
   assert.match(await page.locator('#atlas-overview > p').first().innerText(),lang==='pl'?/jednostki/i:/Reference screens/);

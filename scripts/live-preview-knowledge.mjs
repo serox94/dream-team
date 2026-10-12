@@ -1,3 +1,4 @@
+import {authenticateReadOnly} from './preview-readonly-auth.mjs';
 // Real isolated preview, read-only business data. No provider calls or AI.
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
@@ -10,10 +11,7 @@ for(const width of [390,1280])for(const lang of ['pl','en']){
   const page=await context.newPage();page.setDefaultTimeout(25000);
   const open=async(path,ready)=>{for(let attempt=0;attempt<2;attempt++){try{await page.goto(base+path,{waitUntil:'commit',timeout:30000});await page.locator(ready).waitFor({timeout:30000});return;}catch(error){console.warn('KNOWLEDGE NAVIGATION',path,lang,width,attempt+1,String(error.message).split('\n')[0]);if(attempt||error.name!=='TimeoutError')throw error;}}};
   try{
-   await open('/login','html[data-i18n-ready]');
-   if(await page.locator('html').getAttribute('lang')!==lang){await page.locator('.language-selector select').selectOption(lang);await page.locator('html[data-i18n-ready="'+lang+'"]').waitFor();}
-   await page.locator('[name="username"]').fill(process.env.RYBY_LOGIN_USERNAME);await page.locator('[name="password"]').fill(process.env.RYBY_LOGIN_PASSWORD);
-   await page.locator('[type="submit"]').click({noWaitAfter:true});await page.waitForURL('**/',{waitUntil:'commit',timeout:60000});await page.locator('html[data-ready="true"]').waitFor();
+   await authenticateReadOnly(context,base,lang);
    await open('/pages/encyklopedia.html','html[data-ready="true"][data-i18n-ready="'+lang+'"]');await page.locator('#tactic-form').waitFor();
    assert.equal(await page.locator('.knowledge-entry').count(),14);
    assert.equal(await page.locator('#t-temp').inputValue(),'unknown');
