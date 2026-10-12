@@ -23,6 +23,7 @@ try {
    assert.match(await page.locator('#tactic-result').innerText(),lang==='pl'?/Przerwij łowienie/:/Stop fishing/);assert.equal(await page.locator('#tactic-result dl').count(),0);await page.locator('#tactic-result').scrollIntoViewIfNeeded();await page.screenshot({path:'live-preview-qa/encyclopedia-safety-stop-'+lang+'-'+width+'.png',timeout:10000});
    await page.locator('#t-safe').selectOption('safe');await page.locator('#t-temp').selectOption('warm');await page.locator('#tactic-form button[type="submit"]').click();assert.ok(await page.locator('#tactic-result dl').count());if(lang==='en')assert.doesNotMatch(await page.locator('#tactic-result').innerText(),/[ąćęłńóśźż]/i,'English tactic result and links');
    await page.locator('#diagnostic-step [data-answer="no"]').click();for(let i=1;i<8;i++)await page.locator('#diagnostic-step [data-answer="yes"]').click();assert.equal(await page.locator('#diagnostic-step li').count(),1);await page.locator('#diagnostic-restart').click();assert.equal(await page.locator('#diagnostic-step [data-answer]').count(),3);
+   if(!await page.locator('#knowledge-library').evaluate(el=>el.open))await page.locator('#knowledge-library > summary').click();
    for(const id of ['temperatura','lokalizacja','pogoda','necenie','dno','przynety','profile','bezpieczenstwo','sezony']){
     const entry=page.locator('#'+id);await entry.locator(':scope > details > summary').click();assert.ok(await entry.locator('.section-evidence').count()>0);
    }

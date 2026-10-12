@@ -40,6 +40,7 @@ test('real knowledge renderer handles unknown measurements, a safety stop and al
   assert.ok(d.querySelector('#diagnostic-restart'));d.querySelector('#diagnostic-restart').click();assert.equal(d.querySelectorAll('#diagnostic-step [data-answer]').length,3);
   const thermal=d.querySelector('#temperatura');assert.match(thermal.textContent,lang==='pl'?/Co potwierdzono w badaniach/:/What research supports/);
   assert.ok(thermal.querySelector('a[href*="1439-0426"]'));
+  const title=d.querySelector('.source-catalog-list a[href*="gov.pl/web/wody-polskie/lowiska-rzgw"] [data-user-content]');assert.ok(title);assert.match(title.textContent,/Wody Polskie/);assert.equal(title.tagName,'CITE','source title is semantically a citation');assert.match(title.closest('a').textContent,lang==='pl'?/zasady lokalne/:/local rules/);
   dom.window.close();
  }
 });
