@@ -97,7 +97,7 @@ jobs:
         run: node scripts/live-preview-bindings.mjs
 
   qa-language:
-    needs: preview
+    needs: qa-accounts
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -129,7 +129,7 @@ jobs:
           path: live-preview-qa
 
   qa-media:
-    needs: preview
+    needs: qa-accounts
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -168,7 +168,7 @@ jobs:
           path: live-preview-qa
 
   qa-offline:
-    needs: preview
+    needs: qa-accounts
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -207,7 +207,7 @@ jobs:
           path: live-preview-qa
 
   qa-extras:
-    needs: preview
+    needs: qa-accounts
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -246,7 +246,7 @@ jobs:
           path: live-preview-qa
 
   qa-accounts:
-    needs: [qa-language, qa-media, qa-offline, qa-extras]
+    needs: preview
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -285,7 +285,7 @@ jobs:
           path: live-preview-qa
 
   qa-regression:
-    needs: [qa-accounts]
+    needs: [qa-language, qa-media, qa-offline, qa-extras]
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:

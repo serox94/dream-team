@@ -8,7 +8,12 @@ export async function verifyNavigation(page,context){
  assert.notEqual(config.d1_databases[0].database_id,'b64c7a2c-8694-41c6-b54a-857b88bf2c96');
  const request=async(path)=>{const response=await context.request.get(base+path,{timeout:15000});assert.ok(response.ok());return response.json();};
  const d1=async(sql,params)=>{const response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${config.d1_databases[0].database_id}/query`,{method:'POST',headers:{authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,'content-type':'application/json'},body:JSON.stringify({sql,params}),signal:AbortSignal.timeout(15000)});const result=await response.json();assert.equal(result.success,true);return result.result[0];};
- const open=async route=>{await page.goto(base+route,{waitUntil:'commit',timeout:30000});await page.locator('html[data-ready="true"]').waitFor({timeout:30000});};
+ const navigationErrors=[];page.on('pageerror',error=>navigationErrors.push(error.message));
+ const open=async route=>{
+  const response=await page.goto(base+route,{waitUntil:'commit',timeout:30000});
+  try{assert.equal(response.status(),200);await page.waitForFunction(()=>Boolean(document.documentElement.dataset.ready),null,{timeout:30000});assert.equal(await page.locator('html').getAttribute('data-ready'),'true',`application failed on ${route}`);}
+  catch(error){console.warn('NAVIGATION DIAGNOSTIC',JSON.stringify({route,status:response.status(),url:page.url(),ready:await page.locator('html').getAttribute('data-ready'),notice:await page.locator('#app-notice').allTextContents(),pageErrors:navigationErrors}));await page.screenshot({path:'live-preview-qa/navigation-failure.png',timeout:10000}).catch(()=>{});throw error;}
+ };
  await mkdir('live-preview-qa',{recursive:true});
  for(const width of [390,1280]){
   await page.setViewportSize({width,height:844});await open('/pages/wyjazdy.html');

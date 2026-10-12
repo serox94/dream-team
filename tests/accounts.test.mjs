@@ -33,3 +33,10 @@ test('account migration preserves version-27 business rows and rejects old unide
  const request=new Request('https://dream.test/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:env.RYBY_LOGIN_USERNAME,password:env.RYBY_LOGIN_PASSWORD})});const old=await worker.fetch(request,env),cookie=old.headers.get('set-cookie').split(';')[0];env.INDIVIDUAL_ACCOUNTS='true';assert.equal((await worker.fetch(new Request('https://dream.test/api/bootstrap',{headers:{cookie}}),env)).status,401);
  assert.deepEqual(DB.sqlite.prepare('SELECT * FROM catches').all(),before);assert.equal(DB.sqlite.prepare('SELECT angler_id FROM auth_accounts WHERE username=?').get('Maciek').angler_id,'maciek');
  }finally{DB.close();}});
+
+test('manual edit to another account adds its trip participation without rewriting historical profiles',async()=>{const s=setup();try{
+ const p=await s.login('Patryk'),created=await(await s.call('/api/anglers','POST',{name:'Third',username:'Third'},p.cookie)).json();
+ const payload={tripId:'poland-2027',anglerId:'patryk',weightKg:8,caughtAt:'2026-09-01T10:00:00Z'};const row=await(await s.call('/api/catches','POST',payload,p.cookie)).json();
+ assert.equal((await s.call(`/api/catches/${row.id}?tripId=poland-2027`,'PUT',{anglerId:created.id},p.cookie)).status,200);
+ assert.equal(s.DB.sqlite.prepare('SELECT angler_id FROM trip_participants WHERE trip_id=? AND angler_id=?').get('poland-2027',created.id).angler_id,created.id);
+ }finally{s.DB.close();}});

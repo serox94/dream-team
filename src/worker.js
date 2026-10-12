@@ -175,7 +175,7 @@ async function saveCatch(request,env,id){
   const species=text(pick(x,'species',c.species||'Karp'),'Gatunek',50,true),bait=text(pick(x,'bait',c.bait),'Przynęta',100);
   const rig=text(pick(x,'rig',c.rig),'Rig',100),depth=number(pick(x,'depthM',c.depth_m),'Głębokość',0,100);
   const notes=text(pick(x,'notes',c.notes),'Notatka',2000),photo=webUrl(pick(x,'photoUrl',c.photo_url),'Zdjęcie');
-  if(id) await run(env,`UPDATE catches SET angler_id=?,caught_at=?,weight_kg=?,species=?,spot=?,spot_id=?,bait=?,rig=?,depth_m=?,notes=?,photo_url=?,revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=?`,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo,id);
+  if(id){const statements=[];if(!member)statements.push(stmt(env,'INSERT OR IGNORE INTO trip_participants(trip_id,angler_id) VALUES(?,?)',tripId,anglerId));statements.push(stmt(env,`UPDATE catches SET angler_id=?,caught_at=?,weight_kg=?,species=?,spot=?,spot_id=?,bait=?,rig=?,depth_m=?,notes=?,photo_url=?,revision=revision+1,updated_at=CURRENT_TIMESTAMP WHERE id=?`,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo,id));await env.DB.batch(statements);}
   else {const statements=[];if(!member)statements.push(stmt(env,'INSERT OR IGNORE INTO trip_participants(trip_id,angler_id) VALUES(?,?)',tripId,anglerId));statements.push(stmt(env,`INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,spot,spot_id,bait,rig,depth_m,notes,photo_url,client_mutation_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,tripId,anglerId,caughtAt,weight,species,spotName,spotId,bait,rig,depth,notes,photo,key));const result=await env.DB.batch(statements);id=result.at(-1).meta.last_row_id;}
   return json({ok:true,id},c.id?200:201);
 }
