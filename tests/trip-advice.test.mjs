@@ -29,7 +29,8 @@ test('Fixture: muł, zielsko, źródłowy zakaz łódki i prognoza',()=>{
   assert.equal(result.incomplete,false);
   assert.match(result.suggestions.find(x=>x.name==='Prezentacja i rig').value,/pop-up/);
   assert.match(result.suggestions.find(x=>x.name==='Ograniczenia').value,/zabronione/);
-  assert.match(result.suggestions.find(x=>x.name==='Nęcenie i ilość').value,/kilka kulek/);
+  assert.match(result.suggestions.find(x=>x.name==='Nęcenie i ilość').value,/mała punktowa porcja/);
+  assert.match(result.facts.find(x=>x.field==='weather').value,/Prognoza powietrza/);
   assert.equal(result.facts.find(x=>x.field==='bottom').origin,'Research: operator');
 });
 test('Sprzeczne źródła nie dają pozornej pewności',()=>{
