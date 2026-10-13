@@ -58,7 +58,7 @@ B7f06ec / [38410329365](https://github.com/serox94/dream-team/actions/runs/38410
 
 Import diagnostic 540f0ce / [38411938944](https://github.com/serox94/dream-team/actions/runs/38411938944) ujawnił rzeczywisty błąd zdalnego importu: Cloudflare `D1_RESET_DO`, nie błąd danych czy autoryzacji. Lokalna poprawka FK ma oddzielny reproducer i nie rozwiązywała tego błędu dostawcy. Dla tego jednego błędu dodano jedną próbę na **nowym** pustym, niepublikowanym D1 po usunięciu wyłącznie poprzedniego celu audit. Bez ponawiania migracji, bez ingerencji w źródło i bez przywracania aktywnej produkcji; kolejna odmowa/reset kończy się BLOCKED. Prywatny zapis SQL/R2 pozostaje nienaruszony.
 
-## Końcowy checkpoint po potwierdzonej blokadzie
+## Historyczny checkpoint przed kontynuacją od 0958512
 
 | ID | Wynik | Dowód / pozostały warunek |
 |---|---|---|
@@ -73,15 +73,29 @@ Import diagnostic 540f0ce / [38411938944](https://github.com/serox94/dream-team/
 
 Prywatny zapis pozostaje w `dream-team-audit-38410329365-archive` (source.sql, checkpoint.sql, manifest.json, objects/*); nie został opublikowany w artefaktach. Celowane kopie D1/Workery usunięto; źródła produkcji/preview i wszystkie istniejące dane biznesowe są zachowane. Kolejne CI zachowuje BLOCKED zamiast ponawiania importu/migracji/resetów. Końcowy pełny run na tym commicie ponownie sprawdza niezmienione dane preview, konta, PWA/media i odczytową regresję PL/EN 390/1280; BLOCKED jobu restore utrzymuje ogólny FAIL. Publiczne artefakty zawierają wyłącznie statusy, żadnego SQL/config/secrets.
 
-READY TO MERGE TO MAIN: NO — H03/H04/M04 wymagają odbioru.
-READY TO DEPLOY PRODUCTION: NO — brak pełnego restore i kontroli CF automation, brak osobnej zgody; main/produkcji nie scalano ani nie wdrażano.
+READY TO MERGE TO MAIN: NO — kontrola zewnętrznego automatycznego deploymentu H04 pozostaje BLOCKED (aktualny odbiór restore poniżej).
+READY TO DEPLOY PRODUCTION: NO — H04 pozostaje BLOCKED i nie ma osobnej zgody; main/produkcji nie scalano ani nie wdrażano.
 
 D2c3d92 / [38413402071](https://github.com/serox94/dream-team/actions/runs/38413402071): 122 unit PASS; przygotowanie preview próbowało utworzyć istniejący bucket i otrzymało 409/code10004. Poprawiono wyłącznie QA: bezpośredni GET konkretnego istniejącego bucketu zamiast inferencji z listy i ponownego POST. Nie resetuje ani nie zmienia zawartości R2; prywatne checkpointy zachowane. H04/M04 nadal BLOCKED, bez ponawiania odmówionych operacji.
 
-## Kontynuacja od 0958512 — tylko prywatne odtworzenie
-- Run 38414061182 nie ponowił importu: zatrzymał go utrwalony marker BLOCKED. Faktyczny D1_RESET_DO: 38412632242, job 115348660209.
-- Odtwarzanie wykorzystuje zachowane checkpoint.sql i manifest R2 z dream-team-audit-38410329365-archive; zero żądań do produkcji i wspólnego preview.
-- Nowa ścieżka REST D1: wszystkie tabele przed rekordami, rodzice przed dziećmi, wyzwalacze po rekordach; porównanie wszystkich tabel, schematu, indeksów, wyzwalaczy, FK i liczników. Nie ponawia importu częściowego celu.
-- Nowe testy celowane: 4/4 PASS lokalnie. Rzeczywisty test Cloudflare: PENDING; żaden nowy status PASS nie wynika wyłącznie z kodu.
-- H04 pozostaje BLOCKED; nie ponawiano zapytań o uprawnienia. Zaliczone wcześniej testy aplikacji/UI pozostają dowodem z 38414061182, są pomijane wyłącznie dla oznaczonego checkpointu obejmującego dokładną listę plików restore.
-- Referencja procesu FK: https://developers.cloudflare.com/d1/sql-api/foreign-keys/
+## Zakończenie kontynuacji od 0958512 — tylko prywatne odtworzenie
+
+| Zakres | Wynik | Dowód |
+|---|---|---|
+| M04 D1 | PASS | 38435939611 / 115429778795: zachowany checkpoint 26 tabel / 269 rekordów; prywatny re-export i R2 SQL roundtrip; drugie odtworzenie 270 rekordów (dodatkowa sesja techniczna), 2 triggery, wszystkie wiersze, indeksy, FK, quick_check i liczniki |
+| M04 R2 | PASS | 38436517138 / 115431800489: 1 obiekt, 236364 B; SHA-256, metadane HTTP/custom oraz kompletny inwentarz zgodne; źródłowy archive wyłącznie odczytany |
+| M04 binding / H03 | PASS | [38437797828](https://github.com/serox94/dream-team/actions/runs/38437797828), job 115436244296, kod b4c4830309b83a20de35e24a5a7d89a004bd2e1e: nowe D1 podłączone do odtworzonego R2, API 401 dla cookie usuniętej sesji, nowy login/bootstrap Patryk i pobranie istniejącego obrazu ze zgodnym SHA |
+| H04 | BLOCKED | Bez nowych uprawnień, bez ponowienia odmówionej kontroli. Jedna potrzebna czynność: dostarczyć eksport ustawień Cloudflare Builds/Git integration, deploy hooks oraz oczekujących deployments |
+
+Przyczyna D1: zachowany dump przy włączonych FK odwoływał się do nieutworzonej jeszcze tabeli (`REFERENCED_TABLE_NOT_CREATED`). `D1_RESET_DO` był nieprecyzyjnym błędem ścieżki importu; sam ponowny pusty cel go nie rozwiązywał. Naprawa: komplet tabel przed danymi, kolejność zależności rodzic/dziecko, osobne pełne instrukcje REST, indeksy i triggery po danych, dokładne odtworzenie AUTOINCREMENT i pełne porównanie przed purge. Nie wyłącza FK D1, nie powtarza częściowego importu i odmawia zapisu do zajętego/chronionego celu. Lokalny integrity_check, na D1 obsługiwany quick_check. Referencje: https://developers.cloudflare.com/d1/sql-api/foreign-keys/ oraz https://developers.cloudflare.com/d1/sql-api/sql-statements/.
+
+Pierwsza odpowiedź R2 była nie-JSON, bez zapisanego kodu HTTP; dokładnego kodu tej odpowiedzi nie da się odtworzyć z logu. Odseparowana próba na tym samym prywatnym manifeście przeszła. Transport teraz zapisuje bezpieczny status i ponawia maksymalnie 3 razy wyłącznie przejściowe, nie-JSON 404/502/503/504 na izolowanym celu. Auth i błędów danych nie ponawia. Bramkę aplikacji uszczelniono: maintenance, komplet sekretów jedną operacją bulk, dopiero potem publikacja kodu; gotowość wymaga aktualnego release oraz rzeczywistego 401 API, nie samego ekranu loginu.
+
+H03 dowód złożony: 38435939611 pokazał, że unieważnione cookie rzeczywiście odżywa w prywatnej kopii historycznej przed purge; wszystkie sesje fizycznie usunięto. 38437797828 potwierdził obecność sesji ze snapshotu, wyczyszczenie tabeli przed publikacją i HTTP 401 kontrolnego poprawnego cookie po purge. Pepper i hasło niezmienione; brak resetu kont, migracji czy nowych fixture biznesowych.
+
+Nowe testy: 5/5 D1/R2 (e69cb6b) oraz 3/3 transport (b4c4830). Zaliczone przed kontynuacją testy aplikacji, UI, pogody, offline i researchu nie zostały ponowione: odpowiednie kroki CI mają SKIPPED. Skip jest ograniczony do feat/final-batch, jawnego markera i dokładnej listy plików restore; inne zmiany nadal przechodzą zwykłe testy. Ostatni workflow i audit-fixes są SUCCESS; pozostałe joby preview świadomie SKIPPED, nie nowe PASS.
+
+Commity kodu/diagnostyki: d47d2aa, e69cb6b, 0dffe58, 3ad7bbd, b4c4830. Punkt początkowy 0958512. Prywatne zasoby dowodowe: stary archive dream-team-audit-38410329365-archive pozostaje niezmieniony; SQL re-export dream-team-audit-38435939611-archive; odtworzone media dream-team-audit-38436517138-media. Publiczne artefakty zawierają wyłącznie statusy/liczniki/hashe. Tymczasowe D1 i Workery usunięto. Zero żądań do produkcyjnych zasobów, zapisów do istniejących danych i wywołań Tavily/Workers AI. Main nadal 2d0da14d4637739dcefc61bab596be59778cd26f.
+
+READY TO MERGE TO MAIN: NO — H04: zewnętrzny automatyczny deployment main wciąż niezweryfikowany.
+READY TO DEPLOY PRODUCTION: NO — H04 i brak osobnej zgody; produkcji nie wdrażano.
