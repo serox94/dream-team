@@ -75,3 +75,5 @@ Prywatny zapis pozostaje w `dream-team-audit-38410329365-archive` (source.sql, c
 
 READY TO MERGE TO MAIN: NO — H03/H04/M04 wymagają odbioru.
 READY TO DEPLOY PRODUCTION: NO — brak pełnego restore i kontroli CF automation, brak osobnej zgody; main/produkcji nie scalano ani nie wdrażano.
+
+D2c3d92 / [38413402071](https://github.com/serox94/dream-team/actions/runs/38413402071): 122 unit PASS; przygotowanie preview próbowało utworzyć istniejący bucket i otrzymało 409/code10004. Poprawiono wyłącznie QA: bezpośredni GET konkretnego istniejącego bucketu zamiast inferencji z listy i ponownego POST. Nie resetuje ani nie zmienia zawartości R2; prywatne checkpointy zachowane. H04/M04 nadal BLOCKED, bez ponawiania odmówionych operacji.

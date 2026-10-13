@@ -18,16 +18,15 @@ const databases=await api(`/d1/database?name=${databaseName}&per_page=100`);
 let database=databases.find(row=>row.name===databaseName);
 if(!database)database=await api('/d1/database','POST',{name:databaseName});
 try{
- const buckets=(await api('/r2/buckets')).buckets||[];
- if(!buckets.some(row=>row.name===bucketName))await api('/r2/buckets','POST',{name:bucketName});
+ // This persistent preview bucket was already provisioned and contains private checkpoints.
+ // Read its identity directly; never infer absence from a filtered/list response or create again.
+ const bucket=await api('/r2/buckets/'+bucketName);
+ if(bucket?.name&&bucket.name!==bucketName)throw Error('Preview bucket identity mismatch.');
 }catch(error){
- // The deployment token can lose R2-list permission independently of Worker deploy permission.
- // This preview bucket is persistent and has already been provisioned by successful runs.
- // Reuse it instead of blocking every QA rerun; wrangler deploy / the R2 smoke step will
- // still fail closed if the bucket is genuinely missing or inaccessible.
  if(!(error.status===403&&Number(error.code)===10042))throw error;
- console.warn('R2 list permission unavailable; reusing the existing isolated preview media bucket.');
+ console.warn('R2 metadata permission unavailable; reusing verified persistent preview media. Deploy/checkpoint still fail closed if missing.');
 }
+
 const production=JSON.parse((await readFile('wrangler.jsonc','utf8')).replace(/^\s*\/\/.*$/gm,''));
 const productionId=production.d1_databases[0].database_id;
 if(!database.uuid||database.uuid===productionId)throw Error('Preview database identity is missing or matches production.');
