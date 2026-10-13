@@ -1,0 +1,35 @@
+name: DreamTeam production preflight (backup only)
+on:
+  push:
+    branches: [preflight/production-b20be05-20261013]
+    paths: [scripts/production-preflight.mjs, .github/workflows/production-preflight-backup.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-private-production-preflight
+  cancel-in-progress: false
+jobs:
+  backup-restore-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Backup and isolated restore only; no application tests or production release
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: node scripts/production-preflight.mjs
+      - name: Preserve safe statuses only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-preflight-safe-status
+          path: preflight-safe-status/status.json
+          retention-days: 3
