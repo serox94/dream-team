@@ -1,16 +1,7 @@
 name: Deploy private DreamTeam
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/deploy-private.yml
-      - scripts/smoke-auth.mjs
-      - src/**
-      - wrangler.jsonc
-      - public/**
-      - migrations/**
-      - package.json
-      - package-lock.json
+  # Merging reviewed preview code must not implicitly authorize production deployment.
+  # Keep the existing explicit manual release entry point.
   workflow_dispatch:
     inputs:
       ref:
