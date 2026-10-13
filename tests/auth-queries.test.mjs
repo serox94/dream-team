@@ -1,4 +1,17 @@
-import test from 'node:test';import assert from 'node:assert/strict';import worker from '../src/worker.js';import {session} from '../src/auth.js';import {ensureSchema} from '../src/ensure-schema.js';import {database} from './db.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import worker from '../src/worker.js';import {session,login} from '../src/auth.js';import {ensureSchema} from '../src/ensure-schema.js';import {database} from './db.mjs';
+test('parallel logins reserve at most eight slots per IP; expiration and successful reset still work',async()=>{
+ const DB=database(),env={DB,INDIVIDUAL_ACCOUNTS:'true',RYBY_LOGIN_USERNAME:'fixture',RYBY_LOGIN_PASSWORD:'fixture-password',RYBY_SESSION_SECRET:'fixture-session-secret-at-least-32-characters'};
+ const attempt=(password,ip='203.0.113.20')=>login(new Request('https://dream.test/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded','cf-connecting-ip':ip},body:new URLSearchParams({username:'Patryk',password})}),env);
+ try{
+  // Initialize only the private credential; concurrent attempts exercise the real D1 counter.
+  await attempt(env.RYBY_LOGIN_PASSWORD,'203.0.113.21');
+  const responses=await Promise.all(Array.from({length:12},()=>attempt('wrong')));
+  assert.equal(responses.filter(r=>r.headers.get('location')==='/login?error=credentials').length,8);assert.equal(responses.filter(r=>r.headers.get('location')==='/login?error=limit').length,4);assert.ok(responses.every(r=>!r.headers.get('set-cookie')));
+  assert.equal(DB.sqlite.prepare('SELECT attempts FROM auth_login_limits').get().attempts,8);assert.equal((await attempt(env.RYBY_LOGIN_PASSWORD)).headers.get('location'),'/login?error=limit');
+  const now=Math.floor(Date.now()/1000);DB.sqlite.prepare('UPDATE auth_login_limits SET reset_at=?').run(now-1);assert.equal((await attempt('wrong')).headers.get('location'),'/login?error=credentials');assert.equal(DB.sqlite.prepare('SELECT attempts FROM auth_login_limits').get().attempts,1);
+  const accepted=await attempt(env.RYBY_LOGIN_PASSWORD);assert.equal(accepted.headers.get('location'),'/');assert.ok(accepted.headers.get('set-cookie'));assert.equal(DB.sqlite.prepare('SELECT count(*) n FROM auth_login_limits').get().n,0);
+ }finally{DB.close();}
+});
 test('schema check is scoped to its binding and sessions use one fresh joined authorization read',async()=>{
  const DB=database(),env={DB,INDIVIDUAL_ACCOUNTS:'true',RYBY_LOGIN_USERNAME:'fixture',RYBY_LOGIN_PASSWORD:'fixture-password',RYBY_SESSION_SECRET:'fixture-session-secret-at-least-32-characters'};
  try{

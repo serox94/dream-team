@@ -26,7 +26,7 @@ try{
     await read(context,'/api/checklist-templates');await read(context,'/api/checklist-categories');
    }else{
     await page.locator('#media-save').waitFor();await page.locator('#atlas-overview img').first().waitFor({state:'attached',timeout:30000});assert.equal(await page.locator('#atlas-overview img').count(),17);
-    for(const img of await page.locator('#atlas-overview img').all()){await img.scrollIntoViewIfNeeded();await img.evaluate(el=>el.decode());assert.ok(await img.evaluate(el=>el.naturalWidth>0));}
+    for(const img of await page.locator('#atlas-overview img').all()){await img.scrollIntoViewIfNeeded();try{await img.evaluate(el=>{el.loading='eager';return el.decode();});assert.ok(await img.evaluate(el=>el.naturalWidth>0));}catch(error){const path=await img.getAttribute('src');const response=await context.request.get(base+path,{timeout:15000});console.error('ATLAS IMAGE DIAGNOSTIC',JSON.stringify({path,status:response.status(),type:response.headers()['content-type'],state:await img.evaluate(el=>({complete:el.complete,width:el.naturalWidth,loading:el.loading}))}));throw error;}}
     await read(context,'/api/deeper-media');assert.equal((await read(context,'/api/settings')).workersAiAvailable,false);
     await page.reload({waitUntil:'commit',timeout:30000});await page.locator('html[data-ready="true"]').waitFor({timeout:30000});await page.locator('#media-save').waitFor();await page.locator('#atlas-overview img').first().waitFor({state:'attached',timeout:30000});assert.equal(await page.locator('#atlas-overview img').count(),17);
    }

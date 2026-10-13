@@ -59,8 +59,10 @@ export async function login(request,env){
   const data=new URLSearchParams(raw),username=data.get('username')||'',password=data.get('password')||'';
   const ip=request.headers.get('cf-connecting-ip')||'unknown';
   const ipHash=hex(await digest(`${env.RYBY_SESSION_SECRET}\0${ip}`)),current=now();
-  const limit=await env.DB.prepare('SELECT attempts,reset_at FROM auth_login_limits WHERE id_hash=?').bind(ipHash).first();
-  if(limit&&limit.reset_at>current&&limit.attempts>=8)return redirect('/login?error=limit');
+  // Reserve a slot atomically before the expensive password check. Parallel
+  // failures must not all read zero and overwrite the counter with one.
+  const slot=await env.DB.prepare('INSERT INTO auth_login_limits(id_hash,attempts,reset_at) VALUES(?,1,?) ON CONFLICT(id_hash) DO UPDATE SET attempts=CASE WHEN reset_at<=? THEN 1 ELSE attempts+1 END,reset_at=CASE WHEN reset_at<=? THEN ? ELSE reset_at END WHERE reset_at<=? OR attempts<8').bind(ipHash,current+900,current,current,current+900,current).run();
+  if(!slot.meta.changes)return redirect('/login?error=limit');
   let account,credential,valid;
   if(individualAccounts(env)){
     credential=await sharedCredential(env);
@@ -75,8 +77,6 @@ export async function login(request,env){
   valid=equal(userExpected,userActual)&&equal(passExpected,passActual);
   }
   if(!valid){
-    const attempts=limit&&limit.reset_at>current?limit.attempts+1:1;
-    await env.DB.prepare('INSERT INTO auth_login_limits(id_hash,attempts,reset_at) VALUES(?,?,?) ON CONFLICT(id_hash) DO UPDATE SET attempts=excluded.attempts,reset_at=excluded.reset_at').bind(ipHash,attempts,limit&&limit.reset_at>current?limit.reset_at:current+900).run();
     return redirect('/login?error=credentials');
   }
   await env.DB.prepare('DELETE FROM auth_login_limits WHERE id_hash=?').bind(ipHash).run();
