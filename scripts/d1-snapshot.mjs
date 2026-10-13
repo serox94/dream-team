@@ -46,11 +46,13 @@ export async function restoreSnapshot(db,snapshot,execute=query){
  return {tables:snapshot.tables.length,rows:snapshot.tables.reduce((n,t)=>n+t.rows.length,0),triggers:snapshot.schema.filter(s=>s.type==='trigger').length,foreignKeys:true,sequences:true};
 }
 export async function verifySnapshot(db,snapshot,execute=query){
- const schema=(await execute(db.uuid,"SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*' AND sql IS NOT NULL ORDER BY type,name")).results;
+ const read=async(stage,sql,table)=>{try{return await execute(db.uuid,sql);}catch(error){error.stage=stage;error.table=table;throw error;}};
+ const schema=(await read('verify-schema',"SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*' AND sql IS NOT NULL ORDER BY type,name")).results;
  check(rowsDigest(schema)===rowsDigest(snapshot.schema),'RESTORED_SCHEMA_MISMATCH');
- for(const table of snapshot.tables){const rows=(await execute(db.uuid,'SELECT * FROM '+identifier(table.name))).results;check(rowsDigest(rows)===rowsDigest(table.rows),'RESTORED_ROWS_MISMATCH');}
- const sequences=(await execute(db.uuid,"SELECT name,seq FROM sqlite_sequence WHERE name NOT GLOB '_cf_*' ORDER BY name")).results;
+ for(const table of snapshot.tables){const rows=(await read('verify-rows','SELECT * FROM '+identifier(table.name),table.name)).results;check(rowsDigest(rows)===rowsDigest(table.rows),'RESTORED_ROWS_MISMATCH');}
+ const sequences=(await read('verify-sequences',"SELECT name,seq FROM sqlite_sequence WHERE name NOT GLOB '_cf_*' ORDER BY name")).results;
  check(rowsDigest(sequences)===rowsDigest(snapshot.sequences),'RESTORED_SEQUENCE_MISMATCH');
- check((await execute(db.uuid,'PRAGMA foreign_key_check')).results.length===0,'RESTORED_FOREIGN_KEYS');
- check((await execute(db.uuid,'PRAGMA integrity_check')).results[0].integrity_check==='ok','RESTORED_INTEGRITY');
+ check((await read('verify-FK','PRAGMA foreign_key_check')).results.length===0,'RESTORED_FOREIGN_KEYS');
+ // D1 supports quick_check, not SQLite's full integrity_check (which is used locally).
+ check((await read('verify-quick-check','PRAGMA quick_check')).results[0].quick_check==='ok','RESTORED_INTEGRITY');
 }
