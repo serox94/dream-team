@@ -1,0 +1,122 @@
+# Poprawki po niezależnym audycie Astra — 2026-10-13
+
+Zakres: wyłącznie H01–H04/M01–M04 raportu DreamTeam_audyt_przedprodukcyjny_2026-10-13(1).md. Punkt wyjścia: `1ddaccf9ba02a6a7e25c3f02b3b0f120dac8e31d`. Nie ponawiano modernizacji, researchu, migracji preview ani resetów istniejących haseł. Produkcja/main pozostają bez zmian.
+
+| ID | Poprawka | Celowany dowód lokalny | Odbiór Cloudflare |
+|---|---|---|---|
+| H01 | `ensure-schema.js` tylko SELECT, świeża kontrola maintenance/28 wpisów; HTTP 503 i cron bez pracy; jeden komplet SQL w migrations | 20/27/29: GET/cron nie zmieniają bazy; 20→28 zachowuje stare kolumny/ID; ponowienie noop, częściowy stan odrzucony | job audit-fixes na bieżącym SHA; do wykonania |
+| H02 | Produkcyjne INDIVIDUAL_ACCOUNTS/APP_ENV; APP_BUILD wymaga manifestu; jawny initializer sprawdza istniejące patryk/maciek i nie nadpisuje hash; smoke używa prawdziwego loginu | Dwa istniejące ID/PB, trzeci i limit czwartego; brak profilu/sekr. blokuje inicjalizację | job audit-fixes; produkcyjna migracja celowo nie wykonywana |
+| H03 | Fizyczne DELETE sesji przy rotacji/wyłączeniu/restore; atomowa kontrola uprawnień przy INSERT sesji; usunięty rollback do stałego tagu | Cookie po rotacji nie ma wiersza także dla starego czytnika; nie odżywa po reaktywacji | Odtworzona baza musi usunąć sesje przed podłączeniem aplikacji |
+| M01 | Kolejność operacji na rekordzie, przekazanie zaakceptowanej revision; konflikt blokuje tylko następców; stabilne klucze/payload | 3 przełączenia/3 edycje spotu, restart, utrata ACK, konflikt i niezależny rekord | Rzeczywisty Chromium 390 na nowym Workerze |
+| M02 | `anglers.active` to widoczność uczestnika; `auth_accounts.active` to prawo logowania; wyłączenie atomowo usuwa sesje | Ukryty profil nadal loguje; wyłączone konto/old cookie odmówione, reaktywacja nie odtwarza sesji | Test trzeciego konta wyłącznie na kopii |
+| H04 | Ręczny YAML; jedna próba odczytu CF Builds, Git triggers, deploy hooks, pending builds/deployments | Workflow bez automatycznego deploymentu/rollback | PASS dopiero z rzeczywistym odczytem admin; inaczej BLOCKED i jedna czynność w H04.json |
+| M03 | Kontrolowana aktualizacja narzędzi, bez audit fix --force | npm audit: 0; siedem pierwotnych pakietów ocenione niżej | Validate sprawdza bundle i lokalne migracje |
+| M04 | SQL + bookmark + prywatne kopie/manifesty R2 z SHA-256; drugi świeży D1/R2, przełączenie bindingów, porównanie danych/FK/sekwencji, purge sesji | Gateway: auth, integralność/metadane, brak zapisów SOURCE, uszkodzony archive odrzucony | Bez realnej próby D1/R2 nie oznaczać PASS; brak uprawnień = BLOCKED |
+
+## Bezpieczny proces wydania (przyszła osobna zgoda)
+
+1. Zablokować niezależne CF Builds/Git hooks; odczytać bieżący Worker version/config. Globalny maintenance Worker (`scripts/maintenance-worker.js`) ma zastąpić obsługę **wszystkich hostów/routes** i cron, a D1 maintenance_mode=on utrzyma bramkę nowej aplikacji. Sam flag w starym Workerze nie zapewnia zatrzymania ruchu. Nie publikować aplikacji przed tą blokadą.
+2. W maintenance wykonać świeży prywatny SQL i Time Travel bookmark, zachować wersję/config Worker oraz wszystkie obiekty R2, metadane, SHA-256. Przećwiczyć 20→28 i pełne restore na nowych zasobach. Manifest operatora `dream-team-release-v1` w prywatnym backup R2 musi wiązać candidate SHA, databaseId, previousWorkerVersion, bookmark, sqlSha256/sourceSqlKey, createdAt (<15 min), migrationRehearsal/r2Restore/externalDeployAudit=PASS, schema=28, sessionsPurged/maintenance=true; preMigrationVerified/sourceSchema i postMigrationVerified dla właściwej fazy. Nigdy w publicznym artefakcie CI.
+3. Dopiero osobna autoryzacja i zmienna środowiska production DREAMTEAM_PRODUCTION_APPROVED=yes pozwalają uruchomić konkretną operację przez `release-workflow.mjs`/`release-operator.mjs`. Operator ponownie pobiera prywatny SQL, sprawdza SHA, odtwarza go lokalnie, weryfikuje bieżący rejestr/kolumny/FK oraz zgodność starych danych. Migracja jest jawna, idempotentna przez d1_migrations; wynik ponownie eksportowany i porównany. Błąd zatrzymuje proces przy zamkniętym ruchu — żadnego samoczynnego powtórzenia częściowego schematu.
+4. Jawnie inicjalizować credential **raz** z istniejących Workers secrets (PBKDF2, salt, niezmieniony pepper), po sprawdzeniu oryginalnych kont. Istniejącego hash nie nadpisywać. Przed uruchomieniem po restore fizycznie usunąć wszystkie auth_sessions. Produkcyjny release używa pełnego SHA, indywidualnych kont, bez technicznego aliasu i bez AI.
+5. Zweryfikować realne konta na izolowanej kopii zgodnej z manifestem, potem kontrolowane otwarcie i smoke produkcji pod nadzorem operatora. Workflow i CLI celowo **nie otwierają maintenance automatycznie**. Publiczny release-health jest oddzielony od testu credentials i nie generuje sesji/prób logowania. Nie przywracać danych po zaakceptowanych nowych zapisach bez uzgodnionego reconciliation. Rollback tylko do rzeczywistej poprzedniej zgodnej wersji/config z guardem maintenance, po purge sesji; stary legacy Worker bez guardu jest zabroniony. Przy pierwszym wydaniu ze starej architektury użyć naprawy w maintenance, nie automatycznego powrotu do legacy/tagu.
+
+## M03 — ocena wszystkich siedmiu pakietów
+
+Wszystkie są devDependencies/narzędziami, nie importami produkcyjnego Workera. Mimo tego CLI pracuje z tokenem deploymentu i wymaga usunięcia podatnych zależności. Zachowano wersje Chart.js/jsdom.
+
+| Pakiet przed → po | Ocena ekspozycji i decyzja |
+|---|---|
+| esbuild 0.27.3 → 0.28.2 | Low GHSA-g7r4-m6w7-qqqr dotyczy Windows dev server; Linux CI/Worker nieosiągalne. Zniknął wraz z bezpieczną aktualizacją Wranglera. |
+| miniflare 4.20260317.0 → 5.20261006.2-beta | High przechodnie sharp/undici/ws; lokalny runtime dev. Aktualizacja zależności wymaganej przez stabilny wrangler 4.150.0. |
+| sharp 0.34.5 → 0.35.5 | High GHSA-f88m-g3jw-g9cj / rgj7-g3m4-5g8c / wq5f-xc86-pv6w; biblioteki parsowania obrazów dev runtime; brak sharp w Workerze. Poprawione przechodnio. |
+| source-map-js 1.2.1 → 1.2.2 | High GHSA-68fv-2mgg-jv7q DoS parsera map w narzędziach/testach; mała kompatybilna aktualizacja lockfile. |
+| undici 7.24.4 → 7.29.1 | High, grupa zgłoszeń HTTP/proxy/WebSocket; osiągalne w narzędziach sieciowych CI z tokenami. Poprawione przechodnio; nie włączano nowych usług. |
+| wrangler 4.75.0 → 4.150.0 | Moderate/high zależności przechodnie; właściciel ryzyka deploy/dev. Kontrolowana aktualizacja w tej samej linii major. |
+| ws 8.18.0 → 8.21.0 | High GHSA-58qx-3vcg-4xpx / 96hv-2xvq-fx4p; kanały dev/CLI, nie endpoint aplikacji. Poprawione przechodnio. |
+
+## Checkpoint odbioru
+
+Lokalne testy celowane: 18/18 PASS (accounts/migration/release safety/offline order/recovery gateway). Pierwszy pełny lokalny run wykazał timeout JSDOM pod nadmierną równoległością; pojedynczy test PASS. Ograniczono test concurrency do 2, poprawiono zamknięcie DOM po timeout; asercje zachowane. Pełny lokalny run: 117/117 PASS; trzy dodatkowe asercje inicjalizacji/wyścigu/replay również PASS w zestawie celowanym. **Jeden** pełny run GitHub Actions zostanie wykonany na tym commicie. Wiążący wynik live znajduje się w bezpiecznym artefakcie `audit-fixes-safe-status` tego runu (bez SQL/credentials/cookies), a wynik całej regresji w jobs/artefaktach Actions. Brak dostępu nigdy nie jest PASS. Stare dowody offline z poprzednich SHA nie zastępują nowego testu zapisów.
+
+READY TO MERGE TO MAIN: NO — do potwierdzenia bieżącej bramki i H04/M04.
+READY TO DEPLOY PRODUCTION: NO — nie udzielono osobnej zgody; produkcyjny maintenance/migracja/rollout nie wykonane.
+
+### Pierwsza bramka odbioru 094b389
+
+[Run 38401950023](https://github.com/serox94/dream-team/actions/runs/38401950023): 120/120 unit PASS, Validate i Responsive PASS; backup preview R2+bookmark i integralność istniejących danych PASS; rzeczywiste konta preview PASS; Tavily marker użyty, requestCount=0. H04 BLOCKED: CF GET /workers/scripts 403/code10000; zapisano tę blokadę, nie ponawiamy bez nowego dostępu. M04 FAIL w private media backup/restore przed zapisami biznesowymi (źródłowy SQL 20→28 porównany PASS). Dodano publicznie niewrażliwy sygnał gotowości prywatnego gateway i oczekiwanie propagacji sekretu/bindingów przed pierwszym zapisem, jawne workers_dev oraz status/path błędu. Następna bramka jest wyłącznie celowaną próbą audit-fixes; pełna końcowa bramka dopiero po jej wyniku. Nie ukrywamy pierwszego FAIL ani SKIPPED dalszych jobów.
+
+Celowana próba 6fd22f5 / [38403329021](https://github.com/serox94/dream-team/actions/runs/38403329021) wykryła dokładnie HTTP 404 NON_JSON na /private-sql/source mimo pozytywnego /ready. Gateway SQL usunięto; prywatny SQL zapisuje/odczytuje bezpośrednio Wrangler R2 z porównaniem SHA, jak zaliczony backup preview. Brak zmian biznesowych źródła i zero wywołań dostawców. Następny test dotyczy naprawionego transportu, nie ponownej odmowy H04.
+
+Próba 7ed90f2 / [38404232128](https://github.com/serox94/dream-team/actions/runs/38404232128) przeszła transport SQL/R2, rzeczywiste 20→28, trzy loginy/limit czwartego, wyłączenie konta, restart/utracony ACK offline, upload obrazu i rotację hasła. FAIL nastąpił dopiero w końcowym restore/porównaniu. Lokalny reproducer pokazuje, że Node SQLite domyślnie weryfikuje FK podczas ładowania uporządkowanego dumpu D1 i odrzuca rodzica tworzonego później. Naprawiono wyłącznie lokalny odczyt dumpu: ładowanie bez natychmiastowego FK, potem obowiązkowe PRAGMA foreign_key_check. Ograniczenia FK rzeczywistego D1/aplikacji pozostają włączone. Celowane kolejne wykonanie jest uzasadnione tym nowym błędem, nie powtarza źródłowych zmian biznesowych. Dodano usuwanie wyłącznie zasobów audit o trzech wymienionych run ID oraz zasobów własnego runu; prywatne archiwa SQL/R2 są zachowane.
+
+Brama 8fe8f08 / [38405836336](https://github.com/serox94/dream-team/actions/runs/38405836336) zatrzymała się na deployment gateway, bez zapisów biznesowych; dodano bezpieczne szczegóły błędu CLI. Oddzielny test deploymentu c3f023a / [38407151547](https://github.com/serox94/dream-team/actions/runs/38407151547) PASS, bez tworzenia D1, migracji, zmiany hasła czy danych. Nowa regresja odczytu dumpu/FK PASS; Validate 121/121. Końcowa pełna bramka uruchamiana dopiero na poniższym checkpointcie; odczytowe joby nie są już pomijane wskutek niepowodzenia niezależnego restore. FAIL jobu restore nadal pozostaje FAIL całego runu. H04 pozostaje BLOCKED z dowodem 403, bez kolejnych prób tego odczytu.
+
+Końcowy run 9671ec8 / [38407858886](https://github.com/serox94/dream-team/actions/runs/38407858886): preview/backup/integralność i 121 unit PASS; H01 realna kopia/migracja PASS. Test logowania dostał 503 tuż po ostatnim deploy. Dodano odczytową bramkę /login sprawdzającą build **i fingerprint konfiguracji D1/R2** przed logowaniem oraz po przełączeniu restore; zero prób logowania w tej bramce. Unit potwierdza nagłówki i brak nowych sesji/licznika. Limit 8/IP/900 s nie zmieniony. Pierwsza jawna inicjalizacja credential fizycznie usuwa sesje legacy, ponowienie nie zmienia credential/sesji; produkcyjna bramka sprawdza faktyczny brak sesji przed wydaniem. Kolejny run tylko audit-fixes; pełna końcowa bramka wymaga zakończonego odbioru restore. Wykonawca lokalny utracił transport, dalsze poprawki wprowadzone bezpośrednio przez GitHub i sprawdzane przez CI.
+
+B7f06ec / [38410329365](https://github.com/serox94/dream-team/actions/runs/38410329365): Validate/Responsive 122 PASS. H01/H02/M01/M02 PASS na realnej kopii; rotacja/purge sesji wykonane tylko na kopii. M04 FAIL przy `wrangler d1 execute` drugiego pustego D1. Zachowano prywatny checkpoint SQL/R2; następny test tylko importuje ten zapis do nowego D1, bez ponownej migracji, logowania, resetu czy fixture. Błąd SQL pokazuje wyłącznie zredagowane przyczyny, bez literałów/haszy/tokenów.
+
+Import diagnostic 540f0ce / [38411938944](https://github.com/serox94/dream-team/actions/runs/38411938944) ujawnił rzeczywisty błąd zdalnego importu: Cloudflare `D1_RESET_DO`, nie błąd danych czy autoryzacji. Lokalna poprawka FK ma oddzielny reproducer i nie rozwiązywała tego błędu dostawcy. Dla tego jednego błędu dodano jedną próbę na **nowym** pustym, niepublikowanym D1 po usunięciu wyłącznie poprzedniego celu audit. Bez ponawiania migracji, bez ingerencji w źródło i bez przywracania aktywnej produkcji; kolejna odmowa/reset kończy się BLOCKED. Prywatny zapis SQL/R2 pozostaje nienaruszony.
+
+## Historyczny checkpoint przed kontynuacją od 0958512
+
+| ID | Wynik | Dowód / pozostały warunek |
+|---|---|---|
+| H01 | PASS | Unit HTTP/cron bez zmian; rzeczywisty export 20→28, zachowane stare kolumny/ID/FK, bramka maintenance i jawna migracja; B7 job 115342241577 |
+| H02 | PASS | Konfiguracja prod poprawiona w kodzie; jawne init zachowuje hash/ID/PB; rzeczywiste trzy konta i limit czwartego na kopii; produkcyjna migracja nie wykonana |
+| H03 | BLOCKED | Usunięty tagowy rollback; fizyczne purge przy rotacji, wyłączeniu, inicjalizacji i restore; unit legacy-reader/wyścig PASS. Test cookie po rzeczywistym restore zależy od M04 |
+| H04 | BLOCKED | 403/code10000; bramka automatycznych CF wdrożeń niezweryfikowana. Jedna czynność: dostarczyć eksport Builds/Git integration, hooks i pending deployments |
+| M01 | PASS | JSDOM kolejność/checklist/spot/replay/konflikt oraz rzeczywisty Chromium 390 lost ACK/reload na izolowanym Workerze; B7 |
+| M02 | PASS | Profil i konto oddzielone; wyłączenie/purge/odmowa/reaktywacja bez powrotu sesji: unit i realna kopia B7 |
+| M03 | PASS | Siedem ocenionych pakietów poprawionych; npm audit 0; Validate/bundle na kolejnych SHA PASS |
+| M04 | BLOCKED | Prywatne SQL+bookmark, source/point SQL R2 roundtrip, manifest mediów/restore do pierwszej kopii i PNG upload PASS. Pełny import drugiego D1 daje D1_RESET_DO również po pojedynczym odtworzeniu pustego celu: [38412632242](https://github.com/serox94/dream-team/actions/runs/38412632242), 115348660209. Jedna czynność: zgłosić do Cloudflare Support ten błąd/run i poprosić o naprawę importu |
+
+Prywatny zapis pozostaje w `dream-team-audit-38410329365-archive` (source.sql, checkpoint.sql, manifest.json, objects/*); nie został opublikowany w artefaktach. Celowane kopie D1/Workery usunięto; źródła produkcji/preview i wszystkie istniejące dane biznesowe są zachowane. Kolejne CI zachowuje BLOCKED zamiast ponawiania importu/migracji/resetów. Końcowy pełny run na tym commicie ponownie sprawdza niezmienione dane preview, konta, PWA/media i odczytową regresję PL/EN 390/1280; BLOCKED jobu restore utrzymuje ogólny FAIL. Publiczne artefakty zawierają wyłącznie statusy, żadnego SQL/config/secrets.
+
+READY TO MERGE TO MAIN: NO — kontrola zewnętrznego automatycznego deploymentu H04 pozostaje BLOCKED (aktualny odbiór restore poniżej).
+READY TO DEPLOY PRODUCTION: NO — H04 pozostaje BLOCKED i nie ma osobnej zgody; main/produkcji nie scalano ani nie wdrażano.
+
+D2c3d92 / [38413402071](https://github.com/serox94/dream-team/actions/runs/38413402071): 122 unit PASS; przygotowanie preview próbowało utworzyć istniejący bucket i otrzymało 409/code10004. Poprawiono wyłącznie QA: bezpośredni GET konkretnego istniejącego bucketu zamiast inferencji z listy i ponownego POST. Nie resetuje ani nie zmienia zawartości R2; prywatne checkpointy zachowane. H04/M04 nadal BLOCKED, bez ponawiania odmówionych operacji.
+
+## Zakończenie kontynuacji od 0958512 — tylko prywatne odtworzenie
+
+| Zakres | Wynik | Dowód |
+|---|---|---|
+| M04 D1 | PASS | 38435939611 / 115429778795: zachowany checkpoint 26 tabel / 269 rekordów; prywatny re-export i R2 SQL roundtrip; drugie odtworzenie 270 rekordów (dodatkowa sesja techniczna), 2 triggery, wszystkie wiersze, indeksy, FK, quick_check i liczniki |
+| M04 R2 | PASS | 38436517138 / 115431800489: 1 obiekt, 236364 B; SHA-256, metadane HTTP/custom oraz kompletny inwentarz zgodne; źródłowy archive wyłącznie odczytany |
+| M04 binding / H03 | PASS | [38437797828](https://github.com/serox94/dream-team/actions/runs/38437797828), job 115436244296, kod b4c4830309b83a20de35e24a5a7d89a004bd2e1e: nowe D1 podłączone do odtworzonego R2, API 401 dla cookie usuniętej sesji, nowy login/bootstrap Patryk i pobranie istniejącego obrazu ze zgodnym SHA |
+| H04 | PASS (merge-only) | Cloudflare Builds DISABLED i Deploy Hooks brak — ręczne dowody. GitHub workflow Deploy private DreamTeam DISABLED — nowy screenshot i bieżący publiczny UI. Zero main Actions queued/in_progress/waiting/requested/pending. Pełna aktualna kolejka Cloudflare NOT TESTED; wymaga kontroli przed produkcyjnym wydaniem, nie blokuje scalenia przy wyłączonych obu ścieżkach automatycznego deploymentu. Szczegóły: docs/verification/h04-evidence-2026-10-13.json |
+
+Przyczyna D1: zachowany dump przy włączonych FK odwoływał się do nieutworzonej jeszcze tabeli (`REFERENCED_TABLE_NOT_CREATED`). `D1_RESET_DO` był nieprecyzyjnym błędem ścieżki importu; sam ponowny pusty cel go nie rozwiązywał. Naprawa: komplet tabel przed danymi, kolejność zależności rodzic/dziecko, osobne pełne instrukcje REST, indeksy i triggery po danych, dokładne odtworzenie AUTOINCREMENT i pełne porównanie przed purge. Nie wyłącza FK D1, nie powtarza częściowego importu i odmawia zapisu do zajętego/chronionego celu. Lokalny integrity_check, na D1 obsługiwany quick_check. Referencje: https://developers.cloudflare.com/d1/sql-api/foreign-keys/ oraz https://developers.cloudflare.com/d1/sql-api/sql-statements/.
+
+Pierwsza odpowiedź R2 była nie-JSON, bez zapisanego kodu HTTP; dokładnego kodu tej odpowiedzi nie da się odtworzyć z logu. Odseparowana próba na tym samym prywatnym manifeście przeszła. Transport teraz zapisuje bezpieczny status i ponawia maksymalnie 3 razy wyłącznie przejściowe, nie-JSON 404/502/503/504 na izolowanym celu. Auth i błędów danych nie ponawia. Bramkę aplikacji uszczelniono: maintenance, komplet sekretów jedną operacją bulk, dopiero potem publikacja kodu; gotowość wymaga aktualnego release oraz rzeczywistego 401 API, nie samego ekranu loginu.
+
+H03 dowód złożony: 38435939611 pokazał, że unieważnione cookie rzeczywiście odżywa w prywatnej kopii historycznej przed purge; wszystkie sesje fizycznie usunięto. 38437797828 potwierdził obecność sesji ze snapshotu, wyczyszczenie tabeli przed publikacją i HTTP 401 kontrolnego poprawnego cookie po purge. Pepper i hasło niezmienione; brak resetu kont, migracji czy nowych fixture biznesowych.
+
+Nowe testy: 5/5 D1/R2 (e69cb6b) oraz 3/3 transport (b4c4830). Zaliczone przed kontynuacją testy aplikacji, UI, pogody, offline i researchu nie zostały ponowione: odpowiednie kroki CI mają SKIPPED. Skip jest ograniczony do feat/final-batch, jawnego markera i dokładnej listy plików restore; inne zmiany nadal przechodzą zwykłe testy. Ostatni workflow i audit-fixes są SUCCESS; pozostałe joby preview świadomie SKIPPED, nie nowe PASS.
+
+Commity kodu/diagnostyki: d47d2aa, e69cb6b, 0dffe58, 3ad7bbd, b4c4830. Punkt początkowy 0958512. Prywatne zasoby dowodowe: stary archive dream-team-audit-38410329365-archive pozostaje niezmieniony; SQL re-export dream-team-audit-38435939611-archive; odtworzone media dream-team-audit-38436517138-media. Publiczne artefakty zawierają wyłącznie statusy/liczniki/hashe. Tymczasowe D1 i Workery usunięto. Zero żądań do produkcyjnych zasobów, zapisów do istniejących danych i wywołań Tavily/Workers AI. Main nadal 2d0da14d4637739dcefc61bab596be59778cd26f.
+
+READY TO MERGE TO MAIN: YES — automatyczne Builds/hooki Cloudflare i produkcyjny workflow GitHub wyłączone; kandydat ma workflow wyłącznie ręczny. Scalenie wymaga osobnej zgody.
+READY TO DEPLOY PRODUCTION: NO — brak osobnej zgody i świeżego produkcyjnego manifestu/przygotowania; pełna aktualna kolejka Cloudflare niezweryfikowana.
+
+## Historyczna weryfikacja H04 przed ręcznym wyłączeniem GitHub workflow
+
+Odczytano wizualnie trzy zrzuty. Starszy (17:55 UTC) pokazuje Disable builds OFF; najnowszy (17:58 UTC) pokazuje ON i brak Deploy Hooks. Widok deployments (17:57 UTC) pokazuje aktywną wersję c3a0bc69 sprzed 7 dni, 100% ruchu; ostatnie widoczne wpisy mają Ready/Skipped, bez widocznych Pending/Running. Jest to dowód ręczny, nie nowy eksport API ani pełna historia ukrytej kolejki. Dawna odmowa API 403 pozostaje faktem historycznym.
+
+Twierdzenie o wyłącznie ręcznym triggerze produkcji nie zgadza się z obecnym main 2d0da14d4637739dcefc61bab596be59778cd26f: .github/workflows/deploy-private.yml zawiera push na main (z filtrami ścieżek) oraz workflow_dispatch. Na kandydacie 10e109ff83ce1d5f4903738c9860a3d1fca8558c ten plik ma wyłącznie workflow_dispatch. Stanu enabled/disabled workflow nie ustalono: endpoint metadanych nie jest dostępny przez obecny connector. Nie przedstawiamy samej obecności YAML jako dowodu wykonania deploymentu.
+
+H04 całościowo FAIL (Cloudflare PASS / produkcyjny trigger GitHub FAIL); stan kandydata i obecnego main odróżniono. Jedna potrzebna czynność: wyłączyć obecny produkcyjny workflow deploy-private.yml w GitHub Actions przed zatwierdzeniem scalenia kandydata z ręcznym workflow. Nie zmieniano workflow, Cloudflare, main, D1/R2 ani aktywnego deploymentu; nie uruchamiano testów ani Actions. Ten commit zmienia wyłącznie dokumentację i dowód H04.
+
+## Zamknięcie audytu — scalenie bez deploymentu
+
+Punkt wejścia: 90da21c7c4eb1269771b0ab9c5e1cc36e19e6cdc (zgodny z oczekiwanym); main pozostaje 2d0da14d4637739dcefc61bab596be59778cd26f. Nowy screenshot image(20261013-183021).png potwierdza Workflow disabled successfully, This workflow was disabled manually i etykietę Disabled dla deploy-private.yml. Bieżący publiczny widok GitHub potwierdza ręczne wyłączenie; niczego nie włączano ani wyłączano w tej sesji.
+
+H04 zamknięte jako PASS dla scalenia bez wydania: Cloudflare Builds DISABLED, brak Deploy Hooks oraz produkcyjny workflow GitHub DISABLED. Sam push w historycznym YAML main nie uruchomi ręcznie wyłączonego workflow. Kandydat deploy-private.yml ma wyłącznie workflow_dispatch; deploy-backup.yml również wyłącznie workflow_dispatch. Brak zmian backup/**. PR #8 jest mergeable=true / clean, pozostaje draft; nie zmieniono jego statusu.
+
+Kolejka GitHub: pięć niezależnych zapytań dla main (queued, in_progress, waiting, requested, pending) zwróciło po 0. Ostatni produkcyjny run 37433780454 zakończony 6 października; nie jest oczekującym wdrożeniem. Cloudflare: wcześniejszy przekazany zrzut pokazuje Ready/Skipped, bez widocznego Pending/Running; pełnej aktualnej kolejki nie odczytano z powodu braku uprawnień administracyjnych. Oznaczenie NOT TESTED zachowano jawnie; nie przedstawiamy tego jako pełnej aktualnej kontroli Cloudflare. Przed przyszłym wydaniem wymagana jest świeża kontrola kolejki, aktywnej wersji i prywatny manifest. Nie ponawiano odmówionych wywołań API.
+
+H01–H03 i M01–M04 pozostają PASS na wcześniej zapisanych dowodach. Porównanie b4c4830...90da21c wykazało tylko trzy pliki dokumentacji; src/public/migrations także bez zmian od b7f06ec, gdzie odbierano H01/H02/M01/M02. Run 38437797828 nadal completed/success na b4c4830. Nie uruchomiono testów, Actions, migracji, nowych zapisów biznesowych, researchu ani płatnych integracji. Ten checkpoint zmienia wyłącznie raport i dowód H04.
+
+READY TO MERGE TO MAIN: YES — wyłącznie po osobnej zgodzie; PR draft trzeba wówczas oznaczyć Ready for review. Produkcyjny workflow i Cloudflare Builds mają pozostać wyłączone.
+READY TO DEPLOY PRODUCTION: NO — oddzielna zgoda, świeża kontrola pełnej kolejki Cloudflare i prywatna dokumentacja/przygotowanie produkcji nadal wymagane. Nie scalano ani nie wdrażano.

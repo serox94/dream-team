@@ -1,0 +1,420 @@
+# Modernizacja DreamTeam — stan i kontynuacja
+
+## Aktualny checkpoint (13.10.2026; czytać przed historią poniżej)
+
+- Etapy 0–7: zakończone na preview. Etapów 0–6 nie realizowano ponownie; końcowy run sprawdza ich regresję.
+- Przetestowany i wdrożony kod aplikacji: c4af4ed9d6ba82e03e05876073c507475977e1dd. Preview run 38355798390, attempt 2: wszystkie 10 jobów PASS. Validate 38355802034/38355797989 i Responsive 38355802140/38355797876 PASS. 108/108 lokalnie i CI, Worker dry-run PASS.
+- Pełny live zapis offline/race/36 write guards: job 115156125160 / run 38354942633 na eef0cf86a22b254dd5dbc8e11424d2941e06becf. Nowszy kod zmienia atomowość logowania, bez zmiany przetestowanych modułów offline; jego PWA/429/403 sprawdzono ponownie odczytowo. Nie powtarzano zaliczonych zapisów ani resetu hasła.
+- Końcowy checkpoint zmienia wyłącznie ten raport oraz trigger produkcyjnego workflow (manual-only), z [skip ci], aby nie ponawiać ukończonego QA. Pliki aplikacji są identyczne z przetestowanym c4af4ed; APP_BUILD preview nadal wskazuje ten kod. Kontrola YAML manual-only i diff źródeł PASS; nie wykonano produkcyjnego workflow.
+- READY TO MERGE TO MAIN: YES — dla zweryfikowanego kodu i zabezpieczenia ręcznego wydania. Produkcyjny rollout: NOT TESTED, wymaga osobnej zgody, prywatnej kopii/kontroli danych oraz jawnego włączenia INDIVIDUAL_ACCOUNTS. Main pozostaje 2d0da14d4637739dcefc61bab596be59778cd26f; merge/deployment produkcyjny nie były wykonywane.
+
+## Punkt wyjścia i przywracanie
+
+- Gałąź: `feat/final-batch`.
+- HEAD przed modernizacją: `20b7685260daa187c84b10ef445125027ceab11a` (punkt przywracania kodu; nie oznacza PASS całej aplikacji).
+- Produkcja/main: `2d0da14d4637739dcefc61bab596be59778cd26f`. Nie scalać i nie wdrażać.
+- Preview: `dream-team-preview`, osobna `dream-team-preview-db` i `dream-team-preview-media`; konfiguracja sprawdza różną tożsamość D1 względem produkcji.
+- Schema kodu/preview: 27. Odczyt produkcji przez istniejący workflow: schema 20. Nie zakładać zgodności schematów.
+- Przed etapem 2: wykonać prywatny snapshot/eksport preview D1 oraz odczyt liczb i identyfikatorów anglers/catches/trips/participants. Nie zapisywać danych sesji ani hashy w publicznych artefaktach. Snapshot D1 nie został wykonany w etapie 0; żadna migracja nie jest jeszcze wdrożona.
+- Etap 1 zmienia tylko UI. Przywrócenie kodu bazowego nie wymaga cofania D1/R2. Nie usuwać zasobów produkcyjnych ani historycznych danych.
+
+## Etap 0 — dowody
+
+Źródła: bieżący kod, 75/75 testów lokalnych, run GitHub Actions `38208727708` dla dokładnego HEAD 20b7685, oraz bezpośredni odczyt ekranu Wyjazdów preview w przeglądarce (12.10.2026).
+
+| Funkcja | Istnieje | Działa na preview | Wymaga poprawki | Niezaimplementowane |
+|---|---|---|---|---|
+| Wyjazdy, archiwum, CRUD, dane wieloletnie | tak | widok odczytany w UI; zapis kreatora: NOT TESTED w audycie | podział aktualne/nadchodzące/zakończone, pełne daty, przeniesienie administracji | nie |
+| Checklisty/połowy/spoty/notatki offline | tak | PASS w job qa-offline ostatniego HEAD; pięć zapisów i konflikt | ponowna regresja po każdej zmianie kont | nie |
+| Media Deeper, prywatne R2, 17 obrazów atlasu | tak | PASS w qa-media i staging R2 smoke | nie usuwać obrazów; dalsza kontrola treści | nie |
+| Profile uczestników, PB, szablony | tak | PASS qa-extras ostatniego HEAD | utworzenie uczestnika przenieść z Wyjazdów do Ustawień | konta powiązane z profilem |
+| Login/sesja wspólna, logout | tak | staging smoke PASS; profilowe konta: NOT TESTED | 730-dniowa sesja bez przypisania wędkarza; nowa migracja kont i zmiany hasła | indywidualne loginy i limit trzech kont |
+| PL/EN, PWA/cache | tak | pełny zakres NOT TESTED: qa-language timeout przed zakończeniem, regresja pominięta | nadmiar przełączników, pełny audyt etapu 3 | nie |
+| Kreator: nazwa/kraj/bezpośredni URL | tak, zmiana 725e55d | NOT TESTED: brak dowodu zakończonego E2E na tym HEAD | wymusić test braku requestu lake-candidates przy podanym URL | nie |
+| Tavily | tak | binding dostępny; test jednorazowy wcześniej zarezerwowany: brak pełnego dowodu ekstrakcji | zweryfikować provenance, 38 pól, requesty i kredyty; nie zgadywać łowiska | nie |
+| Workers AI | binding tak | BLOCKED; wyłączone, zero wywołań | niepotwierdzony darmowy limit; brak zgody na paid | nie |
+| Pogoda PRO i miernik | tak | NOT TESTED naukowo i live w tym audycie | arbitralne wagi; brakujące odczyty zamieniane na zero; zbadać jednostki/czas/GPS | rzetelny opis niepewności |
+| Encyklopedia/Deeper/quizy | tak | NOT TESTED co do poprawności źródeł w tym audycie | weryfikacja i rozszerzenie w etapach 5/6 | nie |
+| Autoryzacja wszystkich API | wspólna bramka przed routingiem | smoke i testy automatyczne PASS | audyt kont po etapie 2; nie mieszać cache dwóch tożsamości | indywidualna tożsamość sesji |
+
+Nie sumować powyższych wyników do ogólnego PASS. Test fixture ani sam binding nie zastępuje działającego UI lub rzeczywistego researchu.
+
+## Ryzyka migracyjne (etap 2)
+
+1. Zachować istniejące ID anglers i powiązania PB/połowów/trip_participants; nie tworzyć nowych profili Patryka/Maćka zamiast obecnych.
+2. Wprowadzić konta jako powiązanie z anglers. Limit 3 aktywnych kont egzekwować atomowo po stronie D1, także przy równoległych żądaniach.
+3. Wspólne hasło: istniejący sekret jako źródło inicjalizacji; późniejsze zmiany wyłącznie jako solony hash/KDF w prywatnej D1. Bez jawnych haseł w kodzie, logach, eksporcie i web storage.
+4. Sesje muszą otrzymać ID konta; zaplanować obsługę/relogowanie istniejących sesji. Zmiana hasła powinna unieważnić stare sesje.
+5. Utrzymać wspólne dane drużyny, jawnie wybrać zalogowanego autora nowego połowu, zachować ręczną zmianę autora i oryginalne historyczne połowy.
+6. Kolejkę offline zachować przy aktualizacji aplikacji; przy przełączeniu kont nie wysyłać cudzych oczekujących zmian jako nowej tożsamości.
+7. Przed migracją snapshot preview; po migracji porównanie liczby/ID istniejących danych; dopiero potem E2E kont na 390/1280.
+
+## Kolejność i stan
+
+- Etap 0: odczyt kodu i dowodów zakończony; pełne testy naukowe/providera pozostają oznaczone NOT TESTED/BLOCKED, bez deklaracji.
+- Etap 1: kod gotowy, 76/76 testów lokalnych PASS; live preview po wdrożeniu: NOT TESTED. Język tylko login/Ustawienia, administracja w Ustawieniach, karty aktualne/nadchodzące/zakończone/archiwum. Dodano test live 390/1280: tworzenie, edycja i archiwizacja osobnego wyjazdu QA oraz sprzątanie tylko jego ID/nazwy w izolowanej D1. Wyniku CI nie wolno zakładać.
+- Etapy 2–7: NOT TESTED / DO WYKONANIA. Nie rozpoczynać migracji kont przed przejściem bramki etapu 1.
+- READY TO MERGE TO MAIN: NO — zakres etapów 1–7 nie został zakończony i pełna regresja bazowa nie jest potwierdzona.
+
+## Pliki etapu 1
+
+`public/trip-manager.js`, `public/pages/ustawienia.html`, `public/settings.js`, `public/i18n.js`, `public/dream-loader-v2.js`, `public/sw.js`, `tests/frontend.test.mjs`, `scripts/live-preview-language.mjs`, `scripts/live-preview-offline.mjs`, `scripts/live-preview-extras.mjs`, `scripts/live-preview-navigation.mjs`, `.github/workflows/preview-final-batch.yml`.
+
+Ustawienia są inicjalizowane przed oznaczeniem aplikacji jako gotowej: eksport i logout nie mogą być klikane przed przypięciem obsługi. Etap 1 nie zmienia schematu D1, sesji ani danych użytkowników.
+
+### Dalsza weryfikacja etapu 1
+
+Run `38213090052` potwierdził CRUD wyjazdu i administrację na 390 px, media, offline, profile i system. Wykrył: nieprzetłumaczony prefiks przywracania i wyścig ponownej edycji podczas odświeżenia po zapisie na desktopie. Poprawki: jawna etykieta PL/EN, blokada interakcji `inert` na czas zapisu/odświeżenia i test opóźnionego odświeżenia oraz podwójnego submitu. Wynik ponownego live dla tych poprawek: NOT TESTED do zakończenia CI.
+
+Bramka preview wymaga zgodności `APP_BUILD` i generacji `sw.js`; samo nowe API mogło wcześniej współistnieć ze starym assetem podczas propagacji wydania.
+
+### Wznowienie po przerwaniu — 12 października
+
+HEAD zweryfikowany bezpośrednio przez GitHub: `6707961ed655b7c99e7d8e107ca863903bd698d5`. Validate PASS. Preview run `38213892935`: language, extras (nawigacja 390/1280) i offline PASS; media FAIL podczas `page.reload` czekającego na `load`, regresja SKIPPED. Responsive run `38213895382` FAIL: stary selektor na Dashboardzie.
+
+Naprawy testów: przejście do Ustawień i dokładnie jeden selektor; reload mediów czeka na commit nawigacji, gotowość aplikacji i kartę z zapisanym obrazem. Nie zmieniono bramek danych ani lokalizacji przełącznika. Test nawigacji rozszerzony o rzeczywiste tworzenie uczestnika/edycję PB oraz tworzenie/edycję łowiska na obu szerokościach; sprzątanie wyłącznie dokładnych ID/nazw nowych obiektów QA na izolowanym preview. Lokalne 76/76 PASS. Wynik nowych testów live: NOT TESTED do zakończenia nowego CI. Etap 1 pozostaje otwarty; migracji kont jeszcze nie wykonano.
+
+### Etap 2 — projekt wdrożenia (bez migracji danych)
+
+- Oddzielna tabela `auth_accounts`: ID konta, unikalny login bez rozróżniania wielkości liter, unikalne `angler_id` wskazujące obecny profil, aktywność. Limit trzech aktywnych kont egzekwowany przez trigger D1 przy INSERT/UPDATE, nie tylko przez UI. Nieaktywne/historyczne profile i połowy pozostają zachowane.
+- Oddzielna prywatna tabela wspólnego poświadczenia: solony PBKDF2-SHA256 i wersja hasła. Żadnych hashy ani sekretów w `app_settings`, bootstrap lub eksporcie JSON. Pierwsza inicjalizacja ze skonfigurowanego sekretu Workers; brak hasła w migracji SQL/repozytorium.
+- Sesja wskazuje konto i wersję poświadczenia. Login Patryk/Maciek wiąże się z obecnym `angler_id`, nigdy z nowym profilem. Trzeci uczestnik otrzymuje konto przez autoryzowaną funkcję Ustawień. Istniejący login techniczny może być wyłącznie jawnie skonfigurowanym aliasem jednego konta na preview dla CI, bez czwartego konta.
+- Nowy połów wybiera wędkarza z tożsamości sesji; ręczny wybór innego autora pozostaje. Dane historyczne nie zmieniają autora ani PB.
+- Wylogowanie: najpierw obsługa oczekującej kolejki, dopiero potem unieważnienie sesji. Obecny kod robi odwrotnie i usuwa kolejkę po potwierdzeniu. Kolejka musi zachować oryginalny payload i tożsamość właściciela; po zmianie konta nie wysyłać jej jako innego użytkownika. Zmiana hasła unieważnia stare sesje, ale nie usuwa oczekujących zapisów.
+- Przed aktywacją: prywatny punkt przywracania preview i zestawienie istniejących ID/liczebności/PB; po migracji porównanie. Testy: dwa loginy, trzecie konto, odmowa czwartego/równoległych żądań, błędne hasło/rate-limit, zmiana wspólnego hasła, brak hashy w odpowiedziach, domyślny i ręczny autor, offline i ponowne logowanie na 390/1280. Produkcja bez zmian.
+
+Stan etapu 2: PROJEKT, implementacja i migracja NOT TESTED. Nie przedstawiać tego projektu jako działającego logowania.
+
+### Dowody nowego CI
+
+Kod testów: `ff16701decfe387ee7676817ab4e18439d2b5e4d`; automatyczne bramki gałęzi: `e9cc8bce3a5086bf26ac4328b332216f2fd164d0` (`.github/workflows/responsive-qa.yml`, `.github/workflows/validate.yml`). Validate run `38215471208` PASS; Responsive run `38215471185` PASS (15 ekranów × 5 szerokości w PL/EN, przełączenie w Ustawieniach i niezależne urządzenia).
+
+Preview run `38215466844`: language/media/extras/offline PASS. Log extras: rzeczywiste CRUD uczestnika/PB/łowiska/wyjazdu na 390 px o 07:04:33Z i 1280 px o 07:05:05Z; cleanup wyłącznie własnych obiektów zakończony. Media potwierdziły plik/schowek/reopen/edit/spot/full image/delete oraz D1/R2 i ochronę sesji; AI wyłączone. Regresja job `114700164869` FAIL w czwartym wariancie logowania (1280 EN): dwa GET /login timeout przed commit nawigacji, brak odpowiedzi HTTP; poprzednie trzy warianty po sześć widoków przeszły. Ponowiono wyłącznie ten job, bez zmiany testu i bez powtarzania CRUD. Wynik ponowienia: NOT TESTED do zakończenia.
+
+Ręczny odczyt preview również potwierdził wyjazdy bez administracji i dokładnie jeden selektor w Ustawieniach, zero w nagłówku. Zauważony stary obiekt `QA navigation 1280 1791786983262` z poprzedniego wykonania pozostał na preview; nie usunięto go bez odrębnego potwierdzenia ID/powiązań. Nie należy mieszać go z obiektami nowego testu, które zostały posprzątane.
+
+### Zamknięcie bramki etapu 1
+
+Ponowienie regresji job `114701094610` w run `38215466844`: PASS — wszystkie 24 kombinacje (6 widoków × PL/EN × 390/1280), bez widocznych błędów aplikacji. Kod nie został zmieniony między próbami. Pierwszy timeout sieciowy pozostaje udokumentowany; jedno ponowienie przeszło.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+| --- | --- | --- | --- | --- | --- |
+| Język w Ustawieniach | UI przeniesione, stary test Dashboard FAIL | Jeden przełącznik, poprawny test lokalizacji/persistencji | Responsive `38215471185` + live language/extras | PASS | Preferencje osobnych kont do etapu 2/3 |
+| Media Deeper | Reload czekał na load, FAIL | Commit + gotowość UI + karta zapisanego pliku | Live media, D1/R2/schowek/401/17 obrazów | PASS | AI wyłączone zgodnie z bramką kosztową |
+| Wyjazdy/archiwum | Rozdzielenie w kodzie, niedomknięta bramka | Tworzenie/edycja/archiwizacja i szczegóły łowiska na obu szerokościach | Live extras 390/1280 | PASS | Stary obiekt QA wymaga odrębnego sprawdzenia i sprzątania |
+| Uczestnicy/PB/katalog łowisk | Formularze przeniesione | Rzeczywiste dodawanie i edycja w Ustawieniach | Live extras 390/1280 + serwerowa persistencja | PASS | Limit kont/login jeszcze niezaimplementowany |
+| Offline | Istniejąca kolejka i sync | Regresja operacji i konfliktów nadal przechodzi | Live offline + Responsive fixture | PASS | Właściciel kolejki/logout przy zmianie kont do etapu 2 |
+| Responsywność/regresja | Responsive FAIL; final regression SKIPPED | 15 ekranów/5 szerokości PL/EN; final preview 390/1280 PL/EN | Responsive + `114701094610` | PASS | Pierwsza próba live timeout /login; retry PASS |
+| Konta maks. 3 i domyślny autor | Niezaimplementowane | Projekt migracji zapisany, bez aktywacji | Brak E2E kont | NOT TESTED | Cały etap 2 do wdrożenia po prywatnym checkpoint preview |
+| Pełny audyt języka/warunków/content/security | Niezakończony | Brak deklaracji wykonania | Etapy 3–7 | NOT TESTED | Pozostaje zgodnie z kolejnością |
+
+Etap 1: PASS dla przetestowanego zakresu, zamknięty. Etap 2: rozpoczęty projekt, implementacja/migracja do wykonania. READY TO MERGE TO MAIN: NO — etapy 2–7 pozostają; produkcja i main bez zmian. Ten checkpoint dokumentacji nie zmienia przetestowanego kodu (`e9cc8bce3a5086bf26ac4328b332216f2fd164d0`).
+
+## Etap 2 — implementacja w toku
+
+Zaimplementowano: migracja 0028 (konta na oryginalnych ID, atomowy limit 3), prywatne poświadczenie wspólnego hasła PBKDF2-SHA256/100000 + solony sekret Workers, sesje powiązane z kontem i wersją hasła, login Patryk/Maciek (alias istniejącego loginu CI tylko na preview), tworzenie profilu/loginu w jednej transakcji, konto i zmiana wspólnego hasła w Ustawieniach, domyślny autor połowu z możliwością zmiany, kolejka z właścicielem zachowana po wylogowaniu. Starsze zmiany bez właściciela wymagają jawnego przypisania w Ustawieniach; nie zgadywać tożsamości.
+
+Przed migracją pipeline musi wykonać `preview-account-checkpoint.mjs`: Time Travel bookmark i kompletny prywatny snapshot (schemat+dane, również sesje) w prywatnym R2 `private-checkpoints/`; niezależny odczyt i SHA256 pliku. Dane nie trafiają do logów ani artefaktów. Po migracji pełne porównanie liczby i SHA256 każdej istniejącej tabeli biznesowej. Bez PASS tych kroków deployment preview nie jest wykonywany.
+
+Lokalnie: 80/80 testów PASS; Worker dry-run build PASS. Nowe testy sprawdzają trzy loginy, równoległą próbę przekroczenia limitu/rollback profilu, historyczne ID/PB/połowy, zmianę hasła/unieważnienie sesji, brak hashy w eksporcie, właściciela offline i anulowanie logout przed unieważnieniem sesji. Realne preview/migracja/konta: NOT TESTED do zakończenia CI. Nowy job `qa-accounts` uruchamia rzeczywiste UI trzech kont/połowów na 390/1280, zmianę hasła z przywróceniem oryginalnego prywatnego hasha, logout/relogin/offline/replay; sprząta wyłącznie własne rekordy QA. Etap 2 nie jest jeszcze PASS.
+
+### Etap 2 — rzeczywiste wdrożenie i E2E
+
+Implementacja `72d4dfa00e8957127cb2b5f4ea6f96df850128b6`, poprawki `6927d9e` (Fetch checkpoint), `66448ce` (składnia QA + walidacja wszystkich skryptów), `5e5bf6a` (udział w wyjeździe przy edycji autora, kolejność QA i diagnostyka), `5e2456dd4b694298c713a9288f0689d238ecd832` (pełny formularz E2E, autor na starszych wyjazdach i generacja cache).
+
+Prywatny punkt przywracania przed migracją: run `38218928833`, job `114710197144`, 07:39:42Z — pełny schemat i dane D1 w prywatnym R2, odczyt zwrotny SHA256 `39c17d99ec93abde901aac9ffcf61eb76bd0850e9ab17af94a9912528e24cd49`, bookmark Time Travel przechowywany w tej prywatnej kopii. Obiekty mają prefiks `private-checkpoints/accounts-6927d9ea9c48dbccc9e1193ea58594556322288b-`; kolejne punkty nie nadpisują wcześniejszych. Liczby przed migracją: 2 wędkarzy, 4 łowiska, 5 wyjazdów (w tym stary QA), 10 powiązań uczestników, 0 połowów, 52 spoty, 63 pozycje checklisty, 84 dokumenty. Migracja 0028 PASS, pełne porównanie SHA256 wszystkich tabel biznesowych PASS. Dane produkcyjne nie były migrowane.
+
+Realne E2E kont na kodzie `5e2456d`: run `38221484979`, job `114719127670` PASS:
+
+- 08:11:25Z: trzy loginy, limit 3/rollback czwartego profilu, oryginalne ID/PB, automatyczny autor/reset i ręczny autor, 390/1280.
+- 08:11:47Z: anulowanie logout nie unieważnia sesji; logout zachowuje kolejkę; Maciek otrzymuje 403 przy próbie wysłania kolejki Patryka; właściciel po relogowaniu synchronizuje raz, replay nie duplikuje połowu.
+- 08:12:00Z: zmiana hasła przez Ustawienia, unieważnienie starych sesji, login nowym hasłem, brak hashy/sektretów w eksporcie. Przywrócono dokładnie oryginalny prywatny hash z kolejną wersją, więc stare sesje nie wracają. Tymczasowy trzeci profil i własne połowy/wyjazd QA usunięte.
+
+82/82 testów lokalnych PASS. Końcowe powiązane testy preview i regresja w tym run nadal IN PROGRESS — nie zamykać pełnej bramki etapu 2 przed ich wynikiem. Poprzedni powtarzający się timeout nawigacji ma dodaną diagnostykę: gotowość/notice/page errors oraz screenshot błędu. Nie zignorowano tej bramki.
+
+### Zamknięcie Etapu 2
+
+Run `38221484979` zakończony PASS po ponowieniu wyłącznie końcowej regresji (job `114726916334`). Pierwszy runner finalnej regresji anulowany po 12 minutach: dwa odczyty preflight bez własnego timeoutu czekały po ~5 minut na sieć, bez statusu HTTP. To nie był błąd formularza kont. Ponowienie na innym runnerze przeszło pełne 390/1280 PL/EN; nie powtarzano udanych operacji CRUD. Ograniczenia czasu preflight zostaną dołączone do następnego commitu QA.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+| --- | --- | --- | --- | --- | --- |
+| Loginy Patryk/Maciek | Jedna wspólna sesja bez tożsamości | Indywidualne konta na tych samych ID, wspólne hasło | Unit + real E2E `114719127670` na 390/1280 | PASS | Preferencje języka per konto — etap 3 |
+| Trzeci użytkownik | Profil bez loginu i limitu kont | Uczestnik i login atomowo; maks. 3 aktywne konta | D1 trigger, równoległy unit, UI trzeci + odmowa czwartego/rollback | PASS | Konto QA usunięte; rzeczywistego trzeciego dodaje użytkownik w Ustawieniach |
+| Autor połowu | Pierwsza osoba na liście | Zalogowany wędkarz; reset formularza zachowuje domyślnego autora; ręczny wybór pozostaje | Trzy konta × dwa ekrany, manual author; starszy wyjazd unit | PASS | — |
+| Hasło/sesje | Sekret Workers, wspólna sesja | Prywatny solony KDF + pepper; zmiana w Ustawieniach, wersja unieważnia sesje | Realna rotacja/relogin/401 starych sesji/restore, export bez hashy | PASS | Nie zmieniono hasła użytkowników po teście |
+| Dane/PB/historia | Istniejące dane D1 | Wszystkie istniejące wiersze biznesowe bez zmian po migracji | Prywatny checkpoint R2/Time Travel + SHA256 przed/po | PASS | Stary obiekt QA z wcześniejszego etapu nadal zachowany |
+| Offline/logout/zmiana konta | Logout usuwał kolejkę i unieważniał przed pytaniem | Właściciel w kolejce, zachowanie payloadu, odmowa obcego konta; jawne przypisanie legacy | Real UI cancel/logout/Maciek 403/Patryk relogin/sync/replay + unit | PASS | Starsze nieprzypisane zmiany wymagają potwierdzenia w Ustawieniach |
+| Autoryzacja/regresja | Jedno konto | Konta chronią API i zachowują wspólny dostęp drużyny | Unit 82/82; Validate/Responsive PASS; wszystkie joby preview PASS | PASS | Native preflight timeout do ograniczenia w QA |
+
+Etap 2: PASS i wdrożony na izolowanym preview. Przetestowany kod: `5e2456dd4b694298c713a9288f0689d238ecd832`, schema 28, cache 20261012-103. Etapy 3–7 pozostają do wykonania. READY TO MERGE TO MAIN: NO. Produkcja/main bez zmian.
+
+## Etap 3 — implementacja i audyt w toku
+
+Dodano jedną wspólną obsługę preferencji języka (`language-preference.js`) dla interfejsu konta na urządzeniu; anon/login zachowuje osobną preferencję. Patryk i Maciek na jednym telefonie mogą zachować różne PL/EN bez zmiany cudzego języka. Moduły Encyklopedii/Deepera, pogody i porad odczytują tę samą preferencję. Kontrolka pozostaje pojedyncza w Ustawieniach (oraz osobna na ekranie loginu); nie wróciła do nagłówka.
+
+Błędy API otrzymują język żądania. Audyt statycznych komunikatów i etykiet walidacji wykrył m.in. brak tłumaczenia słowa „Waga” oraz nowe błędy kont; uzupełniono je bez tłumaczenia danych użytkownika. PL: „Dashboard” i „Research provider” mają polskie etykiety. Nazwy użytkowników i wartości źródłowe pozostają oznaczone jako dane/treść źródłowa. Preflight CI ma teraz własne 12-sekundowe limity dla login/settings/SW; zgodność SHA i generacji cache nadal obowiązuje.
+
+Lokalnie 85/85 PASS + Worker dry-run PASS. Nowy live E2E `live-preview-user-language.mjs`: PL→EN→PL, reload, Patryk PL/Maciek EN na jednym urządzeniu, 15 widoków dla każdego konta na 390/1280, błędy API PL/EN. Do tego dotychczasowe 15 ekranów × pięć szerokości, interakcje/quizy i source-preservation w istniejących testach. Live nowego kodu: NOT TESTED do zakończenia CI. Nie oznaczać całego etapu 3 jako PASS na podstawie istnienia kodu i testów lokalnych.
+
+### Etap 3 — wyniki pierwszej bramki
+
+Kod `cb443dcf8e3953281622f556d9715714be3ca73c`: Validate PASS. Preview run `38226895003`: deployment/checkpoint/integralność, konta (ponowny pełny real E2E), language i offline PASS. Extras FAIL wyłącznie na oczekiwaniu starej etykiety „Research provider” w PL; Responsive FAIL na starej etykiecie „Research:”. Testy dostosowano do polskich etykiet, bez cofania lokalizacji. Media FAIL po upload/reload: brak data-ready w 30 s, wcześniej brak diagnostyki. Dodano wczesne rozpoznanie data-ready=error, log ścieżek oczekujących/nieudanych requestów, błędów skryptu i screenshot. Nie zadeklarowano naprawy nieznanej przyczyny timeoutu. Nowe preferencje dwóch użytkowników i końcowa regresja SKIPPED przez zależność od tych bramek. Etap 3 nadal otwarty.
+
+Dalszy audyt etapu 3: PL używa „zrzut ekranu”, polskich komunikatów wyszukiwania źródeł i nazw rodzajów źródeł zamiast surowych wartości API (`manual`, `directory`, itd.). Dynamiczne błędy bootstrap/Encyklopedii i liczby zapisanych faktów mają EN. Moduły mediów i pogody wysyłają wybrany język do API. Nazwy źródeł i stare/nowe wartości cytatów są jawnie zachowane jako treść źródłowa. Testy błędów UI sprawdzają rzeczywistą klasę `status-danger` (wcześniejsze `.error` nie odpowiadało klasie notice). Lokalnie 87/87 + dry-run build PASS. Zmiany nie obejmują migracji danych. Wynik nowego kodu na preview pozostaje NOT TESTED do zakończenia CI.
+
+Run `38244262366` / `f9e2b3b`: Validate/Responsive, konta, extras (CRUD na obu szerokościach), media i offline PASS. Media przeszły pełny cykl (11:45:36Z), bez diagnozy poprzedniego timeoutu; brak dowodu trwałej usterki UI. Language: mobilne Ustawienia PL→EN→reload→PL PASS, później FAIL przed odpowiedzią HTTP na /login w nowym profilu przeglądarki (trzy próby tej samej karty). Osobny pełny audyt EN uruchamia teraz świeży proces przeglądarki, zachowując wszystkie asercje logowania; błędy nawigacji zapisują diagnostykę. Tę poprawkę należy ocenić na kolejnym CI, a nie traktować jako już dowiedzioną naprawę. Etap 3 nie jest zamknięty.
+
+`593f7a2` / run `38245188775`: Validate i Responsive PASS; pełny live audyt EN (15 widoków × 5 szerokości), konta, media, offline i extras PASS. Test dwóch użytkowników pozostał uruchomiony ponad 6 minut bez checkpointu wyniku. Analiza wykryła nieograniczone, równoległe pobieranie całego shell przy każdej nawigacji. Naprawa SW: jeden współdzielony refresh oraz marker generacji z 10-minutowym odstępem, timeout pobrań i zachowanie wpisów przy braku sieci. Unit dowodzi deduplikacji przy trzech jednoczesnych żądaniach i odczytu offline po nieudanym odświeżeniu; nie dowodzi, że wyjaśnia wszystkie poprzednie timeouty. 88/88 lokalnie PASS. Do testu dwóch użytkowników dodano checkpoint każdej nawigacji, diagnostykę i ograniczenie zamykania przeglądarki. Nowy commit zastąpi tylko pozostające read-only testy języka/regresji; wszystkie operacje CRUD i rotacja/przywrócenie hasła już zakończyły się PASS.
+
+
+### Etap 3 — wykryta regresja pogody
+
+Run `38247029441` / `5991fb6`: test użytkowników `114806355754` doszedł do Patryk/1280/PL/Pogoda i wykrył 1 rzeczywisty `#app-notice.status-danger`; brak zapisanej treści komunikatu uniemożliwia przypisanie konkretnego HTTP/native timeoutu. Nowa asercja pokazuje pełny komunikat, rejestruje status/error API pogody i nieudane requesty. Przegląd kodu dodatkowo potwierdził brak polskiej obsługi natywnych `TimeoutError/AbortError` w pogodzie. Poprawiono lokalizację tych błędów i wprowadzono maksymalnie dwie ograniczone próby samego odczytu dostawcy (9 s + 6 s; wyłącznie transport/5xx, bez ponawiania 429 i niepełnych danych); klient ma 22 s limitu. 90/90 testów lokalnych PASS, w tym rzeczywisty frontendowy timeout po polsku i kontrola liczby prób. Przyczyny pierwszego błędu nie przedstawiać jako dowiedzionej; wynik live poprawki: NOT TESTED do zakończenia nowego CI.
+
+
+## Zamknięcie Etapu 3 — 12.10.2026
+
+Kod: `6a9fce35226d685755c4ec9892e7c63c75ad4f3a`. Run preview `38249894300`: wszystkie osiem jobów PASS. Validate `38249898998` / Responsive `38249899036` PASS. Lokalnie 90/90 + Worker dry-run PASS. Brak migracji w tym etapie, schema pozostaje 28. Nie wywołano Workers AI.
+
+- `114815977563`, 12:45:08Z / 12:46:41Z: Patryk PL, Maciek EN na tym samym urządzeniu (390/1280), PL→EN→PL, reload i relogin, po 15 widoków na konto, błędy API PL/EN. Zarejestrowane żądania pogody HTTP 200, brak widocznych błędów aplikacji.
+- `114814840952`: 15 widoków × 360/390/412/768/1280, audyt EN bez polskich etykiet, mobilne Więcej→Ustawienia i pojedynczy przełącznik.
+- `114817571697`, 12:50:35Z: finalna regresja 24 kombinacji (6 widoków × PL/EN × 390/1280), PASS, sprawdzana właściwa klasa błędu notice.
+- Konta, offline, media i extras ponownie PASS na tym HEAD. Zrzuty poprzedniego bieżącego kodu (`593f7a2`) rzeczywiście obejrzano: domyślny Maciek/390 i Patryk/1280 oraz Ustawienia obu szerokości; nowe artefakty dostępne w powyższym run.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+|---|---|---|---|---|---|
+| PL/EN w Ustawieniach na telefonie | Jeden selector, stary test/angielskie etykiety PL | Polski Panel główny, wyszukiwanie, media; pojedynczy selector w Ustawieniach | Responsive + live More→Settings | PASS | — |
+| Preferencje dwóch kont | Wspólna preferencja urządzenia | Osobna preferencja konta na urządzeniu, osobny login | Real Patryk/Maciek PL/EN + reload/relogin 390/1280 | PASS | Preferencja interfejsu jest lokalna dla urządzenia, opisano to w UI |
+| API i błędy połączenia | Braki etykiet EN; natywny timeout angielski w PL | Język żądania, komplet etykiet walidacji, lokalizowane błędy pogody/loadera | Unit + live błędy API + prognoza HTTP 200 | PASS | Dostawca może być niedostępny; awaria ma czytelny komunikat, bez fałszywych danych |
+| Wiedza/quizy/dane źródłowe | Część modułów czytała tylko globalną preferencję | Wspólny odczyt języka konta; źródła i własne wartości pozostają oznaczone | Audyt EN 5 szerokości + Responsive interakcje + unit | PASS | Rzetelność merytoryczna nadal do etapów 4–6 |
+| PWA/cache | Wielokrotne pełne warming przy każdej nawigacji | Jedno współdzielone odświeżenie, 10-minutowy odstęp, zachowanie cache po błędzie | Unit deduplication + real offline/owner queue + regresja | PASS | Nie udowodniono, że warming wyjaśniał wszystkie wcześniejsze timeouty |
+
+Pliki etapu 3:
+
+`.github/workflows/preview-final-batch.yml`, `docs/modernization-2026-10-12.md`, `public/app-plus.js`, `public/deeper-media.js`, `public/dream-core.js`, `public/dream-loader-v2.js`, `public/fixes.js`, `public/i18n.js`, `public/index.html`, `public/knowledge.js`, `public/language-preference.js`, `public/locales/pl.json`, `public/locales/runtime.en.json`, `public/login.html`, `public/pages/checklisty.html`, `public/pages/dojazd.html`, `public/pages/encyklopedia.html`, `public/pages/mapa.html`, `public/pages/pogoda.html`, `public/pages/polowy.html`, `public/pages/porady.html`, `public/pages/regulamin.html`, `public/pages/rigi.html`, `public/pages/sonar.html`, `public/pages/teren.html`, `public/pages/ustawienia.html`, `public/pages/wezly.html`, `public/pages/wyjazdy.html`, `public/settings.js`, `public/sw.js`, `public/trip-manager.js`, `public/trip-renderer-v2.js`, `scripts/live-preview-extras.mjs`, `scripts/live-preview-language.mjs`, `scripts/live-preview-media.mjs`, `scripts/live-preview-offline.mjs`, `scripts/live-preview-regression.mjs`, `scripts/live-preview-user-language.mjs`, `scripts/responsive-qa.mjs`, `scripts/wait-preview-build.mjs`, `src/api-language.js`, `src/auth.js`, `src/lake-research.js`, `src/weather.js`, `src/worker.js`, `tests/frontend.test.mjs`, `tests/i18n.test.mjs`, `tests/language-accounts.test.mjs`, `tests/shell-warming.test.mjs`, `tests/weather-failures.test.mjs`
+
+Etap 3 zamknięty. Następny: Etap 4 — jednostki/GPS/czas/odświeżanie, braki pomiarów wody, naukowa korekta miernika warunków. READY TO MERGE TO MAIN: NO — etapy 4–7 jeszcze niezaliczone. Produkcja i main bez zmian.
+
+
+## Etap 4 — kod i weryfikacja w toku
+
+Zastąpiono niezweryfikowany indeks [-6,14] oceną praktycznych warunków na brzegu (kategorie, nie procent szansy brania). Dawne wagi ciśnienia, pory dnia, zachmurzenia i arbitralnych zakresów powietrza pod żerowanie usunięto z aktywnych ścieżek dashboard/Pogoda. Presja i Księżyc nie są predyktorami w tym module; wiatr opisuje ograniczenia obsługi sprzętu. Jawne pozytywne/negatywne czynniki, niepewność wysoka bez pomiaru wody/tlenu i zweryfikowanego modelu, praktyczna sugestia. Progi komfortu/safety są oznaczone jako reguły praktyczne, nie wyniki badań. Burza/skrajne warunki nie są równoważone pozytywnymi czynnikami. Braki nie są zerem.
+
+API: jedna kompletna para GPS z łowiska (lub legacy wyjazdu), bez mieszania współrzędnych; jawne °C/km/h/mm, MSL w hPa; sunrise/sunset; 3 godziny historii; unixtime→IANA uwzględnia DST i zachowuje absolutne godziny przy jesiennym powtórzeniu 02:00. Woda/tlen: brak pomiarów, temperatura powierzchni modelu nie jest zastępstwem. Cache dashboardu rozróżnia wyjazd/GPS, przycisk refresh jest single-flight, aktywny widok odświeża co 10 min. Prognoza powietrza nie wybiera już strategii nęcenia jako pomiar wody; sezon opisano jako przybliżenie. Wartości wygenerowanej prognozy w popupie porad mają PL/EN.
+
+Źródła pierwotne odczytane 12.10.2026: [Open-Meteo API](https://open-meteo.com/en/docs) (jednostki, modele/siatka, MSL, warstwa 0 cm, unixtime/DST, sunrise/sunset), [Bauer & Schlott 2006](https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2109.2005.01426.x) (zimowe niedotlenienie i aktywność — nie uniwersalny model brań), [NWS](https://www.weather.gov/safety/lightning-safety-overview) (burza), [NASA](https://science.nasa.gov/moon/moon-phases/) i [dane SVS 5587](https://svs.gsfc.nasa.gov/vis/a000000/a005500/a005587/mooninfo_2026.json) (przybliżony cykl, trzy próbki oświetlenia). Dla 12 Oct 2026 12:00 UTC NASA=3,74%, przybliżenie aplikacji=2%; dla 3 Jan=99,86% vs 100%; 1 Feb=99,71% vs 99%. To porównanie próbek, nie globalna gwarancja dokładności ani walidacja prognoz brań.
+
+Weryfikacja lokalna przed odłączeniem: trzy nowe testy PASS (braki/zero, kategorie/skrajne scenariusze, DST/GPS/jednostki, renderer/single-flight) i Worker dry-run PASS. Pełna seria 94 testów: 93 PASS, 1 FAIL na timeout uruchomienia strony głównej. Izolowane powtórzenie też zakończyło się niepowodzeniem; potem executor zwrócił `409 Conflict environment_offline: Environment is not connected`. Nie przypisywać timeoutu kodowi lub CPU bez logów, których nie można teraz odczytać. Lokalny kanał wykonania BLOCKED. Zmiany odtworzono przez GitHub na potwierdzonym parent `b2b5204`; bez utraty checkpointów 2/3 i bez dostępu do produkcji. Runner GitHub jest niezależnym miejscem testów; bramka npm test/build musi przejść przed preview deploy. Dodatkowe testy Moon/przeciwdziałania użyciu powietrza jako wody wymagają wyniku CI. Nowy qa-weather rozdziela rzeczywisty dostawca/GPS/jednostki/czas od jawnie symulowanego storm/missing UI.
+
+Pliki kandydata Etapu 4: `public/app-plus.js`, `public/dream-loader-v2.js`, `public/fixes.js`, `public/locales/runtime.en.json`, `public/pages/pogoda.html`, `public/sw.js`, `scripts/live-preview-offline.mjs`, `scripts/qa-weather.mjs`, `src/weather.js`, `tests/api.test.mjs`, `tests/weather-failures.test.mjs`, `.github/workflows/preview-final-batch.yml`, `src/trip-advice.js`, `public/trip-manager.js`, `public/locales/trip-advice.en.json`, `public/weather-conditions.js`, `tests/weather-conditions.test.mjs`, `scripts/live-preview-weather.mjs`.
+
+Stan Etapu 4: IN PROGRESS / NOT TESTED na preview, do wyniku CI. Etapy 5–7 pozostają. READY TO MERGE TO MAIN: NO. Nie wykonano migracji danych w tym etapie, merge/main i produkcja bez zmian.
+
+
+Etap 4, pierwsza bramka CI `38263116288` / `58fefdd`: 94/95 testów PASS, w tym wszystkie 14 bootstrapów (3,69 s), DST/GPS/jednostki/braki/renderer/Moon oraz niezmienność zaleceń względem temperatury powietrza. Lokalny timeout nie odtworzył się na runnerze, lokalne środowisko nadal BLOCKED. Responsive `38263116125` PASS. Jedyny FAIL: stary test porad dla czerwca oczekiwał zimowej dawki „kilka kulek” wyłącznie przez prognozę powietrza 8–12°C. Test teraz oczekuje małej punktowej porcji sezonowego punktu startowego i jawnej etykiety prognozy powietrza; niezależny nowy test porównuje te same zalecenia przy chłodnej/ciepłej prognozie. Błędnej zależności nie przywrócono. Deployment i E2E zostały poprawnie SKIPPED przez bramkę testów; brak deklaracji PASS Etapu 4 przed ponownym CI/live.
+
+
+Etap 4, run `38263584133` / `c9af092`: Validate i Responsive PASS; preview wdrożono (Worker version `b1c75b83-7663-44dd-8e17-bb605f384e03`), checkpoint/integralność PASS. Konta, media, offline i extras PASS. `qa-weather` `114861607548` rzeczywisty Open-Meteo/GPS/jednostki/IANA/sunrise/sunset/brak pomiarów wody/niepewność oraz single refresh PASS na PL/EN × 390/1280; osobno jawnie symulowane brakujące pola/burza PASS. Audyt EN `114861607340` FAIL: jedna nowa etykieta „🧭 Kierunek wiatru (skąd wieje)” została po polsku na pięciu szerokościach; dictionary zawierał wersję bez ikony, a translator wymaga całego węzła. Dodano pełny klucz z ikoną. Testy użytkowników i finalnej regresji SKIPPED przez tę bramkę, nie przedstawiać ich jako PASS. Etap 4 nadal otwarty do ponownego CI.
+
+
+Run `38264631031` / `cedec898`: Validate/Responsive PASS, EN audyt pięciu szerokości PASS (etykieta kierunku poprawiona). Pogoda FAIL na rzeczywistym HTTP 503; pojedyncze ponowienie odczytu potwierdziło PL/390 PASS, następnie redundantny GET testu API przekroczył 25 s. Nie przypisano tego kodowi aplikacji. Test teraz weryfikuje rzeczywistą odpowiedź /api/weather używaną przez widok, bez dodatkowego GET; sanitizuje błędy (bez nagłówków sesji) i wylogowuje własną sesję w finally. Offline: pierwszy FAIL na nawigacji mapa po 5 zapisach/synchronizacji/replay; własne dane posprzątano. Pojedyncze ponowienie job `114867759457` PASS. Dodano diagnostykę ścieżek/ready/login i najwyżej jedno ponowienie nawigacji przy TimeoutError (bez ponawiania zapisów lub data-ready=error). Nadal brak dowodu przyczyny pierwszego timeoutu; nie ukryto go. Konta/rotacja hasła, media i extras PASS, kolejne bramki SKIPPED przez pogodę. Kolejny deployment ponownie rotuje/przywraca prywatne hasło w QA kont, unieważniając wcześniejsze sesje QA. Etap 4 pozostaje otwarty.
+
+
+Checkpoint 12.10, Etap 4: `39e264a` / run `38266236556` — Validate i Responsive PASS; konta, media, offline, nawigacja i EN audit PASS. Pogoda: rzeczywisty dostawca/renderer/single refresh/storm/missing PASS dla PL/390, EN/390 i PL/1280, lecz czwarta kombinacja EN/1280 zatrzymała się na nawigacji (30 s), również po jednym ponowieniu jobu. Brak dowodu przyczyny; testów użytkowników i finalnej regresji nie zaliczono (SKIPPED). Nowa wersja QA uruchamia osobny proces Chromium dla każdej kombinacji; zapisuje fazę i oczekujące ścieżki bez nagłówków sesji. Maksymalnie jedno ponowienie samej nawigacji przy TimeoutError, bez ponawiania zapisów ani data-ready=error. Wszystkie asercje dostawcy, GPS, jednostek, IANA, słońca, braków wody, niepewności, single refresh i symulowanej burzy zachowano. Wynik nowej wersji: NOT TESTED do CI.
+
+Executor lokalny wrócił: aktualny kod Etapu 4 95/95 PASS, dry-run Worker PASS (bez deploymentu lub dostępu do produkcyjnego D1/R2). Pierwotny szkic Etapu 4 zachowano w stash, zsynchronizowano fast-forward na `feat/final-batch`. Kandydat Encyklopedii: 97/97 lokalnie PASS, zachowany osobno w stash do zamknięcia Etapu 4; nie jest wdrożony ani zaliczony. Lokalny Responsive QA BLOCKED — brak binarium Chromium; rzeczywisty Responsive na Actions PASS. Etap 4 nadal otwarty. READY TO MERGE TO MAIN: NO.
+
+
+`9f68802` / run `38279443887`: QA pogody wykryło konkretny błąd zbierania dowodu, EN/390 — `Network.getResponseBody: No resource with given identifier found`. Odczyt Playwright Response po zmianie dokumentu nie ma gwarancji zachowania body. Nowy test kopiuje odpowiedź rzeczywistego window.fetch na stronie Pogody do zmiennej bieżącego dokumentu, bez dodatkowego GET, proxy, fixture lub zmiany danych; oryginalną odpowiedź oddaje aplikacji od razu. Kopia poprzedniej strony nie przechodzi do nowego dokumentu. Wymóg rzeczywistego HTTP 200, identyfikacji dostawcy i wszystkich metadanych pozostaje. Nie jest to jeszcze PASS Etapu 4: kolejna bramka live jest wymagana. Lokalny browser install również BLOCKED (pobierany ZIP Chromium ma 0 MiB/niepoprawną strukturę); CI dostarcza działający Chromium. Zrzuty `39e264a` dla PL/390 i PL/1280 rzeczywiście obejrzano: brak overflow, wynik opisany jako warunki na brzegu, bez procentowej prognozy brań.
+
+
+## Zamknięcie Etapu 4 — 12.10.2026
+
+Przetestowany kod: `31274bf20c68e91511b7e67ed17f0759c4050876`; preview run `38280317473`, wszystkie dziewięć jobów PASS. Validate `38280325323`/`38280317501` i Responsive `38280325626` PASS. Lokalny kod Etapu 4: 95/95 i Worker dry-run PASS. Schema pozostaje 28, bez migracji danych tego etapu; produkcja/main bez zmian.
+
+- Pogoda `114917369861`: 16:56:45Z–16:57:16Z, PL/EN × 390/1280 — rzeczywisty fetch widoku z Open-Meteo, GPS przechowywanego łowiska, °C/km/h/mm/hPa, epoki i strefa IANA, słońce, brak pomiarów wody/tlenu, wysoka niepewność brań i pojedyncze żądanie po podwójnym kliknięciu PASS. Burza/brakujące pola to osobno oznaczone symulacje renderera, PASS.
+- Media: pierwsza próba FAIL po reload z oczekującymi plikami; sam job ponowiono raz, `114919268379` PASS pełny lifecycle D1/R2/clipboard i usunięcie własnego obiektu. Nie udowodniono przyczyny wszystkich timeoutów sieci; pozostaje do kontroli odporności cache w Etapie 7.
+- `114919753098`: 17:05:32Z / 17:08:38Z, dwa konta na jednym urządzeniu, 15 widoków na konto, PL/EN/PL/reload/relogin i błędy API PASS dla 390/1280.
+- `114922086736`: 17:11:21Z, finalna regresja 24 kombinacji (6 widoków × PL/EN × 390/1280) PASS. Konta, EN audit, offline, media i nawigacja również PASS.
+- Naprawiono jeden konkretny błąd QA: opóźniony odczyt body z poprzedniego dokumentu przez CDP; kopia rzeczywistego window.fetch w bieżącym dokumencie zachowuje sprawdzany payload. Nie przedstawiać tego jako dowodu przyczyny innych timeoutów. Zrzuty PL/390 i PL/1280 faktycznie obejrzano; aktualny kod interfejsu pogody pozostawał ten sam, kolejne commity korygowały QA i raport.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+|---|---|---|---|---|---|
+| Ocena warunków | Niezweryfikowane wagi pogody/ciśnienia/godziny | Kategorie komfortu/ograniczeń, plusy/minusy, praktyczna sugestia i niepewność; bez procentu brań | Unit: invariance, braki, skrajności; real UI PL/EN 390/1280 | PASS | Brak zweryfikowanego modelu brań dla łowiska jest jawny |
+| GPS/jednostki/czas | Część parametrów domyślna, brak absolutnych epok | Jedna kompletna para GPS, jawne jednostki, epoch + IANA/DST, sunrise/sunset | Unit jesiennego DST; live API/rendered response | PASS | Dane są prognozą modelową dla siatki |
+| Woda/tlen | Możliwość pomylenia powierzchni modelu z wodą | Osobny brak pomiarów; powierzchnia 0 cm i gleba 0–1 cm opisane właściwie | Real UI i missing/zero renderer | PASS | Aplikacja nie ma czujnika wody/tlenu |
+| Odświeżanie | Ryzyko równoległych kliknięć | Jedno aktywne żądanie; widoczny widok co 10 min, cache dashboardu po wyjeździe/GPS | Unit + live double click | PASS | Dostawca i transport mogą czasowo zawodzić; błędy jawne |
+| Księżyc | Brak wyraźnej granicy znaczenia/dokładności | Przybliżenie astronomiczne, nie predyktor brań | 3 próbki NASA + oznaczenie w UI | PASS | Nie jest pełną efemerydą; porównanie próbek nie jest globalną gwarancją |
+| Nęcenie w poradach | Zimowa dawka z temperatury powietrza | Air forecast jawnie opisany; przybliżony sezon i obserwacja, bez zastępowania pomiaru wody | Unit: różne powietrze, te same rekomendacje | PASS | Punkt startowy praktyczny, nie kalibracja biologiczna |
+
+Pliki Etapu 4: `.github/workflows/preview-final-batch.yml`, `public/app-plus.js`, `public/dream-loader-v2.js`, `public/fixes.js`, `public/locales/runtime.en.json`, `public/pages/pogoda.html`, `public/sw.js`, `scripts/live-preview-offline.mjs`, `scripts/qa-weather.mjs`, `src/weather.js`, `tests/api.test.mjs`, `tests/weather-failures.test.mjs`, `src/trip-advice.js`, `public/trip-manager.js`, `public/locales/trip-advice.en.json`, `public/weather-conditions.js`, `tests/weather-conditions.test.mjs`, `scripts/live-preview-weather.mjs`, `tests/trip-advice.test.mjs`, `docs/modernization-2026-10-12.md`. Główna implementacja `58fefdd`, korekty `c9af092`, `cedec898`; dowód końcowy na `31274bf`. Etap 4 zamknięty. READY TO MERGE TO MAIN: NO — Etapy 5–7 pozostają.
+
+
+## Etap 5 — implementacja Encyklopedii, bramka preview oczekująca
+
+Zachowano wszystkie 14 ID tematów, 20 rodzajów dna, 20 profili, 7 zakresów temperatur i istniejące przewodniki oraz 8-krokową diagnostykę. Dodano 13 krótkich sekcji wewnątrz istniejących tematów (bez duplikowania artykułów): kontekst badań metabolizmu/młodych karpi, opis pomiaru wody, warstwowanie i tlen, oddychanie nocą, naturalny pokarm, rozdzielenie rozpoznania dna/prezentacji/bezpiecznego holu, ograniczenia instrukcji producentów, uczciwe porównanie aromatów, objawy stresu ryb, regulamin konkretnej wody/roku, scenariusz sezonowy, kontekst astronomiczny i bezpieczne schronienie podczas burzy. Poprawiono dawną poradę zbierania wędek w burzy: schronienie ma pierwszeństwo.
+
+Każda sekcja ma widoczną kategorię (badania/technika, praktyka, producent lub zasady lokalne), nowe sekcje mają własne cytowane odnośniki. EN zachowuje metadane sekcji z PL i identyczną liczbę sekcji na temat. Dotychczasowe odnośniki zachowano; data „sprawdzone” jest wyświetlana tylko przy faktycznie odczytanych źródłach. Nie oznacza to niezależnej naukowej walidacji wszystkich dawnych doświadczeń praktycznych lub każdego smaku przynęty.
+
+Kreator taktyki zaczyna od „Woda niezmierzona”, nie przyjmuje temperatury powietrza za wodę. Osobne potwierdzenie zasad i dobrostanu; zakaz/objawy stresu kończą poradę komunikatem przerwania łowienia, bez sugestii nęcenia. Nieznany stan ma jawną wysoką niepewność. Oryginalne 8 kroków „nie bierze” zachowano i przetestowano; skorygowano „przełowienie” na „podejrzenie przekarmienia”.
+
+Odczytane źródła pierwotne: Becker 1992 (abstrakt; DOI `10.1111/j.1439-0426.1992.tb00664.x`), PMID 21440661/29275188 (metadane/fragment indeksu, nie deklaracja przeczytania pełnego artykułu), Bauer & Schlott 2006 (abstrakt), FAO Improving Pond Water Quality oraz Peteri 2009 Cyprinus carpio, Angling Trust Best Practice (również PDF) i Hot Weather 2025, Gardner Roddie Rig (instrukcja producenta), Mainline Essential Cell (materiał producenta), CC Moore winter fishmeal/PVA (fragment oficjalnego indeksu; bez twierdzenia o dostępie do całego tekstu po HTTP 403), NASA Moon Phases i NWS Lightning Safety Overview. Nowe źródła `s49`–`s53` obejmują FAO, Wody Polskie (portal do właściwego zarządcy i regulaminu — nie uniwersalny regulamin), NASA i NWS. Nie skopiowano hodowlanych dawek karmienia jako porady na zasiadkę.
+
+Weryfikacja przed wdrożeniem: 97/97 unit/frontend/data PASS, w tym wykonanie rzeczywistego renderera PL/EN, brak pomiaru, safety stop, ponowny poprawny wybór i wszystkie kroki diagnostyki. JavaScript oraz git diff check PASS. Nowy `qa-knowledge` w Actions ma sprawdzić rzeczywisty preview PL/EN × 390/1280, 14 tematów, źródła/etykiety, niezmierzoną wodę, blokadę porady, pełne 8 kroków, brak polskich etykiet w wyniku EN i screenshoty. Cache `20261012-109`, loader `20261012-encyclopedia-2`; brak migracji D1 i zmian R2/danych użytkowników. Lokalny Chromium jest BLOCKED (brak prawidłowego pobrania binarium); live/Responsive muszą dostarczyć dowody na Actions.
+
+Pliki Etapu 5: `.github/workflows/preview-final-batch.yml`, `public/data/knowledge/encyclopedia.json`, `public/data/knowledge/en/encyclopedia.json`, `public/data/knowledge/sources.json`, `public/data/knowledge/tools.json`, `public/data/knowledge/en/tools.json`, `public/knowledge.js`, `public/dream-loader-v2.js`, `public/sw.js`, `scripts/live-preview-offline.mjs`, `scripts/live-preview-knowledge.mjs`, `tests/knowledge-editorial.test.mjs`, `docs/modernization-2026-10-12.md`. Stan Etapu 5: IN PROGRESS — live NOT TESTED do zakończenia nowego CI. READY TO MERGE TO MAIN: NO.
+
+
+Etap 5, `747c4c2` / run `38283192466`: 97/97 i Validate PASS; oba Responsive runy `38283198145`/`38283192450` PASS. Private checkpoint/integralność, brak nowych migracji, deployment i exact-build PASS. Read-only smoke FAIL `53 !== 48` — stara stała liczby źródeł nie uwzględnia pięciu nowych cytowań. Konta i pozostałe E2E poprawnie SKIPPED przez tę bramkę. Smoke teraz porównuje cały katalog z plikiem bieżącego checkoutu (nie tylko liczbę) i dodatkowo wymaga wszystkich 48 oryginalnych ID oraz unikalności. Nie wycofano nowych źródeł. Test żywego preview nadal oczekuje na nowy CI.
+
+
+Etap 5, `f0c6819` / run `38283714415`: Validate/Responsive, integralność/deploy/smoke, konta, media, offline, pogoda i nawigacja PASS. Knowledge E2E FAIL przy kliknięciu tematu w celowo zwiniętej bibliotece; wymagane rzeczywiste kliknięcie „Wszystkie tematy”, bez force/evaluate(click) i bez rozwijania biblioteki domyślnie w produkcie. EN audit FAIL na jednym węźle katalogu mieszającym angielską kategorię z oryginalnym polskim tytułem Wody Polskie, na 5 szerokościach Encyklopedii/Sonaru. Tytuł jest teraz osobnym elementem cite treści źródłowej, tak samo jak cytowane tytuły wewnątrz artykułów; kategoria i język nadal są interfejsem PL/EN. Test renderera potwierdza źródłową nazwę, semantykę cytowania i dwujęzyczną kategorię. Nie oznaczono całej karty jako danych użytkownika i nie usunięto tytułu ani polskiej nazwy źródła. Cache 110, loader encyclopedia-3. Nowa bramka live jest wymagana; etap nadal IN PROGRESS.
+
+
+## Zamknięcie Etapu 5 — 12.10.2026
+
+Kod `965c408a598d4d6b244dc6d665f4886bbf7db0d6`; run preview `38285045680`, wszystkie 10 jobów PASS po jednym ponowieniu samej końcowej regresji (pierwszy transport do /login nie zwrócił HTTP i pozostał about:blank). Nie powtarzano wtedy CRUD ani rotacji hasła. Validate `38285050648`/`38285045671` i Responsive `38285050521`/`38285045666` PASS. Lokalnie 97/97.
+
+Knowledge `114932579374`, 17:38:31Z–17:39:09Z: PL/EN × 390/1280 — 14 tematów, kategorie i źródła sekcji, water-not-measured, safety stop bez nęcenia, poprawny ponowny wybór, 8 kroków/restart, EN wyniku bez polskich etykiet, brak overflow PASS. Pełny audyt EN na 5 szerokościach PASS; dane źródłowe pozostają jednoznacznie cytowane. User language `114933720937`: 17:43:31Z/17:45:44Z, dwa konta na jednym urządzeniu i 15 widoków na konto PASS. Final regression `114937208799`: 17:52:32Z, 24 kombinacje PASS. Konta, media/R2, offline i nawigacja także PASS. Brak migracji danych Etapu 5, schema 28.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+|---|---|---|---|---|---|
+| 14 tematów Encyklopedii | Tematy i źródła bez kategorii dla każdej sekcji | 13 nowych krótkich sekcji w tych samych ID, kategorie i cytowania | Unit + live PL/EN 390/1280 | PASS | Dawne doświadczenia praktyczne nie są niezależnym badaniem skuteczności |
+| Temperatura/termika/tlen | Ryzyko przyjęcia domyślnego przedziału bez pomiaru | Domyślnie niezmierzona woda, jawna wysoka niepewność; treści o warstwach i nocy | Renderer + real wybór i zmiana | PASS | Brak pomiaru wymaga obserwacji/czujnika |
+| Ryby i regulaminy | Ogólna porada; nieprecyzyjne polecenie przy burzy | Zasady konkretnej wody/roku, przerwanie przy stresie/zakazie, schronienie ma pierwszeństwo | Real safety stop i źródła NWS/Wody Polskie | PASS | Portal RZGW nie zastępuje lokalnego zezwolenia ani zasad innego kraju |
+| Diagnostyka i taktyka | 8 kroków i kreator | Zachowane kroki, restart i linki; poprawne przekarmienie, stan nieznany i safety stop | Real 8-step + renderer obu języków | PASS | Punkty startowe do sprawdzenia, bez gwarancji brania |
+| PL/EN i cytowania | Jeden mieszany węzeł katalogu nowych źródeł | Oryginalny tytuł w cite, kategoria jako interfejs; wszystkie 48 dawnych źródeł zachowane | EN audit × 5 widths, exact live catalog + unit | PASS | Nie oznaczono wszystkich 53 źródeł jako przeczytanych w całości; zakres dostępu opisany wyżej |
+
+Główna implementacja Etapu 5 `747c4c2`, korekta smoke `f0c6819`, kod końcowy `965c408`. Do listy plików etapu należy także `scripts/smoke-auth.mjs`. Etap 5 zamknięty. Następny Etap 6: Deeper; odczytane już oficjalne specyfikacje/ustawienia/twardość/palety/zakłócenia oraz obejrzane wszystkie 17 niezmienionych obrazów. Wykryto błędną jednostkę w opisach echo-10 (24.2 ft) i echo-052356 (23.0 ft) — do korekty w Etapie 6. READY TO MERGE TO MAIN: NO — Etapy 6–7 pozostają. Produkcja/main bez zmian.
+
+## Etap 6 — Deeper / Sonar: implementacja, bramka live oczekująca
+
+Zachowano 17 ID artykułów, wszystkie 17 oryginalnych PNG, przypisania i regiony atlasu oraz 10 dawnych pytań. Wszystkie obrazy faktycznie obejrzano. Skorygowano jednostki echo-10 (24.2 ft = 7,37616 m), echo-052350 (16.1 ft) i echo-052356 (23.0 ft = 7,0104 m), oraz nadinterpretację liczby łuków i położenia echa echo-052504/052509. Atlas jest materiałem referencyjnym dostarczonym przez użytkownika, nie pomiarem bieżącego łowiska ani potwierdzeniem modelu wszystkich obrazów. Nowe metadane przechowują oryginalną jednostkę i jej przeliczenie. Żaden PNG nie został zmieniony.
+
+Odczytano oficjalne źródła: Deeper CHIRP+ 2 Tech Specs, How to Set Up a Smart Sonar, Sonar Settings (636573), Reading the Sonar Display (381287), How to Determine Bottom Hardness (683898), Choosing the Right Color Palette (628554), Sonar Display Basics (009852) i Inaccurate Sonar Readings (754029). Specyfikacja konkretnego CHIRP+ 2 potwierdza Mid 240 kHz; starsza ogólna instrukcja wymienia Mid CHIRP 290 kHz, dlatego nie przeniesiono z niej dokładnego progu 0,6 m do tego modelu. Wyjaśniono ograniczenia minimalnej głębokości, falowania, czułości (wzmocnienie odbioru), palet/grubości linii, ikon ryb, możliwej termokliny i powtarzalności punktu. Rozdzielczość celów nie jest dokładnością GPS ani pewnością identyfikacji gatunku/tlenu/materiału dna.
+
+Dodano 10 krótkich sekcji w istniejących tematach i 4 źródła s54–s57; powtórny URL używa istniejącego s25. Oficjalne, rzeczywiście istniejące dokumenty CHIRP+ 3/4, AI Fish Detection i Quest/Spark również odczytano; zachowano dotychczasowe porównania i oznaczono źródła s30–s33 jako dotyczące innego modelu. Nie przypisano funkcji CHIRP+ 4 do CHIRP+ 2. Nowe sekcje mają własne cytowania i kategorie praktyka/producent; historyczne doświadczenia praktyczne nie są oznaczone jako badania naukowe.
+
+Nowe ćwiczenie oblicza nominalny ślad wiązek 47°/20°/7° z podanej przykładowej głębokości, przelicza ft/m i odrzuca braki oraz zakres poza 0,15–100 m. Jawnie opisuje model płaskiego dna i pionowej sondy, nie przedstawia go jako pomiaru. Dodano 3 pytania (jednostki, separacja vs GPS, grubość/kolor), zachowując stare indeksy i pełne 3 poziomy. Naprawiono rzeczywisty błąd kreatora miejsca: opcja średniej głębokości miała brakujący opis; teraz działa w PL/EN. Woda domyślnie niezmierzona, bez domyślnego przypisania temperatury.
+
+Lokalnie 99/99 unit/frontend/data PASS; test wykonuje rzeczywisty renderer w PL/EN, ćwiczenie, niepoprawne wejścia, średnią głębokość oraz wszystkie pytania/restarty i blokadę powtórnego naliczenia punktu. Live script sprawdzi 4 kombinacje PL/EN × 390/1280, oryginalne obrazy, quizy/źródła, metry/stopy, brak overflow; uruchamia się po teście kont, bez zapisów biznesowych i bez AI. Cache 111, loader sonar-2. Brak migracji D1 i zmian danych/R2. Lokalny browser nadal BLOCKED; live NOT TESTED do zakończenia Actions.
+
+Pliki: `.github/workflows/preview-final-batch.yml`, `public/assets/deeper/chirp2/index.json`, `public/assets/deeper/chirp2/index.en.json`, `public/data/knowledge/sonar.json`, `public/data/knowledge/en/sonar.json`, `public/data/knowledge/en/quiz.json`, `public/data/knowledge/sources.json`, `public/data/knowledge/tools.json`, `public/data/knowledge/en/tools.json`, `public/knowledge.js`, `public/knowledge.css`, `public/dream-loader-v2.js`, `public/sw.js`, `scripts/live-preview-offline.mjs`, `scripts/live-preview-sonar.mjs`, `tests/sonar-training.test.mjs`, ten raport. Etap 6 IN PROGRESS. READY TO MERGE TO MAIN: NO. Produkcja/main bez zmian.
+
+
+Etap 6, d990ac6 / run 38290293470: Validate/Responsive, deploy/integralność, konta, offline, R2/media i pogoda PASS. EN audit FAIL na jednym mieszanym akapicie linków dokumentacji sonaru przy 5 szerokościach; cały akapit ma teraz jawne PL/EN, test renderera sprawdza tę gałąź. Knowledge E2E potwierdził 3 kombinacje Encyklopedii, lecz czwarte otwarcie /login nie osiągnęło data-i18n-ready w 25 s; sonar script nie został wtedy uruchomiony. QA używa teraz osobnego procesu przeglądarki na kombinację, jednego ograniczonego ponowienia odczytowej nawigacji i wylogowania własnej sesji. Nie określono jeszcze przyczyny transportowej; nie uznawać tych zmian za dowód odporności cache. Cache 112, loader sonar-3. Lokalny wykonawca nie odpowiada; nowe zmiany muszą przejść CI i live. Etap pozostaje IN PROGRESS.
+
+
+Etap 6, 476a0ff / run 38291195666: Validate i oba Responsive PASS; konta/offline/media/nawigacja PASS. Knowledge i pogoda zatrzymały się przed odpowiedzią HTTP przy kolejnym /login (również po ograniczonym ponowieniu); nie zaobserwowano nieprawidłowej treści Sonaru, ponieważ jego krok był pominięty po błędzie wcześniejszego scenariusza. QA treści/pogody/Sonaru loguje teraz prawdziwym endpointem API do kontekstu Playwright, z kontrolą Secure/HttpOnly cookie, i przechodzi bezpośrednio do sprawdzanego UI. Test interfejsu logowania pozostaje w qa-accounts i qa-language. Sonar uruchamia się przed Encyklopedią, żeby jego dowód nie był stale blokowany tym samym odczytem. To nie jest potwierdzenie przyczyny problemów transportowych. Środowisko lokalne i ręczny browser: BLOCKED, potwierdzone environment_offline 409. Nie oznaczać Etapu 6 jako PASS przed ukończeniem bramki live. Zbadano także wyścig synchronizacji: wymuszone dwa odczyty tej samej rewizji spotu pozwalają dwóm zapisom 200/200 i rewizji 2; Etap 7 musi dodać atomowy warunek przy zapisie.
+
+Kolejny checkpoint QA: przed publikacją wszystkie joby zapisujące dane (konta/media/offline/extras) zakończyły się PASS. Trwający wyłącznie odczytowy EN audit poprzedniego runu może zostać anulowany przez concurrency nowego commitu; jego wynik pozostaje NOT TESTED na 476a0ff, nie jest zaliczony jako PASS. Nowy run ma wykonać pełny audyt.
+
+
+## Zamknięcie Etapu 6 — 12.10.2026
+
+Kod implementacji d990ac6310aeaac3b1c79b9531fd23a8a9ad7443, poprawka języka 476a0fff2806145f2c176615e8ca252802c04b6e, końcowa bramka na aaa524651b6c71244d7a7614efaf6afc4cf4d380. Run preview 38293141776: wszystkie 10 jobów PASS. Validate 38293148697/38293141778, Responsive 38293148567 PASS. 99/99 CI unit/frontend/data; przed utratą wykonawcy także lokalne 99/99 i Worker dry-run PASS.
+
+Knowledge 114959232045: 18:50:57Z–18:51:21Z wszystkie 4 realne kombinacje Sonaru PL/EN × 390/1280, 17 tematów/obrazów, przeliczenie 23 ft, geometria trzech wiązek, błędne dane wejściowe, średnia głębokość/niezmierzona woda, komplet 13 pytań/źródeł i restartów oraz brak overflow PASS. Następnie 18:51:54Z–18:52:26Z wszystkie 4 kombinacje Encyklopedii również PASS. Artefakt live-preview-knowledge 11767588701 zawiera aktualne screenshoty; nowego ćwiczenia nie obejrzano ręcznie z powodu potwierdzonego environment_offline 409, nie przedstawiać automatycznej kontroli jako ręcznego przeglądu. Wszystkie 17 oryginalnych PNG odczytano/obejrzano przed implementacją; nie zmieniono ich bajtów.
+
+User language 114960194544: dwie osoby na jednym urządzeniu i 15 widoków na konto PASS. Final regression 114962270739: 24 kombinacje PASS. EN audit 114959232166: wszystkie 15 widoków na 360/390/412/768/1280 PASS; pojedynczy mieszany akapit poprawiony w produkcie. Konta, media/R2, offline, pogoda i nawigacja PASS. Testy funkcji używają prawdziwej sesji API i rzeczywistego UI; testy formularza logowania nadal obejmują osobne qa-accounts/qa-language. Brak migracji i zmian danych użytkowników Etapu 6.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+|---|---|---|---|---|---|
+| CHIRP+ 2 i ograniczenia | Brak etykiety każdej sekcji; niejasne minima/GPS | 10 nowych sekcji, cytowania i granice interpretacji; porównania innych modeli zachowane i oznaczone | Official docs + renderer + EN audit | PASS | Starsza ogólna instrukcja Mid 290 kHz nie jest specyfikacją Mid 240 kHz tego modelu |
+| Atlas | 17 obrazów; w dwóch opisach ft pomylone z m | Wszystkie obrazy/ID/przypisania zachowane, jednostki i nadinterpretacje poprawione | Rzeczywisty odczyt obrazów + unit + live loaded images | PASS | Referencje nie potwierdzają bieżącego łowiska ani modelu wszystkich ekranów |
+| Wiązki i jednostki | Brak interaktywnego obliczenia | Jawny przykład/geometryczny model, ft/m, zakres i trzy wiązki | Unit + real PL/EN 390/1280 | PASS | Model płaskiego dna i pionowej sondy, bez gwarancji pozycji celu |
+| Quiz | 10 pytań / 3 poziomy | Zachowane stare + 3 nowe, źródła i restart; brak podwójnego naliczenia | Renderer oraz komplet odpowiedzi przez UI | PASS | Odpowiedź edukacyjna nie identyfikuje gatunku z echa |
+| Kreator miejsca | Brak opisu dla średniej głębokości, domyślna temperatura | Działający opis PL/EN, domyślnie woda niezmierzona | Real mid-depth / three spots | PASS | Punkty do sprawdzenia, nie zapewnienie brań |
+| Ręczny przegląd nowych screenshotów | Dostępny wykonawca podczas odczytu starych obrazów | CI dostarczył aktualne 390/1280 | Ręczna przeglądarka / lokalny executor | BLOCKED | Environment offline; automatyczny UI/overflow jest PASS |
+
+Do plików etapu należą także scripts/preview-readonly-auth.mjs, scripts/live-preview-knowledge.mjs i scripts/live-preview-weather.mjs (obsługa autoryzacji QA i bezpieczne zamykanie własnych sesji). Etap 6 zamknięty na podstawie rzeczywistych testów CI. Następny Etap 7: atomowość konfliktów, cache/aktualizacja/offline, prywatne odtworzenie, Tavily bez wymuszonego odkrywania stron, końcowa autoryzacja/regresja. READY TO MERGE TO MAIN: NO — Etap 7 pozostaje. Main 2d0da14d4637739dcefc61bab596be59778cd26f bez zmian; produkcji nie wdrożono.
+
+
+## Etap 7 — implementacja i bramka testowa
+
+Potwierdzony wyścig: po wymuszonym równoczesnym odczycie rewizji 0 dwóch klientów otrzymywało 200/200, a drugi nadpisywał pierwszy (rewizja 2). Zapis spotu/checklisty z kolejki ma teraz warunek rewizji w samym UPDATE; zero zmienionych wierszy zwraca 409 z bieżącą wersją, nie jest przepakowywane na 200. Odtworzenie tej samej operacji nadal zwraca dotychczasowy wynik. Dotychczasowe ID, autorzy, PB i wersje danych pozostają.
+
+Statyczne pliki mają limit obejmujący również body odpowiedzi (4 s przy gotowej kopii, 15 s bez niej). API/logowanie/zapisy nie trafiają do tego cache, 401/403/redirect nie są zastępowane starą treścią. Aktywacja zachowuje poprzednią generację; usuwanie następuje dopiero po pełnym pobraniu nowej. Częściowa aktualizacja nie zastępuje kompletnego offline HTML. Wspólne przygotowanie ma 4 pobrania naraz, znacznik kompletności i odrębny czas próby przy błędzie. Do przygotowania offline dodano brakujące widoki i wszystkie 17 referencyjnych PNG (łącznie 3,7 MB); 87 plików. Cache 113, loader security-1.
+
+Autoryzacja indywidualna sprawdza sesję/aktywne konto/profil/wersję hasła jednym bieżącym JOIN. Nie cache'uje sesji ani wersji hasła; unieważnienie pozostaje natychmiastowe. Sprawdzony schemat jest pamiętany osobno dla obiektu bindingu D1, z ponowieniem po błędzie; nie współdzieli migracji różnych baz. Ogranicza to liczbę odczytów przy każdym chronionym statycznym pliku. Nie przedstawiać tego jako dowodu przyczyny wcześniejszych timeoutów przeglądarki.
+
+Prywatny checkpoint v2 zapisuje również sqlite_sequence i sprawdza spójność wierszy z końcowym digestem. Po R2 round trip odtwarza cały schemat, wiersze, indeksy, widoki, triggery i liczniki AUTOINCREMENT w odizolowanej bazie w pamięci, sprawdzając digest każdego stołu i FK. Nie odtwarza niczego na aktywnym preview ani produkcji. Dane auth nie są wypisywane ani publikowane w artefaktach; błędy odtworzenia są sanitizowane. Starszy punkt v1 Etapu 2 nie zawiera osobnego stanu sekwencji; jego prywatny bookmark Time Travel pozostaje właściwą drogą odtworzenia dokładnego stanu. Po rzeczywistym rollbacku auth należy unieważnić sesje/version i wdrożyć odpowiadający kod — nie przywracać starych cookie jako aktywnych.
+
+Tavily research potwierdzonego URL wykonuje jedno basic extract tego adresu, bez dodatkowego search i bez przyjmowania innych URL z odpowiedzi. Odkrywanie kandydatów pozostaje osobną jawną funkcją. Zachowano atomowe limity 900 łącznie/miesiąc, 8/łowisko i 10 minut przerwy; nie pomniejszano konserwatywnej rezerwacji 2 kredytów. Oficjalne docs Tavily Extract/API Credits odczytano 12.10.2026. Rzeczywisty kontrolowany test ma trwale zarezerwowany marker qa_stage7_direct_url_20261012, nie ponawia POST po nieznanej odpowiedzi. Używa istniejącego Plaine 2 i odczytanego oficjalnego URL Lodgingcarp; pozyskane cytowania/fakty pozostają celowym uzupełnieniem tylko preview, z brakami pól jawnymi i bez zmiany GPS/ID/PB. Nie udaje osiągnięcia pełnego pokrycia 38 pól. Actual provider credits wymagają osobnego odczytu rachunku; app rezerwuje maksymalnie 2. Workers AI false, zero inference.
+
+Krok CI produkcji zmieniono na publiczny GET /login bez danych uwierzytelniających. Poprzedni odziedziczony check wykonywał login i tworzył sesję produkcyjną; nie był wdrożeniem ani zapisem biznesowym, lecz nie należy opisywać go jako absolutnego braku zapisów technicznych. Całe QA funkcjonalne pozostaje na preview. Naprawiono sprzątanie nowego seed checklisty przez ścisłe ID/wyjazd/label; nie usuwano żadnych wcześniejszych testowych rekordów/tombstones ani danych użytkowników.
+
+Nowe testy obejmują rzeczywiste nakładanie odczytów rewizji, cofanie hasła w pojedynczym JOIN, spójność/odtworzenie kopii, liczbę i pochodzenie requestów Tavily, częściową aktualizację cache, zatrzymane nagłówki/body i ochronę API. Live offline ma dodatkowo 36 rodzin zapisu (401 anonymous / 403 cross-origin), dwa współbieżne zapisy oraz zatrzymany request statycznego skryptu w działającym SW. Wszystkie nowe testy są jeszcze NOT TESTED do CI; lokalny executor/ręczna przeglądarka nadal BLOCKED environment_offline. Brak nowej migracji D1. Etap 7 IN PROGRESS; READY TO MERGE TO MAIN: NO.
+
+Pliki: src/worker.js, src/auth.js, src/ensure-schema.js, src/lake-research.js, public/sw.js, public/dream-loader-v2.js, tests/offline-sync.test.mjs, tests/shell-warming.test.mjs, tests/auth-queries.test.mjs, tests/research-provider.test.mjs, scripts/checkpoint-restore.mjs, scripts/preview-account-checkpoint.mjs, tests/checkpoint-restore.test.mjs, scripts/check-production-runtime.mjs, .github/workflows/preview-final-batch.yml, scripts/live-preview-offline.mjs, scripts/live-preview-extras.mjs, scripts/live-preview-direct-research.mjs, ten raport.
+
+
+Etap 7, 370cb70 / run 38296195012: 105/105 unit PASS, oba Validate/Responsive PASS; private recovery checkpoint 114967748128 (19:13:59Z) odtworzył 26 tabel/1312 wierszy w pamięci, digest/FK/sekwencje PASS; R2 round trip SHA 61bd01c296d36fdffbf0d336d3cb50a9e7ef7dab95de6db3480f5aa432e8e856; migracja bez nowych plików, wszystkie dotychczasowe wiersze biznesowe unchanged. Deploy/exact-build/smoke/R2 PASS. Tavily 19:14:28Z: rzeczywisty POST research na preview, jedno extract wskazanego operator URL, HTTP 200, 2 fakty, pierwotne pokrycie 4/38. Marker zapisany trwale: przyszłe CI mają 0 dodatkowych wywołań dostawcy. Konta/Knowledge/EN audit/pogoda/media/nawigacja PASS. Offline FAIL na starej literalnej wersji sonar-3 w teście, choć loader security-1 był właściwy; właściwa bramka porównuje teraz resource URL z wersją odczytaną z checkoutu loadera. Nowe race/deadline live były jeszcze NOT TESTED za tym zatrzymaniem, user language/regression poprawnie SKIPPED.
+
+Audyt rzeczywistego źródła ujawnił dawny błąd: język synonimu Arrival time był przypisywany według pozycji w tablicy i oznaczany FR mimo angielskiego wiersza. Jawne rodziny etykiet zastępują to założenie; wspólne etykiety (np. adresse FR/DE lub email) pozostają unknown. Jeden cytowany wiersz operatora zawiera arrival i departure rozdzielone kreską — parser rozdziela wyłącznie delimitery poprzedzające rozpoznaną etykietę z dwukropkiem, nie zakresy liczb. Pure execution faktycznej funkcji w V8: arrival EN, departure EN, adres ambiguous/null, maximum depth EN PASS; dodatkowy test CI oczekuje. Normalizacja na preview dotyczy wyłącznie faktów o URL/timestamp kontrolowanego requestu, używa zachowanego oryginalnego cytowania i endpointu facts z historią, pomija późniejsze ręczne edycje. Nie wykonuje kolejnego Tavily. Oryginalny dowód dostawcy nadal pokazuje 2 fakty; rozdzielenie wiersza może dodać osobny departure, bez deklaracji nowego wywołania/pełnego pokrycia. Cache 114, loader security-2. Etap 7 pozostaje IN PROGRESS; READY TO MERGE TO MAIN: NO.
+
+
+## Etap 7 — wznowienie 13.10.2026 i naprawa niezawodności QA
+
+Run 38297646567 odczytano bezpośrednio. qa-extras otrzymał HTTP 429 na publicznym GET /login; qa-media i qa-language widziały 429 podczas preflight POST /api/login. W kodzie aplikacji odmowa limitu logowania to 303 /login?error=limit, nie HTTP 429. W logach poprzedniego runu brak treści/kodu Cloudflare, więc nie przypisywać 429 konkretnie dziennemu limitowi 100000 ani WAF bez dowodu. Nowa diagnostyka zapisuje status/bezpieczny kod Cloudflare/Retry-After i agregaty historyczne GraphQL, bez cookie, IP, sekretów ani surowej treści. Cloudflare [oficjalnie opisuje 1027 przy limicie dziennym](https://developers.cloudflare.com/workers/platform/limits/); 429 samo w sobie nie rozstrzyga przyczyny. Lokalny publiczny odczyt z domyślnym urllib dostał 403/1010, a odczyt curl z przeglądarkowym User-Agent 200 — to osobna różnica transportu, nie dowód przyczyny starego CI.
+
+Rzeczywisty błąd klienta: response.json() na HTML 429/5xx rzucał przed ustawieniem warunku offline. Teraz status jest rozpoznany przed parsowaniem; ostatni autoryzowany odczyt może być użyty offline, a tylko dotychczasowe idempotentne typy zapisu trafiają do kolejki z właścicielem. Nie kolejkujemy researchu/AI/hasła/ustawień. Nie przechodzimy do starego cache przy 401/403. Jawny PL/EN komunikat serwera zastępuje SyntaxError. SW obsługuje 429 z gotową kopią tak jak 5xx; dotychczasowe terminy obejmują nagłówki i body. Generacja 115, loader security-3. Do kompletu statycznego dodano trip-manager.js i trip-peg-enhancer.js wymagane przez istniejące widoki; wcześniejszy znacznik nie gwarantował ich dostępności offline.
+
+QA wcześniej uruchamiał sześć jobów jednocześnie, a nowe profile przeglądarki za każdym razem przygotowywały ponad 80 prywatnych plików. Teraz tylko test offline i media oraz końcowa regresja używają rzeczywistego SW; online audyt treści/języka nie przygotowuje osobnych kompletów PWA. Joby offline i media są sekwencyjne, pozostałe najwyżej po dwa naraz. Nie zmieniono limitu prób logowania, parametrów hasha, cookies ani bramki autoryzacji. Concurrency nie przerywa procesu sprzątania własnego fixture przy kolejnym push.
+
+Nie powtarzamy migracji 0028, sekretów ani resetu wspólnego hasła; status sprawdza wyłącznie listę zastosowanych migracji i blokuje wdrożenie, jeśli wykryje nową. Prywatny checkpoint v2 z b992115 / job 114972506191 odtworzył 26 tabel/1341 wierszy; R2 SHA256 7cfd5b6a534289fb3a254f5cd94a476a5eb51baf0f035e3702a932bd3643b7d8. Zachowany jako punkt przywracania. Konta/extras/media wykonują teraz odczytową regresję istniejących profili/PB/autorów/systemu/17 obrazów oraz reloadu, bez nowych kont/połowów/uploadów. Pełny wcześniejszy dowód trzech loginów/limitu/rotacji/CRUD pozostaje zaliczonym wynikiem, a nie udawanym nowym testem. Jedyny nowy fixture biznesowy należy do koniecznego testu niezaliczonych jeszcze konfliktów/replay/offline; sprzątany tylko po dokładnym ID/nazwie, nie usuwa starszych obiektów QA. researchNow:true jest zachowanym znacznikiem pomijania automatycznego researchu w istniejącym createTrip.
+
+Marker Tavily qa_stage7_direct_url_20261012 zostaje zachowany: oryginalny rzeczywisty extract 12.10 19:14:28Z, jeden request, HTTP 200, 2 fakty/4 z 38 pól. Normalizacja b992115: 3 pola/5 z 38, wersja 2026-10-12.v2, historia zachowana, zero nowych wywołań dostawcy. Powtórzenie wymaga odczytu istniejącego markera i nie wykonuje kolejnego ekstraktu. Workers AI pozostaje false, zero inference; brak potwierdzonego rachunku/pozostałego darmowego limitu to BLOCKED dla opcjonalnego AI, nie zgoda na płatne zapytanie. W parserze wspólne telefon/rekord (PL/DE) i adres (PL/NL) nie udają rozstrzygniętego języka źródła.
+
+Lokalnie: 107/107 unit/frontend/data PASS, npm run build (Worker dry-run) PASS, git diff --check PASS. Bieżące live: NOT TESTED do ukończenia bramki; READY TO MERGE TO MAIN: NO.
+
+
+### Dalszy audyt Etapu 7 / eef0cf8
+
+Run 38354942633: preview/28 zastosowanych migracji/marker Tavily/konta PASS. Offline job 115156125160, 13.10 06:10:27Z–06:10:33Z: 36 rodzin zapisu anonymous 401/cross-origin 403, realne dwa równoległe zapisy 200/409 z zachowaniem zwycięzcy, zatrzymane pobieranie knowledge.js w prawdziwym SW <8 s, pięć zapisów UI/replay/conflict PASS; sprzątanie własnego fixture PASS. Nie powtarzać tych zapisów przy późniejszej poprawce samej bramki logowania. Nowy job PWA odczytuje i sprawdza ten rzeczywisty ukończony job przez GitHub API, a na nowym wydaniu ponownie sprawdza offline na czterech istniejących widokach, rzeczywisty SW przy kontrolowanym 429 oraz odmowę API 403 — bez zapisu biznesowego. Zmiana src/auth.js nie zmienia modułów offline/SW/API konfliktu z przetestowanego eef0cf8. Pełny mutujący skrypt pozostaje w repozytorium do przyszłych zmian synchronizacji.
+
+Nowy odczyt wszystkich 17 lazy images zatrzymał się na decode() w media (także przy jednym ponowieniu wyłącznie tego odczytowego jobu); PNG lokalnie zweryfikowano przez PIL, wszystkie poprawne. QA jawnie rozpoczyna pobranie przez loading=eager przed decode i zachowuje assert rzeczywistej szerokości każdego obrazu; przy błędzie loguje ścieżkę/status/typ i stan obrazu, bez cookie/sekretów. Nie zmieniono żadnego oryginalnego PNG. Wynik poprawionego testu NOT TESTED do następnego CI; pozostałe joby były SKIPPED za media i nie są zaliczone.
+
+Historyczne metryki GraphQL odczytane w job preview: 12.10 UTC, 154485 successful requests, 716 clientDisconnected. Dowód dużego ruchu i przerwanych połączeń, ale bez kodu historycznej odpowiedzi nie rozstrzyga konkretnego mechanizmu 429 ani planu Free/Paid. Publiczne preview/production GET /login 13.10 06:07Z HTTP 200. Żadna zmiana planu/billingu/WAF ani obejście ochrony nie zostały wykonane.
+
+Odrębny rzeczywisty błąd bezpieczeństwa odtworzono lokalnie: osiem równoległych błędnych loginów zapisywało attempts=1, a dziewiąta próba poprawnego hasła dostawała sesję. SELECT + zapis stałej wartości zastąpiono jednym warunkowym UPSERT rezerwującym próbę przed KDF; najwyżej osiem prób/IP/900 s, sukces zeruje licznik, wygaśnięcie zaczyna nowe okno. Test 12 równoległych prób: osiem odmów credentials + cztery limit, brak cookie, correct po wyczerpaniu nadal limit, expiry/reset/success PASS. Parametry limitu, solony hash i pepper pozostają bez zmian. Lokalnie 108/108 i build PASS. Nowe wdrożenie/live jeszcze NOT TESTED; READY TO MERGE TO MAIN: NO.
+
+
+## Zamknięcie Etapu 7 — 13.10.2026
+
+Zmiany i commity:
+
+1. eef0cf86a22b254dd5dbc8e11424d2941e06becf: 19 plików, obsługa HTML 429/5xx przed parsowaniem, właściciel idempotentnej kolejki, cache 115 (także 429, brak fallback przy odmowie), komplet statyczny, ograniczenie równoległości i powielania przygotowania PWA, odczytowy QA kont/extras/media, status już zastosowanych migracji, diagnostyka transportu/metryk, konserwatywne języki etykiet źródła.
+2. c4af4ed9d6ba82e03e05876073c507475977e1dd: src/auth.js i tests/auth-queries.test.mjs (atomowy limit); scripts/live-preview-pwa-readonly.mjs oraz .github/workflows/preview-final-batch.yml (sprawdzenie istniejącego pełnego dowodu sync + aktualna PWA bez zapisów); scripts/live-preview-readonly-security.mjs (jawne rozpoczęcie lazy image decode); raport. Lokalnie i CI 108/108 oraz build PASS.
+3. Końcowy checkpoint: docs/modernization-2026-10-12.md i .github/workflows/deploy-private.yml. Audyt wykrył odziedziczony deployment po push do main. Usunięto trigger push, pozostawiając istniejący workflow_dispatch; samo zatwierdzenie/merge kodu nie uruchamia teraz produkcji. YAML sprawdzono parserem, trigger wyłącznie manualny, domyślny ref main i concurrency bez przerywania wydania. To weryfikacja konfiguracji, nie test deploymentu; produkcyjnego workflow nie uruchomiono. Żadne pliki runtime, migracje ani dane nie zmieniają się w tym checkpoint.
+
+Rzeczywiste zakończenie bramki: [Preview 38355798390](https://github.com/serox94/dream-team/actions/runs/38355798390), head c4af4ed, attempt 2, success. Jedno ponowienie wyłącznie odczytowego qa-user-language po HTTP 502 dostawcy pogody, z poprawnym komunikatem EN. Pierwsza próba 115161425167 pozostaje FAIL; ponowienie 115163107786 PASS, 06:35:50Z (390) i 06:40:09Z (1280), dwie osoby na tym samym urządzeniu, PL→EN→PL/reload/relogin i 15 widoków na konto, błędy API PL/EN. Nie powtarzano mutujących jobów. Końcowa regresja 115165327659 06:41:59Z PASS: 24 kombinacje (6 widoków × PL/EN × 390/1280) z rzeczywistym logowaniem, danymi API i SW, bez widocznych błędów/overflow. Wszystkie 10 jobów są success; przejęte przez attempt 2 wyniki wcześniejszych jobów są sprawdzone, nie nowe udawane wykonania.
+
+Najważniejsze oryginalne joby tego runu: preview 115158269908; accounts 115158504366; PWA 115158962069; media 115159340016; weather 115159671054; knowledge 115159671038; extras 115160463384; język 115160463492. Pogoda 06:22:18Z–06:22:29Z, Sonar 06:22:16Z–06:22:39Z, Encyklopedia 06:23:13Z–06:23:41Z: wszystkie 4 kombinacje PL/EN × 390/1280 PASS. Testy kontrolowanej burzy/braków i kontrolowanego 429 są wyraźnie oddzielone od rzeczywistego dostawcy; nie są nowymi obserwacjami pogodowymi. EN audit 06:27:13Z: wszystkie 15 widoków na 360/390/412/768/1280 PASS; telefon More→Ustawienia→EN→reload→PL potwierdzony 06:25:34Z.
+
+Artefakty runu: final regression 11793652397 (24 screenshoty + JSON); user language 11793661292; pełny audit języka 11793103056; weather 11793092577; knowledge 11791914928; PWA 11792688562; media 11792499283; accounts 11792718135; extras 11792823900; provider/transport 11793101375. Ręcznie obejrzano aktualne screenshoty formularza połowu 390/1280, ćwiczenia sonaru PL 390, pogody EN 1280 i bezpiecznej decyzji Encyklopedii EN 390; wykonawca lokalny ponownie dostępny. Stare BLOCKED dotyczą historii, nie nowego przeglądu. Dodatkowo obejrzano final-pl-390-ustawienia.html.png (PL/EN wprost widoczne na pierwszym ekranie telefonu) i final-en-1280-sonar.html.png. Odczytany finalny regression.json ma dokładnie 24 wyniki, wszystkie errors=[]; 390/1280 oraz PL/EN.
+
+| Funkcja | Stan przed | Stan po | Test | Wynik | Pozostałe problemy |
+|---|---|---|---|---|---|
+| HTTP 429 i obciążenie QA | Sześć równoległych jobów, wielokrotne pełne warming; /login/preflight 429 | Najwyżej dwa online joby, PWA/media osobno; diagnostyka bez sekretów; brak 429 w zakończonej bramce | 38355798390 + public transport + agregaty GraphQL | PASS | Historyczny dokładny kod Cloudflare/tier nie został zapisany: BLOCKED, nie dowód konkretnej kwoty dziennej |
+| Limit logowania | Równoległe osiem błędnych prób dawało licznik 1 | Atomowy slot przed KDF, max 8/IP/900 s, expiry i successful reset | 12 concurrent unit + istniejący test sekwencyjny + realne loginy | PASS | Zachowane długie sesje; rotacja wspólnego hasła unieważnia je natychmiast |
+| Konta i autorzy | Etap 2 był już PASS | Oryginalne Patryk/Maciek, PB/ID; domyślny i ręczny autor nadal działają | B992 pełny dowód 3 kont; aktualny read-only 390/1280 + unit limit trzech | PASS | Nie tworzono ponownie trzeciego testowego konta ani nie zmieniano hasła |
+| Autoryzacja zapisów | Wspólna bramka; nowa pełna live lista niezaliczona | 36 rodzin: anonymous 401, cross-origin 403; brak efektów dostawcy/AI | Live 115156125160 + unit/private export/current account checks | PASS | Wędkarze zgodnie z wymaganiem współdzielą dane; brak zbędnych ról |
+| Offline/replay/konflikt | Utrata aktualizacji 200/200 przy dwóch odczytach revision 0 | Atomic UPDATE revision: 200/409, zwycięzca zachowany, replay raz | Wymuszony unit race + pełny live sync/race 115156125160 | PASS | Stare obiekty/tombstones QA pozostawiono; czyścimy tylko własny fixture |
+| Cache i przerwany transport | HTML quota łamał parser; statyczny 429 ignorował cache; niepełny shell | Gotowa kopia przy 429/5xx, body deadline, komplet generacji, API/401/403 bez fallback | SW unit partial/body/connect + real <8s + current PWA 115158962069 | PASS | Pierwsze uruchomienie bez przygotowanej kopii nadal wymaga sieci |
+| D1/R2 i restore | Prywatny snapshot; wcześniej nie odtwarzano kompletnej kopii | V2 rekonstruuje 26 tabel/1341 wierszy, FK/digest/sekwencje; stare punkty zachowane | B992 checkpoint 114972506191 + unit restore + 28 migrations read-only | PASS | Nie wykonywano nowych migracji ani powtórnych uploadów R2; wcześniejszy realny R2 round trip pozostaje dowodem |
+| Tavily | Realny one-shot był już zapisany, język etykiet Arrival błędny | Jeden extract potwierdzonego URL; marker użyty, metadata/historia zachowane | Current provider artifact 11793101375 + source/parser unit | PASS | 5/38 pól po normalizacji; realne naliczenie kredytów NOT TESTED; nowe wywołania 0 |
+| Workers AI | Brak potwierdzonej darmowej dostępności/kosztu | Wyłączone, zachowane ręczne funkcje mediów | Runtime flag/binding + anonymous/cross-origin guards + unit | BLOCKED | Celowa bramka kosztowa; zero inference, nie włączać bez potwierdzenia |
+| PL/EN i nawigacja | Etap 3 PASS; ostatni run zablokowany wcześniej | EN audit 5 szerokości, 2 konta × 15 widoków, mobile single Settings control | 115160463492 + 115163107786 + Responsive | PASS | Nazwy użytkownika/wyjazdu/łowiska i oficjalne nazwy trybów urządzenia zachowane jako nazwy/źródła |
+| Pogoda PRO | Wcześniej timeout nawigacji; miernik już zweryfikowany | Realne GPS/units/time/source/uncertainty i kontrolowane braki/burza | 115159671054, 4 kombinacje | PASS | Upstream 502 w pierwszym user-language: FAIL zapisany, readonly retry PASS; brak gwarancji dostępności dostawcy/wody/tlenu |
+| Encyklopedia/Deeper/media | Etapy 5–6 PASS; nowy decode lazy image FAIL | Tematy/17 PNG/cytowania/quizy zachowane, wszystkie obrazy odczytane/reload | Current knowledge 4 kombinacje i media 390/1280 + PNG verify | PASS | Ćwiczenia są przykładem/model geometry; nie potwierdzają gatunku, O2 ani materiału dna |
+| Końcowa regresja | SKIPPED | Wszystkie 24 kombinacje na rzeczywistym preview | 115165327659, aktualne screenshoty/JSON | PASS | Chromium z emulacją telefonu; fizyczny Android/iOS: NOT TESTED |
+| Merge i produkcja | Push main automatycznie wdrażał produkcję | Ręczny release workflow, brak merge/deploy w tej pracy | YAML trigger/diff/main SHA public read | PASS | Produkcyjny rollout NOT TESTED; przyszły prywatny backup, migracja/INDIVIDUAL_ACCOUNTS i kontrola wymagają osobnej zgody |
+
+READY TO MERGE TO MAIN: YES. Uzasadnienie: wdrożony kod c4af4ed ma 108/108 unit, Validate/Responsive i wszystkie 10 realnych jobów preview PASS; potwierdzono wcześniej niezaliczone zapisy/konflikty/ochronę i aktualne PWA, bez nowych Tavily, migracji czy rotacji hasła. Ostatni checkpoint nie zmienia tego kodu, a odłącza automatyczne wydanie produkcji. Ograniczenia powyżej są jawne; decyzja nie oznacza zgody na merge/deployment ani potwierdzenia funkcji na niezmigrowanej produkcji. Produkcji i main nie wdrożono/nie scalono.
+
+### 2026-10-13 — niezależny audyt Astra, korekta decyzji wydania
+
+Dotychczasowe READY TO MERGE: YES jest historyczne. Bieżące H01–H04/M01–M04 i bramki: [audit-fixes-2026-10-13.md](audit-fixes-2026-10-13.md). Runtime migracje i rollback do legacy usunięte, login access oddzielony od profilu, własne operacje offline uporządkowane. Odbiór tylko na finalnym SHA; realny D1/R2/CF admin musi mieć dowód, inaczej BLOCKED. READY TO MERGE TO MAIN: NO do zakończenia odbioru; READY TO DEPLOY PRODUCTION: NO. Main i produkcja pozostają bez zmian.
+
+Końcowy odbiór napraw Astra: H01/H02/M01/M02/M03 PASS; H03/H04/M04 BLOCKED. D1_RESET_DO potwierdzony także na odtworzonym pustym celu w 38412632242; dalszych prób nie wykonujemy. Prywatne archiwum SQL/R2 zachowane, zero zmian biznesowych źródeł i zero nowych Tavily/AI. Szczegóły/dwie jednoznaczne czynności dotyczące blokad: [audit-fixes-2026-10-13.md](audit-fixes-2026-10-13.md). READY TO MERGE TO MAIN: NO. READY TO DEPLOY PRODUCTION: NO. Końcowa pełna bramka CI na bieżącym SHA ma wykazać również BLOCKED, bez udawania PASS lub ponawiania importu.

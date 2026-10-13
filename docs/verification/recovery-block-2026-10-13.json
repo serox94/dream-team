@@ -1,0 +1,52 @@
+{
+  "candidate": "b4c4830309b83a20de35e24a5a7d89a004bd2e1e",
+  "run": 38437797828,
+  "at": "2026-10-13T17:20:16.181Z",
+  "result": "PASS",
+  "productionRequests": 0,
+  "businessWritesToExistingResources": 0,
+  "providerCalls": 0,
+  "priorD1Run": 38435939611,
+  "priorR2Run": 38436517138,
+  "privateSqlSha256": "3f5040524e2c4a80675297230fbf3c2ff99a3603e9432c813ad146fd742d8aa8",
+  "restored": {
+    "tables": 26,
+    "rows": 270,
+    "triggers": 2,
+    "foreignKeys": true,
+    "sequences": true
+  },
+  "snapshotSessionsPresent": true,
+  "sessionsPurged": true,
+  "readinessApiStatus": 401,
+  "purgedCookieHttp": 401,
+  "M04": "PASS",
+  "H03": "PASS",
+  "H04": "BLOCKED",
+  "d1ExportRestore": "PASS",
+  "r2BytesMetadataInventory": "PASS",
+  "isolatedBindingIdentityImage": "PASS",
+  "sourceArchive": "dream-team-audit-38435939611-archive",
+  "restoredMedia": "dream-team-audit-38436517138-media",
+  "job": 115436244296,
+  "cause": "Resolved: raw SQL dump referenced tables before creation; dependency-ordered REST restore verified",
+  "previousBlockedRun": 38412632242,
+  "initialHead": "0958512ddf3a575b6ed219e0d95563e1d1d45291",
+  "proof": {
+    "d1": {
+      "run": 38435939611,
+      "job": 115429778795,
+      "tables": 26,
+      "originalRows": 269,
+      "restoredRows": 270,
+      "triggers": 2
+    },
+    "r2": {
+      "run": 38436517138,
+      "job": 115431800489,
+      "objects": 1,
+      "bytes": 236364,
+      "manifestSha256": "f753922fccf9adf200f977cc42669f3450f252136b3aba20adbea36d8a74a286"
+    }
+  }
+}

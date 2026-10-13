@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+
+const expectedSources=JSON.parse(await readFile(new URL('../public/data/knowledge/sources.json',import.meta.url),'utf8'));
 
 const base=process.env.RYBY_PRODUCTION_URL||'https://dream-team.sewerynski00.workers.dev';
-const username=process.env.RYBY_LOGIN_USERNAME;
-const password=process.env.RYBY_LOGIN_PASSWORD;
+const username=process.env.RYBY_SMOKE_USERNAME||'Patryk';
+const password=process.env.RYBY_SMOKE_PASSWORD||process.env.RYBY_LOGIN_PASSWORD;
 assert.ok(username&&password,'Missing login configuration');
 const request=(path,options={})=>fetch(new URL(path,base),{redirect:'manual',cache:'no-store',...options});
 const form=(username,password)=>({method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password})});
@@ -42,29 +45,39 @@ for(const page of ['/pages/polowy.html','/pages/checklisty.html','/pages/pogoda.
 for(const name of ['sources','encyclopedia','sonar','tools','field-guides','chirp2-practice']){
   const response=await request(`/data/knowledge/${name}.json`,{headers});assert.equal(response.status,200,name);
   const data=await response.json();assert.ok(data.version,`${name} version`);
-  if(name==='sources')assert.equal(data.sources.length,48);
+  if(name==='sources'){
+    assert.deepEqual(data.sources,expectedSources.sources,'deployed source catalog matches this exact release');
+    const ids=new Set(data.sources.map(source=>source.id));
+    assert.equal(ids.size,data.sources.length,'source IDs are unique');
+    for(let i=1;i<=48;i++)assert.ok(ids.has('s'+String(i).padStart(2,'0')),'original source retained: '+i);
+  }
   if(name==='encyclopedia')assert.equal(data.articles.length,14);
   if(name==='sonar')assert.equal(data.articles.length,17);
   if(name==='field-guides')assert.equal(data.guides.length,14);
   if(name==='chirp2-practice')assert.equal(Object.keys(data.practice).length,17);
 }
 const atlasResponse=await request('/assets/deeper/chirp2/index.json',{headers});assert.equal(atlasResponse.status,200);
-assert.equal((await atlasResponse.json()).screenshots.length,5);
+assert.equal((await atlasResponse.json()).screenshots.length,17);
 const dashboard=await request('/',{headers});assert.match(await dashboard.text(),/patryk-maciek\.jpeg|patryk-maciek/);
 const shell=await request('/sw.js',{headers});assert.equal(shell.status,200);
-assert.match(await shell.text(),/ryby-shell-20261005-2/);
+assert.match(await shell.text(),/ryby-shell-\d{8}-\d+/);
 const photo=await request('/assets/img/patryk-maciek.jpeg',{headers});assert.equal(photo.status,200);
 assert.ok((await photo.arrayBuffer()).byteLength>10000,'personal photo is nonempty');
 assert.equal((await request('/manifest.webmanifest',{headers})).status,200);
 const bootstrap=await request('/api/bootstrap',{headers});assert.equal(bootstrap.status,200);
 const model=await bootstrap.json(),tripId=model.app.activeTripId;
+assert.equal(model.currentUser.username.toLowerCase(),username.toLowerCase(),'individual account, no technical alias');
+assert.ok(model.currentUser.anglerId);
 assert.ok(model.trips.some(trip=>trip.id===tripId),'active D1 trip exists');
 const checklist=await request(`/api/checklist?tripId=${encodeURIComponent(tripId)}`,{headers});assert.equal(checklist.status,200);
 assert.ok(Array.isArray((await checklist.json()).items),'D1 checklist read works');
 const categories=await request('/api/checklist-categories',{headers});assert.equal(categories.status,200);
 assert.ok((await categories.json()).categories.length>=3,'migrated categories readable');
 const settings=await request('/api/settings',{headers});assert.equal(settings.status,200);
-assert.equal((await settings.json()).schemaVersion,20);
+const runtime=await settings.json();
+assert.equal(runtime.schemaVersion,28);
+assert.equal(typeof runtime.researchProviderConfigured,'boolean');
+assert.equal(typeof runtime.workersAiAvailable,'boolean');
 assert.equal((await request('/api/bootstrap',{headers})).status,200,'reused cookie after reopening');
 const exportResponse=await request('/api/export',{headers});assert.equal(exportResponse.status,200);
 // An invalid request checks the authorized write path without inserting a trial record.

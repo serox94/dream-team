@@ -1,0 +1,62 @@
+// Stage 1: genuine UI CRUD against disposable preview trips; no Tavily/AI requests.
+import assert from 'node:assert/strict';
+import {readFile,mkdir} from 'node:fs/promises';
+const base='https://dream-team-preview.sewerynski00.workers.dev';
+export async function verifyNavigation(page,context){
+ const config=JSON.parse(await readFile('wrangler.preview.generated.jsonc','utf8'));
+ assert.equal(config.name,'dream-team-preview');assert.equal(config.d1_databases[0].database_name,'dream-team-preview-db');
+ assert.notEqual(config.d1_databases[0].database_id,'b64c7a2c-8694-41c6-b54a-857b88bf2c96');
+ const request=async(path)=>{const response=await context.request.get(base+path,{timeout:15000});assert.ok(response.ok());return response.json();};
+ const d1=async(sql,params)=>{const response=await fetch(`https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${config.d1_databases[0].database_id}/query`,{method:'POST',headers:{authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,'content-type':'application/json'},body:JSON.stringify({sql,params}),signal:AbortSignal.timeout(15000)});const result=await response.json();assert.equal(result.success,true);return result.result[0];};
+ const navigationErrors=[];page.on('pageerror',error=>navigationErrors.push(error.message));
+ const open=async route=>{
+  const response=await page.goto(base+route,{waitUntil:'commit',timeout:30000});
+  try{assert.equal(response.status(),200);await page.waitForFunction(()=>Boolean(document.documentElement.dataset.ready),null,{timeout:30000});assert.equal(await page.locator('html').getAttribute('data-ready'),'true',`application failed on ${route}`);}
+  catch(error){console.warn('NAVIGATION DIAGNOSTIC',JSON.stringify({route,status:response.status(),url:page.url(),ready:await page.locator('html').getAttribute('data-ready'),notice:await page.locator('#app-notice').allTextContents(),pageErrors:navigationErrors}));await page.screenshot({path:'live-preview-qa/navigation-failure.png',timeout:10000}).catch(()=>{});throw error;}
+ };
+ await mkdir('live-preview-qa',{recursive:true});
+ for(const width of [390,1280]){
+  await page.setViewportSize({width,height:844});await open('/pages/wyjazdy.html');
+  assert.equal(await page.locator('#angler-edit,#lake-edit,#ryby-logout,#backup-download,.language-selector').count(),0,'no administration or duplicate language controls on Trips');
+  for(const name of ['Aktualny wyjazd','Nadchodzące wyjazdy','Zakończone wyjazdy','Archiwum'])await page.getByRole('heading',{name,exact:true}).waitFor();
+  await page.locator('[data-view-lake]').first().click();await page.locator('#lake-profile h3').waitFor();
+  assert.equal(await page.locator('#lake-profile form').count(),0,'trip lake details are read-only');
+  await page.screenshot({path:`live-preview-qa/navigation-trips-${width}.png`});
+  await open('/pages/ustawienia.html');assert.equal(await page.locator('.language-selector').count(),1);
+  for(const control of ['#angler-edit','#ryby-logout','#settings-export','#participant-profile-list','#system-health','#lake-catalog'])await page.locator(control).waitFor({state:'visible'});
+  await page.locator('#lake-editor-panel > summary').click();await page.locator('#lake-edit').waitFor({state:'visible'});
+  await page.screenshot({path:`live-preview-qa/navigation-settings-${width}.png`});
+  const stamp=Date.now(),name=`QA navigation ${width} ${stamp}`,anglerName=`QA angler ${width} ${stamp}`,lakeName=`QA lake ${width} ${stamp}`;let tripId,anglerId,lakeId;
+  try{
+   await page.locator('#angler-name').fill(anglerName);await page.locator('#angler-pb').fill('7.5');
+   const personCreated=page.waitForResponse(r=>r.url()===base+'/api/anglers'&&r.request().method()==='POST');await page.locator('#angler-edit [type="submit"]').click();const personResponse=await personCreated;assert.equal(personResponse.status(),201);anglerId=(await personResponse.json()).id;
+   const personForm=page.locator('.participant-profile').filter({has:page.getByRole('heading',{name:anglerName,exact:true})});await personForm.waitFor();await personForm.locator('input[type="number"]').fill('8.5');
+   const personSaved=page.waitForResponse(r=>r.url()===base+'/api/anglers/'+anglerId&&r.request().method()==='PATCH');await personForm.locator('[type="submit"]').click();assert.equal((await personSaved).status(),200);
+   assert.equal((await request('/api/bootstrap')).anglers.find(a=>a.id===anglerId).baselinePbKg,8.5,'PB edit must persist on the server');
+   await open('/pages/ustawienia.html');await page.locator('#lake-editor-panel > summary').click();await page.locator('#lake-name').fill(lakeName);await page.locator('#lake-country').fill('Polska');
+   const lakeCreated=page.waitForResponse(r=>r.url()===base+'/api/lakes'&&r.request().method()==='POST');await page.locator('#lake-edit [type="submit"]').click();const lakeResponse=await lakeCreated;assert.equal(lakeResponse.status(),201);lakeId=(await lakeResponse.json()).id;
+   await page.locator('#settings-management:not([inert])').waitFor();await page.locator(`[data-lake="${lakeId}"]`).click();await page.locator('#lake-editor-panel > summary').click();await page.locator('#lake-depth').fill('4.2 m');
+   const lakeSaved=page.waitForResponse(r=>r.url()===base+'/api/lakes/'+lakeId&&r.request().method()==='PUT');await page.locator('#lake-edit [type="submit"]').click();assert.equal((await lakeSaved).status(),200);
+   assert.equal((await request('/api/bootstrap')).lakes.find(l=>l.id===lakeId).facts.depth,'4.2 m','lake catalogue edits must persist on the server');
+   await open('/pages/wyjazdy.html');await page.locator('#create-trip').click();
+   await page.locator('[name="lake-mode"][value="existing"]').check();await page.locator('#wizard-lake-id').selectOption(lakeId);
+   await page.locator('#wizard-start').fill('2031-06-01');await page.locator('#wizard-end').fill('2031-06-08');await page.locator('#wizard-trip-name').fill(name);
+   const created=page.waitForResponse(r=>r.url()===base+'/api/trips'&&r.request().method()==='POST');await page.locator('#trip-wizard-form [type="submit"]').click();const response=await created;assert.equal(response.status(),201);tripId=(await response.json()).id;
+   const card=page.locator('.trip-card').filter({has:page.getByRole('heading',{name,exact:true})});await card.waitFor();await card.locator('[data-edit]').click();await page.locator('#trip-peg').fill(`QA swim ${width}`);
+   const updated=page.waitForResponse(r=>r.url()===base+'/api/trips/'+tripId&&r.request().method()==='PUT');await page.locator('#trip-edit [type="submit"]').click();assert.equal((await updated).status(),200);
+   assert.equal((await request('/api/bootstrap')).trips.find(t=>t.id===tripId).peg,`QA swim ${width}`);
+   await card.locator('[data-edit]').click();await page.locator('#trip-edit [name="status"]').selectOption('archived');
+   const archived=page.waitForResponse(r=>r.url()===base+'/api/trips/'+tripId&&r.request().method()==='PUT');await page.locator('#trip-edit [type="submit"]').click();assert.equal((await archived).status(),200);
+   assert.equal((await request('/api/bootstrap')).trips.find(t=>t.id===tripId).status,'archived');
+   console.log(`LIVE NAVIGATION ${width}: PASS participant create/PB edit, lake create/edit, trip create/edit/archive, read-only lake details, single Settings language and system.`);
+  }finally{
+   if(tripId){
+    const counts=await d1('SELECT (SELECT COUNT(*) FROM catches WHERE trip_id=?) + (SELECT COUNT(*) FROM checklist_items WHERE trip_id=?) + (SELECT COUNT(*) FROM spots WHERE trip_id=?) AS n',[tripId,tripId,tripId]);assert.equal(counts.results[0].n,0,'disposable trip must have no user records');
+    await d1('DELETE FROM trip_participants WHERE trip_id=? AND EXISTS(SELECT 1 FROM trips WHERE id=? AND name=?)',[tripId,tripId,name]);
+    const removed=await d1('DELETE FROM trips WHERE id=? AND name=?',[tripId,name]);assert.equal(removed.meta.changes,1,'remove only exact disposable QA trip');
+   }
+   if(anglerId){await d1('DELETE FROM auth_sessions WHERE account_id=?',['account-'+anglerId]);await d1('DELETE FROM auth_accounts WHERE angler_id=?',[anglerId]);await d1('DELETE FROM trip_participants WHERE angler_id=?',[anglerId]);const records=await d1('SELECT COUNT(*) n FROM catches WHERE angler_id=?',[anglerId]);assert.equal(records.results[0].n,0);const removed=await d1('DELETE FROM anglers WHERE id=? AND name=?',[anglerId,anglerName]);assert.equal(removed.meta.changes,1);}
+   if(lakeId){const trips=await d1('SELECT COUNT(*) n FROM trips WHERE lake_id=?',[lakeId]);assert.equal(trips.results[0].n,0);const removed=await d1('DELETE FROM lakes WHERE id=? AND name=?',[lakeId,lakeName]);assert.equal(removed.meta.changes,1);}
+  }
+ }
+}

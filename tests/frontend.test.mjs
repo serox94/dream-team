@@ -3,20 +3,35 @@ import assert from 'node:assert/strict';
 import {JSDOM,VirtualConsole} from 'jsdom';
 import {serve} from '../scripts/qa-server.mjs';
 import {weatherFixture} from '../scripts/qa-weather.mjs';
-const waitFor=async(fn,label='condition')=>{const until=Date.now()+7000;while(!fn()){if(Date.now()>until)throw Error('Timed out: '+label);await new Promise(r=>setTimeout(r,15));}};
+const waitFor=async(fn,label='condition')=>{const until=Date.now()+15000;while(!fn()){if(Date.now()>until)throw Error('Timed out: '+label);await new Promise(r=>setTimeout(r,15));}};
 async function page(server,path,trip='next-trip',failure=null){
  const errors=[],calls=[],console=new VirtualConsole();console.on('jsdomError',e=>{if(!/canvas|getContext|navigation/.test(e.message))errors.push(e.message);});console.on('error',(...v)=>{const message=v.join(' ');if(!message.includes("Failed to create chart: can't acquire context"))errors.push(message);});
  const dom=await JSDOM.fromURL(server.url+path,{resources:'usable',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:console,beforeParse(w){
-  w.localStorage.setItem('dream_team_viewed_trip',trip);w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;w.alert=()=>{};
+  Object.defineProperty(w.navigator,'language',{value:'pl-PL',configurable:true});w.localStorage.setItem('dream_team_viewed_trip',trip);w.scrollTo=()=>{};w.HTMLElement.prototype.scrollIntoView=()=>{};w.confirm=()=>true;w.alert=()=>{};
   w.AbortController=AbortController;w.AbortSignal=AbortSignal;w.ResizeObserver=class{observe(){}disconnect(){}};
   w.fetch=async(url,opts)=>{calls.push({url:String(url),method:opts?.method||'GET'});if(failure&&String(url).includes(failure))return new Response('{"ok":false,"error":"Offline test"}',{status:503});return fetch(new URL(url,server.url),opts);};
  }});
- await waitFor(()=>dom.window.document.documentElement.dataset.ready,'page '+path);
+ try{await waitFor(()=>dom.window.document.documentElement.dataset.ready,'page '+path);}catch(error){dom.window.close();throw error;}
  return {dom,w:dom.window,d:dom.window.document,errors,calls,close(){dom.window.close();}};
 }
 const testServe=options=>serve({...options,weatherFetch:async()=>Response.json(weatherFixture())});
 const submit=(p,id)=>p.d.getElementById(id).dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
 const fill=(p,id,value)=>{const el=p.d.getElementById(id);el.value=value;el.dispatchEvent(new p.w.Event('input',{bubbles:true}));};
+test('HTML quota failures preserve cached reads and owned writes, but never bypass access denial',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/polowy.html');
+ try{
+  const original=await p.w.Dream.api('/api/bootstrap');
+  p.w.DREAM_MODEL.currentUser={id:'account-patryk',anglerId:'patryk'};
+  p.w.fetch=async()=>new Response('<html>Error code: 1027</html>',{status:429,headers:{'content-type':'text/html'}});
+  const cached=await p.w.Dream.api('/api/bootstrap');assert.equal(cached.app.activeTripId,original.app.activeTripId);assert.equal(cached.trips.length,original.trips.length);
+  const queued=await p.w.Dream.api('/api/catches',{method:'POST',body:JSON.stringify({tripId:'next-trip',anglerId:'patryk',weightKg:9,caughtAt:'2026-09-01T12:00:00Z'})});assert.equal(queued.pendingSync,true);
+  const entries=JSON.parse(p.w.localStorage.getItem('dreamteam.offline.queue.v1'));assert.equal(entries.length,1);assert.equal(entries[0].accountId,'account-patryk');assert.equal(entries[0].payload.weightKg,9);
+  await assert.rejects(p.w.Dream.api('/api/settings'),/Serwer ograniczył liczbę żądań/);
+  p.w.DreamLanguage={get:()=> 'en'};await assert.rejects(p.w.Dream.api('/api/settings'),/The server has limited requests/);
+  p.w.fetch=async()=>new Response('<html>Forbidden</html>',{status:403});await assert.rejects(p.w.Dream.api('/api/bootstrap'),/Invalid server response/);
+  await assert.rejects(p.w.Dream.api('/api/catches',{method:'POST',body:JSON.stringify({tripId:'next-trip',weightKg:10})}),/Invalid server response/);assert.equal(JSON.parse(p.w.localStorage.getItem('dreamteam.offline.queue.v1')).length,1);
+ }finally{p.close();await s.close();}
+});
 test('every route boots, preserves legacy knowledge, sends no duplicate initial data requests',async()=>{
  const s=await testServe({seed:true});
  try{for(const path of ['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html']){
@@ -90,7 +105,7 @@ test('field mode follows active trip dates and guide reads the selected lake fac
   assert.deepEqual(guide.errors,[]);
  }finally{guide.close();await s.close();}
 });
-test('private read cache marks stale data, never queues writes and clears locally',async()=>{
+test('private read cache marks stale data, rejects unsupported writes and clears locally',async()=>{
  const s=await testServe({seed:true}),p=await page(s,'/');
  try{
   const before=s.DB.sqlite.prepare('SELECT count(*) n FROM checklist_items').get().n;
@@ -162,7 +177,7 @@ test('signed session saves checklist without exposing credentials to frontend st
  }finally{p.close();await s.close();}
 });
 test('management screen offers logout and revokes the active device session',async()=>{
- const s=await testServe(),p=await page(s,'/pages/wyjazdy.html');
+ const s=await testServe(),p=await page(s,'/pages/ustawienia.html');
  try{
   const deleted=[];p.w.caches={keys:async()=>['ryby-shell-old','unrelated'],delete:async key=>{deleted.push(key);return true;}};
   const button=p.d.getElementById('ryby-logout');assert.ok(button);button.click();
@@ -175,13 +190,13 @@ test('management screen offers logout and revokes the active device session',asy
  }finally{p.close();await s.close();}
 });
 test('management page downloads a complete JSON backup through the Worker without writing rows',async()=>{
- const s=await testServe({seed:true}),p=await page(s,'/pages/wyjazdy.html');
+ const s=await testServe({seed:true}),p=await page(s,'/pages/ustawienia.html');
  try{
   let content=null,filename=null;
   p.w.URL.createObjectURL=blob=>{content=blob;return 'blob:ryby-test';};
   p.w.URL.revokeObjectURL=()=>{};
   p.w.HTMLAnchorElement.prototype.click=function(){filename=this.download;};
-  p.d.getElementById('backup-download').click();
+  p.d.getElementById('settings-export').click();
   await waitFor(()=>content&&filename,'backup download');
   assert.match(filename,/^dream-team-backup-\d{4}-\d{2}-\d{2}\.json$/);
   const data=JSON.parse(await content.text());
@@ -194,7 +209,8 @@ test('management page downloads a complete JSON backup through the Worker withou
 test('new participant and year can be managed in UI; no date fallback; lake knowledge isolated',async()=>{
  const s=await testServe(),p=await page(s,'/pages/wyjazdy.html');
  try{
-  fill(p,'angler-name','Ania');fill(p,'angler-pb','7.5');submit(p,'angler-edit');await waitFor(()=>p.d.querySelector('.participant-options')?.textContent.includes('Ania'));
+  const settings=await page(s,'/pages/ustawienia.html');try{fill(settings,'angler-name','Ania');fill(settings,'angler-pb','7.5');submit(settings,'angler-edit');await waitFor(()=>settings.d.querySelector('#participant-profile-list')?.textContent.includes('Ania'));}finally{settings.close();}
+  await p.w.Dream.refreshModel();p.close();const tripPage=await page(s,'/pages/wyjazdy.html');p.dom=tripPage.dom;p.w=tripPage.w;p.d=tripPage.d;p.errors=tripPage.errors;p.close=()=>tripPage.close();
   fill(p,'trip-name','Wspólny wyjazd 2029');fill(p,'trip-year','2029');fill(p,'trip-lake','wygonin');submit(p,'trip-edit');
   await waitFor(()=>[...p.d.querySelectorAll('[data-edit]')].length===5);
   const t=s.DB.sqlite.prepare('SELECT * FROM trips WHERE name=?').get('Wspólny wyjazd 2029');assert.equal(t.start_at,null);assert.equal(t.year,2029);
@@ -215,11 +231,129 @@ test('spot form CRUD retains optional values and renders user notes as text, nev
  const s=await testServe(),p=await page(s,'/pages/mapa.html');
  try{
   const markup='<img src=x onerror=alert(1)>';
-  fill(p,'spot-name','Testowy spot');fill(p,'spot-depth','4.5');fill(p,'spot-obstacles',markup);submit(p,'spot-form');
+  fill(p,'spot-name','Testowy spot');fill(p,'spot-depth','4.5');fill(p,'spot-latitude','53.12345');fill(p,'spot-longitude','18.54321');fill(p,'spot-weed','pas zielska');fill(p,'spot-rig','Ronnie Rig');fill(p,'spot-bait','wafters 15 mm');fill(p,'spot-obstacles',markup);submit(p,'spot-form');
   await waitFor(()=>p.d.querySelector('.spot-card'));assert.equal(p.d.querySelector('img[src="x"]'),null);assert.ok(p.d.querySelector('.spot-meta-grid').textContent.includes(markup));
+  const stored=s.DB.sqlite.prepare('SELECT latitude,longitude,weed,rig,bait FROM spots').get();assert.equal(stored.latitude,53.12345);assert.equal(stored.longitude,18.54321);assert.equal(stored.weed,'pas zielska');assert.equal(stored.rig,'Ronnie Rig');assert.equal(stored.bait,'wafters 15 mm');
   p.d.querySelector('.spot-card .edit-btn').click();await waitFor(()=>p.d.getElementById('edit-spot-id').value);fill(p,'spot-depth','');fill(p,'spot-obstacles','');submit(p,'spot-form');
   await waitFor(()=>p.d.getElementById('spot-message').textContent==='Zmiany zapisane.'&&p.d.querySelector('.spot-card .catch-badges')?.textContent.includes('Głębokość: brak'));assert.equal(s.DB.sqlite.prepare('SELECT depth_m FROM spots').get().depth_m,null);
   p.d.querySelector('.spot-card .danger-btn').click();await waitFor(()=>p.d.querySelector('#app-notice button'));p.d.querySelector('#app-notice button').click();await waitFor(()=>p.d.getElementById('app-notice').textContent==='Wpis przywrócony.');assert.equal(s.DB.sqlite.prepare('SELECT count(*) n FROM spots WHERE deleted_at IS NULL').get().n,1);
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
+});
+test('offline write queue updates checklist immediately and syncs once when connection returns',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/checklisty.html');
+ try{
+  const before=s.DB.sqlite.prepare("SELECT id,packed,revision FROM checklist_items WHERE trip_id='next-trip' AND packed=0 LIMIT 1").get();
+  const live=p.w.fetch;p.w.fetch=async()=>{throw new TypeError('network offline');};
+  const response=await p.w.Dream.api(`/api/checklist/${before.id}?tripId=next-trip`,{method:'PATCH',body:JSON.stringify({packed:true})});
+  assert.equal(response.pendingSync,true);assert.equal(p.w.Dream.pendingCount(),1);
+  assert.equal(s.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(before.id).packed,0);
+  const pending=await p.w.Dream.api('/api/checklist?tripId=next-trip');assert.equal(pending.items.find(x=>x.id===before.id).packed,true);
+  assert.match(p.d.getElementById('offline-banner').textContent,/oczekuj.*synchronizację/i);
+  let attempts=0;const keys=[];
+  p.w.fetch=async(url,options)=>{if(url==='/api/offline-sync'){attempts++;keys.push(JSON.parse(options.body).key);const response=await live(url,options);if(attempts===1)throw new TypeError('response lost after server commit');return response;}return live(url,options);};
+  await p.w.Dream.syncQueue();assert.equal(p.w.Dream.pendingCount(),1);
+  await waitFor(()=>p.w.Dream.pendingCount()===0,'automatic retry after lost response');
+  assert.equal(attempts,2);assert.equal(keys[0],keys[1]);
+  assert.equal(s.DB.sqlite.prepare('SELECT packed,revision FROM checklist_items WHERE id=?').get(before.id).packed,1);
+  assert.equal(s.DB.sqlite.prepare('SELECT revision FROM checklist_items WHERE id=?').get(before.id).revision,before.revision+1);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('offline catch and trip note queue without creating production rows until sync',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/teren.html');
+ try{
+  await waitFor(()=>Boolean(p.d.getElementById('trip-note-form')),'trip notes');
+  const original=p.w.fetch;p.w.fetch=async()=>{throw new TypeError('network offline');};
+  const catchesBefore=s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n;
+  const catchResult=await p.w.Dream.api('/api/catches',{method:'POST',body:JSON.stringify({tripId:'next-trip',anglerId:'patryk',weightKg:7.4,caughtAt:'2026-09-01T10:00:00Z'})});
+  assert.equal(catchResult.pendingSync,true);
+  fill(p,'trip-note-content','Sprawdzić próg po południu');submit(p,'trip-note-form');
+  await waitFor(()=>p.w.Dream.pendingCount()===2,'queued catch and note');
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,catchesBefore);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM trip_notes WHERE content=?').get('Sprawdzić próg po południu').n,0);
+  p.w.fetch=original;await p.w.Dream.syncQueue();await waitFor(()=>p.w.Dream.pendingCount()===0);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM catches').get().n,catchesBefore+1);
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM trip_notes WHERE content=?').get('Sprawdzić próg po południu').n,1);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('existing spot edits and new spots remain usable without signal and sync later',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/mapa.html');
+ try{
+  await p.w.Dream.api('/api/spots',{method:'POST',body:JSON.stringify({tripId:'next-trip',name:'Spot istniejący',depthM:3})});
+  const spots=(await p.w.Dream.api('/api/spots?tripId=next-trip')).spots,original=spots[0];assert.ok(original?.id);
+  const live=p.w.fetch;p.w.fetch=async()=>{throw new TypeError('network offline');};
+  const edit=await p.w.Dream.api(`/api/spots/${original.id}?tripId=next-trip`,{method:'PUT',body:JSON.stringify({name:'Spot offline',depthM:3.7})});
+  const added=await p.w.Dream.api('/api/spots',{method:'POST',body:JSON.stringify({tripId:'next-trip',name:'Nowy spot offline',depthM:2.1})});
+  assert.ok(edit.pendingSync&&added.pendingSync);assert.equal(p.w.Dream.pendingCount(),2);
+  assert.equal(s.DB.sqlite.prepare('SELECT name FROM spots WHERE id=?').get(original.id).name,original.name);
+  p.w.fetch=live;await p.w.Dream.syncQueue();await waitFor(()=>p.w.Dream.pendingCount()===0);
+  assert.equal(s.DB.sqlite.prepare('SELECT name FROM spots WHERE id=?').get(original.id).name,'Spot offline');
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM spots WHERE name=?').get('Nowy spot offline').n,1);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('checklist templates are manageable directly on the checklist screen',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/checklisty.html');
+ try{
+  await waitFor(()=>p.d.getElementById('template-create'),'template UI');
+  fill(p,'template-name','Standardowy wyjazd');submit(p,'template-create');
+  await waitFor(()=>p.d.querySelectorAll('.template-card').length===1,'created template');
+  p.d.querySelector('.template-select').checked=true;p.d.getElementById('template-apply').click();
+  await waitFor(()=>p.d.getElementById('template-message').textContent.includes('Dodano'),'template applied');
+  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM checklist_templates').get().n,1);
+  assert.match(p.d.getElementById('template-message').textContent,/identyczne/);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+test('participant settings edit persists without changing the device language',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/ustawienia.html');
+ try{
+  await waitFor(()=>p.d.querySelector('#participant-profile-list form'),'profile form');
+  const form=[...p.d.querySelectorAll('#participant-profile-list form')].find(x=>x.querySelector('h4').textContent==='Patryk');
+  const active=form.querySelector('input[type="checkbox"]'),language=form.querySelector('select');active.checked=false;language.value='en';
+  form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
+  await waitFor(()=>s.DB.sqlite.prepare("SELECT default_language FROM anglers WHERE id='patryk'").get().default_language==='en','profile save');
+  assert.equal(s.DB.sqlite.prepare("SELECT active FROM anglers WHERE id='patryk'").get().active,0);
+  assert.equal(p.w.localStorage.getItem('dreamteam.language'),null);
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+
+test('trip editor waits for save refresh before the next edit or archive',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/wyjazdy.html');
+ let release;try{
+  p.d.querySelector('[data-edit="next-trip"]').click();fill(p,'trip-peg','QA delayed refresh');
+  const live=p.w.fetch;let held=false;
+  p.w.fetch=async(url,options)=>{if(String(url)==='/api/bootstrap'&&!held){held=true;await new Promise(resolve=>{release=resolve;});}return live(url,options);};
+  submit(p,'trip-edit');submit(p,'trip-edit');await waitFor(()=>held,'save reached bootstrap refresh');
+  assert.equal(p.d.getElementById('trip-manager').inert,true,'editing remains unavailable during refresh');
+  assert.equal(s.requests.filter(r=>r.method==='PUT'&&r.url==='/api/trips/next-trip').length,1);
+  release();await waitFor(()=>!p.d.getElementById('trip-manager').inert,'refresh settled');
+  p.d.querySelector('[data-edit="next-trip"]').click();assert.equal(p.d.querySelector('#trip-edit [name="id"]').value,'next-trip');
+  fill(p,'trip-status','archived');submit(p,'trip-edit');await waitFor(()=>s.DB.sqlite.prepare("SELECT status FROM trips WHERE id='next-trip'").get().status==='archived');
+  await waitFor(()=>!p.d.getElementById('trip-manager').inert);assert.deepEqual(p.errors,[]);
+ }finally{release?.();p.close();await s.close();}
+});
+
+test('account author defaults survive reset and logout preserves owned queue; cancelling never revokes session',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/polowy.html');
+ try{
+  assert.equal(p.d.getElementById('person').value,'Patryk');
+  p.d.getElementById('person').value='Maciek';p.d.getElementById('catch-form').reset();assert.equal(p.d.getElementById('person').value,'Patryk');
+  Object.defineProperty(p.w.navigator,'onLine',{configurable:true,value:false});fill(p,'caught_at','2026-10-07T12:00');fill(p,'species','Karp');fill(p,'weight','6.5');fill(p,'bait','queue-owner');submit(p,'catch-form');await waitFor(()=>p.w.Dream.pendingCount()===1,'owned offline mutation');
+  const queue=JSON.parse(p.w.localStorage.getItem('dreamteam.offline.queue.v1'));assert.equal(queue[0].accountId,'account-patryk');assert.equal(queue[0].payload.anglerId,'patryk');
+  p.w.confirm=()=>false;await p.w.Dream.logout();assert.equal(s.requests.filter(r=>r.url==='/api/logout').length,0,'cancel before revoking session');
+  p.w.confirm=()=>true;await p.w.Dream.logout();assert.deepEqual(JSON.parse(p.w.localStorage.getItem('dreamteam.offline.queue.v1')),queue,'logout never discards unsynced payload');
+  Object.defineProperty(p.w.navigator,'onLine',{configurable:true,value:true});p.w.DREAM_MODEL.currentUser={id:'account-maciek',anglerId:'maciek'};const previous=s.requests.filter(r=>r.url==='/api/offline-sync').length;await p.w.Dream.syncQueue();assert.equal(s.requests.filter(r=>r.url==='/api/offline-sync').length,previous,'different account cannot send the preserved queue');
+ }finally{p.close();await s.close();}
+});
+
+test('shared account author can be selected on an older trip before joining its participants',async()=>{
+ const s=await testServe({seed:true});
+ const response=await fetch(s.url+'/api/anglers',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'Third',username:'Third'})});assert.equal(response.status,201);const {id}=await response.json();
+ const p=await page(s,'/pages/polowy.html','poland-2027');
+ try{fill(p,'person','Third');fill(p,'weight','7.5');fill(p,'bait','test');fill(p,'caught_at','2026-10-07T12:00');submit(p,'catch-form');await waitFor(()=>s.DB.sqlite.prepare('SELECT id FROM catches WHERE trip_id=? AND angler_id=?').get('poland-2027',id),'new shared author');assert.ok(s.DB.sqlite.prepare('SELECT angler_id FROM trip_participants WHERE trip_id=? AND angler_id=?').get('poland-2027',id));}
+ finally{p.close();await s.close();}
 });

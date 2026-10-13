@@ -1,0 +1,495 @@
+name: Preview final batch
+on:
+  workflow_dispatch:
+    inputs:
+      audit_only:
+        description: Targeted isolation/recovery verification only (no shared preview deployment)
+        type: boolean
+        default: false
+  push:
+    branches: [feat/final-batch]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    if: github.ref == 'refs/heads/feat/final-batch' && !inputs.audit_only && !contains(github.event.head_commit.message, '[audit only]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci && npm test
+      - name: Diagnose public transport and historical Worker limits without credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-public-diagnostics.mjs
+      - name: Prepare isolated D1 and R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-config.mjs
+      # No migration here; retain a fresh private point before replacing the preview Worker.
+      - name: Private preview checkpoint and verified reconstruction
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-account-checkpoint.mjs
+      - name: Verify all preview migrations already applied without writing
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-migration-status.mjs
+      - name: Deploy separate preview Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy --config wrangler.preview.generated.jsonc
+      - name: Verify existing business data after deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-account-checkpoint.mjs --verify
+      - name: Read-only build and authorization health
+        run: node scripts/release-health.mjs
+      - name: Wait for exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Read-only staging smoke
+        env:
+          RYBY_PRODUCTION_URL: https://dream-team-preview.sewerynski00.workers.dev
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/smoke-auth.mjs
+      - name: Check live Tavily and AI binding without enabling billing
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/live-preview-bindings.mjs
+
+      - name: One real direct URL extraction on isolated preview, no discovery or AI
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/live-preview-direct-research.mjs
+      - name: Public transport after deployment and QA preparation
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-public-diagnostics.mjs
+      - name: Preserve safe provider status only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: preview-provider-status
+          path: live-preview-qa
+
+  qa-language:
+    needs: [qa-weather, qa-knowledge]
+    if: always() && needs.qa-weather.result == 'success' && needs.qa-knowledge.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Real preview language QA
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-language.mjs
+      - name: Preserve language evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-language
+          path: live-preview-qa
+
+  qa-media:
+    needs: qa-offline
+    if: always() && needs.qa-offline.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Prepare isolated preview config for QA
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-config.mjs
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Existing protected media, all 17 atlas images and actual reload without uploads
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/live-preview-readonly-security.mjs media
+      - name: Preserve media evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-media
+          path: live-preview-qa
+
+  qa-offline:
+    needs: qa-accounts
+    if: always() && needs.qa-accounts.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Prepare isolated preview config for QA
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-config.mjs
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Current PWA without writes; isolated audit-fixes provides current write proof
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/live-preview-pwa-readonly.mjs
+      - name: Preserve offline evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-offline
+          path: live-preview-qa
+
+  qa-extras:
+    needs: [qa-weather, qa-knowledge]
+    if: always() && needs.qa-weather.result == 'success' && needs.qa-knowledge.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Prepare isolated preview config for navigation QA
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-config.mjs
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Existing profiles, templates and system without business writes
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/live-preview-readonly-security.mjs extras
+      - name: Preserve extras evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-extras
+          path: live-preview-qa
+
+  audit-fixes:
+    needs: preview
+    if: always() && (inputs.audit_only || contains(github.event.head_commit.message, '[audit only]') || needs.preview.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser for isolated regression
+        if: ${{ !contains(github.event.head_commit.message, '[restore only]') }}
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Inspect external production automation once, read only
+        if: ${{ !contains(github.event.head_commit.message, '[restore only]') }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/cloudflare-build-check.mjs
+      - name: Private copy, explicit migration, targeted auth/offline and Cloudflare D1/R2 restore
+        if: ${{ !contains(github.event.head_commit.message, '[restore only]') }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+          DRILL_RESTORE_DIAGNOSTIC: ${{ contains(github.event.head_commit.message, '[restore diagnostic]') }}
+          DRILL_DEPLOY_DIAGNOSTIC: ${{ contains(github.event.head_commit.message, '[deploy diagnostic]') }}
+        run: node scripts/cloudflare-recovery-drill.mjs
+      - name: Targeted restore regressions only
+        if: contains(github.event.head_commit.message, '[restore only]') && !contains(github.event.head_commit.message, '[r2 diagnostic]') && !contains(github.event.head_commit.message, '[restore finish]')
+        run: node --test tests/d1-snapshot.test.mjs
+      - name: Resume retained private D1/R2 checkpoint without source changes
+        if: contains(github.event.head_commit.message, '[restore only]') && !contains(github.event.head_commit.message, '[r2 diagnostic]') && !contains(github.event.head_commit.message, '[restore finish]')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: node scripts/saved-checkpoint-drill.mjs
+      - name: Diagnose only private R2 transport without D1 repeats
+        if: contains(github.event.head_commit.message, '[r2 diagnostic]')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/r2-restore-diagnostic.mjs
+      - name: Targeted private transport regressions
+        if: contains(github.event.head_commit.message, '[restore finish]')
+        run: node --test tests/restore-transport.test.mjs
+      - name: Finish isolated application binding and session/media proof only
+        if: contains(github.event.head_commit.message, '[restore finish]')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: node scripts/finish-checkpoint-restore.mjs
+      - name: Preserve safe status only; never upload private SQL/configuration
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-fixes-safe-status
+          path: live-preview-qa
+
+  qa-accounts:
+    needs: [preview, audit-fixes]
+    if: always() && needs.preview.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Prepare isolated preview config
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-config.mjs
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Existing accounts, authors, PB and private export without password rotation
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/live-preview-readonly-security.mjs accounts
+      - name: Preserve account evidence without secrets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-accounts
+          path: live-preview-qa
+
+  qa-weather:
+    needs: [qa-media]
+    if: always() && needs.qa-media.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Actual weather provider and controlled extremes at 390/1280 PL/EN
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-weather.mjs
+      - name: Preserve weather evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-weather
+          path: live-preview-qa
+
+  qa-knowledge:
+    needs: [qa-media]
+    if: always() && needs.qa-media.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Actual Deeper beam units, all quiz levels and reference images at 390/1280 PL/EN
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-sonar.mjs
+      - name: Actual encyclopedia evidence, unmeasured water and safe decisions at 390/1280 PL/EN
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-knowledge.mjs
+      - name: Preserve knowledge evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-knowledge
+          path: live-preview-qa
+
+  qa-user-language:
+    needs: [qa-language, qa-media, qa-offline, qa-extras, qa-weather, qa-knowledge]
+    if: always() && needs.qa-language.result == 'success' && needs.qa-media.result == 'success' && needs.qa-offline.result == 'success' && needs.qa-extras.result == 'success' && needs.qa-weather.result == 'success' && needs.qa-knowledge.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Real two users PL EN on the same device
+        env:
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-user-language.mjs
+      - name: Preserve user language evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-user-language
+          path: live-preview-qa
+
+  qa-regression:
+    needs: [qa-user-language]
+    if: always() && needs.qa-user-language.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install browser
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Verify exact preview build
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/wait-preview-build.mjs
+      - name: Final real preview regression
+        env:
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/live-preview-regression.mjs
+      - name: Preserve regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-preview-regression
+          path: live-preview-qa

@@ -27,7 +27,7 @@
 
   function oldCatch(x) {
     return {
-      id: x.id,
+      id: x.id, revision: x.revision, pendingSync: x.pendingSync,
       person: x.anglerName,
       angler_id: x.anglerId,
       species: x.species,
@@ -43,12 +43,13 @@
 
   function oldSpot(x) {
     return {
-      id: x.id,
+      id: x.id, revision: x.revision, pendingSync: x.pendingSync,
       name: x.name,
       distance_m: x.distanceM,
       depth_m: x.depthM,
       bottom_type: x.bottomType,
       note: x.notes,
+      weed: x.weed, rig: x.rig, bait: x.bait,
       obstacles: x.obstacles,
       best_time: x.bestTime,
       best_wind: x.bestWind,
@@ -59,7 +60,7 @@
   function oldCheck(x) {
     const qty = parseQuantity(x.quantity);
     return {
-      id: x.id,
+      id: x.id, revision: x.revision, pendingSync: x.pendingSync,
       category: x.category,
       item_name: x.label,
       quantity: qty.quantity,
@@ -142,6 +143,11 @@
                 depthM: row.depth_m ?? null,
                 distanceM: row.distance_m ?? null,
                 bottomType: row.bottom_type || null,
+                latitude: row.latitude ?? null,
+                longitude: row.longitude ?? null,
+                weed: row.weed || null,
+                rig: row.rig || null,
+                bait: row.bait || null,
                 notes: row.note || null,
                 obstacles: row.obstacles || null,
                 bestTime: row.best_time || null,
@@ -186,6 +192,11 @@
               depthM: this.payload.depth_m,
               distanceM: this.payload.distance_m,
               bottomType: this.payload.bottom_type,
+              latitude: this.payload.latitude,
+              longitude: this.payload.longitude,
+              weed: this.payload.weed,
+              rig: this.payload.rig,
+              bait: this.payload.bait,
               notes: this.payload.note,
               obstacles: this.payload.obstacles,
               bestTime: this.payload.best_time,

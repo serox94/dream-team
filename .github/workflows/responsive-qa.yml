@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   pull_request:
   push:
-    branches: [main, feat/dreamteam-finalize, "fix/**"]
+    branches: [main, feat/final-batch, feat/dreamteam-finalize, "fix/**"]
     paths: [.github/workflows/responsive-qa.yml, public/**, scripts/responsive-qa.mjs, src/**, migrations/**]
 permissions:
   contents: read
@@ -13,21 +13,32 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+      - name: Scope retained checkpoint verification
+        id: scope
+        run: node scripts/qa-restore-scope.mjs
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.restore_only != 'true'
         with:
           node-version: 24
           cache: npm
       - run: npm ci
+        if: steps.scope.outputs.restore_only != 'true'
       - name: Bundle local Chart.js asset
+        if: steps.scope.outputs.restore_only != 'true'
         run: node scripts/build.mjs
       - name: Install disposable browser test tooling
+        if: steps.scope.outputs.restore_only != 'true'
         run: |
           npm install --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
       - name: Check 15 screens, knowledge tools and offline at five viewport widths
+        if: steps.scope.outputs.restore_only != 'true'
         run: node scripts/responsive-qa.mjs
       - name: Keep screenshots of fixture data for visual review
-        if: always()
+        if: always() && steps.scope.outputs.restore_only != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ryby-responsive-fixture

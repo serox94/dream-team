@@ -1,0 +1,9 @@
+{
+  "result": "BLOCKED",
+  "httpStatus": 403,
+  "code": 10000,
+  "at": "2026-10-13T13:05:56Z",
+  "run": 38401950023,
+  "job": 115312154716,
+  "action": "Udostępnij eksport ustawień Cloudflare dream-team: Builds/Git integration, deploy hooks i oczekujące deployments, potwierdzający brak automatycznego wydania main."
+}

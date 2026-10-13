@@ -1,0 +1,69 @@
+{
+  "version":"2026-10-06.en.1",
+  "substrateFamilies":{
+    "firm":["Feel for a sharper tap or scrape than in silt. Repeat the drop and check for stones or crevices that could trap the lead.","Try a bottom bait or wafter on a simple, safe rig. A shorter hooklink can control presentation on even firm ground; adapt length and material to irregularities and ensure the lead cannot jam.","Start with a small scattered portion or a single hookbait under pressure. Add more only after feeding signs.","If weed is present, confirm a clean patch and safe landing route. Echo colour alone does not establish material."],
+    "soft":["A lead may sink with a dull drop and return carrying sediment, plant remains or an odour. Check sediment depth; hook and hooklink may be buried.","A wafter or controlled low pop-up may remain clear of sediment. Use a safe lead setup and select hooklink length by testing how the rig lands, often longer than on firm bottom. Check local rig rules.","Begin with a few baits or a small patch. Check whether hookbait and feed sink into sediment before topping up.","Check any weed and the landing route. Soft bottom may still hold natural food; one sonar colour cannot tell you its quality."],
+    "weed":["A lead may catch and retrieve plants. Repeat scans across the area, confirm a clean opening and a safe landing route with a lead.","On a verified clear opening, try a bottom bait or wafter. On an edge, use a suitable raised bait only when landing is safe. Match hooklink and lead release to weed height and local rules.","Place a small, precise portion on clear ground rather than scattering into dense growth. Increase after observed activity.","Check the clean patch and fish safety first. A single plant fragment does not describe an entire area."],
+    "structure":["A lead may roll down a slope or catch on a shelf. Repeat tracks from two directions and check where the rig actually settles.","Use a bottom bait or wafter on a stable shelf or patch, adapting rig, hooklink and lead to snags. Ensure the lead can release safely.","Feed a small amount on a stable part, not a steep face. Confirm where the food lands before increasing it.","Check any weed, bottom type and safe landing route; structure shape alone is not a rig placement decision."]
+  },
+  "substrates":[
+    ["Gravel","firm","A strong rough scrape on the lead; often a thicker sonar return and sometimes a second echo.","A bottom bait or wafter after checking the drop. A short to medium hooklink and a little scattered feed are a starting point.","Stone and clay can also give strong returns; gravel is not proven by the echo alone."],
+    ["Sand","firm","Even contact, often firmer than silt without gravel's distinctive scrape; a stable sonar line.","Try a bottom bait or wafter on a verified clean area.","Firm sand may look like other materials on screen."],
+    ["Clay","firm","Smooth strong tap, sometimes clay residue on the lead; a clear echo does not reveal bottom chemistry.","Use a controlled bottom bait or wafter after feeling the area.","Hard clay can resemble gravel acoustically; check for sticky deposits."],
+    ["Firm bottom","firm","Repeatable strong return, short hard landing and vibration on the retrieve.","Start with a controlled short to medium hooklink and confirm the actual descent.","Firm does not automatically mean gravel or natural food."],
+    ["Light silt","soft","Weaker or thinner return, dull drop and a little sediment on the lead.","Consider a wafter or lighter lead. Set hooklink length after checking how far the lead sinks.","The hook can be partly covered even when the bait seems visible."],
+    ["Deep silt","soft","Weak diffuse return; the lead sinks deeply and is hard to pull free.","Raise the hookbait above sediment or compare a firmer edge; verify a safe rig.","Both rig and food may disappear into the sediment."],
+    ["Detritus","soft","Leaves and debris on the lead, uneven soft return and a variable layer above the real bottom.","Check whether a raised presentation can remain clear or move to a cleaner margin.","Rotting debris can hide the hook and change how bait smells."],
+    ["Leaf litter","soft","Recognisable leaves on the lead; sonar may show only a soft layer.","Find a stable clean patch or keep hook and bait above the litter.","A single clean-looking return does not show how deep the leaf layer is."],
+    ["Low weed","weed","An uneven low band above bottom; fine plants on the lead.","Match a wafter or low pop-up to actual height, targeting a gap or edge.","One retrieved plant fragment does not prove the entire patch is densely weedy."],
+    ["Tall weed","weed","Plants extend into the water column at varying heights on repeat scans.","Prefer a large clear opening or outer edge with a safe landing route.","A rig placed inside dense stems can be unsafe even if fish marks appear nearby."],
+    ["Pondweed","weed","Complex, sometimes tall plants; identify from a retrieved fragment or visual check, not sonar alone.","Map a clear corridor or outside edge and check landing safety.","Similar plants can give the same echo shape."],
+    ["Elodea","weed","Fine dense aquatic plants; the image resembles other submerged weed.","Find a verified gap large enough for repeatable placement.","Sonar cannot reliably establish plant species."],
+    ["Dead weed / chod","soft","Soft irregular layer and dead plant fragments on the lead.","Test a safe raised presentation only if permitted and the lead can release; compare a cleaner edge.","Dead weed can conceal the hook and create snags."],
+    ["Gravel to silt","soft","Repeatable change in echo strength and lead feel over a short distance.","Compare both sides and verify which one receives the lead and hookbait.","Beam width and movement blur the exact boundary on screen."],
+    ["Weed edge","weed","Sudden reduction in plant height on repeat parallel tracks.","Target the clear side or a checked gap, allowing for GPS and beam error.","An apparently precise line may be displaced from the true edge."],
+    ["Clear hole","weed","A short gap among plants recurring on several passes; verify with a marker.","Place a bottom bait, wafter or small PVA precisely if the gap is large enough.","GPS and cone width introduce error; the rig may land on the weedy rim."],
+    ["Plateau","structure","A relatively flat area after a depth change; it need not have hard bottom.","Compare the top with its edge and base, then check bottom and fish signs.","A flat screen during a stopped scan is not proof of a plateau."],
+    ["Drop or ledge","structure","A repeatable depth change on passes in opposite directions.","Test a stable upper or lower edge depending on fish, food and presentation.","A wide beam can conceal a steep face or make the hooklink hang."],
+    ["Channel or trough","structure","A local hollow repeated on several cross tracks.","Compare entrance, firm side and base after checking silt and oxygen.","The deepest point is not automatically the best or safest."],
+    ["Underwater hump","structure","Depth rises and falls when crossing from several directions.","Compare top, side and base, then confirm firmness and a safe landing route.","A strong return on top does not prove fish or natural food."]
+  ],
+  "profileFamilies":{
+    "food":["No flavour has a reliable exclusive temperature band. Below 16°C start with less food; at 16–24°C follow actual activity; above 24°C prioritise oxygen and fish welfare. Under pressure compare a small neutral hookbait.","Use a bottom bait on clean ground, a balanced wafter over light sediment, or a pop-up if weed requires lift. Match hooklink length and material to the actual bottom.","Test a single hookbait first; after confirming fish, start with a small portion of related food and increase only after a response.","If fish are present without taking, compare a small neutral wafter and one contrasting bait. Never credit flavour alone without controlling spot, amount, size and colour."],
+    "spice":["No reliable season or temperature belongs to this flavour alone. Start with less food in cool water and adjust to feeding; heat makes oxygen and welfare the priority.","Compare bottom bait and wafter at the same location. Raise a pop-up only when weed or sediment requires it; choose hooklink to fit the bottom.","Start with a single hookbait or a few small portions. Increase only after activity.","If the strong signal changes nothing, compare a neutral bait, size and rig location instead of adding more flavour."],
+    "sweet":["There is no reliable temperature window for this profile. Reduce food in cool water, follow feeding in warmer water and prioritise oxygen during heat.","Try a bottom bait on confirmed ground, a wafter for a lighter presentation or a pop-up when bottom is uncertain. Match hooklink and lead to conditions.","A single hookbait is a useful pressured-water test. When feeding is confirmed, compare a small rule-permitted food patch.","With no response, compare a neutral smaller bait and less feed before blaming the flavour."],
+    "fruit":["Fruit has no guaranteed seasonal window. In cool water use less food; in warmth follow fish activity; in heat put oxygen and welfare first.","Compare a natural bottom bait with a small fruit wafter or pop-up on a separate rig, controlling colour and buoyancy.","Start with a single hookbait. Feed a small amount only after activity; hookbait flavour need not match every free bait.","If a bright contrast fails under pressure, try a smaller bait in a natural colour. Keep location and food amount comparable."],
+    "natural":["No fixed seasonal window. Observe temperature and fish activity, reduce food in cold water and prioritise oxygen in heat.","Use worms, larvae or unscented particles only where rules allow them, with a rig suitable for nuisance fish and the actual bottom.","Offer a small amount of properly prepared food; never scatter uncooked particles.","If small fish dominate, choose a more selective hookbait and reduce fine food."]
+  },
+  "profiles":[
+    ["Fishmeal","food","Food base; ingredients and oil content vary.","Garlic, spice or a bright topper.","Do not equate it with one season."],
+    ["Krill","food","Marine and meaty profile.","Garlic or a natural hookbait.","A package name does not prove ingredients."],
+    ["Squid","food","Marine profile.","Fruit contrast or neutral bait.","Compare composition, not just aroma."],
+    ["Crab","food","Crustacean style.","Spice or a neutral comparison.","The label alone says little about solubility."],
+    ["Liver","food","Savoury and meaty profile.","A mild spice or plain hookbait.","Strong aroma cannot replace fish location."],
+    ["Garlic","spice","Conspicuous signal.","Fishmeal or krill.","It cannot fix poor rig presentation."],
+    ["Spicy","spice","Spicy signal.","Fishmeal or a neutral control.","Avoid changing feed and colour simultaneously."],
+    ["Robin Red style","spice","Spiced cereal style.","Fishmeal or neutral bait.","Ingredients differ between products."],
+    ["Scopex","sweet","Sweet creamy profile.","Nut or tiger nut.","Test alongside feed amount and colour."],
+    ["Creamy","sweet","Mild sweet profile.","Nutty base or plain control.","Do not infer a season from the name."],
+    ["Vanilla","sweet","Sweet profile.","Creamy or a natural comparison.","Aroma strength does not prove feeding value."],
+    ["Nutty","sweet","Nut profile.","Tiger nut or creamy contrast.","Follow particle preparation and lake rules."],
+    ["Tiger nut","sweet","Nutty sweet profile.","Creamy or Scopex.","Actual tiger nuts must be prepared safely."],
+    ["Fruit","fruit","Fruit contrast.","Squid or fishmeal.","Colour and buoyancy may matter more than aroma."],
+    ["Pineapple","fruit","Sharp fruit profile.","Neutral bait as a control.","Bright colour is a separate variable."],
+    ["Citrus","fruit","Fresh sharp profile.","Fishmeal or a plain comparison.","Do not add several new signals at once."],
+    ["Plum","fruit","Fruit profile.","Neutral hookbait as a control.","A flavour name is not a feeding forecast."],
+    ["Strawberry","fruit","Fruit profile.","Natural or fishmeal comparison.","Keep rig location comparable."],
+    ["Banana","fruit","Fruit and sweet profile.","Plain or nutty comparison.","Match hookbait size and colour in the test."],
+    ["Other / natural","natural","Worms, larvae and unscented particles.","Small patch of natural food.","May attract other species."]
+  ],
+  "temperatures":[
+    ["<6°C","Use little food and locate fish patiently. Slower metabolism does not mean feeding stops."],
+    ["6–8°C","Small patches, check more stable areas and watch the direction of temperature change."],
+    ["8–12°C","Compare sun-warmed shallows with safe deeper water; increase food only after a response."],
+    ["12–16°C","Activity may rise on many waters. Observe fish and local trends before feeding more."],
+    ["16–20°C","Spawning may occur. Leave spawning fish undisturbed and obey closures."],
+    ["20–24°C","Activity can be high, but adjust food to stock, actual feeding and oxygen."],
+    [">24°C","Oxygen and fish welfare take priority over bite counts; minimise stress."]
+  ]
+}

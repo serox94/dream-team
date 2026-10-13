@@ -1,0 +1,15 @@
+// Diagnostics ONLY for the failed private R2 restore; no D1 or production access.
+import {readFile,mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {randomBytes} from 'node:crypto';
+import {cf,wrangler,configFile,assertSandbox,sha} from './recovery-common.mjs';
+const name='dream-team-audit-'+process.env.GITHUB_RUN_ID,archive='dream-team-audit-38410329365-archive',dir=await mkdtemp(join(tmpdir(),'private-r2-')),base=JSON.parse(await readFile('wrangler.jsonc','utf8'));
+const result={candidate:process.env.GITHUB_SHA,result:'FAIL',productionRequests:0,d1Requests:0,providerCalls:0};let worker=false;
+try{
+ assertSandbox(name);assertSandbox(archive);const media=name+'-media';await cf('/r2/buckets','POST',{name:media});
+ wrangler(['r2','object','get',archive+'/manifest.json','--remote','--file',dir+'/manifest.json']);const bytes=await readFile(dir+'/manifest.json'),manifest=JSON.parse(bytes);
+ result.objects=manifest.entries.length;result.totalBytes=manifest.entries.reduce((n,e)=>n+e.size,0);result.largestObject=Math.max(0,...manifest.entries.map(e=>e.size));result.manifestSha256=sha(bytes);
+ const config={name:name+'-io',workers_dev:true,main:process.cwd()+'/scripts/restore-io-worker.js',compatibility_date:base.compatibility_date,triggers:{crons:[]},r2_buckets:[{binding:'SOURCE',bucket_name:archive},{binding:'ARCHIVE',bucket_name:archive},{binding:'RESTORED',bucket_name:media}]};
+ const file=await configFile(dir,config,'io.jsonc');worker=true;const output=wrangler(['deploy','--config',file]),url=output.match(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/)?.[0];if(!url)throw Error('NO_WORKER_URL');const key=randomBytes(32).toString('hex');wrangler(['secret','put','RECOVERY_KEY','--config',file],key);
+ const deadline=Date.now()+120000;while(true){const r=await fetch(url+'/ready',{headers:{'x-recovery-key':key},signal:AbortSignal.timeout(15000)});if(r.status===200&&(await r.json()).bindingsReady)break;if(Date.now()>deadline)throw Error('NOT_READY');await new Promise(r=>setTimeout(r,2000));}
+ const r=await fetch(url+'/restore',{method:'POST',headers:{'x-recovery-key':key},signal:AbortSignal.timeout(120000)}),text=await r.text();result.httpStatus=r.status;result.contentType=r.headers.get('content-type');result.cloudflareError=/\b(1101|1102|1019|1027)\b/.exec(text)?.[1];let data;try{data=JSON.parse(text);}catch{}result.error=data?.error||(!data?'NON_JSON':undefined);result.objectsRestored=data?.objects;result.result=r.status===200&&data?.verified===true?'PASS':'FAIL';if(result.result!=='PASS')process.exitCode=1;
+}catch(error){result.code=error.code;result.error=/^[A-Z0-9_]+$/.test(error.message)?error.message:'PRIVATE_R2_ERROR';process.exitCode=1;
+}finally{if(worker)try{await cf('/workers/scripts/'+name+'-io','DELETE');}catch{result.cleanupBlocked=true;}await rm(dir,{recursive:true,force:true});await mkdir('live-preview-qa',{recursive:true});await writeFile('live-preview-qa/audit-fixes-recovery.json',JSON.stringify(result,null,2));console.log('PRIVATE R2 DIAGNOSTIC '+JSON.stringify(result));}

@@ -1,9 +1,10 @@
 (async () => {
-  const VERSION='20261005-1';
+  const VERSION='20261013-audit-fixes-1';
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
     const model=await Dream.api('/api/bootstrap');
+    if(model.currentUser&&window.DreamLanguage?.activate(model.currentUser)){location.reload();return;}
     const trip=model.trips.find(t=>t.id===Dream.readTrip())||model.trips.find(t=>t.id===model.app.activeTripId)||model.trips.find(t=>t.status!=='archived')||model.trips[0];
     if(!trip)throw new Error('Brak wyjazdów w bazie.');
     window.DREAM_MODEL=model;window.DREAM_TRIP=trip;window.DREAM_VIEWED_TRIP_ID=trip.id;
@@ -15,7 +16,7 @@
       categorySelect.replaceChildren(...categories.filter(c=>c.active).map(c=>{const o=document.createElement('option');o.value=c.name;o.textContent=c.name;return o;}));
     }
     const person=document.getElementById('person');
-    if(person){person.replaceChildren(...trip.participants.map(a=>{const o=document.createElement('option');o.value=a.name;o.textContent=a.name;return o;}));}
+    if(person){const authors=[...trip.participants,...model.anglers.filter(a=>a.login&&!trip.participants.some(p=>p.id===a.id))];person.replaceChildren(...authors.map(a=>{const o=document.createElement('option');o.value=a.name;o.textContent=a.name;o.defaultSelected=a.id===model.currentUser?.anglerId;return o;}));}
     const assigned=document.getElementById('check-assigned');
     if(assigned){for(const member of trip.participants){const option=document.createElement('option');option.value=member.name;option.textContent=member.name;assigned.append(option);}}
     document.querySelectorAll('.main-nav a').forEach(a=>{
@@ -24,6 +25,7 @@
     });
     await loadScript('d1-api-compat.js');
     await loadScript('app.js');
+    await loadScript('weather-conditions.js');
     await loadScript('app-plus.js');
     await loadScript('field-mode.js');
     if(document.getElementById('trip-score-charts'))await loadScript('dashboard-chart.js');
@@ -33,9 +35,12 @@
     await window.DreamTripRenderer.render({model,trip,documents});
     window.initDreamPlus();
     if(document.getElementById('weather-current-temp'))await loadScript('fixes.js');
-    if(document.getElementById('trip-manager'))await loadScript('trip-manager.js');
+    if(document.getElementById('trip-manager')||document.getElementById('settings-management'))await loadScript('trip-manager.js');
     await window.initDreamApp();
+    if(document.body.dataset.page==='teren')await loadScript('trip-notes.js');
+    if(document.body.dataset.page==='checklisty')await loadScript('checklist-templates.js');
     if(document.querySelector('.location-photo-card'))await loadScript('trip-peg-enhancer.js');
+    if(document.getElementById('settings-form')){await loadScript('settings.js');await window.initDreamSettings();}
     document.documentElement.dataset.ready='true';
     Dream.registerShell();
     document.dispatchEvent(new Event('dream:ready'));
