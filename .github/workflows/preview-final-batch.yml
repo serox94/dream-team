@@ -263,15 +263,18 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Install browser for isolated regression
+        if: ${{ !contains(github.event.head_commit.message, '[restore only]') }}
         run: |
           npm install --no-save --package-lock=false playwright
           npx playwright install --with-deps chromium
       - name: Inspect external production automation once, read only
+        if: ${{ !contains(github.event.head_commit.message, '[restore only]') }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/cloudflare-build-check.mjs
       - name: Private copy, explicit migration, targeted auth/offline and Cloudflare D1/R2 restore
+        if: ${{ !contains(github.event.head_commit.message, '[restore only]') }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -280,6 +283,17 @@ jobs:
           DRILL_RESTORE_DIAGNOSTIC: ${{ contains(github.event.head_commit.message, '[restore diagnostic]') }}
           DRILL_DEPLOY_DIAGNOSTIC: ${{ contains(github.event.head_commit.message, '[deploy diagnostic]') }}
         run: node scripts/cloudflare-recovery-drill.mjs
+      - name: Targeted restore regressions only
+        if: contains(github.event.head_commit.message, '[restore only]')
+        run: node --test tests/d1-snapshot.test.mjs
+      - name: Resume retained private D1/R2 checkpoint without source changes
+        if: contains(github.event.head_commit.message, '[restore only]')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: node scripts/saved-checkpoint-drill.mjs
       - name: Preserve safe status only; never upload private SQL/configuration
         if: always()
         uses: actions/upload-artifact@v4

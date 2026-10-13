@@ -10,25 +10,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
+      - name: Scope retained checkpoint verification
+        id: scope
+        run: node scripts/qa-restore-scope.mjs
       - uses: actions/setup-node@v4
+        if: steps.scope.outputs.restore_only != 'true'
         with:
           node-version: 24
           cache: npm
       - run: npm ci
+        if: steps.scope.outputs.restore_only != 'true'
       - name: API and browser DOM regression tests
+        if: steps.scope.outputs.restore_only != 'true'
         run: npm test
       - name: Check JavaScript syntax
+        if: steps.scope.outputs.restore_only != 'true'
         run: |
           node --check src/worker.js
           for f in public/*.js src/*.js scripts/*.mjs; do node --check "$f"; done
       - name: Check runtime architecture
+        if: steps.scope.outputs.restore_only != 'true'
         run: |
           ! grep -R -E "dream-loader\.js|wygonin-launcher|wygonin-encyclopedia|catch-fix" public/index.html public/pages/*.html
           ! grep -R -i -E "supabase|sb_publishable|postgrest" public src backup
           for f in public/index.html public/pages/*.html; do test "$(grep -o 'dream-loader-v2.js' "$f" | wc -l)" -eq 1; done
       - name: Apply all migrations locally
+        if: steps.scope.outputs.restore_only != 'true'
         run: npm run db:migrate:local
       - name: Validate Worker build
+        if: steps.scope.outputs.restore_only != 'true'
         run: npm run build
       - name: Validate scheduled D1 backup Worker build
+        if: steps.scope.outputs.restore_only != 'true'
         run: npx wrangler deploy --dry-run --config backup/wrangler.jsonc

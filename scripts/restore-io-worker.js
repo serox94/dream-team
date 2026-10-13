@@ -1,6 +1,7 @@
 // Private operational gateway. SOURCE is read-only; writes go to dedicated recovery targets.
 const digest=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');
 const response=(data,status=200)=>Response.json(data,{status,headers:{'cache-control':'no-store'}});
+const metadata=value=>JSON.stringify(Object.fromEntries(Object.entries(value||{}).filter(([,v])=>v!==undefined).sort(([a],[b])=>a.localeCompare(b))));
 export default{async fetch(request,env){
  if(!env.RECOVERY_KEY||request.headers.get('x-recovery-key')!==env.RECOVERY_KEY)return response({ok:false},401);
  const path=new URL(request.url).pathname;
@@ -15,7 +16,8 @@ export default{async fetch(request,env){
   if(path==='/restore'&&request.method==='POST'){
    const object=await env.ARCHIVE.get('manifest.json');if(!object)throw Error('NO_MANIFEST');const manifest=await object.json();
    for(const row of manifest.entries){const object=await env.ARCHIVE.get('objects/'+row.key);if(!object||await digest(await object.arrayBuffer())!==row.sha256)throw Error('ARCHIVE_MISMATCH');}
-   for(const row of manifest.entries){const bytes=await(await env.ARCHIVE.get('objects/'+row.key)).arrayBuffer();await env.RESTORED.put(row.key,bytes,{httpMetadata:row.httpMetadata,customMetadata:row.customMetadata});const copy=await env.RESTORED.get(row.key);if(!copy||await digest(await copy.arrayBuffer())!==row.sha256)throw Error('RESTORE_MISMATCH');}
+   for(const row of manifest.entries){const bytes=await(await env.ARCHIVE.get('objects/'+row.key)).arrayBuffer();const httpMetadata={...row.httpMetadata};if(httpMetadata.cacheExpiry)httpMetadata.cacheExpiry=new Date(httpMetadata.cacheExpiry);await env.RESTORED.put(row.key,bytes,{httpMetadata,customMetadata:row.customMetadata});const copy=await env.RESTORED.get(row.key);if(!copy||copy.size!==row.size||await digest(await copy.arrayBuffer())!==row.sha256||metadata(copy.httpMetadata)!==metadata(row.httpMetadata)||metadata(copy.customMetadata)!==metadata(row.customMetadata))throw Error('RESTORE_MISMATCH');}
+   let cursor;const keys=new Set();do{const listed=await env.RESTORED.list({cursor});for(const row of listed.objects)keys.add(row.key);cursor=listed.truncated?listed.cursor:undefined;}while(cursor);if(keys.size!==manifest.entries.length||manifest.entries.some(row=>!keys.has(row.key)))throw Error('RESTORE_MISMATCH');
    return response({ok:true,objects:manifest.entries.length,verified:true});
   }
   return response({ok:false},404);

@@ -77,3 +77,11 @@ READY TO MERGE TO MAIN: NO — H03/H04/M04 wymagają odbioru.
 READY TO DEPLOY PRODUCTION: NO — brak pełnego restore i kontroli CF automation, brak osobnej zgody; main/produkcji nie scalano ani nie wdrażano.
 
 D2c3d92 / [38413402071](https://github.com/serox94/dream-team/actions/runs/38413402071): 122 unit PASS; przygotowanie preview próbowało utworzyć istniejący bucket i otrzymało 409/code10004. Poprawiono wyłącznie QA: bezpośredni GET konkretnego istniejącego bucketu zamiast inferencji z listy i ponownego POST. Nie resetuje ani nie zmienia zawartości R2; prywatne checkpointy zachowane. H04/M04 nadal BLOCKED, bez ponawiania odmówionych operacji.
+
+## Kontynuacja od 0958512 — tylko prywatne odtworzenie
+- Run 38414061182 nie ponowił importu: zatrzymał go utrwalony marker BLOCKED. Faktyczny D1_RESET_DO: 38412632242, job 115348660209.
+- Odtwarzanie wykorzystuje zachowane checkpoint.sql i manifest R2 z dream-team-audit-38410329365-archive; zero żądań do produkcji i wspólnego preview.
+- Nowa ścieżka REST D1: wszystkie tabele przed rekordami, rodzice przed dziećmi, wyzwalacze po rekordach; porównanie wszystkich tabel, schematu, indeksów, wyzwalaczy, FK i liczników. Nie ponawia importu częściowego celu.
+- Nowe testy celowane: 4/4 PASS lokalnie. Rzeczywisty test Cloudflare: PENDING; żaden nowy status PASS nie wynika wyłącznie z kodu.
+- H04 pozostaje BLOCKED; nie ponawiano zapytań o uprawnienia. Zaliczone wcześniej testy aplikacji/UI pozostają dowodem z 38414061182, są pomijane wyłącznie dla oznaczonego checkpointu obejmującego dokładną listę plików restore.
+- Referencja procesu FK: https://developers.cloudflare.com/d1/sql-api/foreign-keys/

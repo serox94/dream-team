@@ -19,13 +19,7 @@ export function assertReleaseReceipt(receipt,build){assert.equal(receipt.format,
 
 export async function importSandboxSql(db,config,file){
  assertSandbox(db.name,db.uuid);
- const execute=()=>wrangler(['d1','execute',db.name,'--remote','--config',config,'--file',file]);
- try{execute();}catch(error){
-  if(!error.resetDo)throw error;
-  // Discard only the unpublished scratch target. Never repeat a migration or modify a source.
-  const oldId=db.uuid;await cf('/d1/database/'+oldId,'DELETE');
-  const replacement=await cf('/d1/database','POST',{name:db.name});assertSandbox(replacement.name,replacement.uuid);Object.assign(db,replacement);
-  const cfg=JSON.parse(await readFile(config,'utf8'));const binding=cfg.d1_databases.find(d=>d.database_id===oldId);assert.ok(binding);binding.database_id=db.uuid;await writeFile(config,JSON.stringify(cfg),{mode:0o600});
-  try{execute();}catch(second){if(second.resetDo){second.status=503;second.infrastructureBlocked=true;}throw second;}
- }
+ const cfg=JSON.parse(await readFile(config,'utf8'));assert.ok(cfg.d1_databases.some(d=>d.database_id===db.uuid&&d.database_name===db.name));
+ const {inspectSql,restoreSnapshot}=await import('./d1-snapshot.mjs');
+ return restoreSnapshot(db,inspectSql(await readFile(file)));
 }
