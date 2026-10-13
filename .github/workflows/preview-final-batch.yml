@@ -284,16 +284,22 @@ jobs:
           DRILL_DEPLOY_DIAGNOSTIC: ${{ contains(github.event.head_commit.message, '[deploy diagnostic]') }}
         run: node scripts/cloudflare-recovery-drill.mjs
       - name: Targeted restore regressions only
-        if: contains(github.event.head_commit.message, '[restore only]')
+        if: contains(github.event.head_commit.message, '[restore only]') && !contains(github.event.head_commit.message, '[r2 diagnostic]')
         run: node --test tests/d1-snapshot.test.mjs
       - name: Resume retained private D1/R2 checkpoint without source changes
-        if: contains(github.event.head_commit.message, '[restore only]')
+        if: contains(github.event.head_commit.message, '[restore only]') && !contains(github.event.head_commit.message, '[r2 diagnostic]')
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
         run: node scripts/saved-checkpoint-drill.mjs
+      - name: Diagnose only private R2 transport without D1 repeats
+        if: contains(github.event.head_commit.message, '[r2 diagnostic]')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/r2-restore-diagnostic.mjs
       - name: Preserve safe status only; never upload private SQL/configuration
         if: always()
         uses: actions/upload-artifact@v4
