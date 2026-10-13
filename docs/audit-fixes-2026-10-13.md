@@ -85,7 +85,7 @@ D2c3d92 / [38413402071](https://github.com/serox94/dream-team/actions/runs/38413
 | M04 D1 | PASS | 38435939611 / 115429778795: zachowany checkpoint 26 tabel / 269 rekordów; prywatny re-export i R2 SQL roundtrip; drugie odtworzenie 270 rekordów (dodatkowa sesja techniczna), 2 triggery, wszystkie wiersze, indeksy, FK, quick_check i liczniki |
 | M04 R2 | PASS | 38436517138 / 115431800489: 1 obiekt, 236364 B; SHA-256, metadane HTTP/custom oraz kompletny inwentarz zgodne; źródłowy archive wyłącznie odczytany |
 | M04 binding / H03 | PASS | [38437797828](https://github.com/serox94/dream-team/actions/runs/38437797828), job 115436244296, kod b4c4830309b83a20de35e24a5a7d89a004bd2e1e: nowe D1 podłączone do odtworzonego R2, API 401 dla cookie usuniętej sesji, nowy login/bootstrap Patryk i pobranie istniejącego obrazu ze zgodnym SHA |
-| H04 | FAIL | Nowe zrzuty UI potwierdzają Disable builds ON, zero Deploy Hooks, branch main i aktywną wersję c3a0bc69 sprzed 7 dni (100%). Cloudflare: PASS na podstawie ręcznych dowodów. GitHub: obecny main 2d0da14 nadal ma trigger push; workflow wyłącznie ręczny jest tylko na feat/final-batch. Szczegóły: docs/verification/h04-evidence-2026-10-13.json |
+| H04 | PASS (merge-only) | Cloudflare Builds DISABLED i Deploy Hooks brak — ręczne dowody. GitHub workflow Deploy private DreamTeam DISABLED — nowy screenshot i bieżący publiczny UI. Zero main Actions queued/in_progress/waiting/requested/pending. Pełna aktualna kolejka Cloudflare NOT TESTED; wymaga kontroli przed produkcyjnym wydaniem, nie blokuje scalenia przy wyłączonych obu ścieżkach automatycznego deploymentu. Szczegóły: docs/verification/h04-evidence-2026-10-13.json |
 
 Przyczyna D1: zachowany dump przy włączonych FK odwoływał się do nieutworzonej jeszcze tabeli (`REFERENCED_TABLE_NOT_CREATED`). `D1_RESET_DO` był nieprecyzyjnym błędem ścieżki importu; sam ponowny pusty cel go nie rozwiązywał. Naprawa: komplet tabel przed danymi, kolejność zależności rodzic/dziecko, osobne pełne instrukcje REST, indeksy i triggery po danych, dokładne odtworzenie AUTOINCREMENT i pełne porównanie przed purge. Nie wyłącza FK D1, nie powtarza częściowego importu i odmawia zapisu do zajętego/chronionego celu. Lokalny integrity_check, na D1 obsługiwany quick_check. Referencje: https://developers.cloudflare.com/d1/sql-api/foreign-keys/ oraz https://developers.cloudflare.com/d1/sql-api/sql-statements/.
 
@@ -97,13 +97,26 @@ Nowe testy: 5/5 D1/R2 (e69cb6b) oraz 3/3 transport (b4c4830). Zaliczone przed ko
 
 Commity kodu/diagnostyki: d47d2aa, e69cb6b, 0dffe58, 3ad7bbd, b4c4830. Punkt początkowy 0958512. Prywatne zasoby dowodowe: stary archive dream-team-audit-38410329365-archive pozostaje niezmieniony; SQL re-export dream-team-audit-38435939611-archive; odtworzone media dream-team-audit-38436517138-media. Publiczne artefakty zawierają wyłącznie statusy/liczniki/hashe. Tymczasowe D1 i Workery usunięto. Zero żądań do produkcyjnych zasobów, zapisów do istniejących danych i wywołań Tavily/Workers AI. Main nadal 2d0da14d4637739dcefc61bab596be59778cd26f.
 
-READY TO MERGE TO MAIN: NO — H04: Cloudflare potwierdzony ręcznie, lecz obecny main nadal zawiera automatyczny produkcyjny trigger push.
-READY TO DEPLOY PRODUCTION: NO — H04 i brak osobnej zgody; produkcji nie wdrażano.
+READY TO MERGE TO MAIN: YES — automatyczne Builds/hooki Cloudflare i produkcyjny workflow GitHub wyłączone; kandydat ma workflow wyłącznie ręczny. Scalenie wymaga osobnej zgody.
+READY TO DEPLOY PRODUCTION: NO — brak osobnej zgody i świeżego produkcyjnego manifestu/przygotowania; pełna aktualna kolejka Cloudflare niezweryfikowana.
 
-## H04 — weryfikacja dowodów użytkownika
+## Historyczna weryfikacja H04 przed ręcznym wyłączeniem GitHub workflow
 
 Odczytano wizualnie trzy zrzuty. Starszy (17:55 UTC) pokazuje Disable builds OFF; najnowszy (17:58 UTC) pokazuje ON i brak Deploy Hooks. Widok deployments (17:57 UTC) pokazuje aktywną wersję c3a0bc69 sprzed 7 dni, 100% ruchu; ostatnie widoczne wpisy mają Ready/Skipped, bez widocznych Pending/Running. Jest to dowód ręczny, nie nowy eksport API ani pełna historia ukrytej kolejki. Dawna odmowa API 403 pozostaje faktem historycznym.
 
 Twierdzenie o wyłącznie ręcznym triggerze produkcji nie zgadza się z obecnym main 2d0da14d4637739dcefc61bab596be59778cd26f: .github/workflows/deploy-private.yml zawiera push na main (z filtrami ścieżek) oraz workflow_dispatch. Na kandydacie 10e109ff83ce1d5f4903738c9860a3d1fca8558c ten plik ma wyłącznie workflow_dispatch. Stanu enabled/disabled workflow nie ustalono: endpoint metadanych nie jest dostępny przez obecny connector. Nie przedstawiamy samej obecności YAML jako dowodu wykonania deploymentu.
 
 H04 całościowo FAIL (Cloudflare PASS / produkcyjny trigger GitHub FAIL); stan kandydata i obecnego main odróżniono. Jedna potrzebna czynność: wyłączyć obecny produkcyjny workflow deploy-private.yml w GitHub Actions przed zatwierdzeniem scalenia kandydata z ręcznym workflow. Nie zmieniano workflow, Cloudflare, main, D1/R2 ani aktywnego deploymentu; nie uruchamiano testów ani Actions. Ten commit zmienia wyłącznie dokumentację i dowód H04.
+
+## Zamknięcie audytu — scalenie bez deploymentu
+
+Punkt wejścia: 90da21c7c4eb1269771b0ab9c5e1cc36e19e6cdc (zgodny z oczekiwanym); main pozostaje 2d0da14d4637739dcefc61bab596be59778cd26f. Nowy screenshot image(20261013-183021).png potwierdza Workflow disabled successfully, This workflow was disabled manually i etykietę Disabled dla deploy-private.yml. Bieżący publiczny widok GitHub potwierdza ręczne wyłączenie; niczego nie włączano ani wyłączano w tej sesji.
+
+H04 zamknięte jako PASS dla scalenia bez wydania: Cloudflare Builds DISABLED, brak Deploy Hooks oraz produkcyjny workflow GitHub DISABLED. Sam push w historycznym YAML main nie uruchomi ręcznie wyłączonego workflow. Kandydat deploy-private.yml ma wyłącznie workflow_dispatch; deploy-backup.yml również wyłącznie workflow_dispatch. Brak zmian backup/**. PR #8 jest mergeable=true / clean, pozostaje draft; nie zmieniono jego statusu.
+
+Kolejka GitHub: pięć niezależnych zapytań dla main (queued, in_progress, waiting, requested, pending) zwróciło po 0. Ostatni produkcyjny run 37433780454 zakończony 6 października; nie jest oczekującym wdrożeniem. Cloudflare: wcześniejszy przekazany zrzut pokazuje Ready/Skipped, bez widocznego Pending/Running; pełnej aktualnej kolejki nie odczytano z powodu braku uprawnień administracyjnych. Oznaczenie NOT TESTED zachowano jawnie; nie przedstawiamy tego jako pełnej aktualnej kontroli Cloudflare. Przed przyszłym wydaniem wymagana jest świeża kontrola kolejki, aktywnej wersji i prywatny manifest. Nie ponawiano odmówionych wywołań API.
+
+H01–H03 i M01–M04 pozostają PASS na wcześniej zapisanych dowodach. Porównanie b4c4830...90da21c wykazało tylko trzy pliki dokumentacji; src/public/migrations także bez zmian od b7f06ec, gdzie odbierano H01/H02/M01/M02. Run 38437797828 nadal completed/success na b4c4830. Nie uruchomiono testów, Actions, migracji, nowych zapisów biznesowych, researchu ani płatnych integracji. Ten checkpoint zmienia wyłącznie raport i dowód H04.
+
+READY TO MERGE TO MAIN: YES — wyłącznie po osobnej zgodzie; PR draft trzeba wówczas oznaczyć Ready for review. Produkcyjny workflow i Cloudflare Builds mają pozostać wyłączone.
+READY TO DEPLOY PRODUCTION: NO — oddzielna zgoda, świeża kontrola pełnej kolejki Cloudflare i prywatna dokumentacja/przygotowanie produkcji nadal wymagane. Nie scalano ani nie wdrażano.
