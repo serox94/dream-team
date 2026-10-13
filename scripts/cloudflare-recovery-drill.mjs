@@ -15,10 +15,12 @@ try{
  phase='create isolated D1/R2';
  const db=await cf('/d1/database','POST',{name:name+'-db'}),restored=await cf('/d1/database','POST',{name:name+'-restored'});assertSandbox(db.name,db.uuid);assertSandbox(restored.name,restored.uuid);
  const media=name+'-media',archive=name+'-archive',restoredMedia=name+'-restored';for(const bucket of [media,archive,restoredMedia]){assertSandbox(bucket);await cf('/r2/buckets','POST',{name:bucket});}
- const gatewayConfig=source=>({name:name+'-io',main:process.cwd()+'/scripts/restore-io-worker.js',compatibility_date:base.compatibility_date,workers_dev:true,triggers:{crons:[]},r2_buckets:[{binding:'SOURCE',bucket_name:source},{binding:'ARCHIVE',bucket_name:archive},{binding:'RESTORED',bucket_name:source===media?restoredMedia:media}]});
+ const gatewayConfig=source=>({name:name+'-io',workers_dev:true,main:process.cwd()+'/scripts/restore-io-worker.js',compatibility_date:base.compatibility_date,workers_dev:true,triggers:{crons:[]},r2_buckets:[{binding:'SOURCE',bucket_name:source},{binding:'ARCHIVE',bucket_name:archive},{binding:'RESTORED',bucket_name:source===media?restoredMedia:media}]});
  phase='private media backup/restore';
  let io=await deploy(gatewayConfig('dream-team-media'),'io.jsonc');secret(name+'-io','RECOVERY_KEY',ioKey);
- const recovery=async(path,method='POST',bytes)=>{const r=await fetch(io.url+path,{method,headers:{'x-recovery-key':ioKey},body:bytes,signal:AbortSignal.timeout(120000)});assert.equal(r.status,200,'private recovery gateway');const value=await r.json();assert.equal(value.ok,true);return value;};
+ const ioReady=async()=>{const deadline=Date.now()+120000;while(true){const r=await fetch(io.url+'/ready',{headers:{'x-recovery-key':ioKey},signal:AbortSignal.timeout(15000)});if(r.status===200&&(await r.json()).bindingsReady)return;if(Date.now()>deadline){const e=Error('RECOVERY_GATEWAY_NOT_READY');e.status=r.status;throw e;}await new Promise(resolve=>setTimeout(resolve,2000));}};
+ await ioReady();
+ const recovery=async(path,method='POST',bytes)=>{const r=await fetch(io.url+path,{method,headers:{'x-recovery-key':ioKey},body:bytes,signal:AbortSignal.timeout(120000)});const value=await r.json().catch(()=>({error:'NON_JSON_RECOVERY_RESPONSE'}));if(r.status!==200||value.ok!==true){const error=Error('PRIVATE_RECOVERY_FAILED');error.status=r.status;error.recoveryCode=value.error;error.recoveryPath=path;throw error;}return value;};
  await recovery('/private-sql/source','PUT',exported.bytes);await recovery('/backup');await recovery('/restore');
  phase='import source into isolated D1';
  let app=await deploy(privateConfig(db,media,'scripts/maintenance-worker.js'),'maintenance.jsonc');
@@ -54,7 +56,7 @@ try{
  // Snapshot includes an issued session. Restore MUST remove it; password pepper is unchanged.
  phase='private D1/R2 recovery point';
  await query(db.uuid,"INSERT INTO checklist_items(id,trip_id,category,label) VALUES(80000000,?,'sprzęt','own deleted sequence fixture')",[trip.id]);await query(db.uuid,'DELETE FROM checklist_items WHERE id=80000000 AND trip_id=?',[trip.id]);
- const point=await exportSql(app.file,db.name,dir+'/point.sql');io=await deploy(gatewayConfig(media),'io.jsonc');await recovery('/private-sql/checkpoint','PUT',point.bytes);const r2Point=await recovery('/backup');
+ const point=await exportSql(app.file,db.name,dir+'/point.sql');io=await deploy(gatewayConfig(media),'io.jsonc');await ioReady();await recovery('/private-sql/checkpoint','PUT',point.bytes);const r2Point=await recovery('/backup');
  const rotated=randomBytes(24).toString('hex');await api(app.url,p,'/api/account/password','POST',{currentPassword:process.env.RYBY_LOGIN_PASSWORD,newPassword:rotated});await api(app.url,p,'/api/bootstrap','GET',undefined,401);
  await deploy(privateConfig(db,media,'scripts/maintenance-worker.js'),'maintenance.jsonc');
  phase='restore into second isolated D1/R2';
@@ -65,7 +67,7 @@ try{
  await query(restored.uuid,'DELETE FROM auth_sessions');await query(restored.uuid,"INSERT OR REPLACE INTO app_settings(key,value) VALUES('maintenance_mode','off')");app=await deploy(privateConfig(restored,restoredMedia),'restored.jsonc');await api(app.url,p,'/api/bootstrap','GET',undefined,401);const fresh=await cookie(app.url,'Patryk');assert.equal((await api(app.url,fresh,'/api/bootstrap')).currentUser.anglerId,'patryk');
  const recoveredImage=await fetch(app.url+'/api/deeper-media/'+uploadedId+'/image',{headers:{cookie:fresh},signal:AbortSignal.timeout(20000)});assert.equal(recoveredImage.status,200);assert.equal(sha(Buffer.from(await recoveredImage.arrayBuffer())),sha(image));
  result.result='PASS';result.H01='PASS';result.H02='PASS';result.H03='PASS';result.M01='PASS';result.M02='PASS';result.M04='PASS';result.r2Objects=r2Point.objects;result.privateSqlSha256=point.sha256;result.sourceBookmarkSaved=Boolean(sourceBookmark);result.sessionsPurged=true;result.recoveryArchive=archive;
-}catch(error){result.result=error.status===403||error.code===10042?'BLOCKED':'FAIL';result.error=error.name;result.phase=phase;result.httpStatus=error.status||null;result.action=result.result==='BLOCKED'?'Rozszerz repozytoryjny CLOUDFLARE_API_TOKEN o uprawnienia odczytu D1/Workers i tworzenia izolowanych D1/R2 oraz operacji obiektowych R2.':undefined;throw new Error('AUDIT_FIXES_RECOVERY_'+result.result+' ('+phase+')');
+}catch(error){result.result=error.status===403||error.code===10042?'BLOCKED':'FAIL';result.error=error.name;result.phase=phase;result.httpStatus=error.status||null;result.recoveryPath=error.recoveryPath;result.recoveryCode=error.recoveryCode;result.actualStatus=typeof error.actual==='number'?error.actual:undefined;result.action=result.result==='BLOCKED'?'Rozszerz repozytoryjny CLOUDFLARE_API_TOKEN o uprawnienia odczytu D1/Workers i tworzenia izolowanych D1/R2 oraz operacji obiektowych R2.':undefined;throw new Error('AUDIT_FIXES_RECOVERY_'+result.result+' ('+phase+')');
 }finally{
  await mkdir('live-preview-qa',{recursive:true});await writeFile('live-preview-qa/audit-fixes-recovery.json',JSON.stringify(result,null,2));console.log('AUDIT FIXES RECOVERY '+JSON.stringify(result));await rm(dir,{recursive:true,force:true});
  // No active source resources are deleted. Private recovery archive is deliberately retained.

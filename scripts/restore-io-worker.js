@@ -5,6 +5,7 @@ export default{async fetch(request,env){
  if(!env.RECOVERY_KEY||request.headers.get('x-recovery-key')!==env.RECOVERY_KEY)return response({ok:false},401);
  const path=new URL(request.url).pathname;
  try{
+  if(path==='/ready'&&request.method==='GET')return response({ok:!!(env.SOURCE&&env.ARCHIVE&&env.RESTORED),bindingsReady:!!(env.SOURCE&&env.ARCHIVE&&env.RESTORED)});
   if(path==='/backup'&&request.method==='POST'){
    const entries=[];let cursor;const sourceEtags=new Map();
    do{const listed=await env.SOURCE.list({cursor});for(const info of listed.objects){sourceEtags.set(info.key,info.etag);const object=await env.SOURCE.get(info.key);if(!object)throw Error('SOURCE_CHANGED');if(info.etag!==object.etag)throw Error('SOURCE_CHANGED');const bytes=await object.arrayBuffer();const sha256=await digest(bytes);await env.ARCHIVE.put('objects/'+info.key,bytes,{httpMetadata:object.httpMetadata,customMetadata:object.customMetadata});const copy=await env.ARCHIVE.get('objects/'+info.key);if(!copy||await digest(await copy.arrayBuffer())!==sha256)throw Error('COPY_MISMATCH');entries.push({key:info.key,size:bytes.byteLength,sha256,httpMetadata:object.httpMetadata,customMetadata:object.customMetadata});}cursor=listed.truncated?listed.cursor:undefined;}while(cursor);
@@ -22,5 +23,5 @@ export default{async fetch(request,env){
    const bytes=await request.arrayBuffer();await env.ARCHIVE.put(sqlKey,bytes,{httpMetadata:{contentType:'application/sql'}});const copy=await env.ARCHIVE.get(sqlKey);if(!copy||await digest(await copy.arrayBuffer())!==await digest(bytes))throw Error('SQL_COPY_MISMATCH');return response({ok:true,sha256:await digest(bytes)});
   }
   return response({ok:false},404);
- }catch{return response({ok:false,error:'RECOVERY_FAILED'},500);}
+ }catch(error){const safe=new Set(['SOURCE_CHANGED','COPY_MISMATCH','NO_MANIFEST','ARCHIVE_MISMATCH','RESTORE_MISMATCH','SQL_COPY_MISMATCH']);return response({ok:false,error:safe.has(error.message)?error.message:'RECOVERY_FAILED'},500);}
 }};

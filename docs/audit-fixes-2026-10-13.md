@@ -41,3 +41,7 @@ Lokalne testy celowane: 18/18 PASS (accounts/migration/release safety/offline or
 
 READY TO MERGE TO MAIN: NO — do potwierdzenia bieżącej bramki i H04/M04.
 READY TO DEPLOY PRODUCTION: NO — nie udzielono osobnej zgody; produkcyjny maintenance/migracja/rollout nie wykonane.
+
+### Pierwsza bramka odbioru 094b389
+
+[Run 38401950023](https://github.com/serox94/dream-team/actions/runs/38401950023): 120/120 unit PASS, Validate i Responsive PASS; backup preview R2+bookmark i integralność istniejących danych PASS; rzeczywiste konta preview PASS; Tavily marker użyty, requestCount=0. H04 BLOCKED: CF GET /workers/scripts 403/code10000; zapisano tę blokadę, nie ponawiamy bez nowego dostępu. M04 FAIL w private media backup/restore przed zapisami biznesowymi (źródłowy SQL 20→28 porównany PASS). Dodano publicznie niewrażliwy sygnał gotowości prywatnego gateway i oczekiwanie propagacji sekretu/bindingów przed pierwszym zapisem, jawne workers_dev oraz status/path błędu. Następna bramka jest wyłącznie celowaną próbą audit-fixes; pełna końcowa bramka dopiero po jej wyniku. Nie ukrywamy pierwszego FAIL ani SKIPPED dalszych jobów.

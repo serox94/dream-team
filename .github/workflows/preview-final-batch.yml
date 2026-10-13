@@ -1,6 +1,11 @@
 name: Preview final batch
 on:
   workflow_dispatch:
+    inputs:
+      audit_only:
+        description: Targeted isolation/recovery verification only (no shared preview deployment)
+        type: boolean
+        default: false
   push:
     branches: [feat/final-batch]
 permissions:
@@ -11,7 +16,7 @@ concurrency:
 
 jobs:
   preview:
-    if: github.ref == 'refs/heads/feat/final-batch'
+    if: github.ref == 'refs/heads/feat/final-batch' && !inputs.audit_only && !contains(github.event.head_commit.message, '[audit only]')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -243,6 +248,7 @@ jobs:
 
   audit-fixes:
     needs: preview
+    if: always() && (inputs.audit_only || contains(github.event.head_commit.message, '[audit only]') || needs.preview.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
