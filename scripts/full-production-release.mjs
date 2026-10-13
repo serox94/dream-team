@@ -69,7 +69,9 @@ try{
  phase='current deployment queue and active configuration';
  const [settings,deployments,scripts,domains,subdomain]=await Promise.all([cf('/workers/scripts/dream-team/settings'),cf('/workers/scripts/dream-team/deployments'),cf('/workers/scripts'),cf('/workers/domains'),cf('/workers/subdomain')]);
  const worker=scripts.find(w=>w.id==='dream-team');check(worker?.tag,'WORKER_TAG');const builds=await cf('/builds/workers/'+encodeURIComponent(worker.tag)+'/builds?per_page=100'),buildList=Array.isArray(builds)?builds:builds.builds;check(Array.isArray(buildList)&&!buildList.some(b=>['queued','initializing','running'].includes(b.status)),'OTHER_BUILD_ACTIVE');
- const initialState=(await query(productionId,"SELECT key,value FROM app_settings WHERE key IN ('schema_version','maintenance_mode')")).results;check(initialState.find(r=>r.key==='schema_version')?.value==='20'&&initialState.find(r=>r.key==='maintenance_mode')?.value!=='on','PRODUCTION_NOT_AT_APPROVED_START_STATE');
+ const initialState=(await query(productionId,"SELECT key,value FROM app_settings WHERE key IN ('schema_version','maintenance_mode')")).results;
+ const resumeRun=process.env.RESUME_AFTER_RUN;
+ check(initialState.find(r=>r.key==='schema_version')?.value==='20'&&(resumeRun==='38459921007'?initialState.find(r=>r.key==='maintenance_mode')?.value==='on':initialState.find(r=>r.key==='maintenance_mode')?.value!=='on'),'PRODUCTION_NOT_AT_APPROVED_START_STATE');
  const active=deployments.deployments[0];check(active.versions.length===1&&active.versions[0].percentage===100,'SPLIT_PRODUCTION_TRAFFIC');status.previousVersion=active.versions[0].version_id;
  const gh=await fetch('https://api.github.com/repos/serox94/dream-team/actions/runs?per_page=100',{headers:{authorization:'Bearer '+process.env.GITHUB_TOKEN,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(20000)});check(gh.ok,'GITHUB_QUEUE_NOT_READABLE');const ghRuns=(await gh.json()).workflow_runs;check(Array.isArray(ghRuns)&&!ghRuns.some(r=>String(r.id)!==run&&r.path==='.github/workflows/deploy-private.yml'&&!['completed'].includes(r.status)),'OTHER_MANUAL_RELEASE_ACTIVE');status.concurrentDeploymentGate='PASS';
  const bindings=settings.bindings;check(bindings.some(b=>b.type==='d1'&&b.name==='DB'&&b.id===productionId),'SOURCE_D1_BINDING');
@@ -77,22 +79,34 @@ try{
  for(const k of ['RYBY_LOGIN_USERNAME','RYBY_LOGIN_PASSWORD','RYBY_SESSION_SECRET','TAVILY_API_KEY'])check(bindings.some(b=>b.type==='secret_text'&&b.name===k),'SOURCE_SECRET_MISSING');
  for(const k of ['RYBY_LOGIN_USERNAME','RYBY_LOGIN_PASSWORD','RYBY_SESSION_SECRET'])check(process.env[k],'OPERATOR_AUTH_SECRET_MISSING');check(process.env.RYBY_SESSION_SECRET.length>=32,'OPERATOR_PEPPER_SHORT');
  const hosts=[...new Set([production,'https://dream-team.'+subdomain.subdomain+'.workers.dev',...(Array.isArray(domains)?domains:domains.domains||[]).filter(d=>d.service==='dream-team').map(d=>'https://'+d.hostname)])];
+ if(resumeRun==='38459921007'){
+  // Resume only this stopped, pre-migration run. The public Worker must still be our no-op barrier.
+  phase='verify existing maintenance barrier and retained original Worker configuration';
+  const proofLog=await fetch('https://api.github.com/repos/serox94/dream-team/actions/jobs/115512123413/logs',{headers:{authorization:'Bearer '+process.env.GITHUB_TOKEN},signal:AbortSignal.timeout(20000)});check(proofLog.ok,'RESUME_PROOF_UNAVAILABLE');
+  const lines=(await proofLog.text()).split('\n'),proofLine=lines.find(l=>l.includes('PRODUCTION RELEASE BLOCKED '));check(proofLine,'RESUME_STATUS_MISSING');const stopped=JSON.parse(proofLine.slice(proofLine.indexOf('PRODUCTION RELEASE BLOCKED ')+27));
+  check(stopped.candidate===candidate&&stopped.run===38459921007&&stopped.credentials==='PASS'&&stopped.reason==='SOURCE_CHANGED_IN_MAINTENANCE'&&stopped.maintenanceWorker===true&&stopped.productionBusinessWrites===0,'RESUME_PROOF_INVALID');
+  const originalFile=join(dir,'original-worker.json');wrangler(['r2','object','get','dream-team-audit-38459921007-archive/previous-worker.json','--remote','--file',originalFile]);await chmod(originalFile,0o600);const original=JSON.parse(await readFile(originalFile,'utf8'));check(original.active.versions.length===1&&original.active.versions[0].version_id===stopped.previousVersion,'ORIGINAL_WORKER_PROOF');
+  for(const host of hosts){const r=await http(host,'/login');check(r.status===503&&(await r.text())==='Maintenance in progress. Try again later.','RESUME_BARRIER_NOT_INTACT');}
+  status.previousVersion=stopped.previousVersion;status.credentials='PASS';status.credentialsVerifiedRun=38459921007;barrier=true;maintenance=true;status.maintenance='ON';
+ }else{
  phase='production credential equality without secret disclosure';
  const oldCookie=await login(production,process.env.RYBY_LOGIN_USERNAME),value=oldCookie.slice(oldCookie.indexOf('=')+1),parts=value.split('.');check(parts.length===4,'LEGACY_COOKIE_FORMAT');
  const derived=createHash('sha256').update(process.env.RYBY_SESSION_SECRET+'\0'+process.env.RYBY_LOGIN_USERNAME+'\0'+process.env.RYBY_LOGIN_PASSWORD).digest(),expected=createHmac('sha256',derived).update(parts.slice(0,3).join('.')).digest('base64url');
  check(expected.length===parts[3].length&&timingSafeEqual(Buffer.from(expected),Buffer.from(parts[3])),'PRODUCTION_AUTH_SECRETS_DIFFER');await logout(production,oldCookie);status.credentials='PASS';
+ }
  const archive=name+'-archive',restoredMedia=name+'-media';for(const bucket of [archive,restoredMedia]){assertSandbox(bucket);await cf('/r2/buckets','POST',{name:bucket});}
- const previousFile=await configFile(dir,{settings,active,hosts,sourceMain:candidate},'previous-worker.json');await privatePut(archive,'previous-worker.json',previousFile,sha(await readFile(previousFile)));
+ const previousFile=resumeRun==='38459921007'?join(dir,'original-worker.json'):await configFile(dir,{settings,active,hosts,sourceMain:candidate},'previous-worker.json');await privatePut(archive,'previous-worker.json',previousFile,sha(await readFile(previousFile)));
  const live=await cf('/workers/scripts/dream-team/deployments');check(sha(JSON.stringify(live.deployments[0]))===sha(JSON.stringify(active)),'DEPLOYMENT_CHANGED_BEFORE_MAINTENANCE');
  phase='global HTTP/write/cron maintenance';
  const currentVars=Object.fromEntries(bindings.filter(b=>b.type==='plain_text').map(b=>[b.name,b.text]));
  const maintenanceConfig={name:'dream-team',main:process.cwd()+'/scripts/maintenance-worker.js',workers_dev:true,compatibility_date:base.compatibility_date,vars:currentVars,triggers:{crons:[]},d1_databases:base.d1_databases,r2_buckets:base.r2_buckets};
- const barrierConfig=await configFile(dir,maintenanceConfig,'maintenance.jsonc');wrangler(['deploy','--config',barrierConfig]);barrier=true;maintenance=true;status.maintenance='ON';
- await awaitHttp(production,'/login',r=>r.status===503);await assertBarrier(hosts);await setMaintenance('on');
+ if(resumeRun!=='38459921007'){const barrierConfig=await configFile(dir,maintenanceConfig,'maintenance.jsonc');wrangler(['deploy','--config',barrierConfig]);barrier=true;maintenance=true;status.maintenance='ON';}
+ await awaitHttp(production,'/login',r=>r.status===503);await assertBarrier(hosts);if(resumeRun!=='38459921007')await setMaintenance('on');
  phase='frozen D1 checkpoint and restore proof';
  const checkpointCreatedAt=new Date().toISOString(),before=bookmark(await cf('/d1/database/'+productionId+'/time_travel/bookmark'));
  source=await exportSql('wrangler.jsonc','dream-team-db',join(dir,'source.sql'));const snapshot=inspectSql(source.bytes),db=local(source.bytes);try{check(validateMigrationState(db)===20,'SOURCE_SCHEMA_NOT_20');preservation=oldManifest(db);}finally{db.close();}
- await verifySnapshot({uuid:productionId},snapshot);const frozenBookmark=bookmark(await cf('/d1/database/'+productionId+'/time_travel/bookmark'));check(before&&before===frozenBookmark,'SOURCE_CHANGED_IN_MAINTENANCE');
+ const exportBookmark=bookmark(await cf('/d1/database/'+productionId+'/time_travel/bookmark'));
+ await verifySnapshot({uuid:productionId},snapshot);const frozenBookmark=bookmark(await cf('/d1/database/'+productionId+'/time_travel/bookmark'));check(before&&exportBookmark&&exportBookmark===frozenBookmark,'SOURCE_CHANGED_IN_MAINTENANCE');status.exportAdvancedBookmark=before!==exportBookmark;
  const sqlKey=process.env.RELEASE_MANIFEST_KEY.replace(/\.json$/,'.sql');await privatePut('dream-team-d1-backups',sqlKey,join(dir,'source.sql'),source.sha256);await privatePut(archive,'source.sql',join(dir,'source.sql'),source.sha256);
  const checkpointMetadata=await configFile(dir,{format:'dream-private-frozen-release-checkpoint-v1',candidate,createdAt:checkpointCreatedAt,sourceSchema:20,databaseId:productionId,bookmark:frozenBookmark,sqlSha256:source.sha256,sourceSqlBucket:'dream-team-d1-backups',sourceSqlKey:sqlKey,archive,sourceVerified:true,previousWorkerVersion:status.previousVersion,previousWorkerConfigKey:'previous-worker.json',restoration:'NEW_ISOLATED_TARGET_ONLY',automaticRollback:false},'checkpoint.json');await privatePut(archive,'checkpoint.json',checkpointMetadata,sha(await readFile(checkpointMetadata)));
  const proof=await cf('/d1/database','POST',{name:name+'-db'});assertSandbox(proof.name,proof.uuid);dbs.push(proof);const proofConfig=await configFile(dir,{...maintenanceConfig,name,workers_dev:true,d1_databases:[{binding:'DB',database_name:proof.name,database_id:proof.uuid,migrations_dir:process.cwd()+'/migrations'}]},'proof.jsonc');const restored=await importSandboxSql(proof,proofConfig,join(dir,'source.sql'));status.checkpointD1='PASS';status.sqlSha256=source.sha256;status.tables=restored.tables;status.rows=restored.rows;
