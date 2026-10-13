@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {JSDOM} from 'jsdom';import {readFile,readdir} from 'node:fs/promises';
-import worker from '../src/worker.js';import {database} from './db.mjs';import {apiMessage} from '../src/api-language.js';
+import worker from '../src/worker.js';import {database,initializeTestAccounts} from './db.mjs';import {apiMessage} from '../src/api-language.js';
 const languageScript=await readFile('public/language-preference.js','utf8');
 test('two accounts on one device retain independent language preferences and the login preference',()=>{
  const dom=new JSDOM('<html lang="pl"><body></body></html>',{url:'https://dream.test/pages/ustawienia.html',runScripts:'outside-only'}),w=dom.window;Object.defineProperty(w.navigator,'language',{value:'pl-PL'});w.eval(languageScript);
@@ -14,6 +14,7 @@ test('every static API error has an English translation, with original Polish pr
 test('real API auth and validation errors follow request language without translating user data',async()=>{
  const DB=database(),env={DB,INDIVIDUAL_ACCOUNTS:'true',RYBY_LOGIN_USERNAME:'fixture',RYBY_LOGIN_PASSWORD:'fixture-only-password',RYBY_SESSION_SECRET:'fixture-only-session-secret-long-enough',ASSETS:{fetch:()=>new Response('asset')}};
  try{
+ await initializeTestAccounts(env);
  const unauth=await worker.fetch(new Request('https://dream.test/api/accounts',{headers:{'accept-language':'en'}}),env);assert.equal(unauth.status,401);assert.equal((await unauth.json()).error,'Sign-in is required.');
  const login=await worker.fetch(new Request('https://dream.test/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'Patryk',password:env.RYBY_LOGIN_PASSWORD})}),env);const cookie=login.headers.get('set-cookie').split(';')[0];
  const bad=await worker.fetch(new Request('https://dream.test/api/catches',{method:'POST',headers:{cookie,'accept-language':'en','content-type':'application/json'},body:JSON.stringify({tripId:'next-trip',anglerId:'patryk',weightKg:0})}),env);assert.equal(bad.status,400);assert.equal((await bad.json()).error,'Weight: value from 0.01 to 99.99.');

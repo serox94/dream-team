@@ -1,0 +1,15 @@
+import {readFileSync,readdirSync} from 'node:fs';import {DatabaseSync} from 'node:sqlite';import {createHash} from 'node:crypto';
+export const migrationFiles=readdirSync(new URL('../migrations/',import.meta.url)).filter(f=>f.endsWith('.sql')).sort();
+const hash=rows=>createHash('sha256').update(JSON.stringify(rows.map(r=>Object.fromEntries(Object.keys(r).sort().map(k=>[k,r[k]]))).map(JSON.stringify).sort())).digest('hex');
+export function oldManifest(db){const tables=db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%'").all().map(r=>r.name).filter(n=>!/^auth_|^d1_migrations$/.test(n));return Object.fromEntries(tables.map(name=>{const rows=db.prepare('SELECT * FROM "'+name+'"').all();return [name,{columns:db.prepare('PRAGMA table_info("'+name+'")').all().map(r=>r.name),rows:rows.filter(r=>name!=='app_settings'||!['schema_version','maintenance_mode'].includes(r.key))}];}));}
+export function compareManifest(db,manifest){for(const [name,{columns,rows}] of Object.entries(manifest)){const after=db.prepare('SELECT '+columns.map(c=>'"'+c+'"').join(',')+' FROM "'+name+'"').all().filter(r=>name!=='app_settings'||!['schema_version','maintenance_mode'].includes(r.key));if(hash(after)!==hash(rows))throw Error('BUSINESS_MANIFEST_MISMATCH');}return true;}
+export function validateMigrationState(db){
+ const version=Number(db.prepare("SELECT value FROM app_settings WHERE key='schema_version'").get()?.value);if(!Number.isInteger(version)||version<20||version>28)throw Error('UNSUPPORTED_SCHEMA');
+ const applied=db.prepare('SELECT name FROM d1_migrations').all().map(r=>r.name),expected=migrationFiles.filter(f=>Number(f.slice(0,4))<=version);if(expected.some(f=>!applied.includes(f))||applied.some(f=>!expected.includes(f)))throw Error('PARTIAL_MIGRATION_REGISTRY');
+ const reference=new DatabaseSync(':memory:');try{for(const file of expected)reference.exec(readFileSync(new URL('../migrations/'+file,import.meta.url),'utf8'));
+  for(const {name} of reference.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()){const wanted=reference.prepare('PRAGMA table_info("'+name+'")').all().map(r=>r.name).sort(),actual=db.prepare('PRAGMA table_info("'+name+'")').all().map(r=>r.name).sort();if(JSON.stringify(wanted)!==JSON.stringify(actual))throw Error('PARTIAL_SCHEMA');}
+  if(version<28&&db.prepare("SELECT name FROM sqlite_master WHERE name='auth_accounts'").get())throw Error('PARTIAL_SCHEMA');
+ }finally{reference.close();}return version;
+}
+export function migrateCopy(db){const version=validateMigrationState(db),before=oldManifest(db);for(const file of migrationFiles.filter(f=>Number(f.slice(0,4))>version)){db.exec('BEGIN');try{db.exec(readFileSync(new URL('../migrations/'+file,import.meta.url),'utf8'));db.prepare('INSERT INTO d1_migrations(name) VALUES(?)').run(file);db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');throw error;}}
+ validateMigrationState(db);compareManifest(db,before);if(db.prepare('PRAGMA foreign_key_check').all().length)throw Error('FOREIGN_KEYS');return {from:version,to:28,preserved:true};}

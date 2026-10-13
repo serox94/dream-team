@@ -1,3 +1,4 @@
+import {updateAccountAccess} from './auth.js';
 import {localizeApiResponse} from './api-language.js';
 import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
@@ -254,7 +255,7 @@ async function notes(request,env){
 }
 async function mutationConflict(env,table,id,tripId,key){
   const row=await one(env,`SELECT * FROM ${table} WHERE id=? AND trip_id=? AND deleted_at IS NULL`,id,tripId);
-  if(row?.last_mutation_id===key)return json({ok:true,id,alreadyApplied:true});
+  if(row?.last_mutation_id===key)return json({ok:true,id,alreadyApplied:true,revision:row.revision});
   return json({ok:false,error:row?'Konflikt: ktoś zmienił ten rekord. Wybierz, czy zachować zmianę serwera, czy ponowić swoją.':'Rekord został usunięty albo należy do innego wyjazdu.',serverRevision:row?.revision??null,serverValue:row?(table==='checklist_items'?Boolean(row.packed):{name:row.name,depthM:row.depth_m,notes:row.notes}):null},409);
 }
 async function offlineSync(request,env){
@@ -262,17 +263,17 @@ async function offlineSync(request,env){
   if(typeof key!=='string'||!/^[a-f0-9-]{36}$/.test(key)||typeof path!=='string'||!payload||typeof payload!=='object'||Array.isArray(payload))fail('Nieprawidłowa operacja offline.');
   const allowed=/^\/api\/(catches|spots|notes)$/.test(path)&&method==='POST'||/^\/api\/checklist\/\d+\?tripId=[a-zA-Z0-9_-]+$/.test(path)&&method==='PATCH'||/^\/api\/spots\/\d+\?tripId=[a-zA-Z0-9_-]+$/.test(path)&&method==='PUT';
   if(!allowed)fail('Ta operacja nie może być synchronizowana offline.');
+  const match=path.match(/^\/api\/(checklist|spots)\/(\d+)\?tripId=([a-zA-Z0-9_-]+)$/);
   const signature=JSON.stringify({path,method,payload});
   const receipt=await one(env,'SELECT path,request_json requestJson,result_json resultJson FROM offline_receipts WHERE id=?',key);
-  if(receipt){if(receipt.path!==path||receipt.requestJson!==signature)fail('Klucz użyty dla innej operacji.',409);return json(JSON.parse(receipt.resultJson));}
-  const match=path.match(/^\/api\/(checklist|spots)\/(\d+)\?tripId=([a-zA-Z0-9_-]+)$/);
+  if(receipt){if(receipt.path!==path||receipt.requestJson!==signature)fail('Klucz użyty dla innej operacji.',409);const saved=JSON.parse(receipt.resultJson);if(match&&saved.revision===undefined)saved.revision=op.baseRevision+1;return json(saved);}
   if(match){
     const table=match[1]==='spots'?'spots':'checklist_items',id=Number(match[2]),tripId=match[3];
     const row=await one(env,`SELECT * FROM ${table} WHERE id=? AND trip_id=? AND deleted_at IS NULL`,id,tripId);
     if(!row)fail('Rekord został usunięty albo należy do innego wyjazdu.',409);
-    if(row.last_mutation_id===key)return json({ok:true,id,alreadyApplied:true});
+    if(row.last_mutation_id===key)return json({ok:true,id,alreadyApplied:true,revision:row.revision});
     if(!Number.isInteger(op.baseRevision)||row.revision!==op.baseRevision){
-      if(table==='checklist_items'&&typeof payload.packed==='boolean'&&Boolean(row.packed)===payload.packed)return json({ok:true,id,alreadyApplied:true});
+      if(table==='checklist_items'&&typeof payload.packed==='boolean'&&Boolean(row.packed)===payload.packed)return json({ok:true,id,alreadyApplied:true,revision:row.revision});
       return json({ok:false,error:'Konflikt: ktoś zmienił ten rekord. Wybierz, czy zachować zmianę serwera, czy ponowić swoją.',serverRevision:row.revision,serverValue:table==='checklist_items'?Boolean(row.packed):{name:row.name,depthM:row.depth_m,notes:row.notes}},409);
     }
     if(table==='checklist_items'&&(Object.keys(payload).length!==1||typeof payload.packed!=='boolean'))fail('Offline można zmienić tylko stan spakowania.');
@@ -285,6 +286,7 @@ async function offlineSync(request,env){
   else response=await saveChecklist(replay,env,Number(match[2]));
   if(!response.ok)return response;
   const result=await response.json();
+  if(match)result.revision=op.baseRevision+1;
   await run(env,'INSERT OR IGNORE INTO offline_receipts(id,path,request_json,result_json) VALUES(?,?,?,?)',key,path,signature,JSON.stringify(result));
   return json(result);
 }
@@ -348,6 +350,8 @@ async function privateFetch(request,env,ctx,active){
       const adviceMatch=path.match(/^\/api\/trips\/([^/]+)\/advice$/);
       if(adviceMatch&&method==='GET')return json(await handleTripAdvice(env,decodeURIComponent(adviceMatch[1])));
       if(individualAccounts(env)&&path==='/api/accounts'&&method==='GET')return json({ok:true,accounts:await accountList(env),currentUser:active.account});
+      const accessMatch=path.match(/^\/api\/accounts\/([^/]+)$/);
+      if(individualAccounts(env)&&accessMatch&&method==='PATCH')return await updateAccountAccess(request,env,decodeURIComponent(accessMatch[1]));
       if(individualAccounts(env)&&path==='/api/account/password'&&method==='POST')return await changeSharedPassword(request,env,active);
       if(path==='/api/export'&&method==='GET')return await exportData(env);
       if(path==='/api/checklist-categories'&&['GET','POST'].includes(method))return await categories(request,env);
@@ -421,14 +425,15 @@ function protectedResponse(result,active){
 }
 async function handleRequest(request,env,ctx){
     const url=new URL(request.url),path=url.pathname,method=request.method;
+    try{await ensureSchema(env);}catch{return json({ok:false,error:'Przerwa serwisowa. Spróbuj ponownie później.'},503,{'retry-after':'60'});}
     if(loginAssets.has(path)&&method==='GET'){
       if(authConfigured(env)){
-        await ensureSchema(env);
         if((path==='/login'||path==='/login.html')&&await session(request,env))return Response.redirect(url.origin+'/',302);
       }
       const assetPath=path==='/login'?'/login.html':path;
       const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));
       const result=protectedResponse(asset);
+      result.headers.set('x-dreamteam-build',env.APP_BUILD||'local');result.headers.set('x-dreamteam-auth-mode',individualAccounts(env)?'individual':'legacy');
       if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
       return result;
     }
@@ -441,7 +446,6 @@ async function handleRequest(request,env,ctx){
         const origin=request.headers.get('origin');
         if((origin&&origin!==url.origin)||request.headers.get('sec-fetch-site')==='cross-site')return json({ok:false,error:'Zablokowano zapis z innej witryny.'},403);
       }
-      await ensureSchema(env);
       if(path==='/api/login'&&method==='POST')return await login(request,env);
       const active=await session(request,env);
       if(!active){
@@ -457,5 +461,5 @@ async function handleRequest(request,env,ctx){
 }
 export default {
   async fetch(request,env,ctx){return localizeApiResponse(await handleRequest(request,env,ctx),request);},
-  async scheduled(_event,env,ctx){await ensureSchema(env);ctx.waitUntil(scheduledResearch(env));}
+  async scheduled(_event,env,ctx){try{await ensureSchema(env);}catch{console.warn('Scheduled work blocked by schema/maintenance guard.');return;}ctx.waitUntil(scheduledResearch(env));}
 };

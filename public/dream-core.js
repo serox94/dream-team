@@ -59,18 +59,26 @@
     queue.push({key,path,method,payload,baseRevision,accountId:accountId(),at:Date.now(),status:'pending'});writeQueue(queue);
     return {ok:true,pendingSync:true,id:-Date.now()};
   }
+  const recordKey=item=>/^\/api\/(checklist|spots)\/\d+\?tripId=/.test(item.path)?`${item.accountId}|${item.path}`:null;
+  function advanceSuccessor(items,item,revision){
+    const group=recordKey(item);if(!group||!Number.isInteger(revision))return;
+    const next=items.find(q=>recordKey(q)===group);if(next)next.baseRevision=revision;
+  }
   async function syncQueue(){
     if(synchronizing||navigator.onLine===false||!readQueue().length)return;
     if(syncRetryTimer){clearTimeout(syncRetryTimer);syncRetryTimer=null;}
-    synchronizing=true;let synced=0,retry=false;
-    try{for(const item of readQueue()){
-      if(item.status==='conflict'||(accountId()&&item.accountId!==accountId()))continue;
+    synchronizing=true;let synced=0,retry=false;const blocked=new Set();
+    try{for(const queued of readQueue()){
+      const item=readQueue().find(q=>q.key===queued.key);if(!item)continue;
+      const group=recordKey(item);
+      if(item.status==='conflict'){if(group)blocked.add(group);continue;}
+      if(blocked.has(group)||(accountId()&&item.accountId!==accountId()))continue;
       try{const response=await authorizedFetch('/api/offline-sync',{method:'POST',body:JSON.stringify(item)},AbortSignal.timeout(20000));
         if(response.status===401)break;
         const result=await response.json();
-        if(response.status===409){item.status='conflict';item.serverRevision=result.serverRevision;item.serverValue=result.serverValue;item.error=result.error;writeQueue(readQueue().map(q=>q.key===item.key?item:q));continue;}
+        if(response.status===409){item.status='conflict';item.serverRevision=result.serverRevision;item.serverValue=result.serverValue;item.error=result.error;writeQueue(readQueue().map(q=>q.key===item.key?item:q));if(group)blocked.add(group);continue;}
         if(!response.ok){retry=response.status>=500||response.status===429;item.status='error';item.error=result.error||`HTTP ${response.status}`;writeQueue(readQueue().map(q=>q.key===item.key?item:q));break;}
-        const remaining=readQueue().filter(q=>q.key!==item.key);writeQueue(remaining);synced++;syncRetryDelay=1000;
+        const remaining=readQueue().filter(q=>q.key!==item.key);advanceSuccessor(remaining,item,result.revision);writeQueue(remaining);synced++;syncRetryDelay=1000;
         const tripId=item.payload.tripId||new URL(item.path,location.origin).searchParams.get('tripId');
         const resource=item.path.match(/^\/api\/(catches|spots|checklist|notes)/)?.[1];
         if(resource&&tripId){const entries=readEntries();delete entries[`/api/${resource}?tripId=${tripId}`];localStorage.setItem(readCacheKey,JSON.stringify(entries));}
@@ -86,7 +94,7 @@
         const row=cached?.[resource==='checklist'?'items':'spots']?.find(row=>Number(row.id)===Number(id));
         if(row){if(resource==='checklist')row.packed=item.serverValue;else Object.assign(row,item.serverValue);row.revision=item.serverRevision;delete row.pendingSync;saveReadCache(path,cached);}
       }
-      writeQueue(queue.filter(q=>q.key!==key));
+      const remaining=queue.filter(q=>q.key!==key);advanceSuccessor(remaining,item,item.serverRevision);writeQueue(remaining);syncQueue();
       document.dispatchEvent(new Event('dream:synced'));if(!pendingCount())setTimeout(()=>location.reload(),100);
     }
     else if(choice==='mine'&&Number.isInteger(item.serverRevision)){item.baseRevision=item.serverRevision;item.status='pending';writeQueue(queue);syncQueue();}

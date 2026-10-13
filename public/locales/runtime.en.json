@@ -822,5 +822,6 @@
   "prognoza": "forecast",
   "Brak danych do oceny warunków.": "No data to assess conditions.",
   "🧭 Ciśnienie (poziom morza)": "🧭 Sea level pressure",
-  "🧭 Kierunek wiatru (skąd wieje)": "🧭 Wind direction (from)"
+  "🧭 Kierunek wiatru (skąd wieje)": "🧭 Wind direction (from)",
+  "Przerwa serwisowa. Spróbuj ponownie później.": "Maintenance in progress. Try again later."
 }

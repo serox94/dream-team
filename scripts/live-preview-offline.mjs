@@ -14,7 +14,7 @@ try{
  const model=await req('/api/bootstrap'); // Only this run's owned fixture is cleaned up.
  const categories=(await req('/api/checklist-categories')).categories;tripId=(await req('/api/trips','POST',{name,year:2026,lakeId:model.lakes[0].id,participantIds:model.anglers.filter(a=>a.active).map(a=>a.id),researchNow:true})).id;
  const itemId=(await req('/api/checklist','POST',{tripId,category:categories.find(c=>c.active).name,label:'QA checkbox',packed:false})).id;const spotId=(await req('/api/spots','POST',{tripId,name:'QA existing spot',depthM:2})).id;
- await go('/');await page.locator('#dream-trip-select').selectOption(tripId);await page.waitForFunction(id=>window.DREAM_TRIP?.id===id,tripId);await page.locator('html[data-ready="true"]').waitFor();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);await page.waitForFunction(async()=>!!(await(await caches.open('ryby-shell-20261013-115')).match('/__ryby_shell_complete')),null,{timeout:60000});
+ await go('/');await page.locator('#dream-trip-select').selectOption(tripId);await page.waitForFunction(id=>window.DREAM_TRIP?.id===id,tripId);await page.locator('html[data-ready="true"]').waitFor();await page.waitForFunction(()=>!!navigator.serviceWorker.controller);await page.waitForFunction(async()=>!!(await(await caches.open('ryby-shell-20261013-116')).match('/__ryby_shell_complete')),null,{timeout:60000});
  for(const route of ['/pages/checklisty.html','/pages/polowy.html','/pages/mapa.html','/pages/teren.html'])await go(route);
  await page.waitForFunction(id=>!!JSON.parse(localStorage.getItem('ryby_read_cache_v1')||'{}')[`/api/notes?tripId=${id}`],tripId,{timeout:25000});
  await page.waitForFunction(async()=>!!(await caches.match('/pages/polowy.html')));

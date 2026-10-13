@@ -4,8 +4,8 @@ import {readFile} from 'node:fs/promises';
 const expectedSources=JSON.parse(await readFile(new URL('../public/data/knowledge/sources.json',import.meta.url),'utf8'));
 
 const base=process.env.RYBY_PRODUCTION_URL||'https://dream-team.sewerynski00.workers.dev';
-const username=process.env.RYBY_LOGIN_USERNAME;
-const password=process.env.RYBY_LOGIN_PASSWORD;
+const username=process.env.RYBY_SMOKE_USERNAME||'Patryk';
+const password=process.env.RYBY_SMOKE_PASSWORD||process.env.RYBY_LOGIN_PASSWORD;
 assert.ok(username&&password,'Missing login configuration');
 const request=(path,options={})=>fetch(new URL(path,base),{redirect:'manual',cache:'no-store',...options});
 const form=(username,password)=>({method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password})});
@@ -66,6 +66,8 @@ assert.ok((await photo.arrayBuffer()).byteLength>10000,'personal photo is nonemp
 assert.equal((await request('/manifest.webmanifest',{headers})).status,200);
 const bootstrap=await request('/api/bootstrap',{headers});assert.equal(bootstrap.status,200);
 const model=await bootstrap.json(),tripId=model.app.activeTripId;
+assert.equal(model.currentUser.username.toLowerCase(),username.toLowerCase(),'individual account, no technical alias');
+assert.ok(model.currentUser.anglerId);
 assert.ok(model.trips.some(trip=>trip.id===tripId),'active D1 trip exists');
 const checklist=await request(`/api/checklist?tripId=${encodeURIComponent(tripId)}`,{headers});assert.equal(checklist.status,200);
 assert.ok(Array.isArray((await checklist.json()).items),'D1 checklist read works');

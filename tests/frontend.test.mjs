@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {JSDOM,VirtualConsole} from 'jsdom';
 import {serve} from '../scripts/qa-server.mjs';
 import {weatherFixture} from '../scripts/qa-weather.mjs';
-const waitFor=async(fn,label='condition')=>{const until=Date.now()+7000;while(!fn()){if(Date.now()>until)throw Error('Timed out: '+label);await new Promise(r=>setTimeout(r,15));}};
+const waitFor=async(fn,label='condition')=>{const until=Date.now()+15000;while(!fn()){if(Date.now()>until)throw Error('Timed out: '+label);await new Promise(r=>setTimeout(r,15));}};
 async function page(server,path,trip='next-trip',failure=null){
  const errors=[],calls=[],console=new VirtualConsole();console.on('jsdomError',e=>{if(!/canvas|getContext|navigation/.test(e.message))errors.push(e.message);});console.on('error',(...v)=>{const message=v.join(' ');if(!message.includes("Failed to create chart: can't acquire context"))errors.push(message);});
  const dom=await JSDOM.fromURL(server.url+path,{resources:'usable',runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:console,beforeParse(w){
@@ -11,7 +11,7 @@ async function page(server,path,trip='next-trip',failure=null){
   w.AbortController=AbortController;w.AbortSignal=AbortSignal;w.ResizeObserver=class{observe(){}disconnect(){}};
   w.fetch=async(url,opts)=>{calls.push({url:String(url),method:opts?.method||'GET'});if(failure&&String(url).includes(failure))return new Response('{"ok":false,"error":"Offline test"}',{status:503});return fetch(new URL(url,server.url),opts);};
  }});
- await waitFor(()=>dom.window.document.documentElement.dataset.ready,'page '+path);
+ try{await waitFor(()=>dom.window.document.documentElement.dataset.ready,'page '+path);}catch(error){dom.window.close();throw error;}
  return {dom,w:dom.window,d:dom.window.document,errors,calls,close(){dom.window.close();}};
 }
 const testServe=options=>serve({...options,weatherFetch:async()=>Response.json(weatherFixture())});

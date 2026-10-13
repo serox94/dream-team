@@ -412,3 +412,7 @@ Artefakty runu: final regression 11793652397 (24 screenshoty + JSON); user langu
 | Merge i produkcja | Push main automatycznie wdrażał produkcję | Ręczny release workflow, brak merge/deploy w tej pracy | YAML trigger/diff/main SHA public read | PASS | Produkcyjny rollout NOT TESTED; przyszły prywatny backup, migracja/INDIVIDUAL_ACCOUNTS i kontrola wymagają osobnej zgody |
 
 READY TO MERGE TO MAIN: YES. Uzasadnienie: wdrożony kod c4af4ed ma 108/108 unit, Validate/Responsive i wszystkie 10 realnych jobów preview PASS; potwierdzono wcześniej niezaliczone zapisy/konflikty/ochronę i aktualne PWA, bez nowych Tavily, migracji czy rotacji hasła. Ostatni checkpoint nie zmienia tego kodu, a odłącza automatyczne wydanie produkcji. Ograniczenia powyżej są jawne; decyzja nie oznacza zgody na merge/deployment ani potwierdzenia funkcji na niezmigrowanej produkcji. Produkcji i main nie wdrożono/nie scalono.
+
+### 2026-10-13 — niezależny audyt Astra, korekta decyzji wydania
+
+Dotychczasowe READY TO MERGE: YES jest historyczne. Bieżące H01–H04/M01–M04 i bramki: [audit-fixes-2026-10-13.md](audit-fixes-2026-10-13.md). Runtime migracje i rollback do legacy usunięte, login access oddzielony od profilu, własne operacje offline uporządkowane. Odbiór tylko na finalnym SHA; realny D1/R2/CF admin musi mieć dowód, inaczej BLOCKED. READY TO MERGE TO MAIN: NO do zakończenia odbioru; READY TO DEPLOY PRODUCTION: NO. Main i produkcja pozostają bez zmian.

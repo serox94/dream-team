@@ -1,0 +1,43 @@
+# Poprawki po niezależnym audycie Astra — 2026-10-13
+
+Zakres: wyłącznie H01–H04/M01–M04 raportu DreamTeam_audyt_przedprodukcyjny_2026-10-13(1).md. Punkt wyjścia: `1ddaccf9ba02a6a7e25c3f02b3b0f120dac8e31d`. Nie ponawiano modernizacji, researchu, migracji preview ani resetów istniejących haseł. Produkcja/main pozostają bez zmian.
+
+| ID | Poprawka | Celowany dowód lokalny | Odbiór Cloudflare |
+|---|---|---|---|
+| H01 | `ensure-schema.js` tylko SELECT, świeża kontrola maintenance/28 wpisów; HTTP 503 i cron bez pracy; jeden komplet SQL w migrations | 20/27/29: GET/cron nie zmieniają bazy; 20→28 zachowuje stare kolumny/ID; ponowienie noop, częściowy stan odrzucony | job audit-fixes na bieżącym SHA; do wykonania |
+| H02 | Produkcyjne INDIVIDUAL_ACCOUNTS/APP_ENV; APP_BUILD wymaga manifestu; jawny initializer sprawdza istniejące patryk/maciek i nie nadpisuje hash; smoke używa prawdziwego loginu | Dwa istniejące ID/PB, trzeci i limit czwartego; brak profilu/sekr. blokuje inicjalizację | job audit-fixes; produkcyjna migracja celowo nie wykonywana |
+| H03 | Fizyczne DELETE sesji przy rotacji/wyłączeniu/restore; atomowa kontrola uprawnień przy INSERT sesji; usunięty rollback do stałego tagu | Cookie po rotacji nie ma wiersza także dla starego czytnika; nie odżywa po reaktywacji | Odtworzona baza musi usunąć sesje przed podłączeniem aplikacji |
+| M01 | Kolejność operacji na rekordzie, przekazanie zaakceptowanej revision; konflikt blokuje tylko następców; stabilne klucze/payload | 3 przełączenia/3 edycje spotu, restart, utrata ACK, konflikt i niezależny rekord | Rzeczywisty Chromium 390 na nowym Workerze |
+| M02 | `anglers.active` to widoczność uczestnika; `auth_accounts.active` to prawo logowania; wyłączenie atomowo usuwa sesje | Ukryty profil nadal loguje; wyłączone konto/old cookie odmówione, reaktywacja nie odtwarza sesji | Test trzeciego konta wyłącznie na kopii |
+| H04 | Ręczny YAML; jedna próba odczytu CF Builds, Git triggers, deploy hooks, pending builds/deployments | Workflow bez automatycznego deploymentu/rollback | PASS dopiero z rzeczywistym odczytem admin; inaczej BLOCKED i jedna czynność w H04.json |
+| M03 | Kontrolowana aktualizacja narzędzi, bez audit fix --force | npm audit: 0; siedem pierwotnych pakietów ocenione niżej | Validate sprawdza bundle i lokalne migracje |
+| M04 | SQL + bookmark + prywatne kopie/manifesty R2 z SHA-256; drugi świeży D1/R2, przełączenie bindingów, porównanie danych/FK/sekwencji, purge sesji | Gateway: auth, integralność/metadane, brak zapisów SOURCE, uszkodzony archive odrzucony | Bez realnej próby D1/R2 nie oznaczać PASS; brak uprawnień = BLOCKED |
+
+## Bezpieczny proces wydania (przyszła osobna zgoda)
+
+1. Zablokować niezależne CF Builds/Git hooks; odczytać bieżący Worker version/config. Globalny maintenance Worker (`scripts/maintenance-worker.js`) ma zastąpić obsługę **wszystkich hostów/routes** i cron, a D1 maintenance_mode=on utrzyma bramkę nowej aplikacji. Sam flag w starym Workerze nie zapewnia zatrzymania ruchu. Nie publikować aplikacji przed tą blokadą.
+2. W maintenance wykonać świeży prywatny SQL i Time Travel bookmark, zachować wersję/config Worker oraz wszystkie obiekty R2, metadane, SHA-256. Przećwiczyć 20→28 i pełne restore na nowych zasobach. Manifest operatora `dream-team-release-v1` w prywatnym backup R2 musi wiązać candidate SHA, databaseId, previousWorkerVersion, bookmark, sqlSha256/sourceSqlKey, createdAt (<15 min), migrationRehearsal/r2Restore/externalDeployAudit=PASS, schema=28, sessionsPurged/maintenance=true; preMigrationVerified/sourceSchema i postMigrationVerified dla właściwej fazy. Nigdy w publicznym artefakcie CI.
+3. Dopiero osobna autoryzacja i zmienna środowiska production DREAMTEAM_PRODUCTION_APPROVED=yes pozwalają uruchomić konkretną operację przez `release-workflow.mjs`/`release-operator.mjs`. Operator ponownie pobiera prywatny SQL, sprawdza SHA, odtwarza go lokalnie, weryfikuje bieżący rejestr/kolumny/FK oraz zgodność starych danych. Migracja jest jawna, idempotentna przez d1_migrations; wynik ponownie eksportowany i porównany. Błąd zatrzymuje proces przy zamkniętym ruchu — żadnego samoczynnego powtórzenia częściowego schematu.
+4. Jawnie inicjalizować credential **raz** z istniejących Workers secrets (PBKDF2, salt, niezmieniony pepper), po sprawdzeniu oryginalnych kont. Istniejącego hash nie nadpisywać. Przed uruchomieniem po restore fizycznie usunąć wszystkie auth_sessions. Produkcyjny release używa pełnego SHA, indywidualnych kont, bez technicznego aliasu i bez AI.
+5. Zweryfikować realne konta na izolowanej kopii zgodnej z manifestem, potem kontrolowane otwarcie i smoke produkcji pod nadzorem operatora. Workflow i CLI celowo **nie otwierają maintenance automatycznie**. Publiczny release-health jest oddzielony od testu credentials i nie generuje sesji/prób logowania. Nie przywracać danych po zaakceptowanych nowych zapisach bez uzgodnionego reconciliation. Rollback tylko do rzeczywistej poprzedniej zgodnej wersji/config z guardem maintenance, po purge sesji; stary legacy Worker bez guardu jest zabroniony. Przy pierwszym wydaniu ze starej architektury użyć naprawy w maintenance, nie automatycznego powrotu do legacy/tagu.
+
+## M03 — ocena wszystkich siedmiu pakietów
+
+Wszystkie są devDependencies/narzędziami, nie importami produkcyjnego Workera. Mimo tego CLI pracuje z tokenem deploymentu i wymaga usunięcia podatnych zależności. Zachowano wersje Chart.js/jsdom.
+
+| Pakiet przed → po | Ocena ekspozycji i decyzja |
+|---|---|
+| esbuild 0.27.3 → 0.28.2 | Low GHSA-g7r4-m6w7-qqqr dotyczy Windows dev server; Linux CI/Worker nieosiągalne. Zniknął wraz z bezpieczną aktualizacją Wranglera. |
+| miniflare 4.20260317.0 → 5.20261006.2-beta | High przechodnie sharp/undici/ws; lokalny runtime dev. Aktualizacja zależności wymaganej przez stabilny wrangler 4.150.0. |
+| sharp 0.34.5 → 0.35.5 | High GHSA-f88m-g3jw-g9cj / rgj7-g3m4-5g8c / wq5f-xc86-pv6w; biblioteki parsowania obrazów dev runtime; brak sharp w Workerze. Poprawione przechodnio. |
+| source-map-js 1.2.1 → 1.2.2 | High GHSA-68fv-2mgg-jv7q DoS parsera map w narzędziach/testach; mała kompatybilna aktualizacja lockfile. |
+| undici 7.24.4 → 7.29.1 | High, grupa zgłoszeń HTTP/proxy/WebSocket; osiągalne w narzędziach sieciowych CI z tokenami. Poprawione przechodnio; nie włączano nowych usług. |
+| wrangler 4.75.0 → 4.150.0 | Moderate/high zależności przechodnie; właściciel ryzyka deploy/dev. Kontrolowana aktualizacja w tej samej linii major. |
+| ws 8.18.0 → 8.21.0 | High GHSA-58qx-3vcg-4xpx / 96hv-2xvq-fx4p; kanały dev/CLI, nie endpoint aplikacji. Poprawione przechodnio. |
+
+## Checkpoint odbioru
+
+Lokalne testy celowane: 18/18 PASS (accounts/migration/release safety/offline order/recovery gateway). Pierwszy pełny lokalny run wykazał timeout JSDOM pod nadmierną równoległością; pojedynczy test PASS. Ograniczono test concurrency do 2, poprawiono zamknięcie DOM po timeout; asercje zachowane. Pełny lokalny run: 117/117 PASS; trzy dodatkowe asercje inicjalizacji/wyścigu/replay również PASS w zestawie celowanym. **Jeden** pełny run GitHub Actions zostanie wykonany na tym commicie. Wiążący wynik live znajduje się w bezpiecznym artefakcie `audit-fixes-safe-status` tego runu (bez SQL/credentials/cookies), a wynik całej regresji w jobs/artefaktach Actions. Brak dostępu nigdy nie jest PASS. Stare dowody offline z poprzednich SHA nie zastępują nowego testu zapisów.
+
+READY TO MERGE TO MAIN: NO — do potwierdzenia bieżącej bramki i H04/M04.
+READY TO DEPLOY PRODUCTION: NO — nie udzielono osobnej zgody; produkcyjny maintenance/migracja/rollout nie wykonane.
