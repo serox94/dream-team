@@ -8,11 +8,11 @@ try{
  // Verify the private SQL proof and live schema before any production mutation.
  assert.match(receipt.sourceSqlKey||'',/^private-releases\/[a-f0-9-]+\.sql$/);
  const sourceFile=dir+'/source.sql';wrangler(['r2','object','get','dream-team-d1-backups/'+receipt.sourceSqlKey,'--remote','--file',sourceFile]);const sourceBytes=await readFile(sourceFile);assert.equal(sha(sourceBytes),receipt.sqlSha256);
- const proof=new DatabaseSync(':memory:'),live=new DatabaseSync(':memory:');let preservation;try{proof.exec(sourceBytes.toString());preservation=oldManifest(proof);migrateCopy(proof);const dump=await exportSql(target,'dream-team-db',dir+'/current.sql');live.exec(dump.bytes.toString());validateMigrationState(live);compareManifest(live,preservation);assert.equal(live.prepare('PRAGMA foreign_key_check').all().length,0);}finally{proof.close();live.close();}
+ const proof=new DatabaseSync(':memory:',{enableForeignKeyConstraints:false}),live=new DatabaseSync(':memory:',{enableForeignKeyConstraints:false});let preservation;try{proof.exec(sourceBytes.toString());preservation=oldManifest(proof);migrateCopy(proof);const dump=await exportSql(target,'dream-team-db',dir+'/current.sql');live.exec(dump.bytes.toString());validateMigrationState(live);compareManifest(live,preservation);assert.equal(live.prepare('PRAGMA foreign_key_check').all().length,0);}finally{proof.close();live.close();}
  if(action==='migrate'){
   assert.equal(receipt.preMigrationVerified,true);assert.equal(receipt.sourceSchema,20);assert.equal(receipt.migrationRehearsal,'PASS');
   wrangler(['d1','migrations','apply','dream-team-db','--remote','--config',target]);
-  const verified=new DatabaseSync(':memory:');try{verified.exec((await exportSql(target,'dream-team-db',dir+'/after.sql')).bytes.toString());assert.equal(validateMigrationState(verified),28);compareManifest(verified,preservation);assert.equal(verified.prepare('PRAGMA foreign_key_check').all().length,0);}finally{verified.close();}
+  const verified=new DatabaseSync(':memory:',{enableForeignKeyConstraints:false});try{verified.exec((await exportSql(target,'dream-team-db',dir+'/after.sql')).bytes.toString());assert.equal(validateMigrationState(verified),28);compareManifest(verified,preservation);assert.equal(verified.prepare('PRAGMA foreign_key_check').all().length,0);}finally{verified.close();}
  }else if(action==='initialize'){
   assert.equal(state.find(r=>r.key==='schema_version')?.value,'28');await initializeAccounts({DB:remoteDb(productionId),RYBY_LOGIN_PASSWORD:process.env.RYBY_LOGIN_PASSWORD,RYBY_SESSION_SECRET:process.env.RYBY_SESSION_SECRET});
  }else if(action==='deploy'){
