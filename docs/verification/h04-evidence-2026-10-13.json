@@ -1,0 +1,47 @@
+{
+  "H04": "FAIL",
+  "cloudflare": "PASS",
+  "githubProductionTrigger": "FAIL",
+  "verifiedAt": "2026-10-13T18:04:30.542Z",
+  "worker": "dream-team",
+  "scope": "Read-only evidence verification; documentation changes only",
+  "cloudflareEvidence": {
+    "type": "user-supplied screenshots",
+    "settings": {
+      "libraryFileId": "libfile_2539f54884e08191a6bbe35d8f647e0c",
+      "createdAt": "2026-10-13T17:58:32.458161Z",
+      "disableBuilds": true,
+      "deployHooks": 0,
+      "productionBranch": "main"
+    },
+    "deployment": {
+      "libraryFileId": "libfile_2a1b158b1c988191ac6d7deada524d60",
+      "createdAt": "2026-10-13T17:57:05.690963Z",
+      "activeVersionPrefix": "c3a0bc69",
+      "trafficPercent": 100,
+      "deployedLabel": "7 days ago",
+      "visibleRecentPendingBuilds": 0
+    },
+    "limitation": "Manual screenshot evidence, not a new authenticated Cloudflare API export; screenshot cannot establish invisible queue history."
+  },
+  "githubEvidence": {
+    "mainSha": "2d0da14d4637739dcefc61bab596be59778cd26f",
+    "workflowPath": ".github/workflows/deploy-private.yml",
+    "mainWorkflowBlob": "a0aabcb0ee929e0f5e6655c14a505367dad38941",
+    "mainTriggers": [
+      "push (branches: main, path filters)",
+      "workflow_dispatch"
+    ],
+    "candidateSha": "10e109ff83ce1d5f4903738c9860a3d1fca8558c",
+    "candidateWorkflowBlob": "ccdacc81ec4db033f2f1ee0528167f91d976a16a",
+    "candidateTriggers": [
+      "workflow_dispatch"
+    ],
+    "workflowEnabledState": "NOT TESTED (metadata endpoint not available through connector)"
+  },
+  "cause": "Production workflow source on current main still has automatic push trigger; manual-only workflow is present only on candidate feat/final-batch.",
+  "requiredAction": "Wyłącz obecny produkcyjny workflow deploy-private.yml w GitHub Actions przed zatwierdzeniem scalenia kandydata z ręcznym workflow.",
+  "productionRequests": 0,
+  "deployments": 0,
+  "merges": 0
+}

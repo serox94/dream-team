@@ -85,7 +85,7 @@ D2c3d92 / [38413402071](https://github.com/serox94/dream-team/actions/runs/38413
 | M04 D1 | PASS | 38435939611 / 115429778795: zachowany checkpoint 26 tabel / 269 rekordów; prywatny re-export i R2 SQL roundtrip; drugie odtworzenie 270 rekordów (dodatkowa sesja techniczna), 2 triggery, wszystkie wiersze, indeksy, FK, quick_check i liczniki |
 | M04 R2 | PASS | 38436517138 / 115431800489: 1 obiekt, 236364 B; SHA-256, metadane HTTP/custom oraz kompletny inwentarz zgodne; źródłowy archive wyłącznie odczytany |
 | M04 binding / H03 | PASS | [38437797828](https://github.com/serox94/dream-team/actions/runs/38437797828), job 115436244296, kod b4c4830309b83a20de35e24a5a7d89a004bd2e1e: nowe D1 podłączone do odtworzonego R2, API 401 dla cookie usuniętej sesji, nowy login/bootstrap Patryk i pobranie istniejącego obrazu ze zgodnym SHA |
-| H04 | BLOCKED | Bez nowych uprawnień, bez ponowienia odmówionej kontroli. Jedna potrzebna czynność: dostarczyć eksport ustawień Cloudflare Builds/Git integration, deploy hooks oraz oczekujących deployments |
+| H04 | FAIL | Nowe zrzuty UI potwierdzają Disable builds ON, zero Deploy Hooks, branch main i aktywną wersję c3a0bc69 sprzed 7 dni (100%). Cloudflare: PASS na podstawie ręcznych dowodów. GitHub: obecny main 2d0da14 nadal ma trigger push; workflow wyłącznie ręczny jest tylko na feat/final-batch. Szczegóły: docs/verification/h04-evidence-2026-10-13.json |
 
 Przyczyna D1: zachowany dump przy włączonych FK odwoływał się do nieutworzonej jeszcze tabeli (`REFERENCED_TABLE_NOT_CREATED`). `D1_RESET_DO` był nieprecyzyjnym błędem ścieżki importu; sam ponowny pusty cel go nie rozwiązywał. Naprawa: komplet tabel przed danymi, kolejność zależności rodzic/dziecko, osobne pełne instrukcje REST, indeksy i triggery po danych, dokładne odtworzenie AUTOINCREMENT i pełne porównanie przed purge. Nie wyłącza FK D1, nie powtarza częściowego importu i odmawia zapisu do zajętego/chronionego celu. Lokalny integrity_check, na D1 obsługiwany quick_check. Referencje: https://developers.cloudflare.com/d1/sql-api/foreign-keys/ oraz https://developers.cloudflare.com/d1/sql-api/sql-statements/.
 
@@ -97,5 +97,13 @@ Nowe testy: 5/5 D1/R2 (e69cb6b) oraz 3/3 transport (b4c4830). Zaliczone przed ko
 
 Commity kodu/diagnostyki: d47d2aa, e69cb6b, 0dffe58, 3ad7bbd, b4c4830. Punkt początkowy 0958512. Prywatne zasoby dowodowe: stary archive dream-team-audit-38410329365-archive pozostaje niezmieniony; SQL re-export dream-team-audit-38435939611-archive; odtworzone media dream-team-audit-38436517138-media. Publiczne artefakty zawierają wyłącznie statusy/liczniki/hashe. Tymczasowe D1 i Workery usunięto. Zero żądań do produkcyjnych zasobów, zapisów do istniejących danych i wywołań Tavily/Workers AI. Main nadal 2d0da14d4637739dcefc61bab596be59778cd26f.
 
-READY TO MERGE TO MAIN: NO — H04: zewnętrzny automatyczny deployment main wciąż niezweryfikowany.
+READY TO MERGE TO MAIN: NO — H04: Cloudflare potwierdzony ręcznie, lecz obecny main nadal zawiera automatyczny produkcyjny trigger push.
 READY TO DEPLOY PRODUCTION: NO — H04 i brak osobnej zgody; produkcji nie wdrażano.
+
+## H04 — weryfikacja dowodów użytkownika
+
+Odczytano wizualnie trzy zrzuty. Starszy (17:55 UTC) pokazuje Disable builds OFF; najnowszy (17:58 UTC) pokazuje ON i brak Deploy Hooks. Widok deployments (17:57 UTC) pokazuje aktywną wersję c3a0bc69 sprzed 7 dni, 100% ruchu; ostatnie widoczne wpisy mają Ready/Skipped, bez widocznych Pending/Running. Jest to dowód ręczny, nie nowy eksport API ani pełna historia ukrytej kolejki. Dawna odmowa API 403 pozostaje faktem historycznym.
+
+Twierdzenie o wyłącznie ręcznym triggerze produkcji nie zgadza się z obecnym main 2d0da14d4637739dcefc61bab596be59778cd26f: .github/workflows/deploy-private.yml zawiera push na main (z filtrami ścieżek) oraz workflow_dispatch. Na kandydacie 10e109ff83ce1d5f4903738c9860a3d1fca8558c ten plik ma wyłącznie workflow_dispatch. Stanu enabled/disabled workflow nie ustalono: endpoint metadanych nie jest dostępny przez obecny connector. Nie przedstawiamy samej obecności YAML jako dowodu wykonania deploymentu.
+
+H04 całościowo FAIL (Cloudflare PASS / produkcyjny trigger GitHub FAIL); stan kandydata i obecnego main odróżniono. Jedna potrzebna czynność: wyłączyć obecny produkcyjny workflow deploy-private.yml w GitHub Actions przed zatwierdzeniem scalenia kandydata z ręcznym workflow. Nie zmieniano workflow, Cloudflare, main, D1/R2 ani aktywnego deploymentu; nie uruchamiano testów ani Actions. Ten commit zmienia wyłącznie dokumentację i dowód H04.
