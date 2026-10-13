@@ -20,8 +20,15 @@ try{
  check(base.name==='dream-team'&&base.d1_databases[0].database_id===productionId,'UNEXPECTED_PRODUCTION_CONFIG');
  phase='read deployed production Worker configuration';
  const settings=await cf('/workers/scripts/dream-team/settings');
- const bindings=settings.bindings||[],sourceDb=bindings.find(b=>b.name==='DB'&&b.type==='d1'),sourceMedia=bindings.find(b=>b.name==='MEDIA'&&b.type==='r2_bucket');
- check(sourceDb?.id===productionId,'DEPLOYED_D1_BINDING_MISMATCH');check(sourceMedia?.bucket_name===base.r2_buckets.find(b=>b.binding==='MEDIA').bucket_name,'DEPLOYED_R2_BINDING_MISMATCH');
+ const bindings=settings.bindings||[],sourceDb=bindings.find(b=>b.name==='DB'&&b.type==='d1'),deployedMedia=bindings.find(b=>b.name==='MEDIA'&&b.type==='r2_bucket');
+ check(sourceDb?.id===productionId,'DEPLOYED_D1_BINDING_MISMATCH');
+ const plannedMedia=base.r2_buckets.find(b=>b.binding==='MEDIA').bucket_name;
+ result.deployedR2Bindings=bindings.filter(b=>b.type==='r2_bucket').map(b=>({binding:b.name,bucket:b.bucket_name||null}));
+ result.mediaBindingState=deployedMedia?.bucket_name===plannedMedia?'MATCHES_TARGET':deployedMedia?'DIFFERS_FROM_TARGET':'NOT_BOUND_IN_CURRENT_WORKER';
+ // A legacy Worker may have no MEDIA binding yet. Inventory the existing intended bucket,
+ // record the gap, and require explicit binding reconciliation during the approved release.
+ const sourceMedia={bucket_name:deployedMedia?.bucket_name||plannedMedia};
+ const mediaInfo=await cf('/r2/buckets/'+encodeURIComponent(sourceMedia.bucket_name));check(mediaInfo.name===sourceMedia.bucket_name,'MEDIA_BUCKET_IDENTITY_MISMATCH');
  const deployments=await cf('/workers/scripts/dream-team/deployments'),active=deployments.deployments?.[0];
  check(active?.versions?.length>0,'ACTIVE_PRODUCTION_VERSION_UNAVAILABLE');
  const activeVersions=active.versions.map(v=>({id:v.version_id,percentage:v.percentage}));check(activeVersions.every(v=>v.id),'ACTIVE_VERSION_ID_MISSING');
@@ -30,7 +37,7 @@ try{
  result.requiredSecretBindings=secrets;result.githubAuthSecretPresence={password:!!process.env.RYBY_LOGIN_PASSWORD,sessionSecret:typeof process.env.RYBY_SESSION_SECRET==='string'&&process.env.RYBY_SESSION_SECRET.length>=32};
  const flagNames=['APP_ENV','APP_BUILD','INDIVIDUAL_ACCOUNTS','AI_FREE_ONLY'];
  const currentFlags=Object.fromEntries(bindings.filter(b=>b.type==='plain_text'&&flagNames.includes(b.name)).map(b=>[b.name,b.text]));
- result.configuration='PASS';result.sourceIdentity='DEPLOYED_BINDINGS_VERIFIED';result.secretValuesVerified=false;
+ result.configuration='DEPLOYED_STATE_CAPTURED';result.sourceIdentity='DEPLOYED_D1_AND_EXISTING_R2_VERIFIED';result.secretValuesVerified=false;
  const sourceD1Metadata=await cf('/d1/database/'+productionId);check(sourceD1Metadata.name===base.d1_databases[0].database_name,'PRODUCTION_DATABASE_NAME_MISMATCH');
  phase='fresh private production SQL and Time Travel bookmark';
  const bookmarkBefore=bookmark(await cf('/d1/database/'+productionId+'/time_travel/bookmark'));check(bookmarkBefore,'TIME_TRAVEL_BOOKMARK_MISSING');
