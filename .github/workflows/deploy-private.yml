@@ -11,37 +11,59 @@ on:
         options: [deploy, migrate, initialize, rollback]
         default: deploy
       recovery_manifest_key:
-        description: Private R2 release manifest key (no secrets in workflow inputs)
+        description: New private frozen release manifest key (no secrets)
         required: true
 concurrency:
   group: dream-team-production
   cancel-in-progress: false
 permissions:
   contents: read
+  actions: read
 jobs:
   release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/ops/production-b20be05-20261013' && inputs.action == 'deploy' && inputs.ref == 'b20be0508b8f2aafdd16f31118ab4dbbae2492a0'
     environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
+          path: operator
+      - uses: actions/checkout@v4
+        with:
           ref: ${{ inputs.ref }}
+          path: candidate
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - run: npm ci && npm test
-      - name: Require private recovery evidence and explicit production approval
+          cache-dependency-path: candidate/package-lock.json
+      - name: Prepare approved assets and production smoke browser (no repeated application suites)
+        working-directory: candidate
+        run: |
+          npm ci
+          node scripts/build.mjs
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install --with-deps chromium
+          cp ../operator/scripts/full-production-release.mjs scripts/full-production-release.mjs
+      - name: Explicit approved frozen checkpoint, guarded migration, release and production smoke
+        working-directory: candidate
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
           DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
           RELEASE_ACTION: ${{ inputs.action }}
           RELEASE_MANIFEST_KEY: ${{ inputs.recovery_manifest_key }}
           RELEASE_CANDIDATE: ${{ inputs.ref }}
-        run: node scripts/release-workflow.mjs
-      # A failed verification leaves traffic in maintenance. Never deploy an old tag,
-      # reset D1/R2, rotate the pepper or perform an automatic production rollback.
+        run: node scripts/full-production-release.mjs
+      - name: Preserve safe release statuses only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-release-safe-status
+          path: release-safe-status/status.json
+          retention-days: 3
