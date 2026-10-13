@@ -23,13 +23,15 @@ try{
  const db=await cf('/d1/database','POST',{name:name+'-db'}),restored=await cf('/d1/database','POST',{name:name+'-restored'});assertSandbox(db.name,db.uuid);assertSandbox(restored.name,restored.uuid);createdDbs.push(db,restored);
  const media=name+'-media',archive=name+'-archive',restoredMedia=name+'-restored';for(const bucket of [media,archive,restoredMedia]){assertSandbox(bucket);await cf('/r2/buckets','POST',{name:bucket});}
  const gatewayConfig=source=>({name:name+'-io',workers_dev:true,main:process.cwd()+'/scripts/restore-io-worker.js',compatibility_date:base.compatibility_date,triggers:{crons:[]},r2_buckets:[{binding:'SOURCE',bucket_name:source},{binding:'ARCHIVE',bucket_name:archive},{binding:'RESTORED',bucket_name:source===media?restoredMedia:media}]});
+ phase='private SQL source backup';
+ const storeSql=async(key,file,expected)=>{assertSandbox(archive);const object=archive+'/'+key;wrangler(['r2','object','put',object,'--remote','--file',file,'--content-type','application/sql']);const copy=dir+'/'+key+'.verify';wrangler(['r2','object','get',object,'--remote','--file',copy]);assert.equal(sha(await readFile(copy)),expected,'private SQL R2 round trip');};
+ await storeSql('source.sql',dir+'/source.sql',exported.sha256);
  phase='private media backup/restore';
  let io=await deploy(gatewayConfig('dream-team-media'),'io.jsonc');secret(name+'-io','RECOVERY_KEY',ioKey,io.file);
  const ioReady=async()=>{const deadline=Date.now()+120000;while(true){const r=await fetch(io.url+'/ready',{headers:{'x-recovery-key':ioKey},signal:AbortSignal.timeout(15000)});if(r.status===200&&(await r.json()).bindingsReady)return;if(Date.now()>deadline){const e=Error('RECOVERY_GATEWAY_NOT_READY');e.status=r.status;throw e;}await new Promise(resolve=>setTimeout(resolve,2000));}};
  await ioReady();
  const recovery=async(path,method='POST',bytes)=>{const r=await fetch(io.url+path,{method,headers:{'x-recovery-key':ioKey},body:bytes,signal:AbortSignal.timeout(120000)});const value=await r.json().catch(()=>({error:'NON_JSON_RECOVERY_RESPONSE'}));if(r.status!==200||value.ok!==true){const error=Error('PRIVATE_RECOVERY_FAILED');error.status=r.status;error.recoveryCode=value.error;error.recoveryPath=path;throw error;}return value;};
- const storeSql=async(key,file,expected)=>{assertSandbox(archive);const object=archive+'/'+key;wrangler(['r2','object','put',object,'--remote','--file',file,'--content-type','application/sql']);const copy=dir+'/'+key+'.verify';wrangler(['r2','object','get',object,'--remote','--file',copy]);assert.equal(sha(await readFile(copy)),expected,'private SQL R2 round trip');};
- await storeSql('source.sql',dir+'/source.sql',exported.sha256);await recovery('/backup');await recovery('/restore');
+ await recovery('/backup');await recovery('/restore');
  phase='import source into isolated D1';
  let app=await deploy(privateConfig(db,media,'scripts/maintenance-worker.js'),'maintenance.jsonc');
  wrangler(['d1','execute',db.name,'--remote','--config',app.file,'--file',dir+'/source.sql']);
