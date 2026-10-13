@@ -284,10 +284,10 @@ jobs:
           DRILL_DEPLOY_DIAGNOSTIC: ${{ contains(github.event.head_commit.message, '[deploy diagnostic]') }}
         run: node scripts/cloudflare-recovery-drill.mjs
       - name: Targeted restore regressions only
-        if: contains(github.event.head_commit.message, '[restore only]') && !contains(github.event.head_commit.message, '[r2 diagnostic]')
+        if: contains(github.event.head_commit.message, '[restore only]') && !contains(github.event.head_commit.message, '[r2 diagnostic]') && !contains(github.event.head_commit.message, '[restore finish]')
         run: node --test tests/d1-snapshot.test.mjs
       - name: Resume retained private D1/R2 checkpoint without source changes
-        if: contains(github.event.head_commit.message, '[restore only]') && !contains(github.event.head_commit.message, '[r2 diagnostic]')
+        if: contains(github.event.head_commit.message, '[restore only]') && !contains(github.event.head_commit.message, '[r2 diagnostic]') && !contains(github.event.head_commit.message, '[restore finish]')
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -300,6 +300,17 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/r2-restore-diagnostic.mjs
+      - name: Targeted private transport regressions
+        if: contains(github.event.head_commit.message, '[restore finish]')
+        run: node --test tests/restore-transport.test.mjs
+      - name: Finish isolated application binding and session/media proof only
+        if: contains(github.event.head_commit.message, '[restore finish]')
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: node scripts/finish-checkpoint-restore.mjs
       - name: Preserve safe status only; never upload private SQL/configuration
         if: always()
         uses: actions/upload-artifact@v4

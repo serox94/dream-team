@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile,writeFile,mkdtemp,mkdir,rm,chmod} from 'node:fs/promises';
 import {tmpdir} from 'node:os';import {join} from 'node:path';import {randomBytes} from 'node:crypto';import {DatabaseSync} from 'node:sqlite';
 import {cf,query,remoteDb,configFile,wrangler,sha,assertSandbox,exportSql,importSandboxSql} from './recovery-common.mjs';
-import {inspectSql,verifySnapshot} from './d1-snapshot.mjs';import {login,session} from '../src/auth.js';
+import {privateRestore} from './recovery-transport.mjs';import {inspectSql,verifySnapshot} from './d1-snapshot.mjs';import {login,session} from '../src/auth.js';
 const run=process.env.GITHUB_RUN_ID;assert.match(run||'',/^\d+$/);
 const name='dream-team-audit-'+run,archive='dream-team-audit-38410329365-archive';assertSandbox(archive);
 const dir=await mkdtemp(join(tmpdir(),'dream-private-resume-')),base=JSON.parse(await readFile('wrangler.jsonc','utf8'));
@@ -43,7 +43,7 @@ try{
  phase='restore existing private R2 objects and exact metadata into fresh bucket';
  const media=await createBucket('-media'),key=randomBytes(32).toString('hex');
  const io=await deploy({name:name+'-io',workers_dev:true,main:process.cwd()+'/scripts/restore-io-worker.js',compatibility_date:base.compatibility_date,triggers:{crons:[]},r2_buckets:[{binding:'SOURCE',bucket_name:archive},{binding:'ARCHIVE',bucket_name:archive},{binding:'RESTORED',bucket_name:media}]},'io.jsonc');putSecret(io.file,'RECOVERY_KEY',key);await ready(io,key);
- const r=await fetch(io.url+'/restore',{method:'POST',headers:{'x-recovery-key':key},signal:AbortSignal.timeout(120000)});const restoredR2=await r.json().catch(()=>({error:'NON_JSON'}));check(r.status===200&&restoredR2.verified===true,'R2_RESTORE_'+(restoredR2.error||r.status));result.r2Objects=restoredR2.objects;result.r2HashesMetadataInventory='PASS';
+ const transport=await privateRestore(io.url,key),restoredR2=transport.data;result.r2TransportAttempts=transport.attempts;result.r2Objects=restoredR2.objects;result.r2HashesMetadataInventory='PASS';
  phase='rebind isolated app after physical session purge';
  check(pointSnapshot.tables.find(t=>t.name==='app_settings')?.rows.find(r=>r.key==='maintenance_mode')?.value!=='on','ARCHIVE_REQUIRES_MAINTENANCE_RECONCILIATION');
  const app=await deploy(cfg,'app.jsonc');for(const [k,v] of Object.entries({RYBY_LOGIN_USERNAME:'Patryk',RYBY_LOGIN_PASSWORD:env.RYBY_LOGIN_PASSWORD,RYBY_SESSION_SECRET:env.RYBY_SESSION_SECRET}))putSecret(app.file,k,v);await ready(app);
@@ -53,7 +53,7 @@ try{
  const fixture=pointSnapshot.tables.find(t=>t.name==='deeper_media')?.rows.find(row=>row.name==='QA recovery image');check(fixture,'EXISTING_ARCHIVED_IMAGE_MISSING');
  const image=await fetch(app.url+'/api/deeper-media/'+fixture.id+'/image',{headers:{cookie:freshCookie},signal:AbortSignal.timeout(25000)});check(image.status===200,'RESTORED_IMAGE_UNAVAILABLE');check(sha(Buffer.from(await image.arrayBuffer()))===sha(await readFile('public/assets/deeper/chirp2/fish-deeper-052509.png')),'RESTORED_IMAGE_HASH_MISMATCH');
  Object.assign(result,{result:'PASS',M04:'PASS',H03:'PASS',exportRoundtrip:'PASS',allTablesSchemaIndexesTriggers:'PASS',foreignKeysIntegritySequences:'PASS',revokedRestoredCookie:'DENIED_401',restoredIdentityImage:'PASS',sessionsPurged:true,privateSqlSha256:point.sha256,recoveryArchive:privateArchive});
-}catch(error){Object.assign(result,{result:error.status===403?'BLOCKED':'FAIL',phase,error:error.stage?'RESTORE_STATEMENT_FAILED':/^[A-Z0-9_]+$/.test(error.message)?error.message:'PRIVATE_RESTORE_ERROR',stage:error.stage,table:error.table,httpStatus:error.status||null,code:error.code,importDetail:error.importDetail,deployDetail:error.deployDetail});process.exitCode=1;
+}catch(error){Object.assign(result,{result:error.status===403?'BLOCKED':'FAIL',phase,error:error.stage?'RESTORE_STATEMENT_FAILED':/^[A-Z0-9_]+$/.test(error.message)?error.message:'PRIVATE_RESTORE_ERROR',stage:error.stage,table:error.table,httpStatus:error.status||null,code:error.code,recoveryCode:error.recoveryCode,contentType:error.contentType,importDetail:error.importDetail,deployDetail:error.deployDetail});process.exitCode=1;
 }finally{
  for(const worker of workers)try{assertSandbox(worker);await cf('/workers/scripts/'+worker,'DELETE');}catch{result.cleanupBlocked=true;}
  for(const db of databases)try{assertSandbox(db.name,db.uuid);await cf('/d1/database/'+db.uuid,'DELETE');}catch{result.cleanupBlocked=true;}
