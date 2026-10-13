@@ -1,0 +1,13 @@
+{
+  "result": "BLOCKED",
+  "M04": "BLOCKED",
+  "H03": "BLOCKED",
+  "cause": "Cloudflare D1_RESET_DO repeated on a recreated empty isolated target",
+  "run": 38412632242,
+  "job": 115348660209,
+  "checkpointArchive": "dream-team-audit-38410329365-archive",
+  "recoverySourceWrites": 0,
+  "providerCalls": 0,
+  "at": "2026-10-13T14:22:24Z",
+  "action": "Zgłoś do Cloudflare Support błąd D1 import D1_RESET_DO, podając run 38412632242, i poproś o przywrócenie działania importu."
+}

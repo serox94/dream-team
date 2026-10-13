@@ -416,3 +416,5 @@ READY TO MERGE TO MAIN: YES. Uzasadnienie: wdrożony kod c4af4ed ma 108/108 unit
 ### 2026-10-13 — niezależny audyt Astra, korekta decyzji wydania
 
 Dotychczasowe READY TO MERGE: YES jest historyczne. Bieżące H01–H04/M01–M04 i bramki: [audit-fixes-2026-10-13.md](audit-fixes-2026-10-13.md). Runtime migracje i rollback do legacy usunięte, login access oddzielony od profilu, własne operacje offline uporządkowane. Odbiór tylko na finalnym SHA; realny D1/R2/CF admin musi mieć dowód, inaczej BLOCKED. READY TO MERGE TO MAIN: NO do zakończenia odbioru; READY TO DEPLOY PRODUCTION: NO. Main i produkcja pozostają bez zmian.
+
+Końcowy odbiór napraw Astra: H01/H02/M01/M02/M03 PASS; H03/H04/M04 BLOCKED. D1_RESET_DO potwierdzony także na odtworzonym pustym celu w 38412632242; dalszych prób nie wykonujemy. Prywatne archiwum SQL/R2 zachowane, zero zmian biznesowych źródeł i zero nowych Tavily/AI. Szczegóły/dwie jednoznaczne czynności dotyczące blokad: [audit-fixes-2026-10-13.md](audit-fixes-2026-10-13.md). READY TO MERGE TO MAIN: NO. READY TO DEPLOY PRODUCTION: NO. Końcowa pełna bramka CI na bieżącym SHA ma wykazać również BLOCKED, bez udawania PASS lub ponawiania importu.

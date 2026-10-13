@@ -57,3 +57,21 @@ Końcowy run 9671ec8 / [38407858886](https://github.com/serox94/dream-team/actio
 B7f06ec / [38410329365](https://github.com/serox94/dream-team/actions/runs/38410329365): Validate/Responsive 122 PASS. H01/H02/M01/M02 PASS na realnej kopii; rotacja/purge sesji wykonane tylko na kopii. M04 FAIL przy `wrangler d1 execute` drugiego pustego D1. Zachowano prywatny checkpoint SQL/R2; następny test tylko importuje ten zapis do nowego D1, bez ponownej migracji, logowania, resetu czy fixture. Błąd SQL pokazuje wyłącznie zredagowane przyczyny, bez literałów/haszy/tokenów.
 
 Import diagnostic 540f0ce / [38411938944](https://github.com/serox94/dream-team/actions/runs/38411938944) ujawnił rzeczywisty błąd zdalnego importu: Cloudflare `D1_RESET_DO`, nie błąd danych czy autoryzacji. Lokalna poprawka FK ma oddzielny reproducer i nie rozwiązywała tego błędu dostawcy. Dla tego jednego błędu dodano jedną próbę na **nowym** pustym, niepublikowanym D1 po usunięciu wyłącznie poprzedniego celu audit. Bez ponawiania migracji, bez ingerencji w źródło i bez przywracania aktywnej produkcji; kolejna odmowa/reset kończy się BLOCKED. Prywatny zapis SQL/R2 pozostaje nienaruszony.
+
+## Końcowy checkpoint po potwierdzonej blokadzie
+
+| ID | Wynik | Dowód / pozostały warunek |
+|---|---|---|
+| H01 | PASS | Unit HTTP/cron bez zmian; rzeczywisty export 20→28, zachowane stare kolumny/ID/FK, bramka maintenance i jawna migracja; B7 job 115342241577 |
+| H02 | PASS | Konfiguracja prod poprawiona w kodzie; jawne init zachowuje hash/ID/PB; rzeczywiste trzy konta i limit czwartego na kopii; produkcyjna migracja nie wykonana |
+| H03 | BLOCKED | Usunięty tagowy rollback; fizyczne purge przy rotacji, wyłączeniu, inicjalizacji i restore; unit legacy-reader/wyścig PASS. Test cookie po rzeczywistym restore zależy od M04 |
+| H04 | BLOCKED | 403/code10000; bramka automatycznych CF wdrożeń niezweryfikowana. Jedna czynność: dostarczyć eksport Builds/Git integration, hooks i pending deployments |
+| M01 | PASS | JSDOM kolejność/checklist/spot/replay/konflikt oraz rzeczywisty Chromium 390 lost ACK/reload na izolowanym Workerze; B7 |
+| M02 | PASS | Profil i konto oddzielone; wyłączenie/purge/odmowa/reaktywacja bez powrotu sesji: unit i realna kopia B7 |
+| M03 | PASS | Siedem ocenionych pakietów poprawionych; npm audit 0; Validate/bundle na kolejnych SHA PASS |
+| M04 | BLOCKED | Prywatne SQL+bookmark, source/point SQL R2 roundtrip, manifest mediów/restore do pierwszej kopii i PNG upload PASS. Pełny import drugiego D1 daje D1_RESET_DO również po pojedynczym odtworzeniu pustego celu: [38412632242](https://github.com/serox94/dream-team/actions/runs/38412632242), 115348660209. Jedna czynność: zgłosić do Cloudflare Support ten błąd/run i poprosić o naprawę importu |
+
+Prywatny zapis pozostaje w `dream-team-audit-38410329365-archive` (source.sql, checkpoint.sql, manifest.json, objects/*); nie został opublikowany w artefaktach. Celowane kopie D1/Workery usunięto; źródła produkcji/preview i wszystkie istniejące dane biznesowe są zachowane. Kolejne CI zachowuje BLOCKED zamiast ponawiania importu/migracji/resetów. Końcowy pełny run na tym commicie ponownie sprawdza niezmienione dane preview, konta, PWA/media i odczytową regresję PL/EN 390/1280; BLOCKED jobu restore utrzymuje ogólny FAIL. Publiczne artefakty zawierają wyłącznie statusy, żadnego SQL/config/secrets.
+
+READY TO MERGE TO MAIN: NO — H03/H04/M04 wymagają odbioru.
+READY TO DEPLOY PRODUCTION: NO — brak pełnego restore i kontroli CF automation, brak osobnej zgody; main/produkcji nie scalano ani nie wdrażano.
