@@ -18,10 +18,6 @@ export default{async fetch(request,env){
    for(const row of manifest.entries){const bytes=await(await env.ARCHIVE.get('objects/'+row.key)).arrayBuffer();await env.RESTORED.put(row.key,bytes,{httpMetadata:row.httpMetadata,customMetadata:row.customMetadata});const copy=await env.RESTORED.get(row.key);if(!copy||await digest(await copy.arrayBuffer())!==row.sha256)throw Error('RESTORE_MISMATCH');}
    return response({ok:true,objects:manifest.entries.length,verified:true});
   }
-  if(['/private-sql/source','/private-sql/checkpoint'].includes(path)&&request.method==='PUT'){
-   const sqlKey=path.endsWith('/source')?'source.sql':'checkpoint.sql';
-   const bytes=await request.arrayBuffer();await env.ARCHIVE.put(sqlKey,bytes,{httpMetadata:{contentType:'application/sql'}});const copy=await env.ARCHIVE.get(sqlKey);if(!copy||await digest(await copy.arrayBuffer())!==await digest(bytes))throw Error('SQL_COPY_MISMATCH');return response({ok:true,sha256:await digest(bytes)});
-  }
   return response({ok:false},404);
- }catch(error){const safe=new Set(['SOURCE_CHANGED','COPY_MISMATCH','NO_MANIFEST','ARCHIVE_MISMATCH','RESTORE_MISMATCH','SQL_COPY_MISMATCH']);return response({ok:false,error:safe.has(error.message)?error.message:'RECOVERY_FAILED'},500);}
+ }catch(error){const safe=new Set(['SOURCE_CHANGED','COPY_MISMATCH','NO_MANIFEST','ARCHIVE_MISMATCH','RESTORE_MISMATCH']);return response({ok:false,error:safe.has(error.message)?error.message:'RECOVERY_FAILED'},500);}
 }};

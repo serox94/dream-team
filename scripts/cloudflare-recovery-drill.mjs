@@ -6,7 +6,7 @@ let phase='private source export';
 const result={at:new Date().toISOString(),candidate:process.env.GITHUB_SHA,result:'FAIL',businessWritesToExistingResources:0,providerCalls:0};
 const privateConfig=(db,media,main='src/worker.js')=>{assertSandbox(name,db.uuid);return {...base,name,main:process.cwd()+'/'+main,assets:{...base.assets,directory:process.cwd()+'/public'},secrets:undefined,ai:undefined,triggers:{crons:[]},d1_databases:[{binding:'DB',database_name:db.name,database_id:db.uuid,migrations_dir:process.cwd()+'/migrations'}],r2_buckets:[{binding:'MEDIA',bucket_name:media}],vars:{APP_ENV:'preview',APP_BUILD:process.env.GITHUB_SHA,INDIVIDUAL_ACCOUNTS:'true',AI_FREE_ONLY:'false'}};};
 async function deploy(config,filename){if(config.name!==name+'-io')assertSandbox(config.name,config.d1_databases[0].database_id);const file=await configFile(dir,config,filename),output=wrangler(['deploy','--config',file]);const url=output.match(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/)?.[0];assert.ok(url,'isolated workers.dev URL');return {file,url};}
-const secret=(worker,key,value)=>wrangler(['secret','put',key,'--name',worker],value);
+const secret=(worker,key,value,config)=>wrangler(['secret','put',key,'--name',worker,...(config?['--config',config]:[])],value);
 const cookie=async(url,username,password=process.env.RYBY_LOGIN_PASSWORD)=>{const r=await fetch(url+'/api/login',{method:'POST',redirect:'manual',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password}),signal:AbortSignal.timeout(20000)});assert.equal(r.status,303);assert.equal(r.headers.get('location'),'/');const c=r.headers.get('set-cookie')?.split(';')[0];assert.ok(c,'real login');return c;};
 async function api(url,c,path,method='GET',data,expected=200){const r=await fetch(url+path,{method,headers:{cookie:c,origin:url,'content-type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:AbortSignal.timeout(25000)});assert.equal(r.status,expected,path);return r.json();}
 try{
@@ -15,20 +15,21 @@ try{
  phase='create isolated D1/R2';
  const db=await cf('/d1/database','POST',{name:name+'-db'}),restored=await cf('/d1/database','POST',{name:name+'-restored'});assertSandbox(db.name,db.uuid);assertSandbox(restored.name,restored.uuid);
  const media=name+'-media',archive=name+'-archive',restoredMedia=name+'-restored';for(const bucket of [media,archive,restoredMedia]){assertSandbox(bucket);await cf('/r2/buckets','POST',{name:bucket});}
- const gatewayConfig=source=>({name:name+'-io',workers_dev:true,main:process.cwd()+'/scripts/restore-io-worker.js',compatibility_date:base.compatibility_date,workers_dev:true,triggers:{crons:[]},r2_buckets:[{binding:'SOURCE',bucket_name:source},{binding:'ARCHIVE',bucket_name:archive},{binding:'RESTORED',bucket_name:source===media?restoredMedia:media}]});
+ const gatewayConfig=source=>({name:name+'-io',workers_dev:true,main:process.cwd()+'/scripts/restore-io-worker.js',compatibility_date:base.compatibility_date,triggers:{crons:[]},r2_buckets:[{binding:'SOURCE',bucket_name:source},{binding:'ARCHIVE',bucket_name:archive},{binding:'RESTORED',bucket_name:source===media?restoredMedia:media}]});
  phase='private media backup/restore';
- let io=await deploy(gatewayConfig('dream-team-media'),'io.jsonc');secret(name+'-io','RECOVERY_KEY',ioKey);
+ let io=await deploy(gatewayConfig('dream-team-media'),'io.jsonc');secret(name+'-io','RECOVERY_KEY',ioKey,io.file);
  const ioReady=async()=>{const deadline=Date.now()+120000;while(true){const r=await fetch(io.url+'/ready',{headers:{'x-recovery-key':ioKey},signal:AbortSignal.timeout(15000)});if(r.status===200&&(await r.json()).bindingsReady)return;if(Date.now()>deadline){const e=Error('RECOVERY_GATEWAY_NOT_READY');e.status=r.status;throw e;}await new Promise(resolve=>setTimeout(resolve,2000));}};
  await ioReady();
  const recovery=async(path,method='POST',bytes)=>{const r=await fetch(io.url+path,{method,headers:{'x-recovery-key':ioKey},body:bytes,signal:AbortSignal.timeout(120000)});const value=await r.json().catch(()=>({error:'NON_JSON_RECOVERY_RESPONSE'}));if(r.status!==200||value.ok!==true){const error=Error('PRIVATE_RECOVERY_FAILED');error.status=r.status;error.recoveryCode=value.error;error.recoveryPath=path;throw error;}return value;};
- await recovery('/private-sql/source','PUT',exported.bytes);await recovery('/backup');await recovery('/restore');
+ const storeSql=async(key,file,expected)=>{assertSandbox(archive);const object=archive+'/'+key;wrangler(['r2','object','put',object,'--remote','--file',file,'--content-type','application/sql']);const copy=dir+'/'+key+'.verify';wrangler(['r2','object','get',object,'--remote','--file',copy]);assert.equal(sha(await readFile(copy)),expected,'private SQL R2 round trip');};
+ await storeSql('source.sql',dir+'/source.sql',exported.sha256);await recovery('/backup');await recovery('/restore');
  phase='import source into isolated D1';
  let app=await deploy(privateConfig(db,media,'scripts/maintenance-worker.js'),'maintenance.jsonc');
  wrangler(['d1','execute',db.name,'--remote','--config',app.file,'--file',dir+'/source.sql']);
  const old=JSON.parse(JSON.stringify((await query(db.uuid,"SELECT name FROM sqlite_master WHERE type='table'")).results));
  phase='HTTP guard on copied schema';
  await query(db.uuid,'DELETE FROM auth_sessions');
- let incompatible=await deploy(privateConfig(db,media),'application.jsonc');secret(name,'RYBY_LOGIN_USERNAME','Patryk');secret(name,'RYBY_LOGIN_PASSWORD',process.env.RYBY_LOGIN_PASSWORD);secret(name,'RYBY_SESSION_SECRET',sessionSecret);
+ let incompatible=await deploy(privateConfig(db,media),'application.jsonc');secret(name,'RYBY_LOGIN_USERNAME','Patryk',incompatible.file);secret(name,'RYBY_LOGIN_PASSWORD',process.env.RYBY_LOGIN_PASSWORD,incompatible.file);secret(name,'RYBY_SESSION_SECRET',sessionSecret,incompatible.file);
  const priorSchema=(await query(db.uuid,"SELECT value FROM app_settings WHERE key='schema_version'")).results[0].value;
  if(Number(priorSchema)!==28){assert.equal((await fetch(incompatible.url+'/login',{signal:AbortSignal.timeout(20000)})).status,503);assert.equal((await query(db.uuid,"SELECT value FROM app_settings WHERE key='schema_version'")).results[0].value,priorSchema);assert.deepEqual((await query(db.uuid,"SELECT name FROM sqlite_master WHERE type='table'")).results,old);}
  // Freeze every HTTP path and cron before the explicit migration, even on the copy.
@@ -56,7 +57,7 @@ try{
  // Snapshot includes an issued session. Restore MUST remove it; password pepper is unchanged.
  phase='private D1/R2 recovery point';
  await query(db.uuid,"INSERT INTO checklist_items(id,trip_id,category,label) VALUES(80000000,?,'sprzęt','own deleted sequence fixture')",[trip.id]);await query(db.uuid,'DELETE FROM checklist_items WHERE id=80000000 AND trip_id=?',[trip.id]);
- const point=await exportSql(app.file,db.name,dir+'/point.sql');io=await deploy(gatewayConfig(media),'io.jsonc');await ioReady();await recovery('/private-sql/checkpoint','PUT',point.bytes);const r2Point=await recovery('/backup');
+ const point=await exportSql(app.file,db.name,dir+'/point.sql');io=await deploy(gatewayConfig(media),'io.jsonc');await ioReady();await storeSql('checkpoint.sql',dir+'/point.sql',point.sha256);const r2Point=await recovery('/backup');
  const rotated=randomBytes(24).toString('hex');await api(app.url,p,'/api/account/password','POST',{currentPassword:process.env.RYBY_LOGIN_PASSWORD,newPassword:rotated});await api(app.url,p,'/api/bootstrap','GET',undefined,401);
  await deploy(privateConfig(db,media,'scripts/maintenance-worker.js'),'maintenance.jsonc');
  phase='restore into second isolated D1/R2';
