@@ -12,7 +12,7 @@ async function login(page,username,lang,loginLanguage){console.log('USER LANGUAG
 async function logout(page,lang){await open(page,'/pages/ustawienia.html',lang);await page.locator('#ryby-logout').click();await page.waitForURL('**/login',{waitUntil:'commit',timeout:30000});}
 try{
  for(const width of [390,1280]){
-  const context=await browser.newContext({viewport:{width,height:844},locale:'pl-PL',isMobile:width===390,hasTouch:width===390}),page=await context.newPage();
+  const context=await browser.newContext({serviceWorkers:'block',viewport:{width,height:844},locale:'pl-PL',isMobile:width===390,hasTouch:width===390}),page=await context.newPage();
   page.on('response',async response=>{if(new URL(response.url()).pathname==='/api/weather'){console.log('USER LANGUAGE WEATHER HTTP',response.status());if(!response.ok())console.warn('USER LANGUAGE WEATHER ERROR',(await response.json().catch(()=>({}))).error);}});
   page.on('requestfailed',request=>console.warn('USER LANGUAGE FAILED REQUEST',new URL(request.url()).pathname,request.failure()?.errorText));
   await login(page,'Patryk','pl');await open(page,'/pages/ustawienia.html','pl');assert.equal(await page.locator('.language-selector select').count(),1);

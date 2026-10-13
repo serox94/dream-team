@@ -7,7 +7,7 @@ const base='https://dream-team-preview.sewerynski00.workers.dev';
 const questions=JSON.parse(await readFile('public/data/knowledge/sonar.json','utf8')).quiz;
 await mkdir('live-preview-qa',{recursive:true});
 for(const width of [390,1280])for(const lang of ['pl','en']){
- const browser=await chromium.launch(),context=await browser.newContext({viewport:{width,height:844},locale:lang==='pl'?'pl-PL':'en-GB'}),page=await context.newPage();let phase='login';
+ const browser=await chromium.launch(),context=await browser.newContext({serviceWorkers:'block',viewport:{width,height:844},locale:lang==='pl'?'pl-PL':'en-GB'}),page=await context.newPage();let phase='login';
  page.setDefaultTimeout(25000);
  const open=async(path,ready)=>{for(let attempt=0;attempt<2;attempt++){try{await page.goto(base+path,{waitUntil:'commit',timeout:30000});await page.locator(ready).waitFor({timeout:30000});return;}catch(error){console.warn('SONAR NAVIGATION',phase,path,attempt+1,String(error.message).split('\n')[0]);if(attempt||error.name!=='TimeoutError')throw error;}}};
  try{

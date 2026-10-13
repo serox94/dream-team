@@ -7,7 +7,7 @@ permissions:
   contents: read
 concurrency:
   group: dream-team-preview
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   preview:
@@ -21,54 +21,28 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci && npm test
-      - name: Read public production availability without credentials
-        run: node scripts/check-production-runtime.mjs
+      - name: Diagnose public transport and historical Worker limits without credentials
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-public-diagnostics.mjs
       - name: Prepare isolated D1 and R2
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/preview-config.mjs
-      - name: Private preview recovery point before account migration
+      # Stage 7 has no new migration. The verified private v2 recovery point is retained.
+      # New migrations require the checkpoint/apply/integrity sequence before deployment.
+      - name: Verify all preview migrations already applied without writing
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/preview-account-checkpoint.mjs
-      - name: Migrate staging database only
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler d1 migrations apply dream-team-preview-db --remote --config wrangler.preview.generated.jsonc
-      - name: Verify migration preserved preview business data
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/preview-account-checkpoint.mjs --verify
+        run: node scripts/preview-migration-status.mjs
       - name: Deploy separate preview Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx wrangler deploy --config wrangler.preview.generated.jsonc
-      - name: Attach existing runtime secrets to preview
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
-          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
-          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
-          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
-        run: |
-          set -euo pipefail
-          for name in RYBY_LOGIN_USERNAME RYBY_LOGIN_PASSWORD RYBY_SESSION_SECRET; do
-            test -n "${!name}" || { echo "Missing $name"; exit 1; }
-            printf '%s' "${!name}" | npx wrangler secret put "$name" --name dream-team-preview >/dev/null
-          done
-          if [ -n "${TAVILY_API_KEY:-}" ]; then
-            printf '%s' "$TAVILY_API_KEY" | npx wrangler secret put TAVILY_API_KEY --name dream-team-preview >/dev/null
-            echo 'Preview Tavily binding attached from the repository secret.'
-          else
-            echo 'Preview Tavily binding not attached: GitHub secret TAVILY_API_KEY is not configured.'
-          fi
-          echo 'Preview runtime bindings attached.'
       - name: Wait for exact preview build
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
@@ -80,11 +54,6 @@ jobs:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/smoke-auth.mjs
-      - name: Verify private media R2 round trip in staging
-        env:
-          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
-          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
-        run: node scripts/preview-media-smoke.mjs
       - name: Check live Tavily and AI binding without enabling billing
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
@@ -100,6 +69,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/live-preview-direct-research.mjs
+      - name: Public transport after deployment and QA preparation
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-public-diagnostics.mjs
       - name: Preserve safe provider status only
         if: always()
         uses: actions/upload-artifact@v4
@@ -108,7 +83,7 @@ jobs:
           path: live-preview-qa
 
   qa-language:
-    needs: qa-accounts
+    needs: [qa-weather, qa-knowledge]
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -140,7 +115,7 @@ jobs:
           path: live-preview-qa
 
   qa-media:
-    needs: qa-accounts
+    needs: qa-offline
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -164,13 +139,13 @@ jobs:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/wait-preview-build.mjs
-      - name: Real preview media lifecycle
+      - name: Existing protected media, all 17 atlas images and actual reload without uploads
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/live-preview-media.mjs
+        run: node scripts/live-preview-readonly-security.mjs media
       - name: Preserve media evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -218,7 +193,7 @@ jobs:
           path: live-preview-qa
 
   qa-extras:
-    needs: qa-accounts
+    needs: [qa-weather, qa-knowledge]
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -242,13 +217,13 @@ jobs:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/wait-preview-build.mjs
-      - name: Real preview templates profiles system and two-device language
+      - name: Existing profiles, templates and system without business writes
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/live-preview-extras.mjs
+        run: node scripts/live-preview-readonly-security.mjs extras
       - name: Preserve extras evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -281,13 +256,13 @@ jobs:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/wait-preview-build.mjs
-      - name: Real preview three accounts, authors, password and offline
+      - name: Existing accounts, authors, PB and private export without password rotation
         env:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/live-preview-accounts.mjs
+        run: node scripts/live-preview-readonly-security.mjs accounts
       - name: Preserve account evidence without secrets
         if: always()
         uses: actions/upload-artifact@v4
@@ -296,7 +271,7 @@ jobs:
           path: live-preview-qa
 
   qa-weather:
-    needs: [qa-accounts]
+    needs: [qa-media]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -328,7 +303,7 @@ jobs:
           path: live-preview-qa
 
   qa-knowledge:
-    needs: [qa-accounts]
+    needs: [qa-media]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

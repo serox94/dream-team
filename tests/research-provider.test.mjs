@@ -14,4 +14,5 @@ test('source language uses explicit aliases and compound arrival/departure claus
  assert.equal(facts.find(f=>f.field==='arrival').sourceLanguage,'en');assert.equal(facts.find(f=>f.field==='departure').sourceLanguage,'en');assert.doesNotMatch(facts.find(f=>f.field==='arrival').value,/Departure/);
  assert.equal(facts.find(f=>f.field==='address').sourceLanguage,null);assert.equal(facts.find(f=>f.field==='email').sourceLanguage,null);assert.equal(facts.find(f=>f.field==='depth').sourceLanguage,'en','first depth label in the source remains the selected value');assert.equal(facts.find(f=>f.field==='depth').value,'4 m');
  assert.equal(extractFacts('Maximum depth: 4 m')[0].sourceLanguage,'en');
+ for(const label of ['Telefon','Rekord','Adres'])assert.equal(extractFacts(label+': example')[0].sourceLanguage,null,'shared label '+label+' remains unknown');
 });

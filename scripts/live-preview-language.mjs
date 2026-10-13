@@ -32,7 +32,7 @@ const login=async page=>{
  await page.locator('html[data-ready="true"][data-i18n-ready="en"]').waitFor({timeout:30000});
 };
 const verifyMobileMoreLanguage=async()=>{
- const context=await browser.newContext({viewport:{width:390,height:844},locale:'pl-PL',hasTouch:true});
+ const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},locale:'pl-PL',hasTouch:true});
  const page=await context.newPage();
  try{
   await open(page,'/login','html[data-i18n-ready]');
@@ -72,7 +72,7 @@ try{
  await verifyMobileMoreLanguage();
  // Start a fresh browser connection pool for the separate EN audit; keep all login assertions.
  await browser.close();browser=await chromium.launch();
- const context=await browser.newContext({viewport:{width:390,height:844},locale:'pl-PL',hasTouch:true});
+ const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844},locale:'pl-PL',hasTouch:true});
  const page=await context.newPage();
  await login(page);
  for(const route of routes){

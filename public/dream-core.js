@@ -152,13 +152,18 @@
       try{
         const response=await authorizedFetch(path,options,controller.signal);
         if(response.status===401){clearReadCache();await clearShell();location.assign('/login');throw new Error('Sesja wygasła. Zaloguj się ponownie.');}
-        const data=await response.json();
-        eligibleFallback=response.status>=500;
-        if(!response.ok||data.ok===false)throw new Error(data.error||`HTTP ${response.status}`);
+        eligibleFallback=response.status===429||response.status>=500;
+        let data=null;
+        try{data=await response.json();}catch{if(response.ok)eligibleFallback=true;}
+        const english=window.DreamLanguage?.get()==='en';
+        const message=response.status===429?
+          (english?'The server has limited requests. Try again later.':'Serwer ograniczył liczbę żądań. Spróbuj ponownie później.'):
+          (english?'Invalid server response. Try again.':'Nieprawidłowa odpowiedź serwera. Spróbuj ponownie.');
+        if(!data||!response.ok||data.ok===false)throw new Error(data?.error||(!data||response.status===429?message:`HTTP ${response.status}`));
         if(get)saveReadCache(path,data);
         return data;
       }catch(error){
-        if(mutationKey&&(error.name==='AbortError'||error.name==='TypeError'))return queueMutation(path,options.method,payload,mutationKey);
+        if(mutationKey&&(eligibleFallback||error.name==='AbortError'||error.name==='TypeError'))return queueMutation(path,options.method,payload,mutationKey);
         if(get&&(eligibleFallback||error.name==='AbortError'||error.name==='TypeError')){
           const cached=readOffline(path);if(cached)return cached;
         }

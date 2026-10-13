@@ -8,6 +8,7 @@ function harness(){
   calls.push(request.url);const path=new URL(request.url).pathname;
   if(mode==='offline'||path===failedPath)throw new TypeError('offline');
   if(mode==='forbidden')return new Response('Forbidden',{status:403});
+  if(mode==='quota')return new Response('Rate limited',{status:429});
   if(mode==='connect')return new Promise((_,reject)=>signal.addEventListener('abort',()=>reject(new Error('aborted')),{once:true}));
   if(mode==='body')return new Response(new ReadableStream({start(controller){signal.addEventListener('abort',()=>controller.error(new Error('aborted body')),{once:true});}}));
   return new Response('new '+path);
@@ -35,5 +36,6 @@ test('static deadlines include stalled bodies; private API/login and access deni
  const h=harness();await h.cache(h.current).put('/__ryby_shell_complete',new Response('1'));await h.cache(h.current).put('/knowledge.js',new Response('cached complete script'));
  for(const mode of ['connect','body']){h.setMode(mode);const result=await Promise.race([h.request('/knowledge.js?v=release'),new Promise((_,reject)=>setTimeout(()=>reject(new Error('cache fallback did not finish')),300))]);assert.equal(await result.text(),'cached complete script');}
  assert.ok(h.delays.includes(4000));const reads=h.calls.length;for(const [path,method] of [['/api/bootstrap','GET'],['/api/offline-sync','POST'],['/login','GET']])assert.equal(await h.request(path,method),null);assert.equal(h.calls.length,reads);
+ h.setMode('quota');assert.equal(await(await h.request('/knowledge.js')).text(),'cached complete script');
  h.setMode('forbidden');const denied=await h.request('/knowledge.js');assert.equal(denied.status,403);assert.equal(await denied.text(),'Forbidden');
 });

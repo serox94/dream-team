@@ -17,6 +17,21 @@ async function page(server,path,trip='next-trip',failure=null){
 const testServe=options=>serve({...options,weatherFetch:async()=>Response.json(weatherFixture())});
 const submit=(p,id)=>p.d.getElementById(id).dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));
 const fill=(p,id,value)=>{const el=p.d.getElementById(id);el.value=value;el.dispatchEvent(new p.w.Event('input',{bubbles:true}));};
+test('HTML quota failures preserve cached reads and owned writes, but never bypass access denial',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/polowy.html');
+ try{
+  const original=await p.w.Dream.api('/api/bootstrap');
+  p.w.DREAM_MODEL.currentUser={id:'account-patryk',anglerId:'patryk'};
+  p.w.fetch=async()=>new Response('<html>Error code: 1027</html>',{status:429,headers:{'content-type':'text/html'}});
+  const cached=await p.w.Dream.api('/api/bootstrap');assert.equal(cached.app.activeTripId,original.app.activeTripId);assert.equal(cached.trips.length,original.trips.length);
+  const queued=await p.w.Dream.api('/api/catches',{method:'POST',body:JSON.stringify({tripId:'next-trip',anglerId:'patryk',weightKg:9,caughtAt:'2026-09-01T12:00:00Z'})});assert.equal(queued.pendingSync,true);
+  const entries=JSON.parse(p.w.localStorage.getItem('dreamteam.offline.queue.v1'));assert.equal(entries.length,1);assert.equal(entries[0].accountId,'account-patryk');assert.equal(entries[0].payload.weightKg,9);
+  await assert.rejects(p.w.Dream.api('/api/settings'),/Serwer ograniczył liczbę żądań/);
+  p.w.DreamLanguage={get:()=> 'en'};await assert.rejects(p.w.Dream.api('/api/settings'),/The server has limited requests/);
+  p.w.fetch=async()=>new Response('<html>Forbidden</html>',{status:403});await assert.rejects(p.w.Dream.api('/api/bootstrap'),/Invalid server response/);
+  await assert.rejects(p.w.Dream.api('/api/catches',{method:'POST',body:JSON.stringify({tripId:'next-trip',weightKg:10})}),/Invalid server response/);assert.equal(JSON.parse(p.w.localStorage.getItem('dreamteam.offline.queue.v1')).length,1);
+ }finally{p.close();await s.close();}
+});
 test('every route boots, preserves legacy knowledge, sends no duplicate initial data requests',async()=>{
  const s=await testServe({seed:true});
  try{for(const path of ['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html']){
