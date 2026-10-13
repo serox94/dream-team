@@ -425,7 +425,7 @@ function protectedResponse(result,active){
 }
 async function handleRequest(request,env,ctx){
     const url=new URL(request.url),path=url.pathname,method=request.method;
-    try{await ensureSchema(env);}catch{return json({ok:false,error:'Przerwa serwisowa. Spróbuj ponownie później.'},503,{'retry-after':'60'});}
+    try{await ensureSchema(env);}catch{return json({ok:false,error:'Przerwa serwisowa. Spróbuj ponownie później.'},503,{'retry-after':'60','x-dreamteam-build':env.APP_BUILD||'local',...(env.APP_RELEASE_ID?{'x-dreamteam-release':env.APP_RELEASE_ID}:{})});}
     if(loginAssets.has(path)&&method==='GET'){
       if(authConfigured(env)){
         if((path==='/login'||path==='/login.html')&&await session(request,env))return Response.redirect(url.origin+'/',302);
@@ -433,7 +433,7 @@ async function handleRequest(request,env,ctx){
       const assetPath=path==='/login'?'/login.html':path;
       const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));
       const result=protectedResponse(asset);
-      result.headers.set('x-dreamteam-build',env.APP_BUILD||'local');result.headers.set('x-dreamteam-auth-mode',individualAccounts(env)?'individual':'legacy');
+      result.headers.set('x-dreamteam-build',env.APP_BUILD||'local');result.headers.set('x-dreamteam-auth-mode',individualAccounts(env)?'individual':'legacy');if(env.APP_RELEASE_ID)result.headers.set('x-dreamteam-release',env.APP_RELEASE_ID);
       if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
       return result;
     }

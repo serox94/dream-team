@@ -16,7 +16,7 @@ try{
  }else if(action==='initialize'){
   assert.equal(state.find(r=>r.key==='schema_version')?.value,'28');await initializeAccounts({DB:remoteDb(productionId),RYBY_LOGIN_PASSWORD:process.env.RYBY_LOGIN_PASSWORD,RYBY_SESSION_SECRET:process.env.RYBY_SESSION_SECRET});
  }else if(action==='deploy'){
-  assert.equal(state.find(r=>r.key==='schema_version')?.value,'28');assert.equal(receipt.postMigrationVerified,true);assert.ok((await query(productionId,'SELECT id FROM auth_credential WHERE id=1')).results.length);
+  assert.equal(state.find(r=>r.key==='schema_version')?.value,'28');assert.equal(receipt.postMigrationVerified,true);assert.equal((await query(productionId,'SELECT COUNT(*) n FROM auth_sessions')).results[0].n,0,'Sessions must be physically purged in maintenance before release');assert.ok((await query(productionId,'SELECT id FROM auth_credential WHERE id=1')).results.length);
   wrangler(['deploy','--config',target]);
  }else{
   // No automatic database reset or historical tag checkout. Preserve writes made after release.

@@ -116,8 +116,9 @@ export async function initializeAccounts(env){
  if(existing)return {initialized:false};
  if(typeof env.RYBY_LOGIN_PASSWORD!=='string'||!env.RYBY_LOGIN_PASSWORD||typeof env.RYBY_SESSION_SECRET!=='string'||env.RYBY_SESSION_SECRET.length<32)throw Error('ACCOUNT_SECRET_PREFLIGHT');
  const salt=hex(crypto.getRandomValues(new Uint8Array(32))),hash=await passwordHash(env,env.RYBY_LOGIN_PASSWORD,salt);
- await env.DB.prepare('INSERT OR IGNORE INTO auth_credential(id,salt,password_hash,iterations,version) VALUES(1,?,?,?,1)').bind(salt,hash,iterations).run();
- return {initialized:true};
+ const inserted=await env.DB.prepare('INSERT OR IGNORE INTO auth_credential(id,salt,password_hash,iterations,version) VALUES(1,?,?,?,1)').bind(salt,hash,iterations).run();
+ if(inserted.meta.changes)await env.DB.prepare('DELETE FROM auth_sessions').run();
+ return {initialized:Boolean(inserted.meta.changes)};
 }
 export async function updateAccountAccess(request,env,id){
  const x=await body(request);if(typeof x.active!=='boolean')fail('Nieprawidłowy status lub język.');
