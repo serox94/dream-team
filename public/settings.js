@@ -6,6 +6,7 @@ window.initDreamSettings=async()=>{
   $('settings-schema').textContent=saved.schemaVersion;
   $('research-last').textContent=saved.lastResearchAt?new Date(saved.lastResearchAt).toLocaleString(locale):t('brak');
   const profile=$('settings-version').closest('section');
+  profile.id='general-settings';
   profile.querySelector('p:nth-of-type(2)').insertAdjacentHTML('beforeend',` <small>${t('(profil informacyjny; instrukcje Deeper są napisane dla tego zestawu)')}</small>`);
   const providerStatus=document.createElement('p');providerStatus.id='research-provider-status';providerStatus.textContent=saved.researchProviderConfigured?'Automatyczne wyszukiwanie źródeł: dostawca skonfigurowany.':'AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.';
   $('research-auto').closest('label').before(providerStatus);
