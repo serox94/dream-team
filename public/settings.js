@@ -74,7 +74,7 @@ window.initDreamSettings=async()=>{
     for(const node of [...section.childNodes])if(node!==heading)content.append(node);
     heading.remove();
     details.append(summary,content);section.append(details);
-    const defaultOpen=section.id==='lake-catalog'||title==='Ogólne i Deeper';
+    const defaultOpen=section.id==='lake-catalog'||Boolean(section.querySelector('#settings-form'));
     try{details.open=localStorage.getItem(key)==='open'||(localStorage.getItem(key)===null&&defaultOpen);}catch{details.open=defaultOpen;}
     details.addEventListener('toggle',()=>{try{localStorage.setItem(key,details.open?'open':'closed');}catch{}});
   };
