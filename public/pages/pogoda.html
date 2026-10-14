@@ -64,7 +64,7 @@
           <div class="eyebrow">🌦️ Pogoda i warunki na zasiadkę</div>
           <h2>Pogoda PRO</h2>
           <p>
-            Prognoza dla łowiska i praktyczne ograniczenia zasiadki. Ocena warunków nie zastępuje obserwacji ryb ani pomiarów wody.
+            Warunki na łowisku, zmiany w ciągu 24 godzin i plan działań dla karpiarza. Bez wymyślonych procentów szans na branie.
           </p>
 
           <div class="weather-hero-pills">
@@ -127,6 +127,29 @@
         <strong id="bite-tactic-short">--</strong>
         <small id="bite-tactic-note" class="weather-stat-sub">Szybki wniosek</small>
       </article>
+    </section>
+
+    <section class="panel-card carp-forecast-panel" aria-label="Analiza warunków dla karpiarza">
+      <div class="section-head"><h3>🎣 Analiza karpiowa — najbliższe 24 godziny</h3><span class="section-chip">PLAN ZASIADKI</span></div>
+      <p id="carp-weather-headline" class="carp-forecast-lead" aria-live="polite">Analizuję dostępne warunki…</p>
+      <div class="carp-forecast-grid">
+        <div><span>🧭 Ciśnienie i zmiana</span><strong id="carp-pressure">—</strong></div>
+        <div><span>🌬️ Wiatr, porywy i kierunek</span><strong id="carp-wind">—</strong></div>
+        <div><span>🌧️ Opady w 12 h</span><strong id="carp-rain">—</strong></div>
+        <div><span>🌡️ Temperatura powietrza</span><strong id="carp-air">—</strong></div>
+      </div>
+      <div class="carp-forecast-plan">
+        <div>
+          <h4>⏱️ Kiedy łatwiej przygotować lub poprawić zestawy</h4>
+          <p id="carp-window">—</p>
+          <small>Okno bezpieczniejszej obsługi sprzętu, nie prognoza brania.</small>
+        </div>
+        <div>
+          <h4>🎯 Co warto zrobić nad wodą</h4>
+          <ul id="carp-weather-actions"><li>Ładowanie zaleceń…</li></ul>
+        </div>
+      </div>
+      <p id="carp-limitations" class="carp-forecast-disclaimer">Wnioski z pogody nie zastępują pomiarów w wodzie i obserwacji ryb.</p>
     </section>
 
     <section class="two-column weather-main-grid">
