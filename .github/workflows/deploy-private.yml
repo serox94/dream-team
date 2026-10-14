@@ -8,7 +8,7 @@ on:
       action:
         description: Explicit approved maintenance operation
         type: choice
-        options: [diagnose]
+        options: [diagnose, verify]
         default: diagnose
       recovery_manifest_key:
         description: Read-only diagnosis; no release manifest is consumed
@@ -39,4 +39,44 @@ jobs:
         with:
           name: weather-safe-diagnosis
           path: weather-safe-status/status.json
+          retention-days: 3
+  verify:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify' && inputs.ref == '6743924ac9cc8ec32c443e1ca46ce7df184af45c'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: operator
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: candidate/package-lock.json
+      - working-directory: candidate
+        run: |
+          npm ci
+          node scripts/build.mjs
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install --with-deps chromium
+          cp ../operator/scripts/verify-weather-edge.mjs scripts/
+      - name: Chromium weather failure recovery on disposable local D1
+        working-directory: candidate
+        run: node scripts/qa-weather-recovery.mjs
+      - name: Real provider and cache on isolated private Cloudflare Worker
+        working-directory: candidate
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RELEASE_CANDIDATE: ${{ inputs.ref }}
+        run: node scripts/verify-weather-edge.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: weather-edge-safe-status
+          path: weather-safe-status/edge.json
           retention-days: 3
