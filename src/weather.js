@@ -1,4 +1,4 @@
-import { fail } from './validation.js';
+import { fail, InputError } from './validation.js';
 
 const variables = {
   current: 'temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover,visibility,uv_index',
@@ -63,7 +63,7 @@ async function fetchForecast(env,params,location){
       });
       if (!response.ok) {
         if(attempt===0&&response.status>=500){await response.body?.cancel().catch(()=>{});continue;}
-        const error=Object.assign(new Error(`Dostawca pogody zwrócił HTTP ${response.status}.`),{status:502,weatherTransient:response.status===429||response.status>=500});throw error;
+        const error=Object.assign(new InputError(`Dostawca pogody zwrócił HTTP ${response.status}.`,502),{weatherTransient:response.status===429||response.status>=500});throw error;
       }
       const data = await response.json();
       if(data.current?.time==null||!Array.isArray(data.hourly?.time)||!data.hourly.time.length||!Array.isArray(data.daily?.time)||!data.daily.time.length||!data.timezone) fail('Dostawca pogody zwrócił niepełne dane.',502);
@@ -72,7 +72,7 @@ async function fetchForecast(env,params,location){
       if (error?.status === 502) throw error;
       const transport=['AbortError','TimeoutError','TypeError'].includes(error?.name);
       if(attempt===0&&transport)continue;
-      const failure=Object.assign(new Error('Nie udało się pobrać prognozy od dostawcy.'),{status:502,weatherTransient:transport});throw failure;
+      const failure=Object.assign(new InputError('Nie udało się pobrać prognozy od dostawcy.',502),{weatherTransient:transport});throw failure;
     }
   }
 }
