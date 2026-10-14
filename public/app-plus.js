@@ -303,7 +303,7 @@
       try {
         const weather = await fetchDashboardWeatherAlerts();
         const temp=window.DreamConditions.finite(weather.current?.temperature_2m),wind=window.DreamConditions.finite(weather.current?.wind_speed_10m);
-        if(temp!==null&&wind!==null)currentWeather=`${temp.toFixed(0)}°C · wiatr ${wind.toFixed(0)} km/h`;
+        if(temp!==null&&wind!==null)currentWeather=`${temp.toFixed(0)}°C · ${window.DreamLanguage?.get()==='en'?'wind':'wiatr'} ${wind.toFixed(0)} km/h`;
         if(weather.dreamteam?.stale)currentWeather+=(window.DreamLanguage?.get()==='en'?' · Last forecast':' · Ostatnia prognoza');
         setText('dashboard-weather-now',currentWeather);
         const nowIndex=window.DreamConditions.hourIndex(weather),limit=Math.min(weather.hourly.time.length,nowIndex+24);let bestGrade=null,bestIndex=null;
@@ -320,7 +320,7 @@
         } else if (openChecklist > 0) {
           dashboardWarning = `Brakuje jeszcze ${openChecklist} rzeczy z checklist.`;
         }
-        if(weather.dreamteam?.stale)dashboardWarning=(window.DreamLanguage?.get()==='en'?'Weather provider unavailable — showing the last forecast. ':'Dostawca pogody niedostępny — pokazuję ostatnią prognozę. ')+dashboardWarning;
+        if(weather.dreamteam?.stale)dashboardWarning=(window.DreamLanguage?.get()==='en'?'Weather provider unavailable — showing the last forecast. ':'Dostawca pogody niedostępny — pokazuję ostatnią prognozę. ')+(window.DreamI18n?.t(dashboardWarning)||dashboardWarning);
       } catch (_) { setText('dashboard-weather-now','Brak prognozy'); }
 
       renderAlertCards([
