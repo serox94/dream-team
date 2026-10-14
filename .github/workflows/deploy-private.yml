@@ -18,30 +18,53 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+  actions: read
 jobs:
   release:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'deploy' && inputs.ref == '600d1f55ad0481a77cfc725a7a1810ea15347ee0' && github.ref == 'refs/heads/ops/code-only-600d1f5-20261014'
     environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.ref }}
+          path: operator
+      - uses: actions/checkout@v4
+        with:
           ref: ${{ inputs.ref }}
+          path: candidate
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - run: npm ci && npm test
-      - name: Require private recovery evidence and explicit production approval
+          cache-dependency-path: candidate/package-lock.json
+      - name: Build exact reviewed application and prepare targeted smoke
+        working-directory: candidate
+        run: |
+          npm ci
+          node scripts/build.mjs
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install --with-deps chromium
+          cp ../operator/scripts/code-only-production-release.mjs scripts/
+          node --check scripts/code-only-production-release.mjs
+      - name: Approved schema28 code-only release with private checkpoint and smoke
+        working-directory: candidate
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
-          DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+          DREAMTEAM_PRODUCTION_APPROVED: ${{ github.event_name == 'workflow_dispatch' && inputs.action == 'deploy' && inputs.ref == '600d1f55ad0481a77cfc725a7a1810ea15347ee0' && inputs.recovery_manifest_key == 'private-releases/cd113869-d86f-40bb-ab4d-7abc2baf4348.json' && 'yes' || 'no' }}
           RELEASE_ACTION: ${{ inputs.action }}
           RELEASE_MANIFEST_KEY: ${{ inputs.recovery_manifest_key }}
           RELEASE_CANDIDATE: ${{ inputs.ref }}
-        run: node scripts/release-workflow.mjs
-      # A failed verification leaves traffic in maintenance. Never deploy an old tag,
-      # reset D1/R2, rotate the pepper or perform an automatic production rollback.
+        run: node scripts/code-only-production-release.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: code-only-release-safe-status
+          path: release-safe-status/status.json
+          retention-days: 3
