@@ -8,7 +8,7 @@ on:
       action:
         description: Explicit approved maintenance operation
         type: choice
-        options: [diagnose, verify]
+        options: [diagnose, verify, edge]
         default: diagnose
       recovery_manifest_key:
         description: Read-only diagnosis; no release manifest is consumed
@@ -41,7 +41,7 @@ jobs:
           path: weather-safe-status/status.json
           retention-days: 3
   verify:
-    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify' && inputs.ref == '373ea02c295740d56c524249ee2867ae3f965c0b'
+    if: github.event_name == 'workflow_dispatch' && (inputs.action == 'verify' || inputs.action == 'edge') && inputs.ref == '373ea02c295740d56c524249ee2867ae3f965c0b'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -65,6 +65,7 @@ jobs:
           npx playwright install --with-deps chromium
           cp ../operator/scripts/verify-weather-edge.mjs scripts/
       - name: Chromium weather failure recovery on disposable local D1
+        if: inputs.action == 'verify'
         working-directory: candidate
         run: node scripts/qa-weather-recovery.mjs
       - name: Real provider and cache on isolated private Cloudflare Worker
