@@ -81,6 +81,10 @@
       totalRain!==null&&totalRain>=5?tr(lang,'Najważniejszy czynnik: opady','Key issue: rainfall'):
       tr(lang,'Analiza 24 h: obserwacja ryb + bezpieczna obsługa zestawów','24 h analysis: fish observations + safe rig handling');
     return {available:true,headline,pressure:pressureOut,wind:windOut,rain:rainOut,air:tempOut,window:windowText,notes,
+      pressureShort:delta===null?'—':(delta>=0?'+':'')+fmt(delta,' hPa',1),
+      windowShort:windowStart?dateHour(windowStart):'—',
+      riskLabel:threats.length?tr(lang,'Zagrożenie pogodowe','Weather hazard'):maxGust!==null&&maxGust>=30?tr(lang,'Silne porywy','Strong gusts'):tr(lang,'Brak alarmu w prognozie','No forecast hazard'),
+      shortTip:threats.length?tr(lang,'Bezpieczeństwo','Safety first'):maxGust!==null&&maxGust>=30?tr(lang,'Kontroluj wiatr','Check wind'):tr(lang,'Obserwuj wodę','Observe the water'),
       limitations:tr(lang,'Brak pomiarów temperatury i tlenu wody, głębokości warstw i danych o żerowaniu. To analiza pogody i planu działań, NIE prognoza brań ani procent szansy na rybę. Faza Księżyca jest informacyjna.','No measured water temperature or oxygen, water-layer depths or feeding data. This is weather-based planning, NOT a bite forecast or catch probability. Moon phase is informational.'),
       count:forward.length,threatCount:threats.length};
   }
