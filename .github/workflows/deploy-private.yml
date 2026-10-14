@@ -8,10 +8,10 @@ on:
       action:
         description: Explicit approved maintenance operation
         type: choice
-        options: [deploy, migrate, initialize, rollback]
-        default: deploy
+        options: [diagnose]
+        default: diagnose
       recovery_manifest_key:
-        description: Private R2 release manifest key (no secrets in workflow inputs)
+        description: Read-only diagnosis; no release manifest is consumed
         required: true
 concurrency:
   group: dream-team-production
@@ -19,29 +19,24 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  release:
-    environment: production
+  diagnose:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'diagnose' && inputs.ref == '600d1f55ad0481a77cfc725a7a1810ea15347ee0'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - run: npm ci && npm test
-      - name: Require private recovery evidence and explicit production approval
+      - run: npm ci && npm install --no-save --package-lock=false playwright@1.63.0 && npx playwright install --with-deps chromium
+      - name: Read all trip forecasts and France weather UI without business writes
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
-          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
-          DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
-          RELEASE_ACTION: ${{ inputs.action }}
-          RELEASE_MANIFEST_KEY: ${{ inputs.recovery_manifest_key }}
-          RELEASE_CANDIDATE: ${{ inputs.ref }}
-        run: node scripts/release-workflow.mjs
-      # A failed verification leaves traffic in maintenance. Never deploy an old tag,
-      # reset D1/R2, rotate the pepper or perform an automatic production rollback.
+        run: node scripts/diagnose-live-weather.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: weather-safe-diagnosis
+          path: weather-safe-status/status.json
+          retention-days: 3
