@@ -115,8 +115,8 @@ try{
  const state=(await query(productionId,"SELECT * FROM app_settings WHERE key IN ('schema_version','maintenance_mode')")).results;
  originalMaintenance=state.find(r=>r.key==='maintenance_mode');check(state.find(r=>r.key==='schema_version')?.value==='28'&&originalMaintenance?.value!=='on','SOURCE_NOT_OPEN_SCHEMA28');
  const active=deployments.deployments[0];check(active.versions.length===1&&active.versions[0].percentage===100,'SPLIT_PRODUCTION_TRAFFIC');status.previousVersion=active.versions[0].version_id;
- const bindings=settings.bindings,currentVars=Object.fromEntries(bindings.filter(b=>b.type==='plain_text').map(b=>[b.name,b.text]));
- check(/^[a-f0-9]{40}$/.test(currentVars.APP_BUILD)&&currentVars.INDIVIDUAL_ACCOUNTS==='true'&&currentVars.AI_FREE_ONLY==='false','SOURCE_RELEASE_FLAGS');status.previousCommit=currentVars.APP_BUILD;
+ const bindings=settings.bindings,currentVars=Object.fromEntries(bindings.filter(b=>['plain_text','json'].includes(b.type)).map(b=>[b.name,b.type==='json'?b.json:b.text]));
+ status.sourceFlags=Object.fromEntries(['APP_BUILD','APP_ENV','INDIVIDUAL_ACCOUNTS','AI_FREE_ONLY'].map(k=>[k,currentVars[k]??'ABSENT']));check(/^[a-f0-9]{40}$/.test(currentVars.APP_BUILD)&&currentVars.INDIVIDUAL_ACCOUNTS==='true'&&[false,true,'false','true'].includes(currentVars.AI_FREE_ONLY),'SOURCE_RELEASE_FLAGS');status.previousCommit=currentVars.APP_BUILD;
  check(bindings.some(b=>b.type==='d1'&&b.name==='DB'&&b.id===productionId),'SOURCE_D1_BINDING');
  for(const [binding,bucket] of [['MEDIA','dream-team-media'],['BACKUP_STATUS','dream-team-d1-backups']])check(bindings.some(b=>b.type==='r2_bucket'&&b.name===binding&&b.bucket_name===bucket),'SOURCE_R2_BINDING');
  for(const k of ['RYBY_LOGIN_USERNAME','RYBY_LOGIN_PASSWORD','RYBY_SESSION_SECRET','TAVILY_API_KEY'])check(bindings.some(b=>b.type==='secret_text'&&b.name===k),'SOURCE_SECRET_MISSING');
@@ -153,7 +153,7 @@ try{
  const backed=await http(ioUrl,'/backup',{method:'POST',headers:ioHeaders,signal:AbortSignal.timeout(120000)}),backup=await backed.json();check(backed.status===200&&backup.ok,'R2_BACKUP');const r2Restore=await privateRestore(ioUrl,ioKey);check(r2Restore.data.objects===backup.objects,'R2_RESTORE_COUNT');wrangler(['r2','object','get',archive+'/manifest.json','--remote','--file',join(dir,'r2.json')]);await chmod(join(dir,'r2.json'),0o600);check(sha(await readFile(join(dir,'r2.json')))===backup.manifestSha256,'R2_MANIFEST_DIGEST');r2Manifest=JSON.parse(await readFile(join(dir,'r2.json'),'utf8'));status.checkpointR2='PASS';status.r2Objects=backup.objects;status.restore='PASS';
  receipt={format:'dream-team-code-only-v1',candidate,createdAt:checkpointCreatedAt,databaseId:productionId,sourceSchema:28,schema:28,bookmark:frozenBookmark,sqlSha256:source.sha256,sourceSqlKey:sqlKey,previousWorkerVersion:status.previousVersion,previousCommit:currentVars.APP_BUILD,previousWorkerConfigBucket:archive,previousWorkerConfigKey:'previous-worker.json',restore:'PASS',r2Restore:'PASS',r2Archive:archive,r2ManifestSha256:backup.manifestSha256,migrations:0,accountInitializations:0,globalSessionPurges:0,maintenance:true,externalDeployAudit:'PASS',automaticRollback:false};
  // Never alter provider settings or production secrets. The candidate only changes APP_BUILD.
- check(base.vars.INDIVIDUAL_ACCOUNTS===currentVars.INDIVIDUAL_ACCOUNTS&&base.vars.AI_FREE_ONLY===currentVars.AI_FREE_ONLY,'CANDIDATE_FLAGS_CHANGED');
+ check(base.vars.INDIVIDUAL_ACCOUNTS===currentVars.INDIVIDUAL_ACCOUNTS&&String(base.vars.AI_FREE_ONLY)===String(currentVars.AI_FREE_ONLY),'CANDIDATE_FLAGS_CHANGED');
  base.vars={...currentVars,APP_BUILD:candidate};
  phase='private candidate smoke and unused-lake deletion on restored schema28 copy';console.log('RELEASE PHASE: '+phase);
  await query(proof.uuid,"UPDATE app_settings SET value='off' WHERE key='maintenance_mode'");
@@ -176,7 +176,7 @@ try{
  const deployed=(await cf('/workers/scripts/dream-team/deployments')).deployments[0];check(deployed.versions.length===1&&deployed.versions[0].percentage===100,'TARGET_TRAFFIC');status.activeVersion=deployed.versions[0].version_id;
  await awaitHttp(production,'/login',r=>r.status===503&&r.headers.get('x-dreamteam-build')===candidate);await assertBarrier(hosts);
  const targetSettings=await cf('/workers/scripts/dream-team/settings');
- for(const [k,v] of Object.entries(base.vars))check(targetSettings.bindings.some(b=>b.name===k&&b.text===v),'TARGET_VARIABLE_MISMATCH');
+ for(const [k,v] of Object.entries(base.vars))check(targetSettings.bindings.some(b=>b.name===k&&(b.type==='json'?b.json:b.text)===v),'TARGET_VARIABLE_MISMATCH');
  for(const [binding,bucket] of [['MEDIA','dream-team-media'],['BACKUP_STATUS','dream-team-d1-backups']])check(targetSettings.bindings.some(b=>b.name===binding&&b.bucket_name===bucket),'TARGET_R2_BINDING');
  check(targetSettings.bindings.some(b=>b.name==='DB'&&b.id===productionId),'TARGET_D1_BINDING');for(const secret of bindings.filter(b=>b.type==='secret_text'))check(targetSettings.bindings.some(b=>b.type==='secret_text'&&b.name===secret.name),'SOURCE_SECRET_REMOVED');
  await verifySnapshot({uuid:productionId},snapshot);status.configuration='PASS';status.dataIntegrity='PASS';
