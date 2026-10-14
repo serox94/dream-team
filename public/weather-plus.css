@@ -426,3 +426,20 @@
     padding: 14px;
   }
 }
+
+/* Weather decisions are explanatory panels, never probability-of-bite cards. */
+.carp-forecast-panel{margin:18px 0}
+.carp-forecast-lead{font-size:1.05rem;font-weight:750;line-height:1.5;margin:10px 0 18px}
+.carp-forecast-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.carp-forecast-grid>div{padding:15px;border:1px solid var(--border);border-radius:12px;background:rgba(11,23,17,.32);min-width:0}
+.carp-forecast-grid span{display:block;font-size:.85rem;color:var(--muted);margin-bottom:9px}
+.carp-forecast-grid strong{font-size:1rem;line-height:1.5;font-weight:700;overflow-wrap:anywhere;display:block}
+.carp-forecast-plan{display:grid;grid-template-columns:1fr 1.6fr;gap:20px;margin-top:18px}
+.carp-forecast-plan>div{border-top:1px solid var(--border);padding-top:14px;min-width:0}
+.carp-forecast-plan h4{font-size:1rem;line-height:1.4;margin:0 0 10px}
+.carp-forecast-plan p{font-weight:750;margin:0 0 6px}
+.carp-forecast-plan ul{padding-left:21px;margin:5px 0}
+.carp-forecast-plan li{margin:0 0 10px;line-height:1.55}
+.carp-forecast-plan small,.carp-forecast-disclaimer{color:var(--muted);line-height:1.6}
+.carp-forecast-disclaimer{border-top:1px solid var(--border);margin:14px 0 0;padding-top:12px;font-size:.84rem}
+@media(max-width:720px){.carp-forecast-grid,.carp-forecast-plan{grid-template-columns:1fr}}
