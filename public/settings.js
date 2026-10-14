@@ -57,4 +57,25 @@ window.initDreamSettings=async()=>{
   $('clear-offline').onclick=async()=>{Dream.clearReadCache();if('caches'in window)for(const key of await caches.keys())if(key.startsWith('ryby-shell-'))await caches.delete(key);await offlineStatus();say('Wyczyszczono dane offline.');};
   $('settings-export').onclick=async()=>{try{await Dream.downloadBackup();}catch(e){say(e.message,true);}};
   await offlineStatus();
+  // Keep every setting editable while reducing the initial scroll on mobile and desktop.
+  // All panels are collapsed by default except general preferences and the lake catalogue.
+  const foldSettingsPanel=section=>{
+    if(section.querySelector(':scope > .settings-panel-details'))return;
+    const heading=section.querySelector(':scope > h2, :scope > h3');
+    if(!heading)return;
+    const title=heading.textContent.trim(),key='dream-settings-fold:'+ (section.id||title);
+    const details=document.createElement('details');
+    details.className='management-details settings-panel-details';
+    const summary=document.createElement('summary');
+    summary.textContent=title;
+    const content=document.createElement('div');
+    content.className='settings-panel-content';
+    for(const node of [...section.childNodes])if(node!==heading)content.append(node);
+    heading.remove();
+    details.append(summary,content);section.append(details);
+    const defaultOpen=section.id==='lake-catalog'||title==='Ogólne i Deeper';
+    try{details.open=localStorage.getItem(key)==='open'||(localStorage.getItem(key)===null&&defaultOpen);}catch{details.open=defaultOpen;}
+    details.addEventListener('toggle',()=>{try{localStorage.setItem(key,details.open?'open':'closed');}catch{}});
+  };
+  document.querySelectorAll('.page-content > .two-column > section.panel-card, #settings-management > section.panel-card').forEach(foldSettingsPanel);
 };
