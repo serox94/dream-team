@@ -41,7 +41,7 @@ jobs:
           path: weather-safe-status/status.json
           retention-days: 3
   verify:
-    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify' && inputs.ref == '6743924ac9cc8ec32c443e1ca46ce7df184af45c'
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'verify' && inputs.ref == '373ea02c295740d56c524249ee2867ae3f965c0b'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
