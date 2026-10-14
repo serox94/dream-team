@@ -304,6 +304,19 @@
     setNotes("camp-interpretation", buildCampInterpretation(night, moon));
     setNotes("bite-analysis", biteAnalysis.notes);
     setNotes("bite-tactic-box", biteTactic);
+    // Weather-based handling windows are not fishing bite forecasts.
+    const carp=window.DreamCarpWeather?.render(data,language());
+    if(carp?.available){
+      if($("bite-chance-main"))$("bite-chance-main").textContent=carp.pressureShort;
+      if($("bite-score-note"))$("bite-score-note").textContent=say('Zmiana w ostatnich 3 h, bez prognozy brań.','Change over 3 h, not a bite forecast.');
+      if($("best-bite-window"))$("best-bite-window").textContent=carp.windowShort;
+      if($("best-bite-window-note"))$("best-bite-window-note").textContent=say('Spokojniejsze 3 godziny na obsługę zestawów.','Calmer 3 hours for rig handling.');
+      if($("bite-trend"))$("bite-trend").textContent=carp.riskLabel;
+      if($("bite-trend-note"))$("bite-trend-note").textContent=say('Prognozowane zagrożenia w ciągu 24 h.','Forecast hazards within 24 h.');
+      if($("bite-tactic-short"))$("bite-tactic-short").textContent=carp.shortTip;
+      if($("bite-tactic-note"))$("bite-tactic-note").textContent=say('Wskazówka pogodowa, nie gwarancja brania.','Weather guidance, not a bite guarantee.');
+      if($("bite-chance-hero"))$("bite-chance-hero").textContent=say('Plan 24 h: ','24 h plan: ')+carp.shortTip;
+    }
   }
 
   function createWeatherChip(label, value, highlight = false) {
