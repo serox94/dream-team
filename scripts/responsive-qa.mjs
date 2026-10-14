@@ -356,6 +356,8 @@ try{
   await Promise.all([first.locator('html[data-ready="true"]').waitFor(),second.locator('html[data-ready="true"]').waitFor()]);
   assert.equal(await first.locator('.language-selector select').count(),1,'one language control in Settings');
   assert.equal(await second.locator('.language-selector select').count(),1,'one language control in Settings');
+  // The general-settings panel can be collapsed by the user's persisted preference.
+  for(const page of [first,second])await page.locator('.language-selector').evaluate(el=>{const details=el.closest('details.settings-panel-details');if(details)details.open=true;});
   await first.locator('.language-selector select').selectOption('en');
   await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
   await first.reload();await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
