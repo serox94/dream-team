@@ -327,6 +327,9 @@ try{
       }
       if(width===390&&route.endsWith('ustawienia.html')){
         await page.locator('#system-health').waitFor();
+        // These panels are collapsed by default; expand them to inspect their contents.
+        await page.locator('#system-health > details').evaluate(node=>node.open=true);
+        await page.locator('#participant-profiles > details').evaluate(node=>node.open=true);
         assert.match(await page.locator('#system-health').innerText(),/Media R2[\s\S]*available/);
         assert.match(await page.locator('#participant-profiles').innerText(),/Participant profiles/);
       }
