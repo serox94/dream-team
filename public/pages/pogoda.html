@@ -64,7 +64,7 @@
           <div class="eyebrow">🌦️ Pogoda i warunki na zasiadkę</div>
           <h2>Pogoda PRO</h2>
           <p>
-            Prognoza dla łowiska i praktyczne ograniczenia zasiadki. Ocena warunków nie zastępuje obserwacji ryb ani pomiarów wody.
+            Warunki na łowisku, zmiany w ciągu 24 godzin i plan działań dla karpiarza. Bez wymyślonych procentów szans na branie.
           </p>
 
           <div class="weather-hero-pills">
@@ -105,28 +105,51 @@
 
     <section class="stats-grid weather-top-grid">
       <article class="stat-card weather-stat-card">
-        <span class="label">🐟 Indeks warunków</span>
+        <span class="label">🧭 Ciśnienie: zmiana 3 h</span>
         <strong id="bite-chance-main">--</strong>
-        <small id="bite-score-note" class="weather-stat-sub">Bez prognozy brań</small>
+        <small id="bite-score-note" class="weather-stat-sub">Trend nie oznacza brania</small>
       </article>
 
       <article class="stat-card weather-stat-card">
-        <span class="label">⏰ Łatwiejsze warunki</span>
+        <span class="label">⏰ Okno obsługi zestawów</span>
         <strong id="best-bite-window">--</strong>
         <small id="best-bite-window-note" class="weather-stat-sub">Prognoza warunków na brzegu</small>
       </article>
 
       <article class="stat-card weather-stat-card">
-        <span class="label">📈 Zmiany warunków</span>
+        <span class="label">⚠️ Bezpieczeństwo 24 h</span>
         <strong id="bite-trend">--</strong>
         <small id="bite-trend-note" class="weather-stat-sub">Czy warunki się poprawiają</small>
       </article>
 
       <article class="stat-card weather-stat-card">
-        <span class="label">🎯 Taktyka</span>
+        <span class="label">🎯 Najważniejsze działanie</span>
         <strong id="bite-tactic-short">--</strong>
         <small id="bite-tactic-note" class="weather-stat-sub">Szybki wniosek</small>
       </article>
+    </section>
+
+    <section class="panel-card carp-forecast-panel" aria-label="Analiza warunków dla karpiarza">
+      <div class="section-head"><h3>🎣 Analiza karpiowa — najbliższe 24 godziny</h3><span class="section-chip">PLAN ZASIADKI</span></div>
+      <p id="carp-weather-headline" class="carp-forecast-lead" aria-live="polite">Analizuję dostępne warunki…</p>
+      <div class="carp-forecast-grid">
+        <div><span>🧭 Ciśnienie i zmiana</span><strong id="carp-pressure">—</strong></div>
+        <div><span>🌬️ Wiatr, porywy i kierunek</span><strong id="carp-wind">—</strong></div>
+        <div><span>🌧️ Opady w 12 h</span><strong id="carp-rain">—</strong></div>
+        <div><span>🌡️ Temperatura powietrza</span><strong id="carp-air">—</strong></div>
+      </div>
+      <div class="carp-forecast-plan">
+        <div>
+          <h4>⏱️ Kiedy łatwiej przygotować lub poprawić zestawy</h4>
+          <p id="carp-window">—</p>
+          <small>Okno bezpieczniejszej obsługi sprzętu, nie prognoza brania.</small>
+        </div>
+        <div>
+          <h4>🎯 Co warto zrobić nad wodą</h4>
+          <ul id="carp-weather-actions"><li>Ładowanie zaleceń…</li></ul>
+        </div>
+      </div>
+      <p id="carp-limitations" class="carp-forecast-disclaimer">Wnioski z pogody nie zastępują pomiarów w wodzie i obserwacji ryb.</p>
     </section>
 
     <section class="two-column weather-main-grid">

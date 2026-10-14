@@ -34,7 +34,7 @@
     window.DREAM_DOCUMENTS=documents;
     await window.DreamTripRenderer.render({model,trip,documents});
     window.initDreamPlus();
-    if(document.getElementById('weather-current-temp'))await loadScript('fixes.js');
+    if(document.getElementById('weather-current-temp')){await loadScript('weather-fishing-insights.js');await loadScript('fixes.js');}
     if(document.getElementById('trip-manager')||document.getElementById('settings-management'))await loadScript('trip-manager.js');
     await window.initDreamApp();
     if(document.body.dataset.page==='teren')await loadScript('trip-notes.js');
