@@ -31,7 +31,7 @@
       <div class="form-actions"><button type="submit">${trip?'Zapisz zmiany':'Utwórz wyjazd'}</button><button type="button" id="trip-new" class="secondary-btn">Wyczyść / nowy wyjazd</button></div></form>`;
   }
   function lakeEditor(lake=null){
-    const f=lake?.facts||{};
+    const f=lake?.facts||{},linked=lake?window.DREAM_MODEL.trips.filter(t=>t.lakeId===lake.id):[];
     return `<form id="lake-edit" class="form-grid"><input type="hidden" name="id" value="${E(lake?.id||'')}"><h3>${lake?'Edytuj profil łowiska':'Dodaj łowisko'}</h3><p>Profil jest wspólny dla wszystkich wyjazdów na tę wodę.</p>
       <div class="form-row">${field('lake-name','Nazwa','text',lake?.name,'required maxlength="150"')}${field('lake-country','Kraj','text',lake?.country,'maxlength="100"')}</div>
       <div class="form-row">${field('lake-lat','Szerokość GPS','number',lake?.latitude,'min="-90" max="90" step="any"')}${field('lake-lon','Długość GPS','number',lake?.longitude,'min="-180" max="180" step="any"')}</div>
@@ -44,7 +44,7 @@
       ${area('lake-logistics','Dojazd i zaplecze',f.logisticsText)}
       ${area('lake-advice','Porady i obserwacje',f.adviceText)}
       ${field('lake-source','Oficjalna strona / źródło','url',lake?.sourceUrl,'maxlength="2048"')}
-      <div class="form-actions"><button type="submit">Zapisz łowisko</button><button type="button" id="lake-new" class="secondary-btn">Nowe łowisko</button></div></form>`;
+      <div class="form-actions"><button type="submit">Zapisz łowisko</button><button type="button" id="lake-new" class="secondary-btn">Nowe łowisko</button>${lake?`<button type="button" id="lake-delete" class="danger-btn" ${linked.length?'disabled':''}>${T('Usuń łowisko','Delete lake')}</button>`:''}</div>${linked.length?`<p class="weather-note">${T('Usuwanie niedostępne: łowisko jest przypisane do','Deletion unavailable: this lake is assigned to')} ${linked.length} ${T('wyjazdów (również archiwalnych). Historia pozostaje bezpieczna.','trips (including archived). Trip history is protected.')}</p>`:''}</form>`;
   }
   function wireTrip(trip=null){
     document.getElementById('trip-editor').innerHTML=tripEditor(trip);
@@ -61,6 +61,15 @@
   function wireLake(lake=null){
     document.getElementById('lake-editor').innerHTML=lakeEditor(lake);
     document.getElementById('lake-new').onclick=()=>wireLake();
+    const removeButton=document.getElementById('lake-delete');
+    if(removeButton)removeButton.onclick=async()=>{
+      if(!lake||removeButton.disabled)return;
+      const answer=prompt(T('Aby trwale usunąć nieużywane łowisko i jego research, wpisz dokładną nazwę: ','To permanently delete this unused lake and its research, type its exact name: ')+lake.name);
+      if(answer!==lake.name){if(answer!==null)Dream.notice(T('Nazwa nie pasuje. Niczego nie usunięto.','Name does not match. Nothing was deleted.'),true);return;}
+      removeButton.disabled=true;
+      try{await Dream.api('/api/lakes/'+encodeURIComponent(lake.id),{method:'DELETE',body:'{}'});await refresh();Dream.notice(T('Nieużywane łowisko usunięto.','Unused lake deleted.'));}
+      catch(error){Dream.notice(error.message,true);removeButton.disabled=false;}
+    };
     bind(document.getElementById('lake-edit'),async x=>{
       const saved=await Dream.api('/api/lakes'+(x.id?'/'+encodeURIComponent(x.id):''),{method:x.id?'PUT':'POST',body:JSON.stringify({name:x['lake-name'],country:empty(x['lake-country']),latitude:x['lake-lat']===''?null:Number(x['lake-lat']),longitude:x['lake-lon']===''?null:Number(x['lake-lon']),imageUrl:empty(x['lake-image']),sourceUrl:empty(x['lake-source']),facts:{timeZone:x['lake-zone'],address:x['lake-address'],waterSize:x['lake-size'],depth:x['lake-depth'],mapImage:empty(x['lake-map']),rulesText:x['lake-rules'],logisticsText:x['lake-logistics'],adviceText:x['lake-advice']}})});
       await refresh();await lakeProfile(saved.id);
