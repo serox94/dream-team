@@ -6,6 +6,7 @@ window.initDreamSettings=async()=>{
   $('settings-schema').textContent=saved.schemaVersion;
   $('research-last').textContent=saved.lastResearchAt?new Date(saved.lastResearchAt).toLocaleString(locale):t('brak');
   const profile=$('settings-version').closest('section');
+  profile.id='general-settings';
   profile.querySelector('p:nth-of-type(2)').insertAdjacentHTML('beforeend',` <small>${t('(profil informacyjny; instrukcje Deeper są napisane dla tego zestawu)')}</small>`);
   const providerStatus=document.createElement('p');providerStatus.id='research-provider-status';providerStatus.textContent=saved.researchProviderConfigured?'Automatyczne wyszukiwanie źródeł: dostawca skonfigurowany.':'AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.';
   $('research-auto').closest('label').before(providerStatus);
@@ -57,4 +58,28 @@ window.initDreamSettings=async()=>{
   $('clear-offline').onclick=async()=>{Dream.clearReadCache();if('caches'in window)for(const key of await caches.keys())if(key.startsWith('ryby-shell-'))await caches.delete(key);await offlineStatus();say('Wyczyszczono dane offline.');};
   $('settings-export').onclick=async()=>{try{await Dream.downloadBackup();}catch(e){say(e.message,true);}};
   await offlineStatus();
+  // Keep every setting editable while reducing the initial scroll on mobile and desktop.
+  // All panels are collapsed by default except general preferences and the lake catalogue.
+  const foldSettingsPanel=section=>{
+    if(section.querySelector(':scope > .settings-panel-details'))return;
+    const heading=section.querySelector(':scope > h2, :scope > h3');
+    if(!heading)return;
+    const title=heading.textContent.trim(),key='dream-settings-fold:'+ (section.id||title);
+    const details=document.createElement('details');
+    details.className='management-details settings-panel-details';
+    const summary=document.createElement('summary');
+    summary.textContent=title;
+    const content=document.createElement('div');
+    content.className='settings-panel-content';
+    for(const node of [...section.childNodes])if(node!==heading)content.append(node);
+    heading.remove();
+    details.append(summary,content);section.append(details);
+    const defaultOpen=section.id==='lake-catalog'||Boolean(section.querySelector('#settings-form'));
+    try{details.open=localStorage.getItem(key)==='open'||(localStorage.getItem(key)===null&&defaultOpen);}catch{details.open=defaultOpen;}
+    details.addEventListener('toggle',()=>{try{localStorage.setItem(key,details.open?'open':'closed');}catch{}});
+  };
+  document.querySelectorAll('.page-content > .two-column > section.panel-card, #settings-management > section.panel-card').forEach(foldSettingsPanel);
+  document.addEventListener('dream:settings-management-rendered',()=>{
+    document.querySelectorAll('#settings-management > section.panel-card').forEach(foldSettingsPanel);
+  });
 };

@@ -124,6 +124,29 @@ async function saveLake(request,env,id) {
   else {id=crypto.randomUUID();await run(env,`INSERT INTO lakes(id,name,country,latitude,longitude,image_url,facts_json,source_url) VALUES(?,?,?,?,?,?,?,?)`,id,name,country,lat,lon,image,JSON.stringify(f),source);}
   return json({ok:true,id},c.id?200:201);
 }
+// Delete a lake only when it is not used by any trip (including archived trips).
+// Its source/research records are lake-owned; never cascade into trip history.
+async function deleteLake(env,id) {
+  if(!await one(env,'SELECT id FROM lakes WHERE id=?',id))fail('Nie znaleziono łowiska.',404);
+  const used=await one(env,'SELECT COUNT(*) count FROM trips WHERE lake_id=?',id);
+  if(Number(used?.count)>0)fail('Łowisko jest przypisane do wyjazdów lub archiwum. Aby zachować historię, nie można go usunąć.',409);
+  const running=await one(env,"SELECT id FROM lake_research_runs WHERE lake_id=? AND status IN ('reserved','running') LIMIT 1",id);
+  if(running)fail('Trwa sprawdzanie informacji o łowisku. Spróbuj ponownie po zakończeniu.',409);
+  // Foreign keys from facts/changes to sources require deleting children first.
+  try{
+    await env.DB.batch([
+      stmt(env,'DELETE FROM lake_fact_changes WHERE lake_id=?',id),
+      stmt(env,'DELETE FROM lake_facts WHERE lake_id=?',id),
+      stmt(env,'DELETE FROM lake_research_runs WHERE lake_id=?',id),
+      stmt(env,'DELETE FROM lake_sources WHERE lake_id=?',id),
+      stmt(env,'DELETE FROM lakes WHERE id=? AND NOT EXISTS(SELECT 1 FROM trips WHERE lake_id=?)',id,id)
+    ]);
+  }catch(error){
+    if(/FOREIGN KEY|SQLITE_CONSTRAINT/i.test(String(error?.message)))fail('Łowisko ma powiązane dane. Usuwanie zostało zablokowane.',409);
+    throw error;
+  }
+  return json({ok:true,id});
+}
 async function createAngler(request,env){
   const x=await body(request),name=text(x.name,'Imię',60,true),pb=number(x.baselinePbKg??0,'Dotychczasowe PB',0,150,false),language=x.defaultLanguage||'pl';
   if(!['pl','en'].includes(language))fail('Wybierz język PL lub EN.');
@@ -396,6 +419,7 @@ async function privateFetch(request,env,ctx,active){
       if(m){
         const id=decodeURIComponent(m[2]);
         if(m[1]==='trips'&&m[3]&&method==='POST')return await activate(env,id);
+        if(!m[3]&&m[1]==='lakes'&&method==='DELETE')return await deleteLake(env,id);
         if(!m[3]&&method==='PUT')return await (m[1]==='trips'?saveTrip(request,env,id,ctx):saveLake(request,env,id));
       }
       m=path.match(/^\/api\/(catches|spots|checklist)(?:\/(\d+)(\/restore)?)?$/);

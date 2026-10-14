@@ -823,5 +823,8 @@
   "Brak danych do oceny warunków.": "No data to assess conditions.",
   "🧭 Ciśnienie (poziom morza)": "🧭 Sea level pressure",
   "🧭 Kierunek wiatru (skąd wieje)": "🧭 Wind direction (from)",
-  "Przerwa serwisowa. Spróbuj ponownie później.": "Maintenance in progress. Try again later."
+  "Przerwa serwisowa. Spróbuj ponownie później.": "Maintenance in progress. Try again later.",
+  "Łowisko jest przypisane do wyjazdów lub archiwum. Aby zachować historię, nie można go usunąć.": "This lake is linked to trips or the archive. It cannot be deleted without losing history.",
+  "Trwa sprawdzanie informacji o łowisku. Spróbuj ponownie po zakończeniu.": "Lake research is in progress. Try again when it has finished.",
+  "Łowisko ma powiązane dane. Usuwanie zostało zablokowane.": "The lake has related records. Deletion was blocked."
 }

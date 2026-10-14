@@ -327,6 +327,9 @@ try{
       }
       if(width===390&&route.endsWith('ustawienia.html')){
         await page.locator('#system-health').waitFor();
+        // These panels are collapsed by default; expand them to inspect their contents.
+        await page.locator('#system-health > details').evaluate(node=>node.open=true);
+        await page.locator('#participant-profiles > details').evaluate(node=>node.open=true);
         assert.match(await page.locator('#system-health').innerText(),/Media R2[\s\S]*available/);
         assert.match(await page.locator('#participant-profiles').innerText(),/Participant profiles/);
       }
@@ -353,6 +356,8 @@ try{
   await Promise.all([first.locator('html[data-ready="true"]').waitFor(),second.locator('html[data-ready="true"]').waitFor()]);
   assert.equal(await first.locator('.language-selector select').count(),1,'one language control in Settings');
   assert.equal(await second.locator('.language-selector select').count(),1,'one language control in Settings');
+  // The general-settings panel can be collapsed by the user's persisted preference.
+  for(const page of [first,second])await page.locator('.language-selector').evaluate(el=>{const details=el.closest('details.settings-panel-details');if(details)details.open=true;});
   await first.locator('.language-selector select').selectOption('en');
   await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
   await first.reload();await first.waitForFunction(()=>window.DreamI18n?.lang==='en');
