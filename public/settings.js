@@ -78,4 +78,7 @@ window.initDreamSettings=async()=>{
     details.addEventListener('toggle',()=>{try{localStorage.setItem(key,details.open?'open':'closed');}catch{}});
   };
   document.querySelectorAll('.page-content > .two-column > section.panel-card, #settings-management > section.panel-card').forEach(foldSettingsPanel);
+  document.addEventListener('dream:settings-management-rendered',()=>{
+    document.querySelectorAll('#settings-management > section.panel-card').forEach(foldSettingsPanel);
+  });
 };
