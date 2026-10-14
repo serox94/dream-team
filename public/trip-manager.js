@@ -166,7 +166,7 @@
       root.querySelectorAll('[data-lake]').forEach(b=>b.onclick=()=>{wireLake(m.lakes.find(l=>l.id===b.dataset.lake));void lakeProfile(b.dataset.lake);document.getElementById('lake-profile').scrollIntoView({behavior:'smooth',block:'start'});});
       root.querySelector('#ryby-logout').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{await Dream.logout();}catch(e){Dream.notice(e.message,true);}finally{button.disabled=false;}};
       bind(document.getElementById('angler-edit'),async x=>{await Dream.api('/api/anglers',{method:'POST',body:JSON.stringify({name:x['angler-name'],baselinePbKg:Number(x['angler-pb']),username:x['angler-login']||undefined})});await refresh();document.dispatchEvent(new Event('dream:participants-changed'));});
-      void trash();return;
+      void trash();document.dispatchEvent(new Event('dream:settings-management-rendered'));return;
     }
     const currentDate=Date.now();
     const group=t=>t.status==='archived'?'archive':t.isActive?'current':t.end&&Date.parse(t.end)<currentDate?'completed':'upcoming';
