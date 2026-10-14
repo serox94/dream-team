@@ -1,0 +1,114 @@
+{
+  "productionDiagnosis": {
+    "build": "600d1f55ad0481a77cfc725a7a1810ea15347ee0",
+    "api": [
+      {
+        "tripIndex": 0,
+        "france": false,
+        "status": 200,
+        "elapsedMs": 1252,
+        "provider": "Open-Meteo",
+        "error": null,
+        "coordinatesMatch": true,
+        "hours": 387
+      },
+      {
+        "tripIndex": 1,
+        "france": false,
+        "status": 200,
+        "elapsedMs": 1194,
+        "provider": "Open-Meteo",
+        "error": null,
+        "coordinatesMatch": true,
+        "hours": 387
+      },
+      {
+        "tripIndex": 2,
+        "france": true,
+        "status": 200,
+        "elapsedMs": 809,
+        "provider": "Open-Meteo",
+        "error": null,
+        "coordinatesMatch": true,
+        "hours": 387
+      },
+      {
+        "tripIndex": 3,
+        "france": true,
+        "status": 200,
+        "elapsedMs": 720,
+        "provider": "Open-Meteo",
+        "error": null,
+        "coordinatesMatch": true,
+        "hours": 387
+      }
+    ],
+    "ui": [
+      {
+        "width": 390,
+        "lang": "pl",
+        "path": "/pages/pogoda.html",
+        "elapsedMs": 10689,
+        "weatherStatuses": [
+          200,
+          200
+        ],
+        "notice": null,
+        "value": "9.4°C",
+        "analysis": "Analiza 24 h: obserwacja ryb + bezpieczna obsługa zestawów",
+        "overflow": false,
+        "javascriptErrors": 0
+      },
+      {
+        "width": 390,
+        "lang": "pl",
+        "path": "/",
+        "elapsedMs": 8268,
+        "weatherStatuses": [
+          200
+        ],
+        "notice": null,
+        "value": "9°C · wiatr 2 km/h",
+        "analysis": null,
+        "overflow": false,
+        "javascriptErrors": 0
+      },
+      {
+        "width": 1280,
+        "lang": "en",
+        "path": "/pages/pogoda.html",
+        "elapsedMs": 9085,
+        "weatherStatuses": [
+          200,
+          200
+        ],
+        "notice": null,
+        "value": "9.4°C",
+        "analysis": "24 h analysis: fish observations + safe rig handling",
+        "overflow": false,
+        "javascriptErrors": 0
+      },
+      {
+        "width": 1280,
+        "lang": "en",
+        "path": "/",
+        "elapsedMs": 8012,
+        "weatherStatuses": [
+          200
+        ],
+        "notice": null,
+        "value": "9°C · wind 2 km/h",
+        "analysis": null,
+        "overflow": false,
+        "javascriptErrors": 0
+      }
+    ],
+    "businessWrites": 0,
+    "provider": "Open-Meteo",
+    "result": "PASS"
+  },
+  "candidate": "138e26d85f1a37c892303e0eec12f28755cca18d",
+  "verificationRun": 38523084028,
+  "verification": "PASS",
+  "productionChanged": false
+}
