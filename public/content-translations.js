@@ -11,7 +11,7 @@
   apply();
  }
  function apply(){
-  const current=new Map(),ambiguous=new Set();for(const r of records.filter(r=>r.status==='current')){if(current.has(r.sourceText)&&current.get(r.sourceText)!==r.translation)ambiguous.add(r.sourceText);current.set(r.sourceText,r.translation);}
+  const current=new Map(),ambiguous=new Set(),counts=new Map();for(const r of records){counts.set(r.sourceText,(counts.get(r.sourceText)||0)+1);if(counts.get(r.sourceText)>1)ambiguous.add(r.sourceText);}for(const r of records.filter(r=>r.status==='current'))current.set(r.sourceText,r.translation);
   const selector='[data-user-content],.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dashboard-trip-name,#dashboard-lake,#dashboard-peg';
   document.querySelectorAll(selector).forEach(host=>{if(host.closest('form,#content-translation-editor,input,textarea,select'))return;const walk=document.createTreeWalker(host,NodeFilter.SHOW_TEXT);let node;while((node=walk.nextNode())){const value=node.textContent.trim();if(current.has(value)&&!ambiguous.has(value)&&current.get(value)!==value){node.textContent=node.textContent.replace(value,current.get(value));host.dataset.translationStatus='current';}}});
   let note=document.getElementById('content-language-status');if(!note&&document.querySelector('main')){note=document.createElement('p');note.id='content-language-status';note.className='source-content-note';document.querySelector('main').append(note);}

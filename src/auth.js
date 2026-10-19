@@ -142,6 +142,7 @@ export async function accountList(env){return (await env.DB.prepare('SELECT u.id
 export async function initializeProtectedAccount(env,password,{reset=false,expectedVersion=null}={}){
  const account=await env.DB.prepare('SELECT id,protected,angler_id FROM auth_accounts WHERE username=? COLLATE NOCASE').bind('ryby').first();
  if(account&&(!account.protected||account.id!=='account-system-ryby'||account.angler_id!=='system-ryby'))throw Error('PROTECTED_ACCOUNT_COLLISION');
+ if(!account&&await env.DB.prepare('SELECT id FROM anglers WHERE id=?').bind('system-ryby').first())throw Error('PROTECTED_PROFILE_COLLISION');
  const existing=account?await env.DB.prepare('SELECT version FROM auth_account_credentials WHERE account_id=?').bind(account.id).first():null;
  if(existing&&!reset)return {initialized:false};
  if(typeof password!=='string'||!password||password.length>256)throw Error('PROTECTED_ACCOUNT_SECRET_REQUIRED');
@@ -167,6 +168,7 @@ export async function changeSharedPassword(request,env,active){
   const own=await env.DB.prepare('SELECT * FROM auth_account_credentials WHERE account_id=?').bind(active.account.id).first();
   const row=own||await sharedCredential(env);
   if(!await verifyPassword(env,current,row))fail('Obecne hasło jest nieprawidłowe.',403);
+  if(own?.must_change&&!(typeof x.sharedPassword==='string'&&x.sharedPassword.length<=256&&await verifyPassword(env,x.sharedPassword,await sharedCredential(env))))fail('Potwierdź obecne wspólne hasło zespołu.',403,'BOOTSTRAP_CONFIRMATION_REQUIRED');
   if(next===current)fail('Nowe hasło musi różnić się od obecnego.',400,'PASSWORD_UNCHANGED');
   const salt=hex(crypto.getRandomValues(new Uint8Array(32))),hash=await passwordHash(env,next,salt);
   if(own){

@@ -1,0 +1,36 @@
+// Disposable SQLite + actual production handlers in Chromium. No production requests.
+import assert from 'node:assert/strict';import {chromium} from 'playwright';import {mkdir,writeFile} from 'node:fs/promises';
+import {serve} from './qa-server.mjs';import {weatherFixture} from './qa-weather.mjs';import {initializeProtectedAccount} from '../src/auth.js';
+let forecast=weatherFixture(),outage=false;
+const server=await serve({seed:true,testSession:false,weatherFetch:async()=>outage?new Response('',{status:503}):Response.json(forecast)});
+const browser=await chromium.launch(),results=[];const directory='qa-screenshots/astra';await mkdir(directory,{recursive:true});
+const shared='local-fixture-password',initial='local-bootstrap-fixture';
+const ready=page=>page.locator('html[data-ready="true"]').waitFor({timeout:30000});
+async function signIn(page,name,password=shared){await page.goto(server.url+'/login',{waitUntil:'domcontentloaded'});await page.locator('input[name="username"]').fill(name);await page.locator('input[name="password"]').fill(password);await page.locator('button[type="submit"]').click();}
+try{
+ for(const [width,language] of [[390,'pl'],[1280,'en']]){
+  const context=await browser.newContext({viewport:{width,height:844},locale:language==='pl'?'pl-PL':'en-GB'});await context.addInitScript(lang=>localStorage.setItem('dreamteam.language',lang),language);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await signIn(page,'Patryk');await ready(page);
+  // First Weather visit is offline. Await the actual complete-shell marker, not a single cached file.
+  await page.waitForFunction(async()=>{for(const key of await caches.keys())if(key.startsWith('ryby-shell-')){const cache=await caches.open(key);if(await cache.match('/__ryby_shell_complete'))return true;}return false;},{timeout:45000});
+  await context.setOffline(true);await page.goto(server.url+'/pages/pogoda.html',{waitUntil:'domcontentloaded'});await ready(page);assert.doesNotMatch(await page.locator('#carp-weather-headline').innerText(),/Analizuję|Analy[sz]ing/);await context.setOffline(false);
+  // Both hazard orderings and incomplete data use the same actual rendered engine.
+  for(const scenario of ['storm-now','storm-later','wind-before-storm','missing-codes','two-hours']){
+   forecast=weatherFixture();if(scenario==='storm-now')forecast.current.weather_code=95;if(['storm-later','wind-before-storm'].includes(scenario))forecast.hourly.weather_code[19]=95;
+   if(scenario==='wind-before-storm')forecast.hourly.wind_gusts_10m[15]=60;if(scenario==='missing-codes')delete forecast.hourly.weather_code;
+   if(scenario==='two-hours')for(const field of Object.keys(forecast.hourly))if(Array.isArray(forecast.hourly[field]))forecast.hourly[field]=forecast.hourly[field].slice(14,16);
+   await page.goto(server.url+'/pages/pogoda.html',{waitUntil:'domcontentloaded'});await ready(page);await page.locator('#refresh-weather-btn:not([disabled])').waitFor();
+   const text=await page.locator('#carp-weather-actions').innerText();assert.match(text,scenario.startsWith('storm')||scenario==='wind-before-storm'?language==='pl'?/Burza/:/Thunderstorm/:language==='pl'?/Niepełne dane/:/Incomplete safety data/);
+   if(scenario==='wind-before-storm'){assert.match(text,language==='pl'?/Silny wiatr/:/Strong wind/);assert.match(text,/19:00/);}
+   if(scenario.startsWith('storm')||scenario==='wind-before-storm'){await page.goto(server.url+'/',{waitUntil:'domcontentloaded'});await ready(page);await page.locator('#dashboard-weather-now').filter({hasText:language==='pl'?'Burza':'Thunderstorm'}).waitFor();}
+  }
+  forecast=weatherFixture();await page.goto(server.url+'/pages/pogoda.html',{waitUntil:'domcontentloaded'});await ready(page);await page.locator('#refresh-weather-btn:not([disabled])').waitFor();assert.equal(await page.locator('.weather-hour-card').count(),24);assert.equal(await page.locator('.weather-hour-card[open]').count(),0);await page.locator('.weather-hour-card>summary').first().click();assert.equal(await page.locator('.weather-hour-card[open]').count(),1);await page.screenshot({path:directory+'/weather-'+width+'.png',fullPage:true});
+  outage=true;await page.locator('#refresh-weather-btn').click();await page.locator('#refresh-weather-btn:not([disabled])').waitFor();assert.match(await page.locator('#app-notice').innerText(),language==='pl'?/ostatnią prognozę/:/last forecast/);outage=false;
+  await page.goto(server.url+'/pages/ustawienia.html',{waitUntil:'domcontentloaded'});await ready(page);if(width===390){await page.locator('#angler-name').fill('Third');await page.locator('#angler-login').fill('Third');const created=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/anglers'&&r.request().method()==='POST');await page.locator('#angler-edit button').click();assert.equal((await created).status(),201);await page.waitForFunction(()=>window.DREAM_MODEL.anglers.some(a=>a.name==='Third'));}
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);assert.deepEqual(errors,[]);await context.close();results.push({width,language,weather:'PASS',firstWeatherOffline:'PASS',javascriptErrors:errors.length});
+ }
+ for(const [name,id] of [['Patryk','patryk'],['Maciek','maciek'],['Third',null]]){const context=await browser.newContext(),page=await context.newPage();await signIn(page,name);await ready(page);const response=await page.request.get(server.url+'/api/bootstrap'),model=await response.json();assert.equal(model.currentUser.username,name);if(id)assert.equal(model.currentUser.anglerId,id);await page.goto(server.url+'/pages/polowy.html',{waitUntil:'domcontentloaded'});await ready(page);assert.equal(await page.locator('#person').inputValue(),model.currentUser.name);await context.close();results.push({account:name,loginAndCatchAuthor:'PASS'});}
+ const before=server.DB.sqlite.prepare('SELECT * FROM anglers ORDER BY id').all();await initializeProtectedAccount({DB:server.DB,RYBY_SESSION_SECRET:'local-fixture-session-secret-with-32-chars'},initial);
+ const context=await browser.newContext(),page=await context.newPage();await signIn(page,'ryby',initial);await page.waitForURL('**/account-password.html');assert.equal((await page.request.get(server.url+'/api/bootstrap')).status(),403);await page.locator('[name="currentPassword"]').fill(initial);await page.locator('[name="newPassword"]').fill('changed-protected-fixture');await page.locator('[name="sharedPassword"]').fill(shared);await page.locator('form button').click();await page.waitForURL('**/login');await signIn(page,'ryby','changed-protected-fixture');await ready(page);await page.goto(server.url+'/pages/ustawienia.html',{waitUntil:'domcontentloaded'});await ready(page);assert.equal(await page.locator('[data-account-id="account-system-ryby"]').isDisabled(),true);assert.deepEqual(server.DB.sqlite.prepare("SELECT * FROM anglers WHERE id<>'system-ryby' ORDER BY id").all(),before);await context.close();results.push({protectedAccount:'PASS',forcedOwnPassword:'PASS',existingProfiles:'PRESERVED'});
+ await writeFile(directory+'/results.json',JSON.stringify({result:'PASS',productionRequests:0,results},null,2));console.log('ASTRA CHROMIUM PASS '+JSON.stringify(results));
+}finally{await browser.close();await server.close();}

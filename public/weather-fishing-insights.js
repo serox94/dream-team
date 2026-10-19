@@ -24,7 +24,8 @@
     const h=data?.hourly||{},index=Math.max(0,window.DreamConditions?.hourIndex(data)??0);
     const samples=(h.time||[]).slice(index,index+24).map((time,j)=>({time,weather_code:h.weather_code?.[index+j],wind_speed_10m:at(h,'wind_speed_10m',index+j),wind_gusts_10m:at(h,'wind_gusts_10m',index+j),precipitation:at(h,'precipitation',index+j)}));
     const coverage=samples.filter(complete).length;
-    const continuous=samples.every((s,i)=>Number.isFinite(Date.parse(s.time))&&(!i||Date.parse(s.time)-Date.parse(samples[i-1].time)===3600000));
+    const instant=(s,i)=>n(h.time_epoch?.[index+i])!==null?h.time_epoch[index+i]*1000:Date.parse(s.time);
+    const continuous=samples.every((s,i)=>Number.isFinite(instant(s,i))&&(!i||instant(s,i)-instant(samples[i-1],i-1)===3600000));
     const known=samples.length===24&&coverage===24&&continuous&&complete(data?.current||{});
     const events=[...(data?.current?[{...data.current,time:tr(lang,'teraz','now')}]:[]),...samples];
     const threats=events.filter(hazard),messages=[];

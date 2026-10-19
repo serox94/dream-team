@@ -453,5 +453,3 @@
 .weather-detail-section>.carp-forecast-grid{margin-top:12px}
 #carp-weather-actions{margin-top:8px}
 #carp-weather-headline{font-weight:600}
-#offline-conflict-dialog{max-width:min(560px,92vw);border:1px solid #4e6050;border-radius:12px;padding:20px;background:#17241c;color:#f0f2e9}
-#offline-conflict-dialog button{min-height:44px;margin:8px 8px 0 0}

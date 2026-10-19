@@ -1044,7 +1044,7 @@ function renderSpotsList(spots) {
     const article = el("article", "spot-card");
     const top = el("div", "spot-card-top");
     const left = el("div");
-    left.appendChild(el("h4", "", item.name));
+    left.appendChild(el("h4", "", contentText('spots',item,'name',item.name)));
     left.appendChild(el("div", "catch-meta", `Dodano: ${formatCaughtAt(item.created_at)}${item.pendingSync?" · Oczekuje na synchronizację":""}`));
 
     const actions = el("div", "inline-actions");
@@ -1067,18 +1067,18 @@ function renderSpotsList(spots) {
     article.append(top, badges);
 
     const meta = [];
-    if (item.obstacles) meta.push(`Zaczepy: ${normalizeText(item.obstacles, 120)}`);
-    if (item.best_time) meta.push(`Najlepsza pora: ${normalizeText(item.best_time, 60)}`);
-    if (item.best_wind) meta.push(`Najlepszy wiatr: ${normalizeText(item.best_wind, 60)}`);
-    if (item.weed) meta.push(`Zielsko: ${normalizeText(item.weed, 100)}`);
-    if (item.rig) meta.push(`Rig: ${normalizeText(item.rig, 100)}`);
-    if (item.bait) meta.push(`Przynęta: ${normalizeText(item.bait, 100)}`);
+    if (item.obstacles) meta.push(`Zaczepy: ${normalizeText(contentText('spots',item,'obstacles',item.obstacles), 120)}`);
+    if (item.best_time) meta.push(`Najlepsza pora: ${normalizeText(contentText('spots',item,'best_time',item.best_time), 60)}`);
+    if (item.best_wind) meta.push(`Najlepszy wiatr: ${normalizeText(contentText('spots',item,'best_wind',item.best_wind), 60)}`);
+    if (item.weed) meta.push(`Zielsko: ${normalizeText(contentText('spots',item,'weed',item.weed), 100)}`);
+    if (item.rig) meta.push(`Rig: ${normalizeText(contentText('spots',item,'rig',item.rig), 100)}`);
+    if (item.bait) meta.push(`Przynęta: ${normalizeText(contentText('spots',item,'bait',item.bait), 100)}`);
     if (meta.length) {
       article.appendChild(el("div", "catch-note", meta.join(" • ")));
     }
 
     if (item.note) {
-      article.appendChild(el("div", "catch-note", normalizeText(item.note, 500)));
+      article.appendChild(el("div", "catch-note", normalizeText(contentText('spots',item,'notes',item.note), 500)));
     }
 
     list.appendChild(article);

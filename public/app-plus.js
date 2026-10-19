@@ -829,7 +829,7 @@
       const article = createNode("article", "spot-card");
       const top = createNode("div", "spot-card-top");
       const left = createNode("div");
-      left.appendChild(createNode("h4", "", item.name));
+      left.appendChild(createNode("h4", "", window.DreamContent?.text('spots',item.id,'name',item.name)??item.name));
       left.appendChild(createNode("div", "catch-meta", `Dodano: ${formatDateTimePL(item.created_at)}`));
 
       const actions = createNode("div", "inline-actions");
@@ -878,7 +878,7 @@
       article.appendChild(metaGrid);
 
       if (item.note) {
-        article.appendChild(createNode("div", "catch-note", normalizeTextSafe(item.note, 500)));
+        article.appendChild(createNode("div", "catch-note", normalizeTextSafe(window.DreamContent?.text('spots',item.id,'notes',item.note)??item.note, 500)));
       }
 
       list.appendChild(article);

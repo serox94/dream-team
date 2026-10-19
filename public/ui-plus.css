@@ -359,3 +359,6 @@
 }
 
 .lake-research-flow{margin:1rem 0;padding:1rem;border:1px solid var(--border);border-radius:12px}.lake-research-flow>p{line-height:1.5}.lake-candidate-results{display:grid;gap:12px;margin-top:12px}.lake-candidate-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;border:1px solid var(--border);padding:14px;border-radius:12px}.lake-candidate-info{min-width:0;display:grid;gap:8px;overflow-wrap:anywhere}.lake-candidate-info small{color:var(--muted)}.lake-candidate-actions{display:grid;gap:10px;min-width:170px}.lake-candidate-actions label{display:flex;align-items:center;gap:8px}.lake-candidate-actions input{width:auto}.lake-manual-facts{margin:1rem 0}.lake-manual-facts summary{cursor:pointer;padding:12px 0}@media(max-width:700px){.lake-candidate-card{grid-template-columns:1fr}.lake-candidate-actions{min-width:0}.lake-candidate-actions button{width:100%}}
+
+#offline-conflict-dialog{max-width:min(560px,92vw);border:1px solid #4e6050;border-radius:12px;padding:20px;background:#17241c;color:#f0f2e9}
+#offline-conflict-dialog button{min-height:44px;margin:8px 8px 0 0}

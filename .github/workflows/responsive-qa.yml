@@ -37,6 +37,9 @@ jobs:
       - name: Check 15 screens, knowledge tools and offline at five viewport widths
         if: steps.scope.outputs.restore_only != 'true'
         run: node scripts/responsive-qa.mjs
+      - name: Targeted Astra browser regression on disposable SQLite
+        if: steps.scope.outputs.restore_only != 'true'
+        run: node scripts/qa-astra-browser.mjs
       - name: Keep screenshots of fixture data for visual review
         if: always() && steps.scope.outputs.restore_only != 'true'
         uses: actions/upload-artifact@v4

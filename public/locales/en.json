@@ -494,5 +494,6 @@
   "Zachowaj wersję serwera": "Keep server version",
   "Ponów moją zmianę": "Retry my change",
   "Wróć bez zmian": "Back without changes",
-  "Niedozwolona metoda.": "Method not allowed."
+  "Niedozwolona metoda.": "Method not allowed.",
+  "Potwierdź obecne wspólne hasło zespołu.": "Confirm the current shared team password."
 }
