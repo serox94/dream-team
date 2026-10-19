@@ -1,20 +1,18 @@
-<!DOCTYPE html>
-<html lang="pl">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<!DOCTYPE html><html lang="pl"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>DreamTeam | Pogoda PRO</title>
   
-  <link rel="stylesheet" href="../style.css" />
-  <link rel="stylesheet" href="../weather-plus.css" />
-  <link rel="stylesheet" href="../ui-plus.css" />
-  <link rel="stylesheet" href="/audit.css" />
-  <link rel="stylesheet" href="/refresh.css?v=20260930-3" />
-  <meta name="theme-color" content="#0b100e" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="icon" type="image/png" href="/icons/ryby-192.png" />
-  <link rel="apple-touch-icon" href="/icons/ryby-192.png" />
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="../weather-plus.css">
+  <link rel="stylesheet" href="../ui-plus.css">
+  <link rel="stylesheet" href="/audit.css">
+  <link rel="stylesheet" href="/refresh.css?v=20260930-3">
+  <meta name="theme-color" content="#0b100e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" href="/icons/ryby-192.png">
+  <link rel="apple-touch-icon" href="/icons/ryby-192.png">
 <script src="/language-preference.js"></script></head>
 <body>
   <header class="site-header">
@@ -55,8 +53,38 @@
     </div>
   </header>
 
-  <main class="container page-content">
-    <section class="hero-card weather-hero">
+  <main class="container page-content"><section class="panel-card carp-forecast-panel" aria-label="Analiza warunków dla karpiarza">
+      <div class="section-head"><h3>🎣 Analiza karpiowa — najbliższe 24 godziny</h3><span class="section-chip">PLAN ZASIADKI</span></div><p id="weather-source-status" class="weather-note">Ładowanie źródła prognozy…</p>
+      <p id="carp-weather-headline" class="carp-forecast-lead" aria-live="polite">Analizuję dostępne warunki…</p>
+      <details class="weather-detail-section"><summary>Szczegóły analizy: ciśnienie, wiatr, opady i temperatura</summary><div class="carp-forecast-grid">
+        <div><span>🧭 Ciśnienie i zmiana</span><strong id="carp-pressure">—</strong></div>
+        <div><span>🌬️ Wiatr, porywy i kierunek</span><strong id="carp-wind">—</strong></div>
+        <div><span>🌧️ Opady w 12 h</span><strong id="carp-rain">—</strong></div>
+        <div><span>🌡️ Temperatura powietrza</span><strong id="carp-air">—</strong></div>
+      </div></details>
+      <div class="carp-forecast-plan"><div>
+          <h4>🎯 Co warto zrobić nad wodą</h4>
+          <ul id="carp-weather-actions"><li>Ładowanie zaleceń…</li></ul><details><summary>Pozostałe wnioski</summary><ul id="carp-weather-more-actions"></ul></details>
+        </div>
+        <div>
+          <h4>⏱️ Kiedy łatwiej przygotować lub poprawić zestawy</h4>
+          <p id="carp-window">—</p>
+          <small>Okno bezpieczniejszej obsługi sprzętu, nie prognoza brania.</small>
+        </div>
+        
+      </div>
+      <p id="carp-limitations" class="carp-forecast-disclaimer">Wnioski z pogody nie zastępują pomiarów w wodzie i obserwacji ryb.</p>
+    </section><section class="panel-card">
+      <div class="section-head">
+        <h3>⏱️ Prognoza godzinowa — najbliższe 24h</h3>
+        <button id="refresh-weather-btn" type="button" class="secondary-btn">🔄 Pobierz pogodę</button>
+      </div>
+
+      <div id="weather-hourly-list" class="weather-hourly-list">
+        <div class="empty-box">Ładowanie prognozy godzinowej...</div>
+      </div>
+    </section>
+    <details class="weather-detail-section"><summary>Pogoda PRO</summary><section class="hero-card weather-hero">
       <div class="weather-hero-main">
         <div class="weather-hero-icon" id="weather-current-condition-icon" aria-hidden="true">⛅</div>
 
@@ -75,9 +103,9 @@
           </div>
         </div>
       </div>
-    </section>
+    </section></details>
 
-    <section class="stats-grid weather-top-grid">
+    <details class="weather-detail-section"><summary>Parametry i dodatkowe wskaźniki</summary><section class="stats-grid weather-top-grid">
       <article class="stat-card weather-stat-card">
         <span class="label">🌡️ Temperatura teraz</span>
         <strong id="weather-current-temp">--</strong>
@@ -101,9 +129,9 @@
         <strong id="weather-rating">--</strong>
         <small id="weather-rating-note" class="weather-stat-sub">Komfort i ograniczenia zasiadki</small>
       </article>
-    </section>
+    </section></details>
 
-    <section class="stats-grid weather-top-grid">
+    <details class="weather-detail-section"><summary>Parametry i dodatkowe wskaźniki</summary><section class="stats-grid weather-top-grid">
       <article class="stat-card weather-stat-card">
         <span class="label">🧭 Ciśnienie: zmiana 3 h</span>
         <strong id="bite-chance-main">--</strong>
@@ -127,32 +155,11 @@
         <strong id="bite-tactic-short">--</strong>
         <small id="bite-tactic-note" class="weather-stat-sub">Szybki wniosek</small>
       </article>
-    </section>
+    </section></details>
 
-    <section class="panel-card carp-forecast-panel" aria-label="Analiza warunków dla karpiarza">
-      <div class="section-head"><h3>🎣 Analiza karpiowa — najbliższe 24 godziny</h3><span class="section-chip">PLAN ZASIADKI</span></div>
-      <p id="carp-weather-headline" class="carp-forecast-lead" aria-live="polite">Analizuję dostępne warunki…</p>
-      <div class="carp-forecast-grid">
-        <div><span>🧭 Ciśnienie i zmiana</span><strong id="carp-pressure">—</strong></div>
-        <div><span>🌬️ Wiatr, porywy i kierunek</span><strong id="carp-wind">—</strong></div>
-        <div><span>🌧️ Opady w 12 h</span><strong id="carp-rain">—</strong></div>
-        <div><span>🌡️ Temperatura powietrza</span><strong id="carp-air">—</strong></div>
-      </div>
-      <div class="carp-forecast-plan">
-        <div>
-          <h4>⏱️ Kiedy łatwiej przygotować lub poprawić zestawy</h4>
-          <p id="carp-window">—</p>
-          <small>Okno bezpieczniejszej obsługi sprzętu, nie prognoza brania.</small>
-        </div>
-        <div>
-          <h4>🎯 Co warto zrobić nad wodą</h4>
-          <ul id="carp-weather-actions"><li>Ładowanie zaleceń…</li></ul>
-        </div>
-      </div>
-      <p id="carp-limitations" class="carp-forecast-disclaimer">Wnioski z pogody nie zastępują pomiarów w wodzie i obserwacji ryb.</p>
-    </section>
+    
 
-    <section class="two-column weather-main-grid">
+    <details class="weather-detail-section"><summary>🎣 Warunki — teraz</summary><section class="two-column weather-main-grid">
       <article class="panel-card">
         <div class="section-head">
           <h3>🎣 Warunki — teraz</h3>
@@ -192,9 +199,9 @@
           <div><span>✨ Oświetlenie księżyca</span><strong id="moon-illumination">--</strong></div>
         </div>
       </article>
-    </section>
+    </section></details>
 
-    <section class="two-column">
+    <details class="weather-detail-section"><summary>🧭 Wskaźnik wiatru</summary><section class="two-column">
       <article class="panel-card weather-wind-card">
         <div class="section-head">
           <h3>🧭 Wskaźnik wiatru</h3>
@@ -245,21 +252,21 @@
           i tego, czy nocą może zrobić się nieprzyjemnie przy brzegu.
         </div>
       </article>
-    </section>
+    </section></details>
 
-    <section class="panel-card">
-      <h3>Woda i źródło prognozy</h3><p id="weather-source-status" class="weather-note">Ładowanie źródła prognozy…</p>
+    <details class="weather-detail-section"><summary>Woda i źródło prognozy</summary><section class="panel-card">
+      <h3>Woda i źródło prognozy</h3>
       <div class="weather-chip-grid"><div><span>Temperatura wody</span><strong id="water-temp">--</strong></div><div><span>Tlen rozpuszczony</span><strong id="water-oxygen">--</strong></div></div>
       <p>Temperatura powietrza i powierzchni modelu nie zastępują pomiarów wody w łowisku. Odczyty Open-Meteo są danymi modelowymi dla siatki prognozy.</p>
       <details><summary>Źródła i ograniczenia oceny</summary><ul>
-       <li><a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener noreferrer"><span data-user-content>Open-Meteo</span></a> — dokumentacja dostawcy</li>
-       <li><a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2109.2005.01426.x" target="_blank" rel="noopener noreferrer"><span data-user-content>Bauer & Schlott (2006)</span></a> — badanie niedotlenienia karpia zimą; nie model pogody i brań</li>
-       <li><a href="https://www.weather.gov/safety/lightning-safety-overview" target="_blank" rel="noopener noreferrer"><span data-user-content>NWS</span></a> — bezpieczeństwo podczas burzy</li>
-       <li><a href="https://science.nasa.gov/moon/moon-phases/" target="_blank" rel="noopener noreferrer"><span data-user-content>NASA</span></a> — fazy Księżyca; aplikacja podaje przybliżenie</li>
+       <li><a href="https://open-meteo.com/en/docs" target="_blank" rel="noopener noreferrer"><span data-user-content="">Open-Meteo</span></a> — dokumentacja dostawcy</li>
+       <li><a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1365-2109.2005.01426.x" target="_blank" rel="noopener noreferrer"><span data-user-content="">Bauer &amp; Schlott (2006)</span></a> — badanie niedotlenienia karpia zimą; nie model pogody i brań</li>
+       <li><a href="https://www.weather.gov/safety/lightning-safety-overview" target="_blank" rel="noopener noreferrer"><span data-user-content="">NWS</span></a> — bezpieczeństwo podczas burzy</li>
+       <li><a href="https://science.nasa.gov/moon/moon-phases/" target="_blank" rel="noopener noreferrer"><span data-user-content="">NASA</span></a> — fazy Księżyca; aplikacja podaje przybliżenie</li>
       </ul><p>Brak zweryfikowanego modelu statystycznego dla tego łowiska. Ocena opisuje praktyczne ograniczenia zasiadki, a nie prawdopodobieństwo brania. Dane odświeżaj przyciskiem; w aktywnym widoku odświeżenie następuje co 10 minut.</p></details>
-    </section>
+    </section></details>
 
-    <section class="two-column">
+    <details class="weather-detail-section"><summary>🧠 Interpretacja warunków</summary><section class="two-column">
       <article class="panel-card">
         <div class="section-head">
           <h3>🧠 Interpretacja warunków</h3>
@@ -279,9 +286,9 @@
           Ładowanie interpretacji...
         </div>
       </article>
-    </section>
+    </section></details>
 
-    <section class="two-column">
+    <details class="weather-detail-section"><summary>🐟 Warunki — plusy i minusy</summary><section class="two-column">
       <article class="panel-card">
         <div class="section-head">
           <h3>🐟 Warunki — plusy i minusy</h3>
@@ -301,20 +308,11 @@
           Ładowanie rekomendacji...
         </div>
       </article>
-    </section>
+    </section></details>
 
-    <section class="panel-card">
-      <div class="section-head">
-        <h3>⏱️ Prognoza godzinowa — najbliższe 24h</h3>
-        <button id="refresh-weather-btn" type="button" class="secondary-btn">🔄 Pobierz pogodę</button>
-      </div>
+    
 
-      <div id="weather-hourly-list" class="weather-hourly-list">
-        <div class="empty-box">Ładowanie prognozy godzinowej...</div>
-      </div>
-    </section>
-
-    <section class="panel-card">
+    <details class="weather-detail-section"><summary>📅 Prognoza dzienna — najbliższe 7 dni</summary><section class="panel-card">
       <div class="section-head">
         <h3>📅 Prognoza dzienna — najbliższe 7 dni</h3>
         <span class="section-chip">7 dni</span>
@@ -323,7 +321,8 @@
       <div id="weather-daily-list" class="weather-daily-list">
         <div class="empty-box">Ładowanie prognozy dziennej...</div>
       </div>
-    </section>
+    </section></details>
   </main>  <script src="/dream-loader-v2.js?v=20260930-3"></script>
-<script type="module" src="/i18n.js"></script></body>
-</html>
+<script type="module" src="/i18n.js"></script>
+
+</body></html>

@@ -1,15 +1,17 @@
 // Account preference on this device; user/source text remains in its original language.
 const lang=window.DreamLanguage?.get()||localStorage.getItem('dreamteam.language')||(/^pl\b/i.test(navigator.language)?'pl':'en');
 document.documentElement.lang=lang;
-const dictionary=await fetch(`/locales/${lang}.json`,{cache:'no-cache'}).then(r=>r.json()).catch(()=>({}));
-if(lang==='en')Object.assign(dictionary,await fetch('/locales/runtime.en.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
-if(lang==='en'&&!/^\/login(?:\.html)?$/.test(location.pathname))Object.assign(dictionary,await fetch('/locales/legacy.en.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
-if(lang==='en'&&location.pathname.endsWith('/porady.html'))Object.assign(dictionary,await fetch('/locales/porady.en.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
-const guide=location.pathname.match(/\/pages\/(rigi|wezly)\.html$/)?.[1];
-if(lang==='en'&&guide){
- const file=guide==='rigi'?'guides':'knots';
- Object.assign(dictionary,await fetch(`/locales/${file}.en.json`,{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({})));
+const localeFiles=[`/locales/${lang}.json`];
+if(lang==='en'){
+ localeFiles.push('/locales/runtime.en.json');
+ if(!/^\/login(?:\.html)?$/.test(location.pathname))localeFiles.push('/locales/legacy.en.json');
+ if(location.pathname.endsWith('/porady.html'))localeFiles.push('/locales/porady.en.json');
+ const guide=location.pathname.match(/\/pages\/(rigi|wezly)\.html$/)?.[1];
+ if(guide)localeFiles.push(`/locales/${guide==='rigi'?'guides':'knots'}.en.json`);
 }
+// Independent reads start together; merge order preserves the existing overrides.
+const dictionaries=await Promise.all(localeFiles.map(file=>fetch(file,{cache:'no-cache'}).then(r=>r.ok?r.json():{}).catch(()=>({}))));
+const dictionary=Object.assign({},...dictionaries);
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
@@ -139,6 +141,6 @@ function selector(locationNode){if(!locationNode)return;const label=document.cre
 selector(document.querySelector('.login-card'));
 // Native dialogs are outside the DOM observer. Only known UI messages are translated.
 for(const name of ['alert','confirm','prompt']){const native=window[name].bind(window);window[name]=(message,...args)=>native(translate(String(message)),...args);}
-if(location.pathname.endsWith('/ustawienia.html')){const section=document.querySelector('#settings-form')?.closest('section');if(section){const row=document.createElement('p');row.textContent=lang==='pl'?'Język mojego konta na tym urządzeniu: ':'My account language on this device: ';selector(row);section.insertBefore(row,section.querySelector('form'));}}
+if(location.pathname.endsWith('/ustawienia.html')){const form=document.querySelector('#settings-form');if(form&&!document.getElementById('account-language-row')){const row=document.createElement('p');row.id='account-language-row';row.textContent=lang==='pl'?'Język mojego konta na tym urządzeniu: ':'My account language on this device: ';selector(row);form.before(row);}}
 document.documentElement.dataset.i18nReady=lang;
 document.dispatchEvent(new Event('dream:i18n-ready'));

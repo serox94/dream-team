@@ -1,7 +1,7 @@
 export class InputError extends Error {
-  constructor(message, status = 400) { super(message); this.status = status; }
+  constructor(message, status = 400, code = null) { super(message); this.status = status; this.code=code; }
 }
-export const fail = (message, status = 400) => { throw new InputError(message, status); };
+export const fail = (message, status = 400, code = null) => { throw new InputError(message, status, code); };
 export const has = (object, key) => Object.hasOwn(object, key);
 export const pick = (object, key, fallback) => has(object, key) ? object[key] : fallback;
 export function text(value, label, max = 500, required = false) {

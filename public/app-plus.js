@@ -295,7 +295,7 @@
 
       let bestBiteWindow = "Brak danych";
       let tomorrowWind = "Brak danych";
-      let currentWeather = "Brak prognozy";
+      let currentWeather = "Brak prognozy", weatherSafety="UNKNOWN";
       let dashboardWarning = openChecklist > 0
         ? `Brakuje jeszcze ${openChecklist} rzeczy z checklist.`
         : "Checklisty wyglądają dobrze.";
@@ -306,9 +306,9 @@
         if(temp!==null&&wind!==null)currentWeather=`${temp.toFixed(0)}°C · ${window.DreamLanguage?.get()==='en'?'wind':'wiatr'} ${wind.toFixed(0)} km/h`;
         if(weather.dreamteam?.stale)currentWeather+=(window.DreamLanguage?.get()==='en'?' · Last forecast':' · Ostatnia prognoza');
         setText('dashboard-weather-now',currentWeather);
-        const nowIndex=window.DreamConditions.hourIndex(weather),limit=Math.min(weather.hourly.time.length,nowIndex+24);let bestGrade=null,bestIndex=null;
-        for(let i=nowIndex;i<limit;i++){const grade=getBiteScore(window.DreamConditions.snapshot(weather.hourly,i));if(grade!==null&&grade>0&&(bestGrade===null||grade>bestGrade)){bestGrade=grade;bestIndex=i;}}
-        if(bestIndex!==null){const start=weather.hourly.time[bestIndex].slice(11,16),end=String((Number(start.slice(0,2))+1)%24).padStart(2,'0')+':00';bestBiteWindow=`${start}–${end} (${biteScoreLabel(bestGrade)})`;}
+        const weatherAssessment=window.DreamCarpWeather.analyse(weather,window.DreamLanguage?.get()||'pl');
+        bestBiteWindow=weatherAssessment.window||'Brak danych';weatherSafety=weatherAssessment.safety?.state||'UNKNOWN';
+
 
         const tomorrowWindValue = window.DreamConditions.finite(weather.daily.wind_speed_10m_max?.[1]);
         const tomorrowGustsValue = window.DreamConditions.finite(weather.daily.wind_gusts_10m_max?.[1]);
@@ -320,6 +320,9 @@
         } else if (openChecklist > 0) {
           dashboardWarning = `Brakuje jeszcze ${openChecklist} rzeczy z checklist.`;
         }
+        if(weatherAssessment.safety?.messages.length)dashboardWarning=weatherAssessment.safety.messages.join(' ');
+        if(weatherAssessment.safety?.state==='DANGER')currentWeather=dashboardWarning;
+        setText('dashboard-weather-now',currentWeather);
         if(weather.dreamteam?.stale)dashboardWarning=(window.DreamLanguage?.get()==='en'?'Weather provider unavailable — showing the last forecast. ':'Dostawca pogody niedostępny — pokazuję ostatnią prognozę. ')+(window.DreamI18n?.t(dashboardWarning)||dashboardWarning);
       } catch (_) { setText('dashboard-weather-now','Brak prognozy'); }
 
@@ -327,7 +330,7 @@
         {
           title: "Teraz nad wodą",
           value: currentWeather,
-          status: currentWeather === "Brak prognozy" ? "info" : "success"
+          status: weatherSafety==='DANGER'?'danger':weatherSafety==='WARNING'?'warn':weatherSafety==='SAFE'?'success':'info'
         },
         {
           title: "🎣 Najbliższe 24 h · warunki na brzegu",

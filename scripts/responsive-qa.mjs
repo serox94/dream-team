@@ -334,8 +334,8 @@ try{
         assert.match(await page.locator('#participant-profiles').innerText(),/Participant profiles/);
       }
       if(width===390){
-        const untranslated=await page.evaluate(()=>{const found=[];const walker=document.createTreeWalker(document.querySelector('main')||document.body,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode())){if(node.parentElement?.closest('[data-user-content],script,style,.catch-note,.check-item-title'))continue;const value=node.textContent.trim();if(/[ąęłńóśźżĄĘŁŃÓŚŹŻ]/.test(value)&&value.length>4)found.push(value.slice(0,150));}return [...new Set(found)].slice(0,20);});
-        if(untranslated.length)console.log(`EN content audit ${route}: ${JSON.stringify(untranslated)}`);
+        const untranslated=await page.evaluate(()=>{const found=[];const walker=document.createTreeWalker(document.querySelector('main')||document.body,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode())){if(node.parentElement?.closest('[data-user-content],script,style,.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew,[data-source-content]'))continue;const value=node.textContent.trim();if((/[ąęłńóśźżĄĘŁŃÓŚŹŻ]/.test(value)||/\b(?:Zapisz|Nazwa|Kategoria|Aktywna|Anuluj|Pobierz|Wyjazd|Ustawienia|Opady|Wiatr|Temperatura)\b/.test(value))&&value.length>4)found.push(value.slice(0,150));}return [...new Set(found)].slice(0,20);});
+        assert.deepEqual(untranslated,[],`Untranslated UI on ${route}: ${JSON.stringify(untranslated)}`);
       }
       assert.deepEqual(errors,[],`EN ${width} ${route}: browser errors`);
       if(width===390&&['/pages/checklisty.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/rigi.html','/pages/wezly.html','/pages/ustawienia.html'].includes(route))await page.screenshot({path:`${screenshotDir}/en-${route.split('/').pop().replace('.html','')}-390.png`});

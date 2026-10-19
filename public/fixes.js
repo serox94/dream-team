@@ -335,8 +335,8 @@
     const endIndex = Math.min(data.hourly.time.length, startIndex + 24);
 
     for (let i = startIndex; i < endIndex; i += 1) {
-      const card = el("article", "weather-hour-card");
-      const top = el("div", "weather-row-top");
+      const card = el("details", "weather-hour-card");
+      const top = el("summary", "weather-row-top");
       const title = el("div", "weather-row-title");
       const icon = el("div", "weather-row-icon", weatherCodeToIcon(data.hourly.weather_code?.[i]));
 
@@ -361,6 +361,7 @@
       const rating = el("div", "section-chip", `${biteScoreToLabel(biteScore)}`);
       top.appendChild(title);
       top.appendChild(rating);
+      if(top.tagName==='SUMMARY')top.appendChild(el('span','weather-hour-compact',`${fmt(data.hourly.temperature_2m?.[i],1)}°C · ${fmt(data.hourly.wind_speed_10m?.[i],0)} km/h · ${fmt(data.hourly.precipitation?.[i],1)} mm`));
       card.appendChild(top);
 
       const grid = el("div", "weather-chip-grid");

@@ -11,7 +11,8 @@ test('keeping the server conflict restores the offline row and refreshes the vis
  w.localStorage.setItem('ryby_read_cache_v1',JSON.stringify({[path]:{at:Date.now(),data:{spots:[{id:7,name:'My spot',depthM:4.7,revision:1,pendingSync:true}]}}}));
  w.localStorage.setItem('dreamteam.offline.queue.v1',JSON.stringify([{key:'qa',path:'/api/spots/7?tripId=qa-trip',status:'conflict',serverRevision:2,serverValue:{name:'My spot',depthM:5.7,notes:'Original note'},error:'Conflict'}]));
  w.eval(await readFile('public/dream-core.js','utf8'));await w.Dream.registerShell();
- w.document.getElementById('offline-banner').click();
+ const trigger=w.document.getElementById('resolve-offline-conflict');assert.equal(trigger.tagName,'BUTTON');trigger.focus();trigger.click();
+ assert.equal(w.document.activeElement.tagName,'BUTTON');w.document.querySelector('#offline-conflict-dialog button').click();
  assert.equal(w.Dream.pendingCount(),0);
  const row=JSON.parse(w.localStorage.getItem('ryby_read_cache_v1'))[path].data.spots[0];
  assert.equal(row.depthM,5.7);assert.equal(row.revision,2);assert.equal(row.notes,'Original note');assert.equal(row.pendingSync,undefined);

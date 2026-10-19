@@ -1,8 +1,9 @@
 (() => {
   const pending = new Map();
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const zone = () => (window.DREAM_MODEL?.app?.timeZonePreference==='auto'?null:window.DREAM_MODEL?.app?.timeZonePreference) || window.DREAM_TRIP?.lakeProfile?.facts?.timeZone || 'Europe/Paris';
-  const parts = (value, timeZone = zone()) => Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(value)).map(p=>[p.type,p.value]));
+  const validZone=value=>{try{if(typeof value!=='string'||!value)return null;new Intl.DateTimeFormat('en',{timeZone:value});return value;}catch{return null;}};
+  const zone = () => validZone(window.DREAM_MODEL?.app?.timeZonePreference)||validZone(window.DREAM_TRIP?.lakeProfile?.facts?.timeZone)||'Europe/Paris';
+  const parts = (value, timeZone = zone()) => Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone:validZone(timeZone)||zone(),year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(value)).map(p=>[p.type,p.value]));
   function dateInput(value,timeZone=zone()) {if(!value)return '';const p=parts(value,timeZone);return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;}
   function fromInput(value,timeZone=zone()) {
     if(!value)return null;
@@ -100,10 +101,21 @@
     else if(choice==='mine'&&Number.isInteger(item.serverRevision)){item.baseRevision=item.serverRevision;item.status='pending';writeQueue(queue);syncQueue();}
   }
   window.addEventListener('online',syncQueue);
-  document.addEventListener('click',event=>{if(event.target?.id!=='offline-banner')return;
+  function openConflict(){
     const conflict=readQueue().find(item=>item.status==='conflict'&&(!accountId()||item.accountId===accountId()));if(!conflict)return;
-    if(confirm(`${window.DreamI18n?.t(conflict.error)||conflict.error}\n${window.DreamI18n?.t('OK: ponów swoją zmianę. Anuluj: zachowaj wersję serwera.')||'OK: ponów swoją zmianę. Anuluj: zachowaj wersję serwera.'}`))resolveConflict(conflict.key,'mine');else resolveConflict(conflict.key,'server');
-  });
+    const tr=(pl,en)=>window.DreamLanguage?.get()==='en'?en:pl;
+    const previous=document.activeElement,dialog=document.createElement('dialog');dialog.id='offline-conflict-dialog';dialog.setAttribute('aria-labelledby','offline-conflict-title');
+    const title=document.createElement('h2');title.id='offline-conflict-title';title.textContent=tr('Rozwiąż konflikt','Resolve conflict');
+    const message=document.createElement('p');message.textContent=window.DreamI18n?.t(conflict.error)||conflict.error;
+    const detail=document.createElement('p');detail.textContent=tr('Moja zmiana: ','My change: ')+JSON.stringify(conflict.payload);
+    dialog.append(title,message,detail);
+    const close=()=>{if(typeof dialog.close==='function')dialog.close();dialog.remove();(previous?.isConnected?previous:document.getElementById('resolve-offline-conflict'))?.focus();};
+    for(const [choice,pl,en] of [['server','Zachowaj wersję serwera','Keep server version'],['mine','Ponów moją zmianę','Retry my change'],['cancel','Wróć bez zmian','Back without changes']]){
+      const button=document.createElement('button');button.type='button';button.textContent=tr(pl,en);button.disabled=choice==='mine'&&!Number.isInteger(conflict.serverRevision);button.addEventListener('click',()=>{if(choice!=='cancel')resolveConflict(conflict.key,choice);close();});dialog.append(button);
+    }
+    dialog.addEventListener('cancel',event=>{event.preventDefault();close();});document.body.append(dialog);if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');dialog.querySelector('button').focus();
+  }
+  document.addEventListener('click',event=>{if(event.target?.closest('#resolve-offline-conflict'))openConflict();});
   async function clearShell(){
     if(!('caches' in window))return;
     try{for(const key of await caches.keys())if(key.startsWith('ryby-shell-'))await caches.delete(key);}catch{}
@@ -141,9 +153,12 @@
     if(!banner){banner=document.createElement('div');banner.id='offline-banner';banner.className='offline-banner';banner.setAttribute('role','status');document.body.prepend(banner);}
     const english=window.DreamI18n?.lang==='en';
     const stale=offlineEntries.size?`${english?'Offline data / last sync':'Dane offline / ostatnia synchronizacja'} ${new Date(Math.min(...offlineEntries.values())).toLocaleString(english?'en-GB':(document.documentElement.lang==='en'?'en-GB':'pl-PL'),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
-    const conflicts=readQueue().filter(item=>item.status==='conflict').length;
+    const conflicts=readQueue().filter(item=>item.status==='conflict'&&(!accountId()||item.accountId===accountId())).length;
     const other=readQueue().some(item=>accountId()&&item.accountId!==accountId());
-    banner.textContent=(other?(english?'Some pending changes belong to another login. Sign in as their owner. ':'Część oczekujących zmian należy do innego loginu. Zaloguj się jako ich właściciel. '):'')+stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — tap here to resolve.`:''}`:`Oczekuje na synchronizację: ${count}.${conflicts?` ${conflicts} konflikt(y) — dotknij tutaj, aby rozstrzygnąć.`:''}`:'');
+    banner.textContent=(other?(english?'Some pending changes belong to another login. Sign in as their owner. ':'Część oczekujących zmian należy do innego loginu. Zaloguj się jako ich właściciel. '):'')+stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — resolve below.`:''}`:`Oczekuje na synchronizację: ${count}.${conflicts?` ${conflicts} konflikt(y) — rozstrzygnij poniżej.`:''}`:'');
+    if(conflicts){const button=document.createElement('button');button.id='resolve-offline-conflict';button.type='button';button.textContent=english?'Resolve conflict':'Rozwiąż konflikt';banner.append(document.createTextNode(' '),button);}
+    const failed=readQueue().find(item=>item.status==='error'&&(!accountId()||item.accountId===accountId()));if(failed){const error=document.createElement('p');error.setAttribute('role','alert');error.textContent=window.DreamI18n?.t(failed.error)||failed.error;banner.append(error);}
+
   }
   async function api(path,options={}){
     const get=!options.method||options.method==='GET';
@@ -167,7 +182,7 @@
         const message=response.status===429?
           (english?'The server has limited requests. Try again later.':'Serwer ograniczył liczbę żądań. Spróbuj ponownie później.'):
           (english?'Invalid server response. Try again.':'Nieprawidłowa odpowiedź serwera. Spróbuj ponownie.');
-        if(!data||!response.ok||data.ok===false)throw new Error(data?.error||(!data||response.status===429?message:`HTTP ${response.status}`));
+        if(!data||!response.ok||data.ok===false)throw Object.assign(new Error(data?.error||(!data||response.status===429?message:`HTTP ${response.status}`)),{code:data?.code,status:response.status});
         if(get)saveReadCache(path,data);
         return data;
       }catch(error){
