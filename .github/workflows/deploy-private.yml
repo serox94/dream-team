@@ -6,42 +6,43 @@ on:
         description: Reviewed full candidate commit SHA
         required: true
       action:
-        description: Explicit approved maintenance operation
+        description: Approved operation (inspect is strictly read-only)
         type: choice
-        options: [deploy, migrate, initialize, rollback]
-        default: deploy
+        options: [inspect]
+        default: inspect
       recovery_manifest_key:
-        description: Private R2 release manifest key (no secrets in workflow inputs)
-        required: true
+        description: Private release manifest key (not used for inspection)
+        required: false
 concurrency:
   group: dream-team-production
   cancel-in-progress: false
 permissions:
   contents: read
+  actions: read
 jobs:
-  release:
+  inspect-only:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'inspect' && github.ref == 'refs/heads/ops/astra-release-20261019'
     environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-      - run: npm ci && npm test
-      - name: Require private recovery evidence and explicit production approval
+      - name: Read current production identity, bindings, schema and queues
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
-          DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
           RELEASE_ACTION: ${{ inputs.action }}
-          RELEASE_MANIFEST_KEY: ${{ inputs.recovery_manifest_key }}
-          RELEASE_CANDIDATE: ${{ inputs.ref }}
-        run: node scripts/release-workflow.mjs
-      # A failed verification leaves traffic in maintenance. Never deploy an old tag,
-      # reset D1/R2, rotate the pepper or perform an automatic production rollback.
+        run: node scripts/astra-release-inspect.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: astra-inspection-safe-status
+          path: astra-release-status/inspection.json
+          retention-days: 3
