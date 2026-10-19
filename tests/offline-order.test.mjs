@@ -26,7 +26,7 @@ test('real conflict blocks successors of that record, allows independent edits, 
   for(const x of [true,false,true])await f.packed(x);await f.depth(8);
   await f.native(`/api/checklist/${f.item}?tripId=next-trip`,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({packed:false})});
   Object.defineProperty(f.w.navigator,'onLine',{value:true,configurable:true});await f.w.Dream.syncQueue();const q=JSON.parse(f.w.localStorage.getItem('dreamteam.offline.queue.v1'));assert.equal(q.length,3);assert.equal(q[0].status,'conflict');assert.ok(q.slice(1).every(x=>x.status==='pending'));assert.equal(f.server.DB.sqlite.prepare('SELECT depth_m FROM spots WHERE id=?').get(f.spot).depth_m,8);
-  f.w.document.getElementById('offline-banner').click();await wait(()=>f.w.Dream.pendingCount()===0);assert.equal(f.server.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(f.item).packed,1);
+  f.w.document.getElementById('resolve-offline-conflict').click();f.w.document.querySelectorAll('#offline-conflict-dialog button')[1].click();await wait(()=>f.w.Dream.pendingCount()===0);assert.equal(f.server.DB.sqlite.prepare('SELECT packed FROM checklist_items WHERE id=?').get(f.item).packed,1);
  }finally{await f.close();}
 });
 

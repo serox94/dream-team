@@ -20,7 +20,7 @@
   }
   const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json','accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl',...options.headers},signal});
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
-  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings)(?:\?|$)/;
+  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings|content-translations)(?:\?|$)/;
   const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1',accountKey='dreamteam.account.v1';
   const accountId=()=>window.DREAM_MODEL?.currentUser?.id||localStorage.getItem(accountKey)||null;
   let synchronizing=false,syncRetryTimer=null,syncRetryDelay=1000;
@@ -262,6 +262,7 @@
         menu.insertBefore(link,before||null);
       }
     }
+    if(menu&&!menu.querySelector('[data-language-shortcut]')){const link=document.createElement('a');link.href='/pages/ustawienia.html#account-language-row';link.textContent='PL / EN';link.dataset.languageShortcut='';menu.prepend(link);}
     document.querySelector('.header-top h1').textContent='DreamTeam';
   document.querySelector('.subtitle').textContent=trip.lakeProfile?.name||trip.lake;
     document.getElementById('dream-trip-select')?.remove();

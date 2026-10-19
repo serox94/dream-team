@@ -8,6 +8,8 @@
     const trip=model.trips.find(t=>t.id===Dream.readTrip())||model.trips.find(t=>t.id===model.app.activeTripId)||model.trips.find(t=>t.status!=='archived')||model.trips[0];
     if(!trip)throw new Error('Brak wyjazdów w bazie.');
     window.DREAM_MODEL=model;window.DREAM_TRIP=trip;window.DREAM_VIEWED_TRIP_ID=trip.id;
+    await loadScript('content-translations.js');
+    await window.DreamContent.load();
     Dream.renderHeader();
     const categorySelect=document.getElementById('check-category');
     if(categorySelect){
@@ -41,7 +43,7 @@
     if(document.body.dataset.page==='teren')await loadScript('trip-notes.js');
     if(document.body.dataset.page==='checklisty')await loadScript('checklist-templates.js');
     if(document.querySelector('.location-photo-card'))await loadScript('trip-peg-enhancer.js');
-    if(document.getElementById('settings-form')){await loadScript('settings.js');await window.initDreamSettings();}
+    if(document.getElementById('settings-form')){await loadScript('settings.js');await window.initDreamSettings();await window.DreamContent.editor(document.querySelector('#settings-management')?.parentElement||document.querySelector('main'));}
     document.documentElement.dataset.ready='true';
     Dream.registerShell();
     document.dispatchEvent(new Event('dream:ready'));

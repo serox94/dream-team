@@ -27,7 +27,7 @@ BEGIN SELECT RAISE(ABORT,'PROTECTED_ACCOUNT'); END;
 CREATE TABLE content_translations (
  entity TEXT NOT NULL, record_id TEXT NOT NULL, field TEXT NOT NULL, language TEXT NOT NULL CHECK(language IN ('pl','en')),
  source_hash TEXT NOT NULL, translated_text TEXT NOT NULL, updated_by TEXT NOT NULL REFERENCES auth_accounts(id),
- updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, revision INTEGER NOT NULL DEFAULT 1,
  PRIMARY KEY(entity,record_id,field,language)
 );
 INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','29',CURRENT_TIMESTAMP);

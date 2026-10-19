@@ -1,0 +1,20 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {JSDOM} from 'jsdom';
+import {database,initializeTestAccounts} from './db.mjs';import worker from '../src/worker.js';
+test('content PL/EN preserves originals, detects stale versions, rejects stale edits and never exposes auth fields',async()=>{
+ const DB=database(),env={DB,INDIVIDUAL_ACCOUNTS:'true',RYBY_LOGIN_USERNAME:'fixture',RYBY_LOGIN_PASSWORD:'fixture-password',RYBY_SESSION_SECRET:'fixture-secret-over-32-characters-long',ASSETS:{fetch:async()=>new Response('asset')}};
+ try{await initializeTestAccounts(env);const signed=await worker.fetch(new Request('https://dream.test/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'Patryk',password:env.RYBY_LOGIN_PASSWORD})}),env),cookie=signed.headers.get('set-cookie').split(';')[0];
+  const api=(path,method='GET',data)=>worker.fetch(new Request('https://dream.test'+path,{method,headers:{cookie,'content-type':'application/json'},body:data===undefined?undefined:JSON.stringify(data)}),env);
+  const id=DB.sqlite.prepare("INSERT INTO trip_notes(trip_id,section,title,content) VALUES('next-trip','field','Zapis użytkownika','Zabezpiecz 3 wędki')").run().lastInsertRowid;
+  const path='/api/content-translations?entity=notes&recordId='+id+'&language=en';let catalog=await(await api(path)).json();const original=catalog.records.find(r=>r.field==='content');assert.equal(original.status,'missing');assert.equal(catalog.automaticTranslation,'not_configured');
+  const payload={...original,language:'en',translation:'Secure 3 rods'};assert.equal((await api('/api/content-translations','PUT',payload)).status,200);assert.equal(DB.sqlite.prepare('SELECT content FROM trip_notes WHERE id=?').get(id).content,'Zabezpiecz 3 wędki');
+  catalog=await(await api(path)).json();assert.equal(catalog.records.find(r=>r.field==='content').status,'current');assert.equal((await api('/api/content-translations','PUT',payload)).status,409,'translation edits use their own revision');
+  DB.sqlite.prepare('UPDATE trip_notes SET content=? WHERE id=?').run('Zabezpiecz 4 wędki',id);catalog=await(await api(path)).json();assert.equal(catalog.records.find(r=>r.field==='content').status,'stale');assert.equal((await api('/api/content-translations','PUT',payload)).status,409);
+  assert.equal((await api('/api/content-translations?entity=auth_accounts')).status,400);const changed=catalog.records.find(r=>r.field==='content');assert.equal((await api('/api/content-translations','PUT',{...changed,language:'en',translation:'Secure 5 rods'})).status,400);assert.equal((await api('/api/content-translations','PUT',{...changed,language:'en',translation:'Secure 4 rods'})).status,200);
+  for(const lang of ['pl','en','pl']){const all=await(await api('/api/content-translations?tripId=next-trip&language='+lang)).json();assert.ok(Array.isArray(all.records));assert.ok(!JSON.stringify(all).includes('password_hash'));}
+ }finally{DB.close();}
+});
+test('saved translations work with cached reads, source mismatches stay original and accounts do not share module state',async()=>{
+ const script=await readFile('public/content-translations.js','utf8');for(const lang of ['pl','en','pl']){const dom=new JSDOM('<main><div data-user-content>Moja notatka</div></main>',{runScripts:'outside-only'}),w=dom.window;try{
+  w.document.documentElement.lang=lang;w.DREAM_TRIP={id:'fixture'};w.Dream={api:async()=>({records:[{entity:'notes',recordId:'1',field:'content',sourceText:'Moja notatka',translation:'My note',status:'current'}]})};w.eval(script);await w.DreamContent.load();assert.equal(w.DreamContent.text('notes',1,'content','Moja notatka'),'My note');assert.equal(w.DreamContent.text('notes',1,'content','Zmieniona notatka'),'Zmieniona notatka');assert.equal(w.DreamContent.text('notes',2,'content','Moja notatka'),'Moja notatka');await new Promise(r=>setImmediate(r));
+ }finally{w.close();}}
+});

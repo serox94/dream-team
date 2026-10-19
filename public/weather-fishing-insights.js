@@ -24,13 +24,13 @@
     const h=data?.hourly||{},index=Math.max(0,window.DreamConditions?.hourIndex(data)??0);
     const samples=(h.time||[]).slice(index,index+24).map((time,j)=>({time,weather_code:h.weather_code?.[index+j],wind_speed_10m:at(h,'wind_speed_10m',index+j),wind_gusts_10m:at(h,'wind_gusts_10m',index+j),precipitation:at(h,'precipitation',index+j)}));
     const coverage=samples.filter(complete).length;
-    const continuous=samples.every((s,i)=>!i||Date.parse(s.time)-Date.parse(samples[i-1].time)===3600000);
+    const continuous=samples.every((s,i)=>Number.isFinite(Date.parse(s.time))&&(!i||Date.parse(s.time)-Date.parse(samples[i-1].time)===3600000));
     const known=samples.length===24&&coverage===24&&continuous&&complete(data?.current||{});
     const events=[...(data?.current?[{...data.current,time:tr(lang,'teraz','now')}]:[]),...samples];
     const threats=events.filter(hazard),messages=[];
     for(const type of ['storm','wind']){
       const group=events.filter(s=>type==='storm'?storm(s.weather_code):!storm(s.weather_code)&&hazard(s));
-      if(group.length){const times=[...new Set(group.map(s=>s.time.includes('T')?dateHour(s.time):s.time))];messages.push(times.join(', ')+' · '+risk(group[0],lang));}
+      if(group.length){const times=[...new Set(group.map(s=>typeof s.time==='string'&&s.time.includes('T')?dateHour(s.time):String(s.time??'—')))];messages.push(times.join(', ')+' · '+risk(group[0],lang));}
     }
     const state=threats.length?'DANGER':!known?'UNKNOWN':samples.some(s=>s.wind_gusts_10m>=30||s.precipitation>=5)?'WARNING':'SAFE';
     if(!known)messages.push(tr(lang,'Niepełne dane bezpieczeństwa: ','Incomplete safety data: ')+coverage+'/24 h. '+tr(lang,'Nie można potwierdzić spokojnych warunków.','Calm conditions cannot be confirmed.'));
@@ -103,7 +103,7 @@
       pressureShort:delta===null?'—':(delta>=0?'+':'')+fmt(delta,' hPa',1),
       windowShort:windowStart?dateHour(windowStart):'—',
       riskLabel:assessment.state==='DANGER'?tr(lang,'Zagrożenie pogodowe','Weather hazard'):!assessment.complete?tr(lang,'Brak danych do oceny zagrożeń','Insufficient hazard data'):maxGust!==null&&maxGust>=30?tr(lang,'Silne porywy','Strong gusts'):tr(lang,'Brak alarmu w prognozie','No forecast hazard'),
-      shortTip:threats.length?tr(lang,'Bezpieczeństwo','Safety first'):maxGust!==null&&maxGust>=30?tr(lang,'Kontroluj wiatr','Check wind'):tr(lang,'Obserwuj wodę','Observe the water'),
+      shortTip:assessment.state==='UNKNOWN'?tr(lang,'Sprawdź ostrzeżenia','Check warnings'):assessment.state==='DANGER'?tr(lang,'Bezpieczeństwo','Safety first'):maxGust!==null&&maxGust>=30?tr(lang,'Kontroluj wiatr','Check wind'):tr(lang,'Obserwuj wodę','Observe the water'),
       limitations:tr(lang,'Brak pomiarów temperatury i tlenu wody, głębokości warstw i danych o żerowaniu. To analiza pogody i planu działań, NIE prognoza brań ani procent szansy na rybę. Faza Księżyca jest informacyjna.','No measured water temperature or oxygen, water-layer depths or feeding data. This is weather-based planning, NOT a bite forecast or catch probability. Moon phase is informational.'),
       count:forward.length,threatCount:threats.length};
   }

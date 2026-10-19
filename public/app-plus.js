@@ -349,14 +349,9 @@
                 : "info"
         },
         {
-          title: "📦 Do spakowania",
-          value: openChecklist > 0 ? `${openChecklist} rzeczy` : "Nic nie brakuje",
+          title: "📦 Checklista",
+          value: `${doneChecklist}/${checklistItems.length} · ${openChecklist} ${window.DreamLanguage?.get()==='en'?'remaining':'pozostało'}`,
           status: openChecklist > 0 ? "warn" : "success"
-        },
-        {
-          title: "✅ Spakowane",
-          value: `${checklistItems.filter((item) => item.done).length} rzeczy`,
-          status: checklistItems.filter((item) => item.done).length > 0 ? "success" : "info"
         }
       ]);
     } catch (error) {

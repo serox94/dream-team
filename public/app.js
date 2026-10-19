@@ -1,3 +1,4 @@
+const contentText=(entity,item,field,value)=>window.DreamContent?.text(entity,item.id,field,value)??value;
 const TRIP_START = window.DREAM_TRIP?.start ? new Date(window.DREAM_TRIP.start) : null;
 const TRIP_END = window.DREAM_TRIP?.end ? new Date(window.DREAM_TRIP.end) : null;
 const PB_CELEBRATION_STORAGE_KEY = "ryby2026_pb_celebrated_catches";
@@ -615,14 +616,14 @@ function renderCatchesList(catches, spots) {
 
     const badges = el("div", "catch-badges");
     badges.appendChild(el("span", "badge", `Waga: ${Number(item.weight).toFixed(1)} kg`));
-    badges.appendChild(el("span", "badge", `Przynęta: ${normalizeText(item.bait, 50)}`));
+    badges.appendChild(el("span", "badge", `Przynęta: ${normalizeText(contentText('catches',item,'bait',item.bait), 50)}`));
     badges.appendChild(el("span", "badge", `Spot: ${getSpotDisplayName(item, spots)}`));
 
     article.appendChild(top);
     article.appendChild(badges);
 
     if (item.note) {
-      article.appendChild(el("div", "catch-note", normalizeText(item.note, 300)));
+      article.appendChild(el("div", "catch-note", normalizeText(contentText('catches',item,'notes',item.note), 300)));
     }
 
     list.appendChild(article);
@@ -820,7 +821,7 @@ function renderChecklistGroups(items) {
       checkbox.addEventListener("change", () => toggleChecklistItem(item.id, checkbox.checked));
 
       const content = el("div", "check-item-content");
-      const title = el("div", `check-item-title${item.done ? " done" : ""}`, item.item_name);
+      const title = el("div", `check-item-title${item.done ? " done" : ""}`, contentText('checklist',item,'label',item.item_name));
       const metaText = [];
       if (item.pendingSync) metaText.push("Oczekuje na synchronizację");
       if (item.quantity !== null && item.quantity !== undefined) metaText.push(`${Number(item.quantity)} ${item.unit}`);
@@ -1149,7 +1150,7 @@ function updateDashboard(catches, spots = [], checklist = []) {
         top.appendChild(el("span", "last-entry-weight", `${Number(item.weight).toFixed(1)} kg`));
 
         const meta = el("div", "last-entry-meta");
-        meta.appendChild(el("span", "", `Przynęta: ${normalizeText(item.bait, 50)}`));
+        meta.appendChild(el("span", "", `Przynęta: ${normalizeText(contentText('catches',item,'bait',item.bait), 50)}`));
         meta.appendChild(el("span", "", `Spot: ${getSpotDisplayName(item, spots)}`));
         meta.appendChild(el("span", "", formatCaughtAt(item.caught_at)));
 
