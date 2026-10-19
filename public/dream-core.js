@@ -109,7 +109,7 @@
     const message=document.createElement('p');message.textContent=window.DreamI18n?.t(conflict.error)||conflict.error;
     const detail=document.createElement('p');detail.textContent=tr('Moja zmiana: ','My change: ')+JSON.stringify(conflict.payload);
     dialog.append(title,message,detail);
-    const close=()=>{if(typeof dialog.close==='function')dialog.close();dialog.remove();(previous?.isConnected?previous:document.getElementById('resolve-offline-conflict'))?.focus();};
+    const close=()=>{if(typeof dialog.close==='function')dialog.close();dialog.remove();const target=previous?.isConnected?previous:document.getElementById('resolve-offline-conflict')||document.querySelector('main h1, main h2');if(target){if(!target.matches('button,input,select,textarea,a'))target.setAttribute('tabindex','-1');target.focus();}};
     for(const [choice,pl,en] of [['server','Zachowaj wersję serwera','Keep server version'],['mine','Ponów moją zmianę','Retry my change'],['cancel','Wróć bez zmian','Back without changes']]){
       const button=document.createElement('button');button.type='button';button.textContent=tr(pl,en);button.disabled=choice==='mine'&&!Number.isInteger(conflict.serverRevision);button.addEventListener('click',()=>{if(choice!=='cancel')resolveConflict(conflict.key,choice);close();});dialog.append(button);
     }

@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {JSDOM} from 'jsdom';
 
 test('keeping the server conflict restores the offline row and refreshes the visible page',async()=>{
- const dom=new JSDOM('<body></body>',{url:'https://dream.test/pages/mapa.html',runScripts:'outside-only'}),w=dom.window;
+ const dom=new JSDOM('<body><main><h2>Spots</h2></main></body>',{url:'https://dream.test/pages/mapa.html',runScripts:'outside-only'}),w=dom.window;
  Object.defineProperty(w.navigator,'onLine',{value:false});w.confirm=()=>false;
  let refreshScheduled=false;w.setTimeout=()=>{refreshScheduled=true;};
  const path='/api/spots?tripId=qa-trip';
@@ -13,7 +13,7 @@ test('keeping the server conflict restores the offline row and refreshes the vis
  w.eval(await readFile('public/dream-core.js','utf8'));await w.Dream.registerShell();
  const trigger=w.document.getElementById('resolve-offline-conflict');assert.equal(trigger.tagName,'BUTTON');trigger.focus();trigger.click();
  assert.equal(w.document.activeElement.tagName,'BUTTON');w.document.querySelector('#offline-conflict-dialog button').click();
- assert.equal(w.Dream.pendingCount(),0);
+ assert.equal(w.Dream.pendingCount(),0);assert.equal(w.document.activeElement.tagName,'H2');
  const row=JSON.parse(w.localStorage.getItem('ryby_read_cache_v1'))[path].data.spots[0];
  assert.equal(row.depthM,5.7);assert.equal(row.revision,2);assert.equal(row.notes,'Original note');assert.equal(row.pendingSync,undefined);
  assert.equal(refreshScheduled,true);w.close();

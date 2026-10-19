@@ -495,5 +495,8 @@
   "Ponów moją zmianę": "Retry my change",
   "Wróć bez zmian": "Back without changes",
   "Niedozwolona metoda.": "Method not allowed.",
-  "Potwierdź obecne wspólne hasło zespołu.": "Confirm the current shared team password."
+  "Potwierdź obecne wspólne hasło zespołu.": "Confirm the current shared team password.",
+  "🌬️ Wiatr, porywy i kierunek": "🌬️ Wind, gusts and direction",
+  "🌧️ Opady w 12 h": "🌧️ Rain over 12 hours",
+  "🌡️ Temperatura powietrza": "🌡️ Air temperature"
 }
