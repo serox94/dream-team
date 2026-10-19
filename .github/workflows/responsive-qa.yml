@@ -1,6 +1,11 @@
 name: Responsive UI QA
 on:
   workflow_dispatch:
+    inputs:
+      targeted_only:
+        description: Run only the targeted Astra browser regression
+        type: boolean
+        default: false
   pull_request:
   push:
     branches: [main, feat/final-batch, feat/dreamteam-finalize, "fix/**"]
@@ -35,7 +40,7 @@ jobs:
           npm install --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
       - name: Check 15 screens, knowledge tools and offline at five viewport widths
-        if: steps.scope.outputs.restore_only != 'true'
+        if: steps.scope.outputs.restore_only != 'true' && inputs.targeted_only != true
         run: node scripts/responsive-qa.mjs
       - name: Targeted Astra browser regression on disposable SQLite
         if: steps.scope.outputs.restore_only != 'true'

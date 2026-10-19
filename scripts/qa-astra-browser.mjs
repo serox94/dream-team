@@ -5,14 +5,14 @@ let forecast=weatherFixture(),outage=false;
 const server=await serve({seed:true,testSession:false,weatherFetch:async()=>outage?new Response('',{status:503}):Response.json(forecast)});
 const browser=await chromium.launch(),results=[];const directory='qa-screenshots/astra';await mkdir(directory,{recursive:true});
 const shared='local-fixture-password',initial='local-bootstrap-fixture';
-const ready=page=>page.locator('html[data-ready="true"]').waitFor({timeout:30000});
+async function ready(page){try{await page.locator('html[data-ready="true"]').waitFor({timeout:30000});}catch(error){console.log('ASTRA BOOT DIAGNOSTIC '+JSON.stringify({url:page.url(),state:await page.locator('html').getAttribute('data-ready'),notice:await page.locator('#app-notice').textContent().catch(()=>null),scripts:await page.locator('script[src]').evaluateAll(nodes=>nodes.map(n=>n.src)),requests:server.requests.slice(-15)}));await page.screenshot({path:directory+'/failed-bootstrap.png',fullPage:true});throw error;}}
 async function signIn(page,name,password=shared){await page.goto(server.url+'/login',{waitUntil:'domcontentloaded'});await page.locator('input[name="username"]').fill(name);await page.locator('input[name="password"]').fill(password);await page.locator('button[type="submit"]').click();}
 try{
  for(const [width,language] of [[390,'pl'],[1280,'en']]){
-  const context=await browser.newContext({viewport:{width,height:844},locale:language==='pl'?'pl-PL':'en-GB'});await context.addInitScript(lang=>localStorage.setItem('dreamteam.language',lang),language);const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const context=await browser.newContext({viewport:{width,height:844},locale:language==='pl'?'pl-PL':'en-GB'});await context.addInitScript(lang=>localStorage.setItem('dreamteam.language',lang),language);const page=await context.newPage(),errors=[];page.on('pageerror',e=>{errors.push(e.message);console.log('ASTRA PAGE ERROR '+e.message);});page.on('console',m=>{if(m.type()==='error')console.log('ASTRA CONSOLE '+m.text());});
   await signIn(page,'Patryk');await ready(page);
   // First Weather visit is offline. Await the actual complete-shell marker, not a single cached file.
-  await page.waitForFunction(async()=>{for(const key of await caches.keys())if(key.startsWith('ryby-shell-')){const cache=await caches.open(key);if(await cache.match('/__ryby_shell_complete'))return true;}return false;},{timeout:45000});
+  await page.waitForFunction(async()=>{for(const key of await caches.keys())if(key.startsWith('ryby-shell-')){const cache=await caches.open(key);if(await cache.match('/__ryby_shell_complete'))return true;}return false;},null,{timeout:45000});
   await context.setOffline(true);await page.goto(server.url+'/pages/pogoda.html',{waitUntil:'domcontentloaded'});await ready(page);assert.doesNotMatch(await page.locator('#carp-weather-headline').innerText(),/Analizuję|Analy[sz]ing/);await context.setOffline(false);
   // Resolve a real server conflict using only the keyboard, with an isolated competing write.
   await page.goto(server.url+'/pages/checklisty.html',{waitUntil:'domcontentloaded'});await ready(page);const tripId=await page.evaluate(()=>window.DREAM_TRIP.id);const item=server.DB.sqlite.prepare('SELECT id FROM checklist_items WHERE trip_id=? AND packed=0 AND deleted_at IS NULL LIMIT 1').get(tripId);assert.ok(item);
