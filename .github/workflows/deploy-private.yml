@@ -8,7 +8,7 @@ on:
       action:
         description: Approved operation (inspect is strictly read-only)
         type: choice
-        options: [inspect, prepare, deploy, restore]
+        options: [inspect, prepare, deploy, restore, diagnose]
         default: inspect
       recovery_manifest_key:
         description: Private release manifest key (not used for inspection)
@@ -171,4 +171,56 @@ jobs:
         with:
           name: astra-restoration-safe-status
           path: astra-release-status/restoration.json
+          retention-days: 3
+
+  weather-diagnostic:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'diagnose' && github.ref == 'refs/heads/ops/astra-release-20261019'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: operator
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: candidate/package-lock.json
+      - run: npm ci
+        working-directory: candidate
+      - name: Install disposable browser tooling
+        working-directory: candidate
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Build the exact tested static assets
+        working-directory: candidate
+        run: node scripts/build.mjs
+      - name: Reproduce frozen Weather PRO failure on isolated resources only
+        working-directory: candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+          DREAMTEAM_PRODUCTION_APPROVED: 'yes'
+          RELEASE_ACTION: ${{ inputs.action }}
+          RELEASE_CANDIDATE: ${{ inputs.ref }}
+          RELEASE_MANIFEST_KEY: ${{ inputs.recovery_manifest_key }}
+          PROTECTED_BOOTSTRAP_ENVELOPE: ${{ inputs.protected_bootstrap_envelope }}
+        run: |
+          cp ../operator/scripts/astra-weather-diagnostic.mjs scripts/astra-weather-diagnostic.mjs
+          node scripts/astra-weather-diagnostic.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: astra-weather-safe-status
+          path: candidate/astra-release-status/weather.json
           retention-days: 3
