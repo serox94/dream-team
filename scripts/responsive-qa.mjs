@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
 import {serve} from './qa-server.mjs';
+import {waitForOfflineReady} from './qa-offline-ready.mjs';
 import {weatherFixture} from './qa-weather.mjs';
 
 const widths=[360,390,412,768,1280];
@@ -238,7 +239,7 @@ try{
       const offline=await context.newPage();
       await offline.goto(preview.url+'/pages/checklisty.html');
       await offline.locator('html[data-ready="true"]').waitFor();
-      await offline.waitForFunction(async()=>Boolean(await caches.match('/index.html')),{timeout:20000});
+      await waitForOfflineReady(offline);
       const row=preview.DB.sqlite.prepare("SELECT id,packed FROM checklist_items WHERE trip_id='next-trip' AND packed=0 LIMIT 1").get();
       await context.setOffline(true);
       await offline.goto(preview.url+'/',{waitUntil:'domcontentloaded'});
@@ -382,7 +383,7 @@ try{
     try{
       const page=await context.newPage();
       await page.goto(offlineFixture.url+'/pages/mapa.html');await page.locator('html[data-ready="true"]').waitFor();
-      await page.waitForFunction(async()=>Boolean(await caches.match('/index.html')));
+      await waitForOfflineReady(page);
       const original=await page.evaluate(async()=>{
         const spot=await Dream.api('/api/spots',{method:'POST',body:JSON.stringify({tripId:'next-trip',name:'Existing bank',depthM:3})});
         await Promise.all(['/api/spots?tripId=next-trip','/api/checklist?tripId=next-trip','/api/catches?tripId=next-trip','/api/notes?tripId=next-trip'].map(path=>Dream.api(path)));
