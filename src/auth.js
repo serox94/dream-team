@@ -39,10 +39,10 @@ export async function session(request,env){
   const idHash=hex(await digest(parts[1]));
   const individual=individualAccounts(env);
   const row=await env.DB.prepare(individual?
-    'SELECT s.expires_at,u.id,u.username,u.angler_id anglerId,a.name,a.default_language defaultLanguage FROM auth_sessions s JOIN auth_accounts u ON u.id=s.account_id AND u.active=1 JOIN anglers a ON a.id=u.angler_id JOIN auth_credential c ON c.id=1 AND c.version=s.auth_version WHERE s.id_hash=?':
+    'SELECT s.expires_at,u.id,u.username,u.angler_id anglerId,u.protected,a.name,a.default_language defaultLanguage,COALESCE(p.must_change,0) mustChangePassword FROM auth_sessions s JOIN auth_accounts u ON u.id=s.account_id AND u.active=1 JOIN anglers a ON a.id=u.angler_id JOIN auth_credential c ON c.id=1 LEFT JOIN auth_account_credentials p ON p.account_id=u.id WHERE s.id_hash=? AND s.auth_version=COALESCE(p.version,c.version)':
     'SELECT expires_at FROM auth_sessions WHERE id_hash=?').bind(idHash).first();
   if(!row||row.expires_at<current||row.expires_at<expires)return null;
-  const account=individual?{id:row.id,username:row.username,anglerId:row.anglerId,name:row.name,defaultLanguage:row.defaultLanguage}:null;
+  const account=individual?{id:row.id,username:row.username,anglerId:row.protected?null:row.anglerId,name:row.name,defaultLanguage:row.defaultLanguage,protected:Boolean(row.protected),mustChangePassword:Boolean(row.mustChangePassword)}:null;
   let refreshCookie=null;
   if(expires-current<ageSeconds-renewalSeconds){
     const next=current+ageSeconds;
@@ -68,6 +68,7 @@ export async function login(request,env){
     credential=await sharedCredential(env);
     const loginName=env.APP_ENV==='preview'&&env.AUTH_LEGACY_ALIAS&&username===env.RYBY_LOGIN_USERNAME?env.AUTH_LEGACY_ALIAS:username.trim();
     account=await env.DB.prepare('SELECT id FROM auth_accounts WHERE username=? COLLATE NOCASE AND active=1').bind(loginName).first();
+    if(account){const own=await env.DB.prepare('SELECT * FROM auth_account_credentials WHERE account_id=?').bind(account.id).first();if(own)credential={...own,individual:true};}
     valid=await verifyPassword(env,password,credential);
     valid=Boolean(account)&&valid;
   }else{
@@ -81,7 +82,7 @@ export async function login(request,env){
   }
   await env.DB.prepare('DELETE FROM auth_login_limits WHERE id_hash=?').bind(ipHash).run();
   const id=b64(crypto.getRandomValues(new Uint8Array(32))),expires=current+ageSeconds;
-  const stored=individualAccounts(env)?await env.DB.prepare('INSERT INTO auth_sessions(id_hash,expires_at,account_id,auth_version) SELECT ?,?,u.id,c.version FROM auth_accounts u JOIN auth_credential c ON c.id=1 WHERE u.id=? AND u.active=1 AND c.version=?').bind(hex(await digest(id)),expires,account.id,credential.version).run():await env.DB.prepare('INSERT INTO auth_sessions(id_hash,expires_at,account_id,auth_version) VALUES(?,?,NULL,NULL)').bind(hex(await digest(id)),expires).run();
+  const stored=individualAccounts(env)?await env.DB.prepare('INSERT INTO auth_sessions(id_hash,expires_at,account_id,auth_version) SELECT ?,?,u.id,COALESCE(p.version,c.version) FROM auth_accounts u JOIN auth_credential c ON c.id=1 LEFT JOIN auth_account_credentials p ON p.account_id=u.id WHERE u.id=? AND u.active=1 AND COALESCE(p.version,c.version)=? AND COALESCE(p.salt,c.salt)=?').bind(hex(await digest(id)),expires,account.id,credential.version,credential.salt).run():await env.DB.prepare('INSERT INTO auth_sessions(id_hash,expires_at,account_id,auth_version) VALUES(?,?,NULL,NULL)').bind(hex(await digest(id)),expires).run();
   if(!stored.meta.changes)return redirect('/login?error=credentials');
   const result=redirect('/');result.headers.set('set-cookie',formatCookie(await issue(await signingKey(env),id,expires),ageSeconds));return result;
 }
@@ -111,7 +112,7 @@ export async function initializeAccounts(env){
   const profile=await env.DB.prepare('SELECT id FROM anglers WHERE id=?').bind(id).first();
   if(!profile||!mappings.some(a=>a.username===username&&a.anglerId===id))throw Error('ACCOUNT_PREFLIGHT');
  }
- if(mappings.filter(a=>a.active).length>3)throw Error('ACCOUNT_PREFLIGHT');
+ if(mappings.filter(a=>a.active&&!a.protected).length>3)throw Error('ACCOUNT_PREFLIGHT');
  const existing=await env.DB.prepare('SELECT id FROM auth_credential WHERE id=1').first();
  if(existing)return {initialized:false};
  if(typeof env.RYBY_LOGIN_PASSWORD!=='string'||!env.RYBY_LOGIN_PASSWORD||typeof env.RYBY_SESSION_SECRET!=='string'||env.RYBY_SESSION_SECRET.length<32)throw Error('ACCOUNT_SECRET_PREFLIGHT');
@@ -122,10 +123,11 @@ export async function initializeAccounts(env){
 }
 export async function updateAccountAccess(request,env,id){
  const x=await body(request);if(typeof x.active!=='boolean')fail('Nieprawidłowy status lub język.');
- const account=await env.DB.prepare('SELECT id,active FROM auth_accounts WHERE id=?').bind(id).first();if(!account)fail('Nie znaleziono uczestnika.',404);
+ const account=await env.DB.prepare('SELECT id,active,protected FROM auth_accounts WHERE id=?').bind(id).first();if(!account)fail('Nie znaleziono uczestnika.',404);
+ if(account.protected&&!x.active)fail('Konto chronione nie może zostać wyłączone.',409,'PROTECTED_ACCOUNT');
  const statements=[env.DB.prepare('UPDATE auth_accounts SET active=? WHERE id=?').bind(x.active?1:0,id)];
  if(!x.active)statements.push(env.DB.prepare('DELETE FROM auth_sessions WHERE account_id=?').bind(id));
- try{await env.DB.batch(statements);}catch(error){if(/MAX_ACTIVE_ACCOUNTS/.test(error.message))fail('Maksymalnie trzy aktywne konta.',409);throw error;}
+ try{await env.DB.batch(statements);}catch(error){if(/LAST_ACTIVE_ACCOUNT/.test(error.message))fail('Nie można wyłączyć ostatniego aktywnego konta.',409,'LAST_ACTIVE_ACCOUNT');if(/PROTECTED_ACCOUNT/.test(error.message))fail('Konto chronione nie może zostać wyłączone.',409,'PROTECTED_ACCOUNT');if(/MAX_ACTIVE_ACCOUNTS/.test(error.message))fail('Maksymalnie trzy aktywne konta.',409,'MAX_ACTIVE_ACCOUNTS');throw error;}
  return response(200,JSON.stringify({ok:true}),{'content-type':'application/json'});
 }
 async function verifyPassword(env,password,row){return equal(encoder.encode(await passwordHash(env,password,row.salt)),encoder.encode(row.password_hash));}
@@ -134,14 +136,49 @@ export function accountUsername(value){
   if(!/^[a-zA-Z0-9][a-zA-Z0-9._-]{1,31}$/.test(name))fail('Login: 2–32 znaki, litery bez akcentów, cyfry, kropka, myślnik lub podkreślenie.');
   return name;
 }
-export async function accountList(env){return (await env.DB.prepare('SELECT u.id,u.username,u.angler_id anglerId,u.active,a.name FROM auth_accounts u JOIN anglers a ON a.id=u.angler_id ORDER BY u.username').all()).results;}
+export async function accountList(env){return (await env.DB.prepare('SELECT u.id,u.username,u.angler_id anglerId,u.active,u.protected,a.name FROM auth_accounts u JOIN anglers a ON a.id=u.angler_id ORDER BY u.username').all()).results;}
+// Operator only, after the private checkpoint. Never called by HTTP or cron.
+// Initial password is supplied privately by the operator, never derived from the login.
+export async function initializeProtectedAccount(env,password,{reset=false,expectedVersion=null}={}){
+ const account=await env.DB.prepare('SELECT id,protected,angler_id FROM auth_accounts WHERE username=? COLLATE NOCASE').bind('ryby').first();
+ if(account&&(!account.protected||account.id!=='account-system-ryby'||account.angler_id!=='system-ryby'))throw Error('PROTECTED_ACCOUNT_COLLISION');
+ if(!account&&await env.DB.prepare('SELECT id FROM anglers WHERE id=?').bind('system-ryby').first())throw Error('PROTECTED_PROFILE_COLLISION');
+ const existing=account?await env.DB.prepare('SELECT version FROM auth_account_credentials WHERE account_id=?').bind(account.id).first():null;
+ if(existing&&!reset)return {initialized:false};
+ if(typeof password!=='string'||!password||password.length>256)throw Error('PROTECTED_ACCOUNT_SECRET_REQUIRED');
+ const salt=hex(crypto.getRandomValues(new Uint8Array(32))),hash=await passwordHash(env,password,salt),id='account-system-ryby';
+ if(reset){
+  if(!existing||existing.version!==expectedVersion)throw Error('PROTECTED_RESET_VERSION');
+  const changed=await env.DB.batch([
+   env.DB.prepare('UPDATE auth_account_credentials SET salt=?,password_hash=?,version=version+1,must_change=1 WHERE account_id=? AND version=?').bind(salt,hash,id,expectedVersion),
+   env.DB.prepare('DELETE FROM auth_sessions WHERE account_id=? AND EXISTS(SELECT 1 FROM auth_account_credentials WHERE account_id=? AND salt=?)').bind(id,id,salt)
+  ]);if(!changed[0].meta.changes)throw Error('PROTECTED_RESET_VERSION');return {initialized:false,reset:true};
+ }
+ await env.DB.batch([
+  env.DB.prepare("INSERT INTO anglers(id,name,pb_kg,baseline_pb_kg,active,default_language) VALUES('system-ryby','Ryby',0,0,0,'pl') ON CONFLICT(id) DO NOTHING"),
+  env.DB.prepare('INSERT INTO auth_accounts(id,username,angler_id,active,protected) VALUES(?,?,?,1,1) ON CONFLICT(id) DO NOTHING').bind(id,'ryby','system-ryby'),
+  env.DB.prepare('INSERT INTO auth_account_credentials(account_id,salt,password_hash,iterations,version,must_change) VALUES(?,?,?,?,1,1) ON CONFLICT(account_id) DO NOTHING').bind(id,salt,hash,iterations)
+ ]);
+ return {initialized:true};
+}
 export async function changeSharedPassword(request,env,active){
   const x=await body(request),current=x.currentPassword,next=x.newPassword;
   if(typeof current!=='string'||typeof next!=='string'||!current.length||current.length>256||next.length>256)fail('Nieprawidłowe hasło.');
   if(next.length<8)fail('Nowe hasło musi mieć co najmniej 8 znaków.');
-  const row=await sharedCredential(env);
+  const own=await env.DB.prepare('SELECT * FROM auth_account_credentials WHERE account_id=?').bind(active.account.id).first();
+  const row=own||await sharedCredential(env);
   if(!await verifyPassword(env,current,row))fail('Obecne hasło jest nieprawidłowe.',403);
+  if(own?.must_change&&!(typeof x.sharedPassword==='string'&&x.sharedPassword.length<=256&&await verifyPassword(env,x.sharedPassword,await sharedCredential(env))))fail('Potwierdź obecne wspólne hasło zespołu.',403,'BOOTSTRAP_CONFIRMATION_REQUIRED');
+  if(next===current)fail('Nowe hasło musi różnić się od obecnego.',400,'PASSWORD_UNCHANGED');
   const salt=hex(crypto.getRandomValues(new Uint8Array(32))),hash=await passwordHash(env,next,salt);
+  if(own){
+    const changed=await env.DB.batch([
+      env.DB.prepare('UPDATE auth_account_credentials SET salt=?,password_hash=?,version=version+1,must_change=0 WHERE account_id=? AND version=?').bind(salt,hash,active.account.id,row.version),
+      env.DB.prepare('DELETE FROM auth_sessions WHERE account_id=? AND EXISTS(SELECT 1 FROM auth_account_credentials WHERE account_id=? AND salt=?)').bind(active.account.id,active.account.id,salt)
+    ]);
+    if(!changed[0].meta.changes)fail('Hasło zmieniło się w międzyczasie. Zaloguj się ponownie.',409,'CREDENTIAL_CHANGED');
+    return response(200,JSON.stringify({ok:true}),{'content-type':'application/json','set-cookie':formatCookie('',0)});
+  }
   // Compare-and-swap avoids a simultaneous rotation overwriting a newer password.
   const changed=await env.DB.batch([
     env.DB.prepare('UPDATE auth_credential SET salt=?,password_hash=?,version=version+1 WHERE id=1 AND version=?').bind(salt,hash,row.version),

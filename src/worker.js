@@ -1,4 +1,6 @@
 import {updateAccountAccess} from './auth.js';
+import {latestR2Backup} from './backup-status.js';
+import {handleContentTranslations} from './content-translations.js';
 import {localizeApiResponse} from './api-language.js';
 import { ensureSchema } from './ensure-schema.js';
 import { InputError, fail, has, pick, text, number, date, webUrl, facts, body } from './validation.js';
@@ -34,10 +36,10 @@ async function scopedRow(request, env, table, id, includeDeleted = false) {
 }
 async function bootstrap(env) {
   const timeZone=await one(env,"SELECT value FROM app_settings WHERE key='trip_time_zone'");
-  const anglers = await all(env,`SELECT a.id,a.name,a.active,a.default_language defaultLanguage,COALESCE(a.baseline_pb_kg,a.pb_kg) baselinePbKg,
+  let anglers = await all(env,`SELECT a.id,a.name,a.active,a.default_language defaultLanguage,COALESCE(a.baseline_pb_kg,a.pb_kg) baselinePbKg,
     MAX(COALESCE(a.baseline_pb_kg,a.pb_kg),COALESCE(MAX(c.weight_kg),0)) pbKg
     FROM anglers a LEFT JOIN catches c ON c.angler_id=a.id AND c.deleted_at IS NULL GROUP BY a.id ORDER BY a.name`);
-  if(individualAccounts(env)){const accounts=await accountList(env);for(const a of anglers)a.login=accounts.find(u=>u.anglerId===a.id&&u.active)?.username||null;}
+  if(individualAccounts(env)){const accounts=await accountList(env);for(const a of anglers)a.login=accounts.find(u=>u.anglerId===a.id&&u.active&&!u.protected)?.username||null;anglers=anglers.filter(a=>!accounts.some(u=>u.protected&&u.anglerId===a.id));}
   const rawLakes = await all(env,'SELECT id,name,country,latitude,longitude,image_url imageUrl,facts_json factsJson,source_url sourceUrl FROM lakes ORDER BY name');
   const lakes = rawLakes.map(({factsJson,...l})=>({...l,facts:parseFacts(factsJson)}));
   const rawTrips = await all(env,`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at start,end_at end,peg,latitude,longitude,lake_image lakeImage,facts_json factsJson,is_active isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`);
@@ -260,7 +262,7 @@ async function categories(request,env,id){
     return json({ok:true});
   }
   if(request.method==='DELETE'){
-    if(await one(env,'SELECT id FROM checklist_items WHERE category=? LIMIT 1',current.name))fail('Kategoria zawiera pozycje. Przenieś je do innej kategorii przed usunięciem.',409);
+    if(await one(env,'SELECT id FROM checklist_items WHERE category=? LIMIT 1',current.name))fail('Kategoria zawiera pozycje. Przenieś je do innej kategorii przed usunięciem.',409,'CATEGORY_NOT_EMPTY');
     await run(env,'DELETE FROM checklist_categories WHERE id=?',id);return json({ok:true});
   }
 }
@@ -321,9 +323,8 @@ async function settings(request,env){
     let lastBackupAt=null,backupStatus='unavailable';
     if(env.BACKUP_STATUS){try{
       // Only metadata is read. Never expose object keys or the backup contents to the browser.
-      const listing=await env.BACKUP_STATUS.list({prefix:'dream-team-db/',limit:100});
-      const valid=listing.objects.filter(o=>o.size>1000&&o.uploaded instanceof Date).sort((a,b)=>b.uploaded-a.uploaded);
-      lastBackupAt=valid[0]?.uploaded.toISOString()||null;backupStatus=lastBackupAt?'available':'missing';
+      const latest=await latestR2Backup(env.BACKUP_STATUS);
+      lastBackupAt=latest?.uploaded.toISOString()||null;backupStatus=lastBackupAt?'available':'missing';
     }catch{backupStatus='unavailable';}}
     const schema=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
     return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',mediaStorageAvailable:Boolean(env.MEDIA),lastBackupAt,backupStatus,environment:env.APP_ENV==='preview'?'preview':'production',build:env.APP_BUILD||null,version:'1.2.0',schemaVersion:Number(schema?.value)||null});
@@ -334,7 +335,7 @@ async function settings(request,env){
     const v=text(value,'Ustawienie',100,true);
     if(key==='research_auto'||key==='research_official_first'){if(!['on','off'].includes(v))fail('Wybierz on/off.');}
     if(key==='research_languages'&&(!v.split(',').every(lang=>['PL','EN','FR','DE','NL'].includes(lang))||new Set(v.split(',')).size!==v.split(',').length))fail('Nieprawidłowe języki.');
-    if(key==='trip_time_zone'&&v!=='auto'&&!/^Europe\/[A-Za-z_]+$/.test(v))fail('Nieprawidłowa strefa czasowa.');
+    if(key==='trip_time_zone'&&v!=='auto'){try{new Intl.DateTimeFormat('en',{timeZone:v}).format();}catch{fail('Nieprawidłowa strefa czasowa.',400,'INVALID_TIME_ZONE');}}
     statements.push(stmt(env,'INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES(?,?,CURRENT_TIMESTAMP)',key,v));
   }
   if(statements.length)await env.DB.batch(statements);
@@ -357,7 +358,7 @@ async function removeOrRestore(request,env,kind,id,restore){
 }
 async function exportData(env){
   const data={format:'dream-team-backup-v1',exportedAt:new Date().toISOString(),tables:{}};
-  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
+  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','content_translations','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
   return json(data,200,{'content-disposition':`attachment; filename="dream-team-backup-${new Date().toISOString().slice(0,10)}.json"`});
 }
 async function privateFetch(request,env,ctx,active){
@@ -369,6 +370,7 @@ async function privateFetch(request,env,ctx,active){
         return json({ok:true,app:'dream-team',version:'1.2.0',database:'connected',schemaVersion:version?.value||null});
       }
       if(path==='/api/bootstrap'&&method==='GET')return json({...await bootstrap(env),currentUser:active?.account||null});
+      if(path==='/api/content-translations'&&['GET','PUT'].includes(method))return json(await handleContentTranslations(request,env,active));
       if(path==='/api/weather'&&method==='GET')return json(await weatherForTrip(env,url.searchParams.get('tripId')));
       const adviceMatch=path.match(/^\/api\/trips\/([^/]+)\/advice$/);
       if(adviceMatch&&method==='GET')return json(await handleTripAdvice(env,decodeURIComponent(adviceMatch[1])));
@@ -435,7 +437,7 @@ async function privateFetch(request,env,ctx,active){
       }
       return json({ok:false,error:'Nie znaleziono endpointu.'},404);
     }catch(error){
-      if(error instanceof InputError)return json({ok:false,error:error.message},error.status);
+      if(error instanceof InputError)return json({ok:false,error:error.message,...(error.code?{code:error.code}:{})},error.status);
       console.error(error);return json({ok:false,error:'Błąd serwera. Spróbuj ponownie.'},500);
     }
 }
@@ -444,6 +446,11 @@ function protectedResponse(result,active){
   wrapped.headers.set('cache-control','private, no-store');
   wrapped.headers.set('x-content-type-options','nosniff');
   wrapped.headers.set('referrer-policy','no-referrer');
+  wrapped.headers.set('x-frame-options','DENY');
+  if(wrapped.headers.get('content-type')?.includes('text/html')){
+    const csp=wrapped.headers.get('content-security-policy')||'';
+    if(!/frame-ancestors/i.test(csp))wrapped.headers.set('content-security-policy',(csp?csp+'; ':'')+"frame-ancestors 'none'");
+  }
   if(active?.refreshCookie&&!wrapped.headers.has('set-cookie'))wrapped.headers.set('set-cookie',active.refreshCookie);
   return wrapped;
 }
@@ -477,6 +484,10 @@ async function handleRequest(request,env,ctx){
         return protectedResponse(Response.redirect(url.origin+'/login',302));
       }
       if(path==='/api/logout'&&method==='POST')return await logout(env,active);
+      if(active.account?.mustChangePassword&&!['/api/account/password','/account-password.html','/account-password.js','/login.css','/language-preference.js'].includes(path)){
+        if(path.startsWith('/api/'))return json({ok:false,error:'Zmień hasło początkowe przed korzystaniem z aplikacji.',code:'PASSWORD_CHANGE_REQUIRED'},403);
+        return protectedResponse(Response.redirect(url.origin+'/account-password.html',303),active);
+      }
       return protectedResponse(await privateFetch(request,env,ctx,active),active);
     }catch(error){
       console.error('Private request failed:',error);

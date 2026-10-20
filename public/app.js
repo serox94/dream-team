@@ -1,3 +1,4 @@
+const contentText=(entity,item,field,value)=>window.DreamContent?.text(entity,item.id,field,value)??value;
 const TRIP_START = window.DREAM_TRIP?.start ? new Date(window.DREAM_TRIP.start) : null;
 const TRIP_END = window.DREAM_TRIP?.end ? new Date(window.DREAM_TRIP.end) : null;
 const PB_CELEBRATION_STORAGE_KEY = "ryby2026_pb_celebrated_catches";
@@ -615,14 +616,14 @@ function renderCatchesList(catches, spots) {
 
     const badges = el("div", "catch-badges");
     badges.appendChild(el("span", "badge", `Waga: ${Number(item.weight).toFixed(1)} kg`));
-    badges.appendChild(el("span", "badge", `Przynęta: ${normalizeText(item.bait, 50)}`));
+    badges.appendChild(el("span", "badge", `Przynęta: ${normalizeText(contentText('catches',item,'bait',item.bait), 50)}`));
     badges.appendChild(el("span", "badge", `Spot: ${getSpotDisplayName(item, spots)}`));
 
     article.appendChild(top);
     article.appendChild(badges);
 
     if (item.note) {
-      article.appendChild(el("div", "catch-note", normalizeText(item.note, 300)));
+      article.appendChild(el("div", "catch-note", normalizeText(contentText('catches',item,'notes',item.note), 300)));
     }
 
     list.appendChild(article);
@@ -820,7 +821,7 @@ function renderChecklistGroups(items) {
       checkbox.addEventListener("change", () => toggleChecklistItem(item.id, checkbox.checked));
 
       const content = el("div", "check-item-content");
-      const title = el("div", `check-item-title${item.done ? " done" : ""}`, item.item_name);
+      const title = el("div", `check-item-title${item.done ? " done" : ""}`, contentText('checklist',item,'label',item.item_name));
       const metaText = [];
       if (item.pendingSync) metaText.push("Oczekuje na synchronizację");
       if (item.quantity !== null && item.quantity !== undefined) metaText.push(`${Number(item.quantity)} ${item.unit}`);
@@ -1043,7 +1044,7 @@ function renderSpotsList(spots) {
     const article = el("article", "spot-card");
     const top = el("div", "spot-card-top");
     const left = el("div");
-    left.appendChild(el("h4", "", item.name));
+    left.appendChild(el("h4", "", contentText('spots',item,'name',item.name)));
     left.appendChild(el("div", "catch-meta", `Dodano: ${formatCaughtAt(item.created_at)}${item.pendingSync?" · Oczekuje na synchronizację":""}`));
 
     const actions = el("div", "inline-actions");
@@ -1066,18 +1067,18 @@ function renderSpotsList(spots) {
     article.append(top, badges);
 
     const meta = [];
-    if (item.obstacles) meta.push(`Zaczepy: ${normalizeText(item.obstacles, 120)}`);
-    if (item.best_time) meta.push(`Najlepsza pora: ${normalizeText(item.best_time, 60)}`);
-    if (item.best_wind) meta.push(`Najlepszy wiatr: ${normalizeText(item.best_wind, 60)}`);
-    if (item.weed) meta.push(`Zielsko: ${normalizeText(item.weed, 100)}`);
-    if (item.rig) meta.push(`Rig: ${normalizeText(item.rig, 100)}`);
-    if (item.bait) meta.push(`Przynęta: ${normalizeText(item.bait, 100)}`);
+    if (item.obstacles) meta.push(`Zaczepy: ${normalizeText(contentText('spots',item,'obstacles',item.obstacles), 120)}`);
+    if (item.best_time) meta.push(`Najlepsza pora: ${normalizeText(contentText('spots',item,'best_time',item.best_time), 60)}`);
+    if (item.best_wind) meta.push(`Najlepszy wiatr: ${normalizeText(contentText('spots',item,'best_wind',item.best_wind), 60)}`);
+    if (item.weed) meta.push(`Zielsko: ${normalizeText(contentText('spots',item,'weed',item.weed), 100)}`);
+    if (item.rig) meta.push(`Rig: ${normalizeText(contentText('spots',item,'rig',item.rig), 100)}`);
+    if (item.bait) meta.push(`Przynęta: ${normalizeText(contentText('spots',item,'bait',item.bait), 100)}`);
     if (meta.length) {
       article.appendChild(el("div", "catch-note", meta.join(" • ")));
     }
 
     if (item.note) {
-      article.appendChild(el("div", "catch-note", normalizeText(item.note, 500)));
+      article.appendChild(el("div", "catch-note", normalizeText(contentText('spots',item,'notes',item.note), 500)));
     }
 
     list.appendChild(article);
@@ -1149,7 +1150,7 @@ function updateDashboard(catches, spots = [], checklist = []) {
         top.appendChild(el("span", "last-entry-weight", `${Number(item.weight).toFixed(1)} kg`));
 
         const meta = el("div", "last-entry-meta");
-        meta.appendChild(el("span", "", `Przynęta: ${normalizeText(item.bait, 50)}`));
+        meta.appendChild(el("span", "", `Przynęta: ${normalizeText(contentText('catches',item,'bait',item.bait), 50)}`));
         meta.appendChild(el("span", "", `Spot: ${getSpotDisplayName(item, spots)}`));
         meta.appendChild(el("span", "", formatCaughtAt(item.caught_at)));
 

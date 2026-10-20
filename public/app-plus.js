@@ -295,7 +295,7 @@
 
       let bestBiteWindow = "Brak danych";
       let tomorrowWind = "Brak danych";
-      let currentWeather = "Brak prognozy";
+      let currentWeather = "Brak prognozy", weatherSafety="UNKNOWN";
       let dashboardWarning = openChecklist > 0
         ? `Brakuje jeszcze ${openChecklist} rzeczy z checklist.`
         : "Checklisty wyglądają dobrze.";
@@ -303,11 +303,12 @@
       try {
         const weather = await fetchDashboardWeatherAlerts();
         const temp=window.DreamConditions.finite(weather.current?.temperature_2m),wind=window.DreamConditions.finite(weather.current?.wind_speed_10m);
-        if(temp!==null&&wind!==null)currentWeather=`${temp.toFixed(0)}°C · wiatr ${wind.toFixed(0)} km/h`;
+        if(temp!==null&&wind!==null)currentWeather=`${temp.toFixed(0)}°C · ${window.DreamLanguage?.get()==='en'?'wind':'wiatr'} ${wind.toFixed(0)} km/h`;
+        if(weather.dreamteam?.stale)currentWeather+=(window.DreamLanguage?.get()==='en'?' · Last forecast':' · Ostatnia prognoza');
         setText('dashboard-weather-now',currentWeather);
-        const nowIndex=window.DreamConditions.hourIndex(weather),limit=Math.min(weather.hourly.time.length,nowIndex+24);let bestGrade=null,bestIndex=null;
-        for(let i=nowIndex;i<limit;i++){const grade=getBiteScore(window.DreamConditions.snapshot(weather.hourly,i));if(grade!==null&&grade>0&&(bestGrade===null||grade>bestGrade)){bestGrade=grade;bestIndex=i;}}
-        if(bestIndex!==null){const start=weather.hourly.time[bestIndex].slice(11,16),end=String((Number(start.slice(0,2))+1)%24).padStart(2,'0')+':00';bestBiteWindow=`${start}–${end} (${biteScoreLabel(bestGrade)})`;}
+        const weatherAssessment=window.DreamCarpWeather.analyse(weather,window.DreamLanguage?.get()||'pl');
+        bestBiteWindow=weatherAssessment.window||'Brak danych';weatherSafety=weatherAssessment.safety?.state||'UNKNOWN';
+
 
         const tomorrowWindValue = window.DreamConditions.finite(weather.daily.wind_speed_10m_max?.[1]);
         const tomorrowGustsValue = window.DreamConditions.finite(weather.daily.wind_gusts_10m_max?.[1]);
@@ -319,13 +320,17 @@
         } else if (openChecklist > 0) {
           dashboardWarning = `Brakuje jeszcze ${openChecklist} rzeczy z checklist.`;
         }
+        if(weatherAssessment.safety?.messages.length)dashboardWarning=weatherAssessment.safety.messages.join(' ');
+        if(weatherAssessment.safety?.state==='DANGER')currentWeather=dashboardWarning;
+        setText('dashboard-weather-now',currentWeather);
+        if(weather.dreamteam?.stale)dashboardWarning=(window.DreamLanguage?.get()==='en'?'Weather provider unavailable — showing the last forecast. ':'Dostawca pogody niedostępny — pokazuję ostatnią prognozę. ')+(window.DreamI18n?.t(dashboardWarning)||dashboardWarning);
       } catch (_) { setText('dashboard-weather-now','Brak prognozy'); }
 
       renderAlertCards([
         {
           title: "Teraz nad wodą",
           value: currentWeather,
-          status: currentWeather === "Brak prognozy" ? "info" : "success"
+          status: weatherSafety==='DANGER'?'danger':weatherSafety==='WARNING'?'warn':weatherSafety==='SAFE'?'success':'info'
         },
         {
           title: "🎣 Najbliższe 24 h · warunki na brzegu",
@@ -344,14 +349,9 @@
                 : "info"
         },
         {
-          title: "📦 Do spakowania",
-          value: openChecklist > 0 ? `${openChecklist} rzeczy` : "Nic nie brakuje",
+          title: "📦 Checklista",
+          value: `${doneChecklist}/${checklistItems.length} · ${openChecklist} ${window.DreamLanguage?.get()==='en'?'remaining':'pozostało'}`,
           status: openChecklist > 0 ? "warn" : "success"
-        },
-        {
-          title: "✅ Spakowane",
-          value: `${checklistItems.filter((item) => item.done).length} rzeczy`,
-          status: checklistItems.filter((item) => item.done).length > 0 ? "success" : "info"
         }
       ]);
     } catch (error) {
@@ -829,7 +829,7 @@
       const article = createNode("article", "spot-card");
       const top = createNode("div", "spot-card-top");
       const left = createNode("div");
-      left.appendChild(createNode("h4", "", item.name));
+      left.appendChild(createNode("h4", "", window.DreamContent?.text('spots',item.id,'name',item.name)??item.name));
       left.appendChild(createNode("div", "catch-meta", `Dodano: ${formatDateTimePL(item.created_at)}`));
 
       const actions = createNode("div", "inline-actions");
@@ -878,7 +878,7 @@
       article.appendChild(metaGrid);
 
       if (item.note) {
-        article.appendChild(createNode("div", "catch-note", normalizeTextSafe(item.note, 500)));
+        article.appendChild(createNode("div", "catch-note", normalizeTextSafe(window.DreamContent?.text('spots',item.id,'notes',item.note)??item.note, 500)));
       }
 
       list.appendChild(article);

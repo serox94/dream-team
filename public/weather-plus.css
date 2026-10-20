@@ -443,3 +443,13 @@
 .carp-forecast-plan small,.carp-forecast-disclaimer{color:var(--muted);line-height:1.6}
 .carp-forecast-disclaimer{border-top:1px solid var(--border);margin:14px 0 0;padding-top:12px;font-size:.84rem}
 @media(max-width:720px){.carp-forecast-grid,.carp-forecast-plan{grid-template-columns:1fr}}
+
+/* Audit L01: one compact hour; retain every measurement behind native disclosure. */
+.weather-hour-card>summary{list-style:none;min-height:44px;flex-wrap:wrap;gap:8px}
+.weather-hour-compact{display:block;width:100%;font-size:.9rem}
+.weather-hour-card[open]>summary{margin-bottom:12px}
+.weather-detail-section{margin:16px 0}
+.weather-detail-section>summary{padding:14px 12px;min-height:44px;font-weight:600}
+.weather-detail-section>.carp-forecast-grid{margin-top:12px}
+#carp-weather-actions{margin-top:8px}
+#carp-weather-headline{font-weight:600}

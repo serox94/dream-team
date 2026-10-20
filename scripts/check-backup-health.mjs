@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {listRestR2Objects} from '../src/backup-status.js';
 
 const account=process.env.CLOUDFLARE_ACCOUNT_ID,token=process.env.CLOUDFLARE_API_TOKEN;
 assert.ok(account&&token,'Cloudflare deployment credentials missing');
@@ -8,12 +9,7 @@ const now=new Date(),today=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMont
 const expected=Date.now()<today.getTime()+45*60000?new Date(today.getTime()-86400000):today;
 const since=Date.parse(process.env.MIN_BACKUP_TIMESTAMP||expected.toISOString());
 
-const listing=await fetch(`${root}/r2/buckets/dream-team-d1-backups/objects?prefix=dream-team-db%2F&per_page=100`,{headers});
-assert.equal(listing.status,200,`R2 listing returned ${listing.status}`);
-const data=await listing.json();
-assert.equal(data.success,true,'R2 listing failed');
-const objects=data.result?.objects??data.result;
-assert.ok(Array.isArray(objects),'Unexpected R2 object listing response');
+const objects=await listRestR2Objects(`${root}/r2/buckets/dream-team-d1-backups/objects?prefix=dream-team-db%2F&per_page=100`,headers);
 const timestamp=item=>Date.parse(item.uploaded||item.last_modified||item.lastModified||'');
 const backup=objects.filter(item=>item.key?.startsWith('dream-team-db/')&&item.size>1000&&timestamp(item)>=since).sort((a,b)=>timestamp(b)-timestamp(a))[0];
 assert.ok(backup,'No nonempty scheduled backup after the expected 03:17 UTC run');

@@ -299,7 +299,7 @@
     for(const [id,v]of [['weather-sunrise',daily.sunrise?.[dayIndex]],['weather-sunset',daily.sunset?.[dayIndex]]])if($(id))$(id).textContent=formatHour(v);
     if($('water-temp'))$('water-temp').textContent=say('Brak pomiaru','Not measured');
     if($('water-oxygen'))$('water-oxygen').textContent=say('Brak pomiaru','Not measured');
-    if($('weather-source-status'))$('weather-source-status').textContent=`Open-Meteo · ${data.timezone} · GPS ${data.dreamteam?.requestedCoordinates?.latitude??spot.latitude}, ${data.dreamteam?.requestedCoordinates?.longitude??spot.longitude} · ${say('pobrano','fetched')} ${data.dreamteam?.fetchedAt?new Date(data.dreamteam.fetchedAt).toLocaleString(language()==='en'?'en-GB':'pl-PL',{timeZone:data.timezone}):current.time}`;
+    if($('weather-source-status'))$('weather-source-status').textContent=(data.dreamteam?.stale?say('Ostatnia prognoza (brak połączenia z dostawcą) · ','Last forecast (provider unavailable) · '):'')+`Open-Meteo · ${data.timezone} · GPS ${data.dreamteam?.requestedCoordinates?.latitude??spot.latitude}, ${data.dreamteam?.requestedCoordinates?.longitude??spot.longitude} · ${say('pobrano','fetched')} ${data.dreamteam?.fetchedAt?new Date(data.dreamteam.fetchedAt).toLocaleString(language()==='en'?'en-GB':'pl-PL',{timeZone:data.timezone}):current.time}`;
     setNotes("weather-interpretation", buildWeatherInterpretation(current, hourly, currentIndex));
     setNotes("camp-interpretation", buildCampInterpretation(night, moon));
     setNotes("bite-analysis", biteAnalysis.notes);
@@ -335,8 +335,8 @@
     const endIndex = Math.min(data.hourly.time.length, startIndex + 24);
 
     for (let i = startIndex; i < endIndex; i += 1) {
-      const card = el("article", "weather-hour-card");
-      const top = el("div", "weather-row-top");
+      const card = el("details", "weather-hour-card");
+      const top = el("summary", "weather-row-top");
       const title = el("div", "weather-row-title");
       const icon = el("div", "weather-row-icon", weatherCodeToIcon(data.hourly.weather_code?.[i]));
 
@@ -361,6 +361,7 @@
       const rating = el("div", "section-chip", `${biteScoreToLabel(biteScore)}`);
       top.appendChild(title);
       top.appendChild(rating);
+      if(top.tagName==='SUMMARY')top.appendChild(el('span','weather-hour-compact',`${fmt(data.hourly.temperature_2m?.[i],1)}°C · ${fmt(data.hourly.wind_speed_10m?.[i],0)} km/h · ${fmt(data.hourly.precipitation?.[i],1)} mm`));
       card.appendChild(top);
 
       const grid = el("div", "weather-chip-grid");
@@ -419,19 +420,29 @@
     });
   }
 
+  let lastGoodWeather=null;
   async function performWeatherRender() {
     if (!$("weather-current-temp")) return;
 
     try {
-      $("weather-current-temp").textContent = "Ładowanie...";
+      if(lastGoodWeather?.tripId!==window.DREAM_TRIP.id)$("weather-current-temp").textContent = say("Ładowanie...","Loading...");
       const data = await fetchWeatherDataEnhanced();
       if(/^(Pogoda niedostępna:|Weather unavailable:)/.test($("app-notice")?.textContent||""))Dream.notice("");
       renderCurrentWeatherEnhanced(data);
       renderHourlyWeatherEnhanced(data);
       renderDailyWeatherEnhanced(data);
+      lastGoodWeather={tripId:window.DREAM_TRIP.id,data,at:Date.parse(data.dreamteam?.fetchedAt)||Date.now()};
+      if(data.dreamteam?.stale)Dream.notice(say('Dostawca pogody jest niedostępny. Pokazuję ostatnią prognozę z oznaczonym czasem pobrania — sprawdź aktualne ostrzeżenia przed wyjściem nad wodę.','The weather provider is unavailable. Showing the last forecast with its retrieval time — check current warnings before fishing.'),true);
     } catch (error) {
       console.error(error);
-      Dream.notice(`Pogoda niedostępna: ${error.message}`,true);
+      const prefix=say('Pogoda niedostępna: ','Weather unavailable: ');
+      Dream.notice(prefix+error.message,true);
+      if(lastGoodWeather?.tripId===window.DREAM_TRIP.id&&Date.now()-lastGoodWeather.at<=1800000){
+       const at=new Date(lastGoodWeather.at).toLocaleString(language()==='en'?'en-GB':'pl-PL');
+       if($('weather-summary-updated'))$('weather-summary-updated').textContent=say('Ostatnia prognoza: ','Last forecast: ')+at;
+       Dream.notice(prefix+error.message+say(' Pokazuję ostatnią prognozę, nie dane na żywo.',' Showing the last forecast, not live data.'),true);return;
+      }
+      lastGoodWeather=null;
       const ids = [
         "weather-current-temp",
         "weather-current-wind",
@@ -445,12 +456,17 @@
         "bite-tactic-short"
       ];
       ids.forEach((id) => {
-        if ($(id)) $(id).textContent = "Błąd";
+        if ($(id)) $(id).textContent = say("Brak danych","Unavailable");
       });
-      setNotes("weather-interpretation", ["Nie udało się pobrać danych pogodowych."]);
-      setNotes("camp-interpretation", ["Brak danych do oceny obozowania."]);
-      setNotes("bite-analysis", ["Brak danych do oceny warunków."]);
-      setNotes("bite-tactic-box", ["Brak danych do rekomendacji."]);
+      const unavailable=say('Brak prognozy — spróbuj odświeżyć dane.','Forecast unavailable — try refreshing.');
+      for(const id of ['weather-summary-updated','weather-source-status','carp-weather-headline'])if($(id))$(id).textContent=unavailable;
+      for(const id of ['carp-pressure','carp-wind','carp-rain','carp-air','carp-window','weather-rating-hero','bite-chance-hero'])if($(id))$(id).textContent=say('Brak danych','Unavailable');
+      for(const id of ['weather-hourly-list','weather-daily-list'])if($(id))clearNode($(id));
+      setNotes('carp-weather-actions',[unavailable]);
+      setNotes("weather-interpretation", [say("Nie udało się pobrać danych pogodowych.","Could not retrieve weather data.")]);
+      setNotes("camp-interpretation", [say("Brak danych do oceny obozowania.","No data to assess camping conditions.")]);
+      setNotes("bite-analysis", [say("Brak danych do oceny warunków.","No data to assess conditions.")]);
+      setNotes("bite-tactic-box", [say("Brak danych do rekomendacji.","No data for recommendations.")]);
     }
   }
 

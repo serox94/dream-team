@@ -1,3 +1,4 @@
+const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,field,doc[field])??doc[field];
 (() => {
   const esc = v => String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   const route = () => location.pathname.replace(/\.html$/, '').replace(/\/$/, '');
@@ -28,7 +29,7 @@
   }
 
   function docNotes(doc) {
-    return sentences(doc.content).map(x => note(x)).join('');
+    return sentences(documentText(doc,'content')).map(x => note(x)).join('');
   }
 
   function panel(title, chip, body) {
@@ -103,11 +104,11 @@
           ${f.managerPhone ? `<div><span>Manager</span><strong>${esc(f.managerPhone)}</strong></div>` : ''}
           ${f.crossingPhone ? `<div><span>Przeprawa</span><strong>${esc(f.crossingPhone)}</strong></div>` : ''}
         </div><a class="dream-action" href="${maps}" target="_blank" rel="noopener">🚗 Jedź do łowiska <span>→</span></a>`)}
-        ${panel('📋 Logistyka na miejscu', 'WAŻNE', `<div class="weather-interpretation">${[...baseDocs, ...reservation].flatMap(d => sentences(d.content)).slice(0,8).map(x => note(x)).join('') || note('Brak zweryfikowanych danych logistycznych.', 'warn')}</div>`)}
+        ${panel('📋 Logistyka na miejscu', 'WAŻNE', `<div class="weather-interpretation">${[...baseDocs, ...reservation].flatMap(d => sentences(documentText(d,'content'))).slice(0,8).map(x => note(x)).join('') || note('Brak zweryfikowanych danych logistycznych.', 'warn')}</div>`)}
       </section>
       <section class="two-column">
-        ${panel('🚙 Dojazd / stanowiska', 'DOSTĘP', `<div class="weather-interpretation">${accessDocs.flatMap(d => sentences(d.content)).map(x => note(x)).join('') || note(f.access || 'Szczegóły dostępu do uzupełnienia.', 'info')}</div>`)}
-        ${panel('⚡ Zaplecze', 'NA MIEJSCU', `<div class="weather-interpretation">${facilities.flatMap(d => sentences(d.content)).map(x => note(x)).join('')}${f.power ? note(`Prąd: ${f.power}`) : ''}${f.sanitary ? note(`Sanitariaty: ${f.sanitary}`) : ''}</div>`)}
+        ${panel('🚙 Dojazd / stanowiska', 'DOSTĘP', `<div class="weather-interpretation">${accessDocs.flatMap(d => sentences(documentText(d,'content'))).map(x => note(x)).join('') || note(f.access || 'Szczegóły dostępu do uzupełnienia.', 'info')}</div>`)}
+        ${panel('⚡ Zaplecze', 'NA MIEJSCU', `<div class="weather-interpretation">${facilities.flatMap(d => sentences(documentText(d,'content'))).map(x => note(x)).join('')}${f.power ? note(`Prąd: ${f.power}`) : ''}${f.sanitary ? note(`Sanitariaty: ${f.sanitary}`) : ''}</div>`)}
       </section>
       ${sources(docs,p)}`;
   }
@@ -154,8 +155,8 @@
     const rods = strategy.filter(d => /kij|wędk/i.test(d.title));
     const rest = strategy.filter(d => ![...start,...where,...bait,...rigs,...rods].includes(d));
 
-    const practical = overview.length ? overview.map(d => knowledge(`🧠 ${esc(d.title)}`, `<p>${esc(d.content)}</p>`)).join('') : knowledge('🌊 Charakter wody', `<p>${esc(f.waterType || 'Profil łowiska będzie uzupełniony po sprawdzeniu źródeł.')}</p>`);
-    const strategyPanel = (title, chip, group, fallback) => panel(title, chip, `<div class="weather-interpretation">${group.flatMap(d => sentences(d.content)).map(x => note(x)).join('') || note(fallback,'info')}</div>`);
+    const practical = overview.length ? overview.map(d => knowledge(`🧠 ${esc(documentText(d,'title'))}`, `<p>${esc(documentText(d,'content'))}</p>`)).join('') : knowledge('🌊 Charakter wody', `<p>${esc(f.waterType || 'Profil łowiska będzie uzupełniony po sprawdzeniu źródeł.')}</p>`);
+    const strategyPanel = (title, chip, group, fallback) => panel(title, chip, `<div class="weather-interpretation">${group.flatMap(d => sentences(documentText(d,'content'))).map(x => note(x)).join('') || note(fallback,'info')}</div>`);
 
     m.innerHTML = `<section class="hero-card"><h2>💡 Porady na ${esc(trip.lake)}</h2><p>Encyklopedia praktyczna pod ten konkretny wyjazd: charakter wody, lokalizacja ryb, nęcenie, zestawy, reakcja na warunki i plan działania.</p></section>
       <section class="stats-grid">

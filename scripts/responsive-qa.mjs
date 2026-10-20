@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
 import {serve} from './qa-server.mjs';
+import {waitForOfflineReady} from './qa-offline-ready.mjs';
 import {weatherFixture} from './qa-weather.mjs';
 
 const widths=[360,390,412,768,1280];
@@ -238,7 +239,7 @@ try{
       const offline=await context.newPage();
       await offline.goto(preview.url+'/pages/checklisty.html');
       await offline.locator('html[data-ready="true"]').waitFor();
-      await offline.waitForFunction(async()=>Boolean(await caches.match('/index.html')),{timeout:20000});
+      await waitForOfflineReady(offline);
       const row=preview.DB.sqlite.prepare("SELECT id,packed FROM checklist_items WHERE trip_id='next-trip' AND packed=0 LIMIT 1").get();
       await context.setOffline(true);
       await offline.goto(preview.url+'/',{waitUntil:'domcontentloaded'});
@@ -334,8 +335,8 @@ try{
         assert.match(await page.locator('#participant-profiles').innerText(),/Participant profiles/);
       }
       if(width===390){
-        const untranslated=await page.evaluate(()=>{const found=[];const walker=document.createTreeWalker(document.querySelector('main')||document.body,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode())){if(node.parentElement?.closest('[data-user-content],script,style,.catch-note,.check-item-title'))continue;const value=node.textContent.trim();if(/[ąęłńóśźżĄĘŁŃÓŚŹŻ]/.test(value)&&value.length>4)found.push(value.slice(0,150));}return [...new Set(found)].slice(0,20);});
-        if(untranslated.length)console.log(`EN content audit ${route}: ${JSON.stringify(untranslated)}`);
+        const untranslated=await page.evaluate(()=>{const found=[];const walker=document.createTreeWalker(document.querySelector('main')||document.body,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode())){if(node.parentElement?.closest('[data-user-content],script,style,.catch-note,.check-item-title,.spot-card h4,.trip-card h3,#dashboard-trip-name,#dashboard-lake,#dashboard-peg,#dashboard-crew,[data-source-content]'))continue;const value=node.textContent.trim();if((/[ąęłńóśźżĄĘŁŃÓŚŹŻ]/.test(value)||/\b(?:Zapisz|Nazwa|Kategoria|Aktywna|Anuluj|Pobierz|Wyjazd|Ustawienia|Opady|Wiatr|Temperatura)\b/.test(value))&&value.length>4)found.push(value.slice(0,150));}return [...new Set(found)].slice(0,20);});
+        assert.deepEqual(untranslated,[],`Untranslated UI on ${route}: ${JSON.stringify(untranslated)}`);
       }
       assert.deepEqual(errors,[],`EN ${width} ${route}: browser errors`);
       if(width===390&&['/pages/checklisty.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/rigi.html','/pages/wezly.html','/pages/ustawienia.html'].includes(route))await page.screenshot({path:`${screenshotDir}/en-${route.split('/').pop().replace('.html','')}-390.png`});
@@ -382,7 +383,7 @@ try{
     try{
       const page=await context.newPage();
       await page.goto(offlineFixture.url+'/pages/mapa.html');await page.locator('html[data-ready="true"]').waitFor();
-      await page.waitForFunction(async()=>Boolean(await caches.match('/index.html')));
+      await waitForOfflineReady(page);
       const original=await page.evaluate(async()=>{
         const spot=await Dream.api('/api/spots',{method:'POST',body:JSON.stringify({tripId:'next-trip',name:'Existing bank',depthM:3})});
         await Promise.all(['/api/spots?tripId=next-trip','/api/checklist?tripId=next-trip','/api/catches?tripId=next-trip','/api/notes?tripId=next-trip'].map(path=>Dream.api(path)));
