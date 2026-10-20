@@ -8,7 +8,7 @@ on:
       action:
         description: Approved operation (inspect is strictly read-only)
         type: choice
-        options: [inspect, prepare, deploy]
+        options: [inspect, prepare, deploy, restore]
         default: inspect
       recovery_manifest_key:
         description: Private release manifest key (not used for inspection)
@@ -143,4 +143,32 @@ jobs:
         with:
           name: astra-production-safe-status
           path: candidate/astra-release-status/release.json
+          retention-days: 3
+
+  restore-production:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'restore' && github.ref == 'refs/heads/ops/astra-release-20261019'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Restore exact retained schema28 Worker after private checkpoint verification
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RELEASE_ACTION: ${{ inputs.action }}
+          RELEASE_CANDIDATE: ${{ inputs.ref }}
+        run: node scripts/astra-restore-production.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: astra-restoration-safe-status
+          path: astra-release-status/restoration.json
           retention-days: 3
