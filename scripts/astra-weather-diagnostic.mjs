@@ -1,5 +1,7 @@
 // Reproduce the exact failed frozen candidate against isolated D1 and read-only R2.
 import {readFile,writeFile,mkdtemp,rm,mkdir} from 'node:fs/promises';import {join} from 'node:path';import {tmpdir} from 'node:os';import {randomBytes} from 'node:crypto';import {chromium} from 'playwright';
+import {assertWeatherFields} from './qa-weather-fields.mjs';
+import {assertWeatherProof} from './astra-weather-gate.mjs';
 import {cf,query,wrangler,productionId,assertSandbox,configFile,importSandboxSql,sha} from './recovery-common.mjs';
 const candidate=process.env.RELEASE_CANDIDATE,run=process.env.GITHUB_RUN_ID,name='dream-team-audit-'+run,archive='dream-team-audit-39370527927-archive';
 const dir=await mkdtemp(join(tmpdir(),'dream-private-weather-'));const status={candidate,result:'BLOCKED',productionWrites:0,observations:[]};let db,created=false,browser;
@@ -16,18 +18,19 @@ try{
  wrangler(['secret','bulk','--config',config],JSON.stringify({RELEASE_GATE_KEY:gate,RYBY_LOGIN_USERNAME:process.env.RYBY_LOGIN_USERNAME,RYBY_LOGIN_PASSWORD:process.env.RYBY_LOGIN_PASSWORD,RYBY_SESSION_SECRET:process.env.RYBY_SESSION_SECRET}));
  const headers={'x-release-gate':gate};for(let i=0;i<45;i++){if((await fetch(url+'/login',{headers})).status===200)break;await new Promise(r=>setTimeout(r,2000));}
  browser=await chromium.launch();let replay;
- for(const [width,language] of [[390,'pl'],[1280,'en']]){
+ for(const [width,language] of [[390,'pl'],[390,'en'],[1280,'pl'],[1280,'en']]){
   const login=await fetch(url+'/api/login',{method:'POST',redirect:'manual',headers:{...headers,'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'Patryk',password:process.env.RYBY_LOGIN_PASSWORD})});const cookie=login.headers.get('set-cookie')?.split(';')[0];check(login.status===303&&cookie,'CANARY_LOGIN');
   const context=await browser.newContext({viewport:{width,height:844},isMobile:width===390,locale:language==='pl'?'pl-PL':'en-GB',serviceWorkers:'block'});await context.addCookies([{name:'__Host-ryby_session',value:cookie.slice(cookie.indexOf('=')+1),url,secure:true,httpOnly:true,sameSite:'Lax'}]);await context.addInitScript(lang=>localStorage.setItem('dreamteam.language',lang),language);
   await context.route('**/*',async route=>{const r=route.request();await route.continue({headers:new URL(r.url()).origin===url?{...r.headers(),...headers}:r.headers()});});const page=await context.newPage();let payload,apiStatus;page.on('response',async r=>{if(new URL(r.url()).pathname==='/api/weather'){apiStatus=r.status();try{payload=await r.json();}catch{}}});
   await page.goto(url+'/pages/pogoda.html',{waitUntil:'domcontentloaded'});await page.locator('html[data-ready="true"]').waitFor({timeout:45000});await page.locator('#weather-source-status').filter({hasText:'Open-Meteo'}).waitFor({timeout:45000});await page.locator('#refresh-weather-btn:not([disabled])').waitFor();
   check(payload,'WEATHER_RESPONSE_MISSING');replay??=payload;
   const exactGateBefore={};for(const id of ids)exactGateBefore[id]=await page.locator('#'+id).innerText();
-  await page.locator('details').filter({has:page.locator('#carp-pressure')}).locator(':scope > summary').click();
+  await assertWeatherFields(page);
   const exactGateAfter={};for(const id of ids)exactGateAfter[id]=await page.locator('#'+id).innerText();
   const observation=await page.evaluate(({ids,payload})=>{const d=payload.data||payload.weather||payload;const report=window.DreamCarpWeather.analyse(d,document.documentElement.lang);return {fields:Object.fromEntries(ids.map(id=>[id,document.getElementById(id)?.textContent])),report:{available:report.available,headline:report.headline,safety:report.safety},hourlyLengths:Object.fromEntries(Object.entries(d.hourly||{}).filter(([k,v])=>Array.isArray(v)).map(([k,v])=>[k,v.length])),currentKeys:Object.keys(d.current||{}),notice:document.getElementById('app-notice')?.textContent};},{ids,payload});
   // Never log locations, source data, cookies, accounts or private safety sample timestamps.
   const safe={width,language,apiStatus,exactGateBefore,exactGateAfter,fields:observation.fields,reportAvailable:observation.report.available,headline:observation.report.headline,safetyState:observation.report.safety.state,safetyComplete:observation.report.safety.complete,safetyCoverage:observation.report.safety.coverage,hourlyLengths:observation.hourlyLengths,currentKeys:observation.currentKeys};status.observations.push(safe);console.log('WEATHER OBSERVED '+JSON.stringify(safe));await context.close();
  }
- const file=join(dir,'weather-observed.json');await writeFile(file,JSON.stringify(replay),{mode:0o600});wrangler(['r2','object','put',archive+'/weather-observed.json','--remote','--file',file]);status.privateReplaySha256=sha(await readFile(file));status.result='DIAGNOSED';
+ const file=join(dir,'weather-observed.json');await writeFile(file,JSON.stringify(replay),{mode:0o600});wrangler(['r2','object','put',archive+'/weather-observed.json','--remote','--file',file]);status.privateReplaySha256=sha(await readFile(file));status.result='PASS';
+ const proof={...status,format:'dream-team-weather-gate-v1',createdAt:new Date().toISOString(),regressionCases:16,replaySchema:29};assertWeatherProof(proof,candidate);const gateFile=join(dir,'weather-gate.json');await writeFile(gateFile,JSON.stringify(proof));wrangler(['r2','object','put','dream-team-d1-backups/private-weather-gates/'+candidate+'.json','--remote','--file',gateFile]);status.preMaintenanceProof='PRIVATE_VERIFIED';
 }catch(error){status.reason=/^[A-Z0-9_]+$/.test(error.message)?error.message:'DIAGNOSTIC_FAILED';process.exitCode=1;}finally{if(browser)await browser.close();if(created)await cf('/workers/scripts/'+name,'DELETE').catch(()=>{});if(db)await cf('/d1/database/'+db.uuid,'DELETE').catch(()=>{});await rm(dir,{recursive:true,force:true});await mkdir('astra-release-status',{recursive:true});await writeFile('astra-release-status/weather.json',JSON.stringify(status,null,2));console.log('ASTRA WEATHER DIAGNOSTIC '+JSON.stringify(status));}

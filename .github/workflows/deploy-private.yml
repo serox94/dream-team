@@ -137,6 +137,7 @@ jobs:
         run: |
           cp ../operator/scripts/astra-production-release.mjs scripts/astra-production-release.mjs
           cp ../operator/scripts/astra-release-model.mjs scripts/astra-release-model.mjs
+          cp ../operator/scripts/astra-weather-gate.mjs scripts/astra-weather-gate.mjs
           node scripts/astra-production-release.mjs
       - uses: actions/upload-artifact@v4
         if: always()
@@ -217,6 +218,9 @@ jobs:
           PROTECTED_BOOTSTRAP_ENVELOPE: ${{ inputs.protected_bootstrap_envelope }}
         run: |
           cp ../operator/scripts/astra-weather-diagnostic.mjs scripts/astra-weather-diagnostic.mjs
+          cp ../operator/scripts/astra-weather-gate.mjs scripts/astra-weather-gate.mjs
+          node --test ../operator/tests/astra-weather-gate.test.mjs
+          node scripts/qa-weather-release.mjs
           node scripts/astra-weather-diagnostic.mjs
       - uses: actions/upload-artifact@v4
         if: always()

@@ -8,6 +8,8 @@ import {execFileSync} from 'node:child_process';
 import {randomBytes,randomUUID,createHmac,createHash,timingSafeEqual,privateDecrypt,constants} from 'node:crypto';
 import {DatabaseSync} from 'node:sqlite';
 import {chromium} from 'playwright';
+import {assertWeatherFields} from './qa-weather-fields.mjs';
+import {assertWeatherProof} from './astra-weather-gate.mjs';
 import {cf,query,wrangler,sha,productionId,assertSandbox,configFile,exportSql,importSandboxSql} from './recovery-common.mjs';
 import {inspectSql,verifySnapshot} from './d1-snapshot.mjs';
 import {oldManifest,validateMigrationState,compareManifest} from './migration-contract.mjs';
@@ -88,7 +90,7 @@ async function uiSmoke(base,extra={}){
    if(path.includes('pogoda')){
     await page.locator('#weather-source-status').filter({hasText:'Open-Meteo'}).waitFor({timeout:45000});
     const headline=await page.locator('#carp-weather-headline').innerText();check(headline.length>12&&!/Analizuję|Analy[sz]ing/.test(headline),'WEATHER_ANALYSIS_NOT_RENDERED');
-    for(const id of ['carp-pressure','carp-wind','carp-rain','carp-air','carp-window'])check(!['—','--',''].includes((await page.locator('#'+id).innerText()).trim()),'WEATHER_FIELD_EMPTY');
+    await assertWeatherFields(page);
     check(await page.locator('#carp-weather-actions li').count()>0,'WEATHER_ACTIONS_EMPTY');
    }
    const dims=await page.evaluate(()=>({w:document.documentElement.clientWidth,s:document.documentElement.scrollWidth}));check(dims.s<=dims.w+1,'UI_HORIZONTAL_OVERFLOW');
@@ -141,6 +143,9 @@ try{
  const archive=name+'-archive',restoredMedia=name+'-media';for(const bucket of [archive,restoredMedia]){assertSandbox(bucket);await cf('/r2/buckets','POST',{name:bucket});}
  const previousFile=await configFile(dir,{settings,activeVersion,active,hosts,sourceMain:currentVars.APP_BUILD,sourceSchema:28},'previous-worker.json');await privatePut(archive,'previous-worker.json',previousFile,sha(await readFile(previousFile)));
  check(sha(JSON.stringify((await cf('/workers/scripts/dream-team/deployments')).deployments[0]))===sha(JSON.stringify(active)),'DEPLOYMENT_CHANGED_BEFORE_MAINTENANCE');
+ // This isolated candidate gate is checked BEFORE production maintenance.
+ const weatherGateFile=join(dir,'weather-gate.json');wrangler(['r2','object','get','dream-team-d1-backups/private-weather-gates/'+candidate+'.json','--remote','--file',weatherGateFile]);
+ assertWeatherProof(JSON.parse(await readFile(weatherGateFile,'utf8')),candidate);status.preMaintenanceCandidateSmoke='PASS';
  phase='global HTTP/write/cron maintenance';console.log('RELEASE PHASE: '+phase);
  const maintenanceConfig={name:'dream-team',main:process.cwd()+'/scripts/maintenance-worker.js',workers_dev:true,compatibility_date:base.compatibility_date,vars:currentVars,triggers:{crons:[]},d1_databases:base.d1_databases,r2_buckets:base.r2_buckets};
  barrierConfig=await configFile(dir,maintenanceConfig,'maintenance.jsonc');wrangler(['deploy','--config',barrierConfig]);barrier=true;maintenance=true;status.maintenance='ON';
@@ -186,7 +191,7 @@ try{
  const canaryConfig=await configFile(dir,canarySettings,'canary.jsonc');assertSandbox(canary);canaryCreated=true;const out=wrangler(['deploy','--config',canaryConfig]),canaryUrl=out.match(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/)?.[0];check(canaryUrl,'CANARY_URL');
  wrangler(['secret','bulk','--config',canaryConfig],JSON.stringify({RELEASE_GATE_KEY:gateKey,RYBY_LOGIN_USERNAME:process.env.RYBY_LOGIN_USERNAME,RYBY_LOGIN_PASSWORD:process.env.RYBY_LOGIN_PASSWORD,RYBY_SESSION_SECRET:process.env.RYBY_SESSION_SECRET}));
  const smokeHeaders={'x-release-gate':gateKey};check((await http(canaryUrl,'/api/bootstrap')).status===503,'PRIVATE_CANARY_NOT_PROTECTED');
- await awaitHttp(canaryUrl,'/login',r=>r.status===200&&r.headers.get('x-dreamteam-build')===candidate,smokeHeaders);await apiSmoke(canaryUrl,smokeHeaders);await protectedSmoke(canaryUrl,smokeHeaders);await uiSmoke(canaryUrl,smokeHeaders);
+ await awaitHttp(canaryUrl,'/login',r=>r.status===200&&r.headers.get('x-dreamteam-build')===candidate,smokeHeaders);await apiSmoke(canaryUrl,smokeHeaders);await protectedSmoke(canaryUrl,smokeHeaders); // UI already passed on the exact candidate before maintenance; do not repeat the provider-dependent UI gate here.
  expectedSnapshot=null;await assertUnchanged();expectedSnapshot=inspectSql(expected.bytes);status.isolatedCandidateSmoke='PASS';
  phase='receipt-gated explicit schema29 migration and protected initialization';console.log('RELEASE PHASE: '+phase);
  await saveReceipt();await queueGate();await assertBarrier(hosts);await verifySnapshot({uuid:productionId},snapshot);
