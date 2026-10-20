@@ -12,7 +12,7 @@ import {cf,query,wrangler,sha,productionId,assertSandbox,configFile,exportSql,im
 import {inspectSql,verifySnapshot} from './d1-snapshot.mjs';
 import {oldManifest,validateMigrationState,compareManifest} from './migration-contract.mjs';
 import {privateRestore} from './recovery-transport.mjs';
-import {wrapLocal,insertSql} from './astra-release-model.mjs';
+import {wrapLocal,insertSql,assertPreparedFiles} from './astra-release-model.mjs';
 import {initializeProtectedAccount} from '../src/auth.js';
 const candidate=process.env.RELEASE_CANDIDATE;
 const production='https://dream-team.sewerynski00.workers.dev';
@@ -125,12 +125,14 @@ try{
  const hosts=[...new Set([production,'https://dream-team.'+subdomain.subdomain+'.workers.dev',...(Array.isArray(domains)?domains:domains.domains||[]).filter(d=>d.service==='dream-team').map(d=>'https://'+d.hostname)])];
  phase='verify private preflight receipt and encrypted bootstrap credential';console.log('RELEASE PHASE: '+phase);
  const receiptFile=join(dir,'preflight.json');wrangler(['r2','object','get','dream-team-d1-backups/'+process.env.RELEASE_MANIFEST_KEY,'--remote','--file',receiptFile]);await chmod(receiptFile,0o600);preflight=JSON.parse(await readFile(receiptFile,'utf8'));
- check(preflight.format==='dream-team-astra-preflight-v1'&&preflight.candidate===candidate&&preflight.sourceSchema===28&&preflight.schema===29,'PREFLIGHT_RECEIPT_MISMATCH');check(preflight.productionD1Writes===0&&preflight.sqlSha256&&preflight.bookmark,'PREFLIGHT_CHECKPOINT_MISSING');check(preflight.migrationRehearsal==='PASS'&&preflight.r2Restore==='PASS'&&preflight.previousWorkerVersion===status.previousVersion,'PREFLIGHT_PROOF_MISMATCH');check(Date.now()-Date.parse(preflight.createdAt)<12*60*60*1000,'PREFLIGHT_TOO_OLD');assertSandbox(preflight.bootstrapPrivateKeyBucket);
+ check(preflight.format==='dream-team-astra-preflight-v1'&&/^[a-f0-9]{40}$/.test(preflight.candidate||'')&&preflight.sourceSchema===28&&preflight.schema===29,'PREFLIGHT_RECEIPT_MISMATCH');if(preflight.candidate!==candidate){execFileSync('git',['fetch','--no-tags','--depth=1','origin',preflight.candidate],{stdio:['ignore','pipe','pipe']});const files=execFileSync('git',['diff','--name-only','--no-renames','-z',preflight.candidate,candidate],{encoding:'utf8'}).split('\0').filter(Boolean);assertPreparedFiles(files);status.preflightSourceCommit=preflight.candidate;status.preflightRuntimeEquivalence='PASS';}
+ check(preflight.productionD1Writes===0&&preflight.sqlSha256&&preflight.bookmark,'PREFLIGHT_CHECKPOINT_MISSING');check(preflight.migrationRehearsal==='PASS'&&preflight.r2Restore==='PASS'&&preflight.previousWorkerVersion===status.previousVersion,'PREFLIGHT_PROOF_MISMATCH');check(Date.now()-Date.parse(preflight.createdAt)<12*60*60*1000,'PREFLIGHT_TOO_OLD');assertSandbox(preflight.bootstrapPrivateKeyBucket);
  const privateKeyFile=join(dir,'bootstrap-private.pem');wrangler(['r2','object','get',preflight.bootstrapPrivateKeyBucket+'/'+preflight.bootstrapPrivateKeyKey,'--remote','--file',privateKeyFile]);await chmod(privateKeyFile,0o600);
  const envelope=JSON.parse(privateDecrypt({key:await readFile(privateKeyFile),oaepHash:'sha256',padding:constants.RSA_PKCS1_OAEP_PADDING},Buffer.from(process.env.PROTECTED_BOOTSTRAP_ENVELOPE||'','base64')).toString('utf8'));
  check(envelope.candidate===candidate&&envelope.preflightRun===preflight.run&&envelope.expiresAt>Date.now()&&typeof envelope.password==='string'&&envelope.password.length>0&&envelope.password.length<=256,'BOOTSTRAP_ENVELOPE_MISMATCH');protectedPassword=envelope.password;
  const proofRuns=await fetch('https://api.github.com/repos/serox94/dream-team/actions/runs?head_sha='+candidate+'&per_page=100',{headers:{authorization:'Bearer '+process.env.GITHUB_TOKEN,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(20000)});check(proofRuns.ok,'CANDIDATE_CI_NOT_READABLE');const candidateRuns=(await proofRuns.json()).workflow_runs;
  for(const path of ['.github/workflows/validate.yml','.github/workflows/responsive-qa.yml'])check(candidateRuns.some(r=>r.head_sha===candidate&&r.path===path&&r.conclusion==='success'),'CANDIDATE_CI_NOT_PASS');
+ check((await query(productionId,"SELECT id FROM auth_accounts WHERE username='ryby' COLLATE NOCASE")).results.length===0&&(await query(productionId,"SELECT id FROM anglers WHERE id='system-ryby'")).results.length===0,'SYSTEM_ACCOUNT_COLLISION');
  phase='existing credentials and session continuity baseline';console.log('RELEASE PHASE: '+phase);
  const health=await http(production,'/login');check(health.status===200&&health.headers.get('x-dreamteam-build')===currentVars.APP_BUILD&&health.headers.get('x-dreamteam-auth-mode')==='individual','SOURCE_BUILD_NOT_VERIFIED');
  continuityCookie=await login(production,'Patryk');const parts=continuityCookie.slice(continuityCookie.indexOf('=')+1).split('.');check(parts.length===4,'COOKIE_FORMAT');

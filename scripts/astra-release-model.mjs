@@ -6,3 +6,10 @@ export function wrapLocal(db){
 }
 const sqlLiteral=value=>value===null?'NULL':typeof value==='number'?String(value):"CAST(X'"+Buffer.from(value).toString('hex')+"' AS TEXT)";
 export function insertSql(db,table,key,value){const rows=db.prepare('SELECT * FROM "'+table+'" WHERE "'+key+'"=?').all(value);check(rows.length===1,'INITIALIZATION_ROW_COUNT');const row=rows[0];return 'INSERT INTO "'+table+'" ('+Object.keys(row).map(k=>'"'+k+'"').join(',')+') VALUES ('+Object.values(row).map(sqlLiteral).join(',')+');';}
+
+// A private data restore proof remains valid across documentation/test-only commits.
+// Every runtime, migration, dependency and workflow change requires a new proof.
+export function assertPreparedFiles(files){
+ for(const file of files)check(/^(?:tests\/|scripts\/(?:qa-astra-browser|qa-offline-ready|responsive-qa)\.mjs$|DREAMTEAM_AUDIT_FIXES_REPORT\.md$)/.test(file),'PREFLIGHT_RUNTIME_CHANGED');
+ return true;
+}

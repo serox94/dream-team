@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {database} from './db.mjs';import {migrateCopy,oldManifest,compareManifest} from '../scripts/migration-contract.mjs';
-import {initializeProtectedAccount} from '../src/auth.js';import {wrapLocal,insertSql} from '../scripts/astra-release-model.mjs';
+import {initializeProtectedAccount} from '../src/auth.js';import {wrapLocal,insertSql,assertPreparedFiles} from '../scripts/astra-release-model.mjs';
 test('release schema28-to29 and private system initialization preserve all original rows, credentials and sessions',async()=>{
  const source=database({through:'0028'}),target=database({through:'0028'});const env={DB:source,RYBY_SESSION_SECRET:'isolated-fixture-strong-session-secret',RYBY_LOGIN_PASSWORD:'isolated-fixture-shared',RYBY_LOGIN_USERNAME:'fixture'};
  try{
@@ -13,4 +13,9 @@ test('release schema28-to29 and private system initialization preserve all origi
   assert.deepEqual(source.sqlite.prepare('SELECT * FROM auth_sessions').all(),sessions);assert.deepEqual(source.sqlite.prepare('SELECT * FROM auth_credential').all(),credential);for(const old of originalAccounts){const after=source.sqlite.prepare('SELECT * FROM auth_accounts WHERE id=?').get(old.id);delete after.protected;assert.deepEqual(after,old);}
   assert.throws(()=>target.sqlite.prepare('UPDATE auth_accounts SET active=0 WHERE id=?').run('account-system-ryby'),/PROTECTED_ACCOUNT/);assert.throws(()=>target.sqlite.prepare('DELETE FROM auth_accounts WHERE id=?').run('account-system-ryby'),/PROTECTED_ACCOUNT/);
  }finally{source.close();target.close();}
+});
+
+test('private restore proof reuse is limited to tests and report changes',()=>{
+ assert.equal(assertPreparedFiles(['scripts/qa-astra-browser.mjs','tests/qa-offline-ready.test.mjs','DREAMTEAM_AUDIT_FIXES_REPORT.md']),true);
+ for(const path of ['src/worker.js','public/sw.js','migrations/0029_audit_account_guards.sql','package-lock.json','.github/workflows/deploy-private.yml','scripts/recovery-common.mjs'])assert.throws(()=>assertPreparedFiles([path]),/PREFLIGHT_RUNTIME_CHANGED/);
 });
