@@ -8,10 +8,13 @@ on:
       action:
         description: Approved operation (inspect is strictly read-only)
         type: choice
-        options: [inspect, prepare]
+        options: [inspect, prepare, deploy]
         default: inspect
       recovery_manifest_key:
         description: Private release manifest key (not used for inspection)
+        required: false
+      protected_bootstrap_envelope:
+        description: RSA-OAEP encrypted initial account secret; never enter a plaintext password
         required: false
 concurrency:
   group: dream-team-production
@@ -87,4 +90,57 @@ jobs:
         with:
           name: astra-preflight-safe-status
           path: candidate/astra-release-status/preflight.json
+          retention-days: 3
+
+  approved-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'deploy' && github.ref == 'refs/heads/ops/astra-release-20261019'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: operator
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          path: candidate
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: candidate/package-lock.json
+      - run: npm ci
+        working-directory: candidate
+      - name: Install disposable browser tooling
+        working-directory: candidate
+        run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Build the exact tested static assets
+        working-directory: candidate
+        run: node scripts/build.mjs
+      - name: Frozen checkpoint, explicit schema29 migration and verified production release
+        working-directory: candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+          DREAMTEAM_PRODUCTION_APPROVED: 'yes'
+          RELEASE_ACTION: ${{ inputs.action }}
+          RELEASE_CANDIDATE: ${{ inputs.ref }}
+          RELEASE_MANIFEST_KEY: ${{ inputs.recovery_manifest_key }}
+          PROTECTED_BOOTSTRAP_ENVELOPE: ${{ inputs.protected_bootstrap_envelope }}
+        run: |
+          cp ../operator/scripts/astra-production-release.mjs scripts/astra-production-release.mjs
+          cp ../operator/scripts/astra-release-model.mjs scripts/astra-release-model.mjs
+          node scripts/astra-production-release.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: astra-production-safe-status
+          path: candidate/astra-release-status/release.json
           retention-days: 3
