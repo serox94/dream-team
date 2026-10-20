@@ -54,7 +54,7 @@ test('missing meteo measurements remain missing, never zero',()=>{
    delete data.hourly.precipitation;
    delete data.hourly.pressure_msl;
    const out=dom.window.DreamCarpWeather.analyse(data,'pl');
-   assert.match(out.rain,/—/);
+   assert.match(out.rain,/Brak danych/);
    assert.match(out.pressure,/brak danych/);
  }finally{dom.window.close();}
 });
@@ -70,4 +70,20 @@ test('Open-Meteo forecast requests probability data for 24-hour precipitation pl
   assert.match(request.searchParams.get('hourly'),/pressure_msl/);
   assert.match(request.searchParams.get('hourly'),/wind_direction_10m/);
  }finally{DB.close();}
+});
+
+for(const lang of ['pl','en'])test(`missing weather is explicitly labelled and never reassures: ${lang}`,()=>{
+ const dom=setup(),data=weatherFixture();
+ try{
+  for(const k of ['pressure_msl','temperature_2m','wind_speed_10m','wind_gusts_10m','wind_direction_10m','precipitation','weather_code']){delete data.hourly[k];delete data.current[k];}
+  const report=dom.window.DreamCarpWeather.render(data,lang);
+  assert.equal(report.safety.state,'UNKNOWN');assert.equal(report.safety.complete,false);
+  for(const key of ['pressure','wind','rain'])assert.match(report[key],lang==='pl'?/Brak danych/:/No data/);
+  assert.doesNotMatch(report.window,/Spokojniejsze 3 h od|Calmer 3 h starting/);
+  const absent=dom.window.DreamCarpWeather.render({...data,hourly:{}},lang);
+  assert.equal(absent.available,false);assert.equal(absent.safety.state,'UNKNOWN');
+  for(const id of ['carp-pressure','carp-wind','carp-rain','carp-air','carp-window'])assert.match(dom.window.document.getElementById(id).textContent,lang==='pl'?/Brak danych/:/No data/);
+  data.hourly={};data.current.weather_code=95;
+  assert.equal(dom.window.DreamCarpWeather.analyse(data,lang).safety.state,'DANGER');
+ }finally{dom.window.close();}
 });

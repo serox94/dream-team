@@ -3,7 +3,6 @@
   const n = v => typeof v === 'number' && Number.isFinite(v) ? v : null;
   const tr = (lang,pl,en) => lang === 'en' ? en : pl;
   const at = (hours,key,index) => n(hours?.[key]?.[index]);
-  const fmt = (number,unit='',digits=0) => number===null?'—':number.toFixed(digits)+unit;
   const dateHour = time => typeof time==='string' ? time.slice(11,16) : '—';
   const storm = code => [95,96,99].includes(code);
   const codes=new Set([0,1,2,3,45,48,51,53,55,56,57,61,63,65,66,67,71,73,75,77,80,81,82,85,86,95,96,99]);
@@ -11,7 +10,7 @@
   const hazard = x => storm(x.weather_code) || (n(x.wind_gusts_10m)!==null && x.wind_gusts_10m>=50) || (n(x.wind_speed_10m)!==null && x.wind_speed_10m>=40);
   const wrap = degrees => ((degrees%360)+360)%360;
   const compass = (deg,lang) => {
-    if(deg===null)return '—';
+    if(deg===null)return tr(lang,'Brak danych','No data');
     const names=lang==='en'?['N','NE','E','SE','S','SW','W','NW']:['N','NE','E','SE','S','SW','W','NW'];
     return names[Math.round(wrap(deg)/45)%8]+' ('+Math.round(wrap(deg))+'°)';
   };
@@ -38,10 +37,12 @@
     return {state,complete:known,coverage,count:samples.length,messages,threats,samples};
   }
   function analyse(data,lang='pl') {
+    const missing=tr(lang,'Brak danych','No data');
+    const fmt=(number,unit='',digits=0)=>number===null?missing:number.toFixed(digits)+unit;
     const assessment=safety(data,lang);
     const hours=data?.hourly||{},idx=window.DreamConditions?.hourIndex(data)??0;
     const total=Array.isArray(hours.time)?hours.time.length:0;
-    if(!total)return {available:false,safety:assessment,headline:tr(lang,'Brak prognozy godzinowej.','Hourly forecast unavailable.'),notes:assessment.messages,riskLabel:tr(lang,'Brak danych do oceny zagrożeń','Insufficient hazard data')};
+    if(!total)return {available:false,safety:assessment,pressure:missing,wind:missing,rain:missing,air:missing,window:tr(lang,'Brak danych — nie można potwierdzić spokojnego okna 3 h.','No data — a calm 3 h window cannot be confirmed.'),limitations:tr(lang,'Brak danych prognozy; sprawdź aktualne ostrzeżenia.','Forecast data unavailable; check current warnings.'),headline:tr(lang,'Brak prognozy godzinowej.','Hourly forecast unavailable.'),notes:assessment.messages,riskLabel:tr(lang,'Brak danych do oceny zagrożeń','Insufficient hazard data')};
     const forward=Array.from({length:Math.min(24,total-idx)},(_,i)=>idx+i);
     const in12=forward.slice(0,12);
     const samples=forward.map(i=>({i,time:hours.time[i],weather_code:hours.weather_code?.[i],wind_speed_10m:at(hours,'wind_speed_10m',i),wind_gusts_10m:at(hours,'wind_gusts_10m',i),precipitation:at(hours,'precipitation',i)}));
@@ -74,7 +75,7 @@
       (probability!==null?tr(lang,' · maks. prawdopodobieństwo w pojedynczej godzinie: ',' · maximum probability in a single hour: ')+fmt(probability,'%',0):'');
     const tempOut=temperatures.length?
       tr(lang,'Powietrze 24 h: ','24 h air: ')+fmt(Math.min(...temperatures),'°C',1)+'–'+fmt(Math.max(...temperatures),'°C',1):
-      tr(lang,'Brak zakresu temperatury powietrza.','Air temperature range unavailable.');
+      tr(lang,'Brak danych temperatury powietrza.','No data for air temperature range.');
     // This is a work/safety window, NOT a prediction of bites.
     let windowStart=null;
     for(let offset=0;offset<Math.min(19,samples.length-2);offset++){
