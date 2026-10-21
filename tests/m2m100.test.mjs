@@ -9,5 +9,5 @@ test('chunks bound encoder input and preserve URLs, line breaks and markdown mar
 });
 test('durable budget fails closed and concurrent duplicate chunks make one model call',async()=>{
  const DB=database();let calls=0;const env={DB,TRANSLATION_DAILY_UNITS:'1200',AI:{run:async()=>{calls++;await new Promise(r=>setTimeout(r,20));return {translated_text:'Bring equipment.'};}}};
- try{const a=await Promise.all([translateField(env,'Zabierz sprzęt.','pl','en'),translateField(env,'Zabierz sprzęt.','pl','en')]);assert.equal(calls,1);assert.ok(a.some(x=>x.deferred));assert.equal((await translateField(env,'Zabierz sprzęt.','pl','en')).text,'Bring equipment.');await assert.rejects(()=>modelCall(env,'Sprawdź sprzęt','pl','en'),/TRANSLATION_DAILY_BUDGET/);assert.equal(calls,1);}finally{DB.close();}
+ try{const a=await Promise.all([translateField(env,'Zabierz sprzęt.','pl','en'),translateField(env,'Zabierz sprzęt.','pl','en')]);assert.equal(calls,1);assert.ok(a.some(x=>x.deferred));assert.equal((await translateField(env,'Zabierz sprzęt.','pl','en')).text,'Bring equipment.');env.TRANSLATION_DAILY_UNITS='20';await assert.rejects(()=>modelCall(env,'Sprawdź sprzęt','pl','en'),/TRANSLATION_DAILY_BUDGET/);assert.equal(calls,1);}finally{DB.close();}
 });

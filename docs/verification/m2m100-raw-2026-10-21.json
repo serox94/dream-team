@@ -1,0 +1,290 @@
+[
+  {
+    "number": 1,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Kulki proteinowe",
+    "raw": "Protein Bullets"
+  },
+  {
+    "number": 2,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Podbierak",
+    "raw": "Pickup"
+  },
+  {
+    "number": 3,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Namiot",
+    "raw": "tents"
+  },
+  {
+    "number": 4,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Łódka zanętowa",
+    "raw": "Boat Engraving"
+  },
+  {
+    "number": 5,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Mata karpiowa",
+    "raw": "Mata Carpiowa"
+  },
+  {
+    "number": 6,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Zestaw końcowy",
+    "raw": "Final Set"
+  },
+  {
+    "number": 7,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Worek do ważenia",
+    "raw": "Bag for Weighting"
+  },
+  {
+    "number": 8,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Śpiwór",
+    "raw": "Sleeping"
+  },
+  {
+    "number": 9,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Zapasowe baterie",
+    "raw": "Reserve Batteries"
+  },
+  {
+    "number": 10,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Podpórki pod wędki",
+    "raw": "Support for fishing"
+  },
+  {
+    "number": 11,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Przypon karpiowy",
+    "raw": "Carpentry"
+  },
+  {
+    "number": 12,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Żyłka główna",
+    "raw": "HIGH PRINCIPAL"
+  },
+  {
+    "number": 13,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Haczyk bezzadziorowy",
+    "raw": "Hacks Untold"
+  },
+  {
+    "number": 14,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Sygnalizator brań",
+    "raw": "Brain Signal"
+  },
+  {
+    "number": 15,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Zabierz podbierak i matę karpiową.",
+    "raw": "Bring a carpet and a carpet."
+  },
+  {
+    "number": 16,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Po zmroku *** żerowały przy trzcinach.",
+    "raw": "In the dark, the fish eaten at the trees."
+  },
+  {
+    "number": 17,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Na stanowisku jest prąd i woda pitna.",
+    "raw": "There is electricity and drinking water."
+  },
+  {
+    "number": 18,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Landing net",
+    "raw": "lądowanie netto"
+  },
+  {
+    "number": 19,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Bait boat",
+    "raw": "Łódź Bait"
+  },
+  {
+    "number": 20,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Sleeping bag",
+    "raw": "Śpiąca torba"
+  },
+  {
+    "number": 21,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Carp unhooking mat",
+    "raw": "Karp Unhooking Mat"
+  },
+  {
+    "number": 22,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Terminal tackle",
+    "raw": "Rozwiązywanie terminali"
+  },
+  {
+    "number": 23,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Weigh sling",
+    "raw": "Waga Sling"
+  },
+  {
+    "number": 24,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Spare batteries",
+    "raw": "Oszczędzaj baterie"
+  },
+  {
+    "number": 25,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Rod rests",
+    "raw": "Rod pozostaje"
+  },
+  {
+    "number": 26,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Barbless hook",
+    "raw": "bezbarwny hook"
+  },
+  {
+    "number": 27,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Main line",
+    "raw": "Główna linia"
+  },
+  {
+    "number": 28,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Bite alarm",
+    "raw": "Ugryź alarm"
+  },
+  {
+    "number": 29,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Bring a tent and a sleeping bag.",
+    "raw": "Weź ze sobą namiot i torbę do spania."
+  },
+  {
+    "number": 30,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "The fish were feeding near the reeds after dark.",
+    "raw": "Ryby karmiły się w pobliżu żłobka po zmroku."
+  },
+  {
+    "number": 31,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "The peg has electricity and drinking water.",
+    "raw": "Gmina posiada prąd i wodę pitną."
+  },
+  {
+    "number": 32,
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Check the batteries before using the bait boat.",
+    "raw": "Sprawdź baterie przed użyciem łodzi."
+  }
+]

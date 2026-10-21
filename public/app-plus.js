@@ -627,6 +627,7 @@
           const content = createNode("div", "check-item-content");
           const title = createNode("div", `check-item-title${item.done ? " done" : ""}`, normalizeTextSafe(window.DreamContent?.text('checklist',item.id,'label',item.item_name)??item.item_name, 80));
 
+          Object.assign(title.dataset,{contentEntity:'checklist',contentId:String(item.id),contentField:'label',contentOriginal:item.item_name});
           const metaParts = [];
           if (item.pendingSync) metaParts.push("Oczekuje na synchronizację");
           if (item.quantity !== null && item.quantity !== undefined) {
@@ -643,7 +644,7 @@
           badges.append(catBadge, statusBadge);
 
           content.append(title, meta, badges);
-          if(item.notes){const note=createNode('p','catch-note',window.DreamContent?.text('checklist',item.id,'notes',item.notes)??item.notes);content.append(note);}
+          if(item.notes){const note=createNode('p','catch-note',window.DreamContent?.text('checklist',item.id,'notes',item.notes)??item.notes);Object.assign(note.dataset,{contentEntity:'checklist',contentId:String(item.id),contentField:'notes',contentOriginal:item.notes});content.append(note);}
           left.append(checkbox, content);
 
           const actions = createNode("div", "check-item-actions");

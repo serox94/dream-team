@@ -559,6 +559,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/pro2-ai-run.mjs
+      - name: Install real Chromium for two-account translation verification
+        run: |
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Patryk PL, Maciek EN, shared UI records, edit, restart and offline
+        env:
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/qa-pro2-ai-live.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
