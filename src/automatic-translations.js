@@ -31,14 +31,14 @@ export async function processTranslations(request,env,active){
   let output=glossary(source.sourceText,language,target),provider='glossary';
   const cached=await env.DB.prepare('SELECT text,provider FROM translation_cache WHERE source_hash=? AND source_language=? AND language=?').bind(source.sourceHash,language,target).first();if(cached){output=cached.text;provider=cached.provider;}
   if(!output&&providerReady(env)&&processed<8&&source.sourceText.length<=3000&&(!job||job.attempts<3)&&(!job||job.status==='pending'||Date.now()-Date.parse(job.updated_at+'Z')>60000)){
-   const lease=await env.DB.prepare("UPDATE translation_jobs SET status='processing',updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=? AND source_hash=? AND status<>'processing'").bind(...args,target,source.sourceHash).run();
+   const lease=await env.DB.prepare("UPDATE translation_jobs SET status='processing',attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=? AND source_hash=? AND (status<>'processing' OR updated_at<datetime('now','-5 minutes'))").bind(...args,target,source.sourceHash).run();
    if(!lease.meta.changes)continue;
    processed++;provider='cloudflare_m2m100';
    let deadline;try{const response=await Promise.race([env.AI.run('@cf/meta/m2m100-1.2b',{text:source.sourceText,source_lang:language==='pl'?'polish':'english',target_lang:target==='pl'?'polish':'english'}),new Promise((_,reject)=>deadline=setTimeout(()=>reject(Error('PROVIDER_TIMEOUT')),12000))]);
     output=response?.translated_text;if(typeof output!=='string'||!output.trim()||output.length>20000)throw Error('INVALID_PROVIDER_OUTPUT');
     const tokens=v=>v.match(/https?:\/\/\S+|\b\d+(?:[.,]\d+)?\b/g)||[];
     if(JSON.stringify(tokens(output))!==JSON.stringify(tokens(source.sourceText)))throw Error('PROVIDER_TOKENS_CHANGED');
-   }catch(error){output=null;failed++;await env.DB.prepare("UPDATE translation_jobs SET status='failed',attempts=attempts+1,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=? AND source_hash=?").bind(['PROVIDER_TIMEOUT','INVALID_PROVIDER_OUTPUT','PROVIDER_TOKENS_CHANGED'].includes(error.message)?error.message:'PROVIDER_UNAVAILABLE',...args,target,source.sourceHash).run();}finally{clearTimeout(deadline);}
+   }catch(error){output=null;failed++;await env.DB.prepare("UPDATE translation_jobs SET status='failed',last_error=?,updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=? AND source_hash=?").bind(['PROVIDER_TIMEOUT','INVALID_PROVIDER_OUTPUT','PROVIDER_TOKENS_CHANGED'].includes(error.message)?error.message:'PROVIDER_UNAVAILABLE',...args,target,source.sourceHash).run();}finally{clearTimeout(deadline);}
   }
   if(!output)continue;
   // The source may have changed while inference was in flight. Atomic source/revision guards prevent stale writes.
