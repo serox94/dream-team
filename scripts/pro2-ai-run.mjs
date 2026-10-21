@@ -37,11 +37,10 @@ try{
  const login=async username=>{const r=await fetch(status.previewUrl+'/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password:process.env.RYBY_LOGIN_PASSWORD}),redirect:'manual'});assert.equal(r.status,303,'ACCOUNT_LOGIN_'+username);return r.headers.get('set-cookie').split(';')[0];};
  const cookie=await login('Patryk');
  const api=async(path,body,lang='pl',session=cookie)=>{for(let n=0;n<3;n++){const r=await fetch(status.previewUrl+path,{method:body===undefined?'GET':'POST',headers:{cookie:session,'content-type':'application/json','accept-language':lang},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(45000)});if(r.ok)return r.json();if([429,500,502,503,504].includes(r.status)&&n<2){await r.body?.cancel();await new Promise(resolve=>setTimeout(resolve,1000*(n+1)));continue;}const data=await r.json().catch(()=>({}));throw Object.assign(Error('PREVIEW_HTTP_'+r.status),{safeError:data.error});}};
- phase='32 real Cloudflare Llama alternatives to the recorded raw M2M100 benchmark';status.samples=[];
- for(let probe=0;probe<32;probe++){
-  const started=Date.now(),answer=await api('/api/content-translations/process',{tripId:'next-trip',probe,reviewOnly:true});status.samples.push({...answer,ms:Date.now()-started});
-  await writeFile('pro2-ai-status/model-responses.json',JSON.stringify(status.samples,null,2));console.log('M2M100_SAMPLE '+JSON.stringify({number:probe+1,...answer}));
- }
+ phase='retained real 32-example Cloudflare 70B benchmark';
+ const proof=JSON.parse(await readFile('docs/verification/llama70b-live-2026-10-21.json','utf8'));assert.equal(proof.model,'@cf/meta/llama-3.3-70b-instruct-fp8-fast');assert.equal(proof.samples.length,32);
+ status.samples=proof.samples;status.benchmarkSource=proof.workflow;status.benchmarkReused=true;
+ await writeFile('pro2-ai-status/model-responses.json',JSON.stringify(status.samples,null,2));
  status.quality=assessSamples(status.samples);await writeFile('pro2-ai-status/alternative-quality.json',JSON.stringify(status.quality,null,2));
  assert.ok(status.quality.pass>=30&&status.quality.checks.slice(0,9).every(x=>x.pass),'ALTERNATIVE_QUALITY_GATE');
  phase='controlled resumable archive backfill';status.batches=0;
@@ -58,6 +57,7 @@ try{
   if(!outstanding)break;if(pass<3)await new Promise(r=>setTimeout(r,20000));
  }
  status.after=(await query(dbId,'SELECT status,COUNT(*) count FROM translation_jobs GROUP BY status')).results;
+ status.unresolved=(await query(dbId,"SELECT entity,record_id,field,language,status,attempts,last_error FROM translation_jobs WHERE status NOT IN ('complete','superseded')")).results;
  status.errors=(await query(dbId,"SELECT last_error,COUNT(*) count FROM translation_jobs WHERE status NOT IN ('complete','superseded') GROUP BY last_error")).results;
  status.providers=(await query(dbId,'SELECT origin,COUNT(*) count FROM content_translations GROUP BY origin')).results;
  status.budget=(await query(dbId,"SELECT key,value FROM app_settings WHERE key LIKE 'translation.budget.%'")).results;
