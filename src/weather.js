@@ -15,7 +15,7 @@ function normalizeTimes(data,location){
  data.daily.time=data.daily.time.map(v=>typeof v==='number'?new Date((v+(data.utc_offset_seconds||0))*1000).toISOString().slice(0,10):v);
  for(const field of ['sunrise','sunset'])if(data.daily[field])data.daily[field]=data.daily[field].map(wall);
  for(const group of ['current_units','hourly_units','daily_units'])if(data[group]){data[group].time='iso8601';if(group!=='daily_units')data[group].time_epoch='unixtime';}
- data.dreamteam={provider:'Open-Meteo',fetchedAt:new Date().toISOString(),requestedCoordinates:location,waterTemperature:null,dissolvedOxygen:null,measurementStatus:'not_measured'};return data;
+ data.dreamteam={provider:'Open-Meteo',fetchedAt:new Date().toISOString(),requestedCoordinates:location,waterTemperature:null,measurementStatus:'not_measured'};return data;
 }
 
 export async function weatherForTrip(env, tripId) {
@@ -29,7 +29,7 @@ export async function weatherForTrip(env, tripId) {
 
   const params = new URLSearchParams({
     latitude:String(location.latitude), longitude:String(location.longitude),
-    ...variables,timezone:'auto',forecast_days:'7',past_hours:'3',temperature_unit:'celsius',wind_speed_unit:'kmh',precipitation_unit:'mm',timeformat:'unixtime'
+    ...variables,timezone:'auto',forecast_days:'7',past_hours:'12',temperature_unit:'celsius',wind_speed_unit:'kmh',precipitation_unit:'mm',timeformat:'unixtime'
   });
   const cache=env.WEATHER_CACHE??globalThis.caches?.default;
   const now=()=>env.WEATHER_NOW?.()??Date.now();

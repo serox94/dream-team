@@ -563,7 +563,7 @@
     let list = [...items];
 
     if (APP_STATE.checklistSearch) {
-      list = list.filter((item) => `${item.item_name} ${item.category} ${item.quantity ?? ''} ${item.unit ?? ''}`.toLocaleLowerCase('pl').includes(APP_STATE.checklistSearch));
+      list = list.filter((item) => `${item.item_name} ${item.category} ${window.DreamContent?.text('checklist',item.id,'label',item.item_name)??item.item_name} ${window.DreamContent?.category(item.category)??item.category} ${item.quantity ?? ''} ${item.unit ?? ''}`.toLocaleLowerCase('pl').includes(APP_STATE.checklistSearch));
     }
 
     if (APP_STATE.checklistFilter === "done") {
@@ -594,7 +594,7 @@
       const section = createNode("details", "checklist-group");
       section.dataset.category=category;
       section.open=saved[definition?.id||category]??index===0;
-      const header=createNode('summary','check-category-summary',`${category}${definition&&!definition.active?' · ukryta':''}  ${done}/${all.length}`);
+      const header=createNode('summary','check-category-summary',`${window.DreamContent?.category(category)??category}${definition&&!definition.active?' · '+(window.DreamI18n?.lang==='en'?'hidden':'ukryta'):''}  ${done}/${all.length}`);
       section.append(header);section.addEventListener('toggle',()=>{saved[definition?.id||category]=section.open;localStorage.setItem(stateKey,JSON.stringify(saved));});
       const wrap = createNode("div", "checklist-items");
       if(definition?.active){const add=createNode('button','secondary-btn check-add-in-category','+ Dodaj pozycję');add.type='button';add.onclick=()=>{const select=$('check-category');select.value=category;$('checklist-form').scrollIntoView({behavior:'smooth',block:'start'});$('check-name').focus();};wrap.append(add);}
@@ -625,8 +625,9 @@
           });
 
           const content = createNode("div", "check-item-content");
-          const title = createNode("div", `check-item-title${item.done ? " done" : ""}`, normalizeTextSafe(item.item_name, 80));
+          const title = createNode("div", `check-item-title${item.done ? " done" : ""}`, normalizeTextSafe(window.DreamContent?.text('checklist',item.id,'label',item.item_name)??item.item_name, 80));
 
+          Object.assign(title.dataset,{contentEntity:'checklist',contentId:String(item.id),contentField:'label',contentOriginal:item.item_name});
           const metaParts = [];
           if (item.pendingSync) metaParts.push("Oczekuje na synchronizację");
           if (item.quantity !== null && item.quantity !== undefined) {
@@ -638,11 +639,12 @@
           const meta = createNode("div", "check-item-meta", metaParts.join(" • "));
           const badges = createNode("div", "check-item-badges");
 
-          const catBadge = createNode("span", "check-item-badge", item.category);
+          const catBadge = createNode("span", "check-item-badge", window.DreamContent?.category(item.category)??item.category);
           const statusBadge = createNode("span", "check-item-badge", item.done ? "✅ gotowe" : "🟡 otwarte");
           badges.append(catBadge, statusBadge);
 
           content.append(title, meta, badges);
+          if(item.notes){const note=createNode('p','catch-note',window.DreamContent?.text('checklist',item.id,'notes',item.notes)??item.notes);Object.assign(note.dataset,{contentEntity:'checklist',contentId:String(item.id),contentField:'notes',contentOriginal:item.notes});content.append(note);}
           left.append(checkbox, content);
 
           const actions = createNode("div", "check-item-actions");

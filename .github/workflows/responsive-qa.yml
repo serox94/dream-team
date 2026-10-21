@@ -45,11 +45,16 @@ jobs:
       - name: Targeted Astra browser regression on disposable SQLite
         if: steps.scope.outputs.restore_only != 'true'
         run: node scripts/qa-astra-browser.mjs
+      - name: PRO2 Chromium weather, water and offline regression
+        if: steps.scope.outputs.restore_only != 'true'
+        run: node scripts/qa-pro2.mjs && node scripts/qa-pro2-features.mjs
       - name: Keep screenshots of fixture data for visual review
         if: always() && steps.scope.outputs.restore_only != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ryby-responsive-fixture
-          path: qa-screenshots/
+          path: |
+            qa-screenshots/
+            qa-pro2/
           if-no-files-found: ignore
           retention-days: 3

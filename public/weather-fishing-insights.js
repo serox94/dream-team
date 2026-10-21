@@ -93,7 +93,7 @@
     if(directionNow!==null)notes.push(tr(lang,'Wiatr wieje z ','Wind blows from ')+compass(directionNow,lang)+tr(lang,'. Sprawdź falowanie oraz brzeg, na który wieje; kierunek wiatru sam nie wskazuje miejsca karpi.','. Check surface waves and the windward bank; wind direction alone does not locate carp.'));
     if(delta!==null&&Math.abs(delta)>=2)notes.push(tr(lang,'Ciśnienie zmieniło się o ','Pressure changed by ')+fmt(delta,' hPa',1)+tr(lang,' w 3 h. Obserwuj reakcję ryb zamiast traktować zmianę jako pewną prognozę brań.',' over 3 h. Observe fish response rather than treating pressure as a bite predictor.'));
     if(temperatures.length&&Math.max(...temperatures)-Math.min(...temperatures)>=6)notes.push(tr(lang,'Duże dobowe wahanie temperatury POWIETRZA. Nie zakładaj takiej samej zmiany temperatury głębokiej wody.','Large AIR temperature range. Do not assume the deep-water temperature changes by the same amount.'));
-    notes.push(tr(lang,'Przed zmianą miejsca sprawdź oznaki żerowania, echosondę i prezentację zestawu; mierz temperaturę i tlen wody, jeśli masz sprzęt.','Before moving rigs, check feeding signs, sonar and rig presentation; measure water temperature and oxygen if equipped.'));
+    notes.push(tr(lang,'Przed zmianą miejsca sprawdź oznaki żerowania, echosondę i prezentację zestawu; mierz temperaturę wody, jeśli masz sprzęt.','Before moving rigs, check feeding signs, sonar and rig presentation; measure water temperature if equipped.'));
     if(!safetyNote&&noStorm&&notes.length<3)notes.unshift(tr(lang,'Brak wykrytych skrajnych warunków w 24 h, ale sprawdzaj bieżącą pogodę i ostrzeżenia.','No extreme conditions identified in the next 24 h; keep checking live weather and warnings.'));
     const headline=assessment.state==='DANGER'?tr(lang,'Uwaga: ryzyko pogodowe w ciągu 24 h','Warning: weather hazard within 24 h'):
       !assessment.complete?tr(lang,'Niepełna prognoza — bezpieczeństwo niepotwierdzone','Incomplete forecast — safety unknown'):
@@ -105,7 +105,7 @@
       windowShort:windowStart?dateHour(windowStart):'—',
       riskLabel:assessment.state==='DANGER'?tr(lang,'Zagrożenie pogodowe','Weather hazard'):!assessment.complete?tr(lang,'Brak danych do oceny zagrożeń','Insufficient hazard data'):maxGust!==null&&maxGust>=30?tr(lang,'Silne porywy','Strong gusts'):tr(lang,'Brak alarmu w prognozie','No forecast hazard'),
       shortTip:assessment.state==='UNKNOWN'?tr(lang,'Sprawdź ostrzeżenia','Check warnings'):assessment.state==='DANGER'?tr(lang,'Bezpieczeństwo','Safety first'):maxGust!==null&&maxGust>=30?tr(lang,'Kontroluj wiatr','Check wind'):tr(lang,'Obserwuj wodę','Observe the water'),
-      limitations:tr(lang,'Brak pomiarów temperatury i tlenu wody, głębokości warstw i danych o żerowaniu. To analiza pogody i planu działań, NIE prognoza brań ani procent szansy na rybę. Faza Księżyca jest informacyjna.','No measured water temperature or oxygen, water-layer depths or feeding data. This is weather-based planning, NOT a bite forecast or catch probability. Moon phase is informational.'),
+      limitations:tr(lang,'Brak pomiarów temperatury wody, głębokości warstw i danych o żerowaniu. To analiza pogody i planu działań, NIE prognoza brań ani procent szansy na rybę. Faza Księżyca jest informacyjna.','No measured water temperature, water-layer depths or feeding data. This is weather-based planning, NOT a bite forecast or catch probability. Moon phase is informational.'),
       count:forward.length,threatCount:threats.length};
   }
   function render(data,lang){

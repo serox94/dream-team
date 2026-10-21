@@ -132,3 +132,7 @@ test('Polish menus and media controls have Polish labels; source and user text i
  assert.equal(root.querySelector('a').textContent,'Panel główny');assert.equal(root.querySelector('button').textContent,'Przeanalizuj zrzut ekranu');assert.equal(root.querySelector('p').textContent,'Dostawca wyszukiwania');assert.equal(root.querySelector('[data-user-content]').textContent,'Screenshot research');
  }finally{d.window.close();}
 });
+
+test('catches static labels and error messages translate while bait and spot names remain untouched',async()=>{
+ const d=await device('en-GB'),panel=d.window.document.createElement('section');panel.innerHTML='<span><span>Waga: </span><span>13.0 kg</span></span><span>Spot: <span>Brak</span></span><span>Przynęta: <span data-user-content>Przynęta: Hot Garlic</span></span><strong data-user-content>Brak</strong>';d.window.document.body.append(panel);await new Promise(r=>setTimeout(r,0));assert.match(panel.textContent,/Weight: 13.0 kg/);assert.match(panel.textContent,/Spot: None/);assert.equal(panel.querySelector('[data-user-content]').textContent,'Przynęta: Hot Garlic');assert.equal(panel.querySelector('strong').textContent,'Brak');assert.equal(d.window.DreamI18n.t('Nie udało się zapisać połowu. Brak połączenia z bazą. Dane w formularzu pozostały.'),'Could not save the catch. Database connection unavailable. Your form entries have been kept.');d.window.close();
+});

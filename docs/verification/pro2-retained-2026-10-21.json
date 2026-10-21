@@ -1,0 +1,18 @@
+{
+  "database": {
+    "id": "c45a6a34-3ca4-46fb-bef5-ff17b8d9caee",
+    "name": "dream-team-audit-39580535456-db"
+  },
+  "workflow": "https://github.com/serox94/dream-team/actions/runs/39593389231",
+  "createdAt": "2026-10-21T11:38:19.164Z",
+  "privateCheckpointSha256": "1573aae1c9e98588c3b7eb366c6085010e31160ebcf4e6297ced64e55aeb214c",
+  "records": 403,
+  "translationDigest": "f8c8f479be68f1d70f03c1e8f2aabc3340da95b0be2299cfca50c819e301a827",
+  "excludedRepair": {
+    "entity": "documents",
+    "record_id": "17",
+    "field": "content",
+    "language": "en"
+  },
+  "lastChecklistId": 106
+}

@@ -43,7 +43,7 @@ test('approaching storms take precedence over easy rig access and missing water 
   assert.equal(out.threatCount,1);
   assert.match(out.riskLabel,/hazard/);
   assert.match(out.notes[0],/shelter/i);
-  assert.match(out.limitations,/water temperature or oxygen/);
+  assert.match(out.limitations,/water temperature/);
   assert.match(out.window,/Calmer|No confirmed/);
  }finally{dom.window.close();}
 });

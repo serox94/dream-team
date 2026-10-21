@@ -15,6 +15,8 @@ const dictionary=Object.assign({},...dictionaries);
 const dynamic=string=>{
  if(lang!=='en'||typeof string!=='string')return null;
  const patterns=[
+  [/^Nie udało się zapisać połowu\. (.+) Dane w formularzu pozostały\.$/,(_,message)=>`Could not save the catch. ${translate(message)} Your form entries have been kept.`],
+  [/^(Połów czeka na synchronizację\.|Połów zapisany\.) Nie udało się odświeżyć listy: (.+)$/,(_,state,message)=>`${translate(state)} Could not refresh the list: ${translate(message)}`],
   [/^Nie udało się wczytać ([\w/-]+\.js)\.$/,(_,file)=>`Could not load ${file}.`],
   [/^Nie udało się wczytać aplikacji: (.+) Odśwież stronę\.$/,(_,message)=>`Could not load the application: ${translate(message)} Refresh the page.`],
   [/^Nie udało się odczytać (.+) \((\d+)\)(?:\. Sprawdź połączenie i odśwież stronę\.)?$/,(_,name,code)=>`Could not read ${name} (${code}). Check the connection and refresh the page.`],

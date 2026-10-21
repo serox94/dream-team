@@ -20,7 +20,7 @@
   }
   const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json','accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl',...options.headers},signal});
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
-  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings|content-translations)(?:\?|$)/;
+  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings|content-translations|water-measurements|weather)(?:\?|$)/;
   const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1',accountKey='dreamteam.account.v1';
   const accountId=()=>window.DREAM_MODEL?.currentUser?.id||localStorage.getItem(accountKey)||null;
   let synchronizing=false,syncRetryTimer=null,syncRetryDelay=1000;
@@ -144,19 +144,22 @@
       const entry=readEntries()[path];
       if(!marker||Date.now()-marker>maxAge||!entry?.at||Date.now()-entry.at>maxAge)return null;
       offlineEntries.set(path,entry.at);showOfflineState();
-      return entry.data;
+      return path.startsWith('/api/weather?')?{...entry.data,dreamteam:{...entry.data.dreamteam,stale:true,offline:true}}:entry.data;
     }catch{return null;}
   }
   function showOfflineState(){
     let banner=document.getElementById('offline-banner');const count=pendingCount();
     if(!offlineEntries.size&&!count){banner?.remove();return;}
     if(!banner){banner=document.createElement('div');banner.id='offline-banner';banner.className='offline-banner';banner.setAttribute('role','status');document.body.prepend(banner);}
+    // Cache refreshes may redraw this banner between keyboard focus and Enter.
+    const restoreConflictFocus=document.activeElement?.id==='resolve-offline-conflict';
     const english=window.DreamI18n?.lang==='en';
     const stale=offlineEntries.size?`${english?'Offline data / last sync':'Dane offline / ostatnia synchronizacja'} ${new Date(Math.min(...offlineEntries.values())).toLocaleString(english?'en-GB':(document.documentElement.lang==='en'?'en-GB':'pl-PL'),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
     const conflicts=readQueue().filter(item=>item.status==='conflict'&&(!accountId()||item.accountId===accountId())).length;
     const other=readQueue().some(item=>accountId()&&item.accountId!==accountId());
     banner.textContent=(other?(english?'Some pending changes belong to another login. Sign in as their owner. ':'Część oczekujących zmian należy do innego loginu. Zaloguj się jako ich właściciel. '):'')+stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — resolve below.`:''}`:`Oczekuje na synchronizację: ${count}.${conflicts?` ${conflicts} konflikt(y) — rozstrzygnij poniżej.`:''}`:'');
     if(conflicts){const button=document.createElement('button');button.id='resolve-offline-conflict';button.type='button';button.textContent=english?'Resolve conflict':'Rozwiąż konflikt';banner.append(document.createTextNode(' '),button);}
+    if(restoreConflictFocus)banner.querySelector('#resolve-offline-conflict')?.focus();
     const failed=readQueue().find(item=>item.status==='error'&&(!accountId()||item.accountId===accountId()));if(failed){const error=document.createElement('p');error.setAttribute('role','alert');error.textContent=window.DreamI18n?.t(failed.error)||failed.error;banner.append(error);}
 
   }
@@ -184,6 +187,7 @@
           (english?'Invalid server response. Try again.':'Nieprawidłowa odpowiedź serwera. Spróbuj ponownie.');
         if(!data||!response.ok||data.ok===false)throw Object.assign(new Error(data?.error||(!data||response.status===429?message:`HTTP ${response.status}`)),{code:data?.code,status:response.status});
         if(get)saveReadCache(path,data);
+        else if(window.DreamContent&&/^\/api\/(?:checklist(?:\/|$)|checklist-categories|catches|spots|notes|trips|lakes)/.test(path))await window.DreamContent.load({entity:({'checklist-categories':'categories'})[path.split('/')[2]]||path.split('/')[2],recordId:data.id??path.split('/')[3]});
         return data;
       }catch(error){
         if(mutationKey&&(eligibleFallback||error.name==='AbortError'||error.name==='TypeError'))return queueMutation(path,options.method,payload,mutationKey);

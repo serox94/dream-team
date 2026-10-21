@@ -1,0 +1,295 @@
+{
+  "workflow": "https://github.com/serox94/dream-team/actions/runs/39587959031",
+  "commit": "d6ec0f8cef8c572f8ae17f5b9979f4ec4a42e05c",
+  "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+  "samples": [
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Kulki proteinowe",
+      "raw": "Boilies",
+      "ms": 674
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Podbierak",
+      "raw": "Landing net",
+      "ms": 1128
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Namiot",
+      "raw": "Tent",
+      "ms": 500
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Łódka zanętowa",
+      "raw": "bait boat",
+      "ms": 689
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Mata karpiowa",
+      "raw": "Carp unhooking mat",
+      "ms": 592
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Zestaw końcowy",
+      "raw": "Terminal tackle",
+      "ms": 410
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Worek do ważenia",
+      "raw": "weigh sling",
+      "ms": 452
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Śpiwór",
+      "raw": "sleeping bag",
+      "ms": 482
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Zapasowe baterie",
+      "raw": "Spare batteries",
+      "ms": 358
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Podpórki pod wędki",
+      "raw": "Rod rests",
+      "ms": 462
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Przypon karpiowy",
+      "raw": "Carp rig",
+      "ms": 1162
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Żyłka główna",
+      "raw": "main line",
+      "ms": 560
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Haczyk bezzadziorowy",
+      "raw": "Barbless hook",
+      "ms": 427
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Sygnalizator brań",
+      "raw": "Bite alarm",
+      "ms": 604
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Zabierz podbierak i matę karpiową.",
+      "raw": "Take the landing net and the carp unhooking mat.",
+      "ms": 772
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Po zmroku ryby żerowały przy trzcinach.",
+      "raw": "After dark the fish were feeding near the reeds.",
+      "ms": 602
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "pl",
+      "target": "en",
+      "text": "Na stanowisku jest prąd i woda pitna.",
+      "raw": "At the peg, there is electricity and drinking water.",
+      "ms": 3093
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Landing net",
+      "raw": "podbierak",
+      "ms": 454
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Bait boat",
+      "raw": "Łódka zanętowa",
+      "ms": 834
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Sleeping bag",
+      "raw": "śpiwór",
+      "ms": 420
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Carp unhooking mat",
+      "raw": "Mata karpiowa",
+      "ms": 420
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Terminal tackle",
+      "raw": "Zestaw końcowy",
+      "ms": 514
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Weigh sling",
+      "raw": "Worek do ważenia",
+      "ms": 1098
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Spare batteries",
+      "raw": "Zapasowe baterie",
+      "ms": 453
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Rod rests",
+      "raw": "Podpórki pod wędki",
+      "ms": 737
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Barbless hook",
+      "raw": "haczyk bezzadziorowy",
+      "ms": 561
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Main line",
+      "raw": "Żyłka główna",
+      "ms": 520
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Bite alarm",
+      "raw": "Sygnalizator brań",
+      "ms": 4825
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Bring a tent and a sleeping bag.",
+      "raw": "Przynieś namiot i śpiwór.",
+      "ms": 759
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "The fish were feeding near the reeds after dark.",
+      "raw": "Ryby żerują w okolicy trzcin po zmroku.",
+      "ms": 1053
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "The peg has electricity and drinking water.",
+      "raw": "Stanowisko ma prąd i wodę pitną.",
+      "ms": 1233
+    },
+    {
+      "ok": true,
+      "model": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+      "source": "en",
+      "target": "pl",
+      "text": "Check the batteries before using the bait boat.",
+      "raw": "Sprawdź zapasowe baterie przed użyciem łódki zanętowej.",
+      "ms": 756
+    }
+  ]
+}

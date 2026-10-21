@@ -2,6 +2,8 @@ import {cp,mkdir,readdir,readFile,access} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 import path from 'node:path';
 await mkdir('public/vendor',{recursive:true});
+await cp('node_modules/suncalc/suncalc.js','public/vendor/suncalc.js');
+await cp('node_modules/suncalc/LICENSE','public/vendor/suncalc.LICENSE');
 await cp('node_modules/chart.js/dist/chart.umd.js','public/vendor/chart.umd.js');
 await cp('node_modules/chart.js/LICENSE.md','public/vendor/chart.LICENSE.md');
 await cp('node_modules/chart.js/dist/chart.umd.js.map','public/vendor/chart.umd.js.map');

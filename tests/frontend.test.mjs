@@ -40,7 +40,7 @@ test('every route boots, preserves legacy knowledge, sends no duplicate initial 
    if(path.includes('checklisty'))assert.equal(p.d.getElementById('check-all-count').textContent,'2');
    if(path.includes('pogoda')){
     assert.equal(p.calls.filter(x=>x.url.startsWith('/api/weather?tripId=next-trip')).length,1);
-    assert.equal(p.d.getElementById('weather-current-temp').textContent,'15.0°C');
+    assert.equal(p.d.getElementById('weather-current-temp').textContent,'15,0°');
    }
   }finally{p.close();}
  }}finally{await s.close();}

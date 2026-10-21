@@ -1,0 +1,290 @@
+[
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Kulki proteinowe",
+    "raw": "Protein Bullets",
+    "ms": 514
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Podbierak",
+    "raw": "Pickup",
+    "ms": 760
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Namiot",
+    "raw": "tents",
+    "ms": 855
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Łódka zanętowa",
+    "raw": "Boat Engraving",
+    "ms": 818
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Mata karpiowa",
+    "raw": "Mata Carpiowa",
+    "ms": 721
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Zestaw końcowy",
+    "raw": "Final Set",
+    "ms": 406
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Worek do ważenia",
+    "raw": "Bag for Weighting",
+    "ms": 977
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Śpiwór",
+    "raw": "Sleeping",
+    "ms": 246
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Zapasowe baterie",
+    "raw": "Reserve Batteries",
+    "ms": 355
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Podpórki pod wędki",
+    "raw": "Support for fishing",
+    "ms": 1414
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Przypon karpiowy",
+    "raw": "Carpentry",
+    "ms": 428
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Żyłka główna",
+    "raw": "HIGH PRINCIPAL",
+    "ms": 571
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Haczyk bezzadziorowy",
+    "raw": "Hacks Untold",
+    "ms": 810
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Sygnalizator brań",
+    "raw": "Brain Signal",
+    "ms": 1248
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Zabierz podbierak i matę karpiową.",
+    "raw": "Bring a carpet and a carpet.",
+    "ms": 845
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Po zmroku ryby żerowały przy trzcinach.",
+    "raw": "In the dark, the fish eaten at the trees.",
+    "ms": 1499
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "pl",
+    "target": "en",
+    "text": "Na stanowisku jest prąd i woda pitna.",
+    "raw": "There is electricity and drinking water.",
+    "ms": 477
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Landing net",
+    "raw": "lądowanie netto",
+    "ms": 647
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Bait boat",
+    "raw": "Łódź Bait",
+    "ms": 1005
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Sleeping bag",
+    "raw": "Śpiąca torba",
+    "ms": 562
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Carp unhooking mat",
+    "raw": "Karp Unhooking Mat",
+    "ms": 668
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Terminal tackle",
+    "raw": "Rozwiązywanie terminali",
+    "ms": 1077
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Weigh sling",
+    "raw": "Waga Sling",
+    "ms": 501
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Spare batteries",
+    "raw": "Oszczędzaj baterie",
+    "ms": 773
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Rod rests",
+    "raw": "Rod pozostaje",
+    "ms": 232
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Barbless hook",
+    "raw": "bezbarwny hook",
+    "ms": 2224
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Main line",
+    "raw": "Główna linia",
+    "ms": 1101
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Bite alarm",
+    "raw": "Ugryź alarm",
+    "ms": 821
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Bring a tent and a sleeping bag.",
+    "raw": "Weź ze sobą namiot i torbę do spania.",
+    "ms": 878
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "The fish were feeding near the reeds after dark.",
+    "raw": "Ryby karmiły się w pobliżu żłobka po zmroku.",
+    "ms": 1533
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "The peg has electricity and drinking water.",
+    "raw": "Gmina posiada prąd i wodę pitną.",
+    "ms": 1557
+  },
+  {
+    "ok": true,
+    "model": "@cf/meta/m2m100-1.2b",
+    "source": "en",
+    "target": "pl",
+    "text": "Check the batteries before using the bait boat.",
+    "raw": "Sprawdź baterie przed użyciem łodzi.",
+    "ms": 834
+  }
+]
