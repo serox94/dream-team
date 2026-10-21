@@ -30,10 +30,11 @@ try{
  await en.screenshot({path:'pro2-ai-status/screenshots/baits-species-en-390.png',fullPage:true});
  const catalog=await(await patryk.request.get(base+'/api/content-translations?tripId='+trip+'&language=en')).json();assert.ok(!catalog.records.some(r=>r.entity==='catches'&&['bait','species'].includes(r.field)));report.tests.push({test:'six commercial baits unchanged, three controlled species, live UI and API field exclusion',result:'PASS'});
  report.result='PASS';
-}catch(e){report.error=e.message;process.exitCode=1;}
+}catch(e){report.error=e.message;report.stack=e.stack;report.result='FAIL';process.exitCode=1;}
 finally{
  // Remove only the disposable records created by this run, using normal soft delete.
- if(contexts[0])for(const id of catchIds){const r=await contexts[0].request.delete(base+'/api/catches/'+id);assert.ok(r.ok());}
- if(contexts[0])for(const id of created){const r=await contexts[0].request.delete(base+'/api/checklist/'+id);assert.ok(r.ok());}
+ report.cleanup=[];
+ for(const [kind,ids] of [['catches',catchIds],['checklist',created]])if(contexts[0])for(const id of ids){try{const r=await contexts[0].request.delete(base+'/api/'+kind+'/'+id);report.cleanup.push({kind,id,status:r.status(),...(!r.ok()?{body:await r.text()}:{} )});if(!r.ok()){report.result='FAIL';process.exitCode=1;}}catch(e){report.cleanup.push({kind,id,error:e.message});report.result='FAIL';process.exitCode=1;}}
+
  await writeFile('pro2-ai-status/two-account-browser.json',JSON.stringify(report,null,2));console.log('PRO2_AI_BROWSER '+JSON.stringify(report));await browser.close();
 }
