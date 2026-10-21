@@ -40,7 +40,8 @@ export async function processTranslations(request,env,active){
   await env.DB.prepare(`INSERT INTO translation_jobs(entity,record_id,field,language,source_hash) VALUES(?,?,?,?,?) ON CONFLICT(entity,record_id,field,language) DO UPDATE SET status=CASE WHEN source_hash<>excluded.source_hash THEN 'pending' ELSE status END,attempts=CASE WHEN source_hash<>excluded.source_hash THEN 0 ELSE attempts END,source_hash=excluded.source_hash`).bind(...args,target,source.sourceHash).run();
   let output=glossary(source.sourceText,language,target),provider='glossary';
   const cached=await env.DB.prepare('SELECT text,provider FROM translation_cache WHERE source_hash=? AND source_language=? AND language=?').bind(source.sourceHash,language,target).first();if(cached&&!(cached.provider==='cloudflare_m2m100'&&env.TRANSLATION_REVIEW_ENABLED==='true')){output=cached.text;provider=cached.provider;}
-  if(!output&&providerReady(env)&&processed<8&&source.sourceText.length<=20000&&(!job||job.attempts<3)&&(!job||job.status==='pending'||Date.now()-Date.parse(job.updated_at+'Z')>60000)){
+  const sourceChanged=job?.source_hash!==source.sourceHash;
+  if(!output&&providerReady(env)&&processed<8&&source.sourceText.length<=20000&&(sourceChanged||job.attempts<3)&&(sourceChanged||job.status==='pending'||Date.now()-Date.parse(job.updated_at+'Z')>60000)){
    const lease=await env.DB.prepare("UPDATE translation_jobs SET status='processing',attempts=attempts+1,updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=? AND source_hash=? AND (status<>'processing' OR updated_at<datetime('now','-5 minutes'))").bind(...args,target,source.sourceHash).run();
    if(!lease.meta.changes)continue;
    processed++;provider=env.TRANSLATION_REVIEW_ENABLED==='true'?'cloudflare_m2m100_llama_review':'cloudflare_m2m100';
