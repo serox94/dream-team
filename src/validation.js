@@ -58,3 +58,10 @@ export async function body(request) {
   if (!x || typeof x !== 'object' || Array.isArray(x)) fail('Wymagany obiekt JSON.');
   return x;
 }
+export function googlePhotosUrl(value){
+ const v=text(value,'Google Photos',2000);if(!v)return null;
+ try{const u=new URL(v);if(u.protocol!=='https:'||u.username||u.password||u.port||u.hash)throw Error();
+  if(u.hostname==='photos.app.goo.gl'&&/^\/[A-Za-z0-9_-]+$/.test(u.pathname)&&!u.search)return u.href;
+  if(u.hostname==='photos.google.com'&&/^\/(?:share|album)\/[A-Za-z0-9_-]+\/?$/.test(u.pathname)&&[...u.searchParams.keys()].every(k=>k==='key'))return u.href;
+ }catch{}fail('Google Photos: wymagany bezpieczny link HTTPS do albumu.',400,'INVALID_GOOGLE_PHOTOS_URL');
+}

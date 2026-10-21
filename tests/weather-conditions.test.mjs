@@ -10,13 +10,14 @@ test('conditions are practical categories: pressure, moon and clock never predic
 test('forecast uses explicit units, one stored GPS pair and absolute epochs across DST',async()=>{
  const DB=database(),first=Date.UTC(2026,9,25,0)/1000;let url;
  try{const data=await weatherForTrip({DB,WEATHER_FETCH:async target=>{url=new URL(target);return Response.json({timezone:'Europe/Warsaw',utc_offset_seconds:3600,current:{time:first+5400,temperature_2m:15},hourly:{time:[first,first+3600]},daily:{time:[Date.UTC(2026,9,24,23)/1000],sunrise:[first+6*3600],sunset:[first+15*3600]}});}},'next-trip');
- assert.equal(url.searchParams.get('timeformat'),'unixtime');assert.equal(url.searchParams.get('wind_speed_unit'),'kmh');assert.equal(url.searchParams.get('temperature_unit'),'celsius');assert.equal(url.searchParams.get('precipitation_unit'),'mm');assert.equal(url.searchParams.get('past_hours'),'3');assert.ok(url.searchParams.get('daily').includes('sunrise,sunset'));
+ assert.equal(url.searchParams.get('timeformat'),'unixtime');assert.equal(url.searchParams.get('wind_speed_unit'),'kmh');assert.equal(url.searchParams.get('temperature_unit'),'celsius');assert.equal(url.searchParams.get('precipitation_unit'),'mm');assert.equal(url.searchParams.get('past_hours'),'12');assert.ok(url.searchParams.get('daily').includes('sunrise,sunset'));
  assert.deepEqual(data.hourly.time,['2026-10-25T02:00','2026-10-25T02:00']);assert.equal(model.hourIndex(data),1);assert.equal(data.daily.time[0],'2026-10-25');assert.equal(data.daily.sunrise[0],'2026-10-25T07:00');assert.equal(data.dreamteam.waterTemperature,null);assert.equal(data.dreamteam.measurementStatus,'not_measured');
  DB.sqlite.exec("UPDATE lakes SET latitude=50,longitude=NULL WHERE id='plaine2'");await assert.rejects(weatherForTrip({DB,WEATHER_FETCH:()=>{throw Error('must not fetch mixed GPS');}},'next-trip'),/GPS/);
  }finally{DB.close();}
 });
 test('weather renderer preserves zeros, shows missing fields and sends one refresh at a time',async()=>{
- const dom=new JSDOM(await readFile('public/pages/pogoda.html','utf8'),{url:'https://dream.test/pages/pogoda.html',runScripts:'outside-only'}),w=dom.window,data=weatherFixture(),notices=[];let calls=0;
+ const legacyIds=[...new Set([...((await readFile('public/fixes.js','utf8')).matchAll(/(?:\$\(|setNotes\()["']([^"']+)["']/g))].map(m=>m[1]))];
+ const dom=new JSDOM('<main>'+legacyIds.map(id=>'<div id="'+id+'"></div>').join('')+'</main>',{url:'https://dream.test/pages/pogoda.html',runScripts:'outside-only'}),w=dom.window,data=weatherFixture(),notices=[];let calls=0;
  try{w.FISHING_SPOT={latitude:50,longitude:20,name:'Fixture lake'};w.DREAM_TRIP={id:'next-trip'};w.Dream={notice:m=>notices.push(m),zone:()=>data.timezone};w.AbortSignal=AbortSignal;w.fetch=async()=>{calls++;await new Promise(r=>setTimeout(r,10));return Response.json(data);};w.eval(await readFile('public/weather-conditions.js','utf8'));w.eval(await readFile('public/fixes.js','utf8'));
  data.current.temperature_2m=null;data.current.wind_speed_10m=null;data.current.precipitation=0;data.current.relative_humidity_2m=null;delete data.hourly.soil_temperature_0cm;
  await Promise.all([w.DreamWeather.render(),w.DreamWeather.render()]);assert.equal(calls,1);assert.equal(w.document.getElementById('weather-current-temp').textContent,'--');assert.equal(w.document.getElementById('weather-current-wind').textContent,'-- / 15.0 km/h');assert.equal(w.document.getElementById('weather-precipitation').textContent,'0.0 mm');assert.equal(w.document.getElementById('soil-temp').textContent,'--');assert.equal(w.document.getElementById('water-temp').textContent,'Brak pomiaru');assert.match(w.document.getElementById('bite-analysis').textContent,/Niepewność brań: wysoka/);assert.deepEqual(notices,[]);
@@ -26,7 +27,7 @@ test('weather renderer preserves zeros, shows missing fields and sends one refre
 test('approximate Moon illumination agrees coarsely with NASA 2026 samples and is labelled',async()=>{
  const dom=new JSDOM('<main></main>',{url:'https://dream.test/pages/pogoda.html',runScripts:'outside-only'});try{dom.window.eval(await readFile('public/fixes.js','utf8'));const moon=dom.window.DreamWeather.moonPhaseInfo;
  // NASA SVS 5587 mooninfo_2026.json; these samples do not validate bite predictions.
- for(const [date,illum]of [['2026-10-12T12:00:00Z',3.74],['2026-01-03T12:00:00Z',99.86],['2026-02-01T12:00:00Z',99.71]])assert.ok(Math.abs(parseFloat(moon(new Date(date)).illumination)-illum)<5,date);assert.ok((await readFile('public/pages/pogoda.html','utf8')).includes('Faza Księżyca (orientacyjnie)'));
+ for(const [date,illum]of [['2026-10-12T12:00:00Z',3.74],['2026-01-03T12:00:00Z',99.86],['2026-02-01T12:00:00Z',99.71]])assert.ok(Math.abs(parseFloat(moon(new Date(date)).illumination)-illum)<5,date);assert.ok((await readFile('public/weather-pro2.js','utf8')).includes('Astronomia · Księżyc: 0 punktów'));
  }finally{dom.window.close();}
 });
 

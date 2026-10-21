@@ -6,3 +6,5 @@ node_modules/
 public/vendor/
 
 .preview-account-integrity.json
+qa-pro2/
+pro2-status/

@@ -1,3 +1,6 @@
+import {processTranslations} from './automatic-translations.js';
+import {waterMeasurements} from './water-measurements.js';
+import {googlePhotosUrl} from './validation.js';
 import {updateAccountAccess} from './auth.js';
 import {latestR2Backup} from './backup-status.js';
 import {handleContentTranslations} from './content-translations.js';
@@ -42,7 +45,7 @@ async function bootstrap(env) {
   if(individualAccounts(env)){const accounts=await accountList(env);for(const a of anglers)a.login=accounts.find(u=>u.anglerId===a.id&&u.active&&!u.protected)?.username||null;anglers=anglers.filter(a=>!accounts.some(u=>u.protected&&u.anglerId===a.id));}
   const rawLakes = await all(env,'SELECT id,name,country,latitude,longitude,image_url imageUrl,facts_json factsJson,source_url sourceUrl FROM lakes ORDER BY name');
   const lakes = rawLakes.map(({factsJson,...l})=>({...l,facts:parseFacts(factsJson)}));
-  const rawTrips = await all(env,`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at start,end_at end,peg,latitude,longitude,lake_image lakeImage,facts_json factsJson,is_active isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`);
+  const rawTrips = await all(env,`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at start,end_at end,peg,google_photos_url googlePhotosUrl,latitude,longitude,lake_image lakeImage,facts_json factsJson,is_active isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`);
   const participants = await all(env,'SELECT trip_id tripId,angler_id anglerId FROM trip_participants');
   const anglerCounts=await all(env,'SELECT angler_id anglerId,COUNT(*) fishCount FROM catches WHERE deleted_at IS NULL GROUP BY angler_id');
   for(const angler of anglers){angler.active=Boolean(angler.active);angler.tripCount=participants.filter(p=>p.anglerId===angler.id).length;angler.fishCount=anglerCounts.find(c=>c.anglerId===angler.id)?.fishCount||0;}
@@ -80,6 +83,7 @@ async function saveTrip(request,env,id,ctx) {
   if(!['planning','active','archived'].includes(status)) fail('Nieprawidłowy status.');
   const name=text(pick(x,'name',current.name||`${lake.name} ${year}`),'Nazwa wyjazdu',150,true);
   const peg=text(pick(x,'peg',current.peg),'Stanowisko',200);
+  const photos=googlePhotosUrl(pick(x,'googlePhotosUrl',current.google_photos_url));
   const ids=has(x,'participantIds')?await participantsFor(env,x.participantIds):id?null:await participantsFor(env,[]);
   const statements=[];
   if(id){
@@ -92,6 +96,7 @@ async function saveTrip(request,env,id,ctx) {
     id=crypto.randomUUID();
     statements.push(stmt(env,`INSERT INTO trips(id,year,name,lake,lake_id,country,status,start_at,end_at,peg,latitude,longitude,lake_image) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`,id,year,name,lake.name,lakeId,lake.country,status,start,end,peg,lake.latitude,lake.longitude,lake.image_url));
   }
+  statements.push(stmt(env,'UPDATE trips SET google_photos_url=? WHERE id=?',photos,id));
   if(ids){
     statements.push(stmt(env,'DELETE FROM trip_participants WHERE trip_id=?',id));
     for(const a of ids) statements.push(stmt(env,'INSERT INTO trip_participants(trip_id,angler_id) VALUES(?,?)',id,a));
@@ -358,7 +363,7 @@ async function removeOrRestore(request,env,kind,id,restore){
 }
 async function exportData(env){
   const data={format:'dream-team-backup-v1',exportedAt:new Date().toISOString(),tables:{}};
-  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','content_translations','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
+  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','content_translations','content_sources','translation_jobs','translation_cache','water_measurements','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
   return json(data,200,{'content-disposition':`attachment; filename="dream-team-backup-${new Date().toISOString().slice(0,10)}.json"`});
 }
 async function privateFetch(request,env,ctx,active){
@@ -370,7 +375,10 @@ async function privateFetch(request,env,ctx,active){
         return json({ok:true,app:'dream-team',version:'1.2.0',database:'connected',schemaVersion:version?.value||null});
       }
       if(path==='/api/bootstrap'&&method==='GET')return json({...await bootstrap(env),currentUser:active?.account||null});
+      if(path==='/api/content-translations/process'&&method==='POST')return json(await processTranslations(request,env,active));
       if(path==='/api/content-translations'&&['GET','PUT'].includes(method))return json(await handleContentTranslations(request,env,active));
+      const waterMatch=path.match(/^\/api\/water-measurements(?:\/([a-f0-9-]{36}))?$/);
+      if(waterMatch)return json(await waterMeasurements(request,env,active,waterMatch[1]||null));
       if(path==='/api/weather'&&method==='GET')return json(await weatherForTrip(env,url.searchParams.get('tripId')));
       const adviceMatch=path.match(/^\/api\/trips\/([^/]+)\/advice$/);
       if(adviceMatch&&method==='GET')return json(await handleTripAdvice(env,decodeURIComponent(adviceMatch[1])));

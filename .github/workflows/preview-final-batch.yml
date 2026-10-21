@@ -493,3 +493,32 @@ jobs:
         with:
           name: live-preview-regression
           path: live-preview-qa
+
+  pro2-preview:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/pro2-i18n-photos-20261021'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Build reviewed assets
+        run: node scripts/build.mjs
+      - name: Copy production read-only, migrate separate D1, deploy authenticated PRO2 preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: node scripts/pro2-preview.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pro2-preview-safe-status
+          path: pro2-status/
+          retention-days: 7

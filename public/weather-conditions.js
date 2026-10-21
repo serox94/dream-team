@@ -51,8 +51,8 @@
     "Freezing air complicates gear handling and increases cold exposure."
   ],
   "heat": [
-    "Upał: zabezpiecz siebie przed przegrzaniem i zmierz temperaturę oraz tlen wody.",
-    "Hot air: protect yourself from heat and measure water temperature and oxygen."
+    "Upał: zabezpiecz siebie przed przegrzaniem i zmierz temperaturę wody.",
+    "Hot air: protect yourself from heat and measure water temperature."
   ],
   "fog": [
     "Mgła: ograniczona widoczność utrudnia orientację nad wodą.",
@@ -67,8 +67,8 @@
     "Incomplete meteorological reading; missing data is never replaced with zero."
   ],
   "uncertainty": [
-    "Niepewność brań: wysoka. Brak pomiarów temperatury i tlenu wody oraz modelu dopasowanego do tego łowiska.",
-    "Bite uncertainty: high. No measured water temperature or oxygen and no model fitted to this lake."
+    "Niepewność brań: wysoka. Brak pomiarów temperatury wody oraz modelu dopasowanego do tego łowiska.",
+    "Bite uncertainty: high. No measured water temperature and no model fitted to this lake."
   ],
   "explanation": [
     "To orientacyjna ocena komfortu i ograniczeń zasiadki. Wiatr, ciśnienie, faza Księżyca i temperatura powietrza nie określają tu szansy brania.",

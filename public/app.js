@@ -597,7 +597,7 @@ function renderCatchesList(catches, spots) {
     const article = el("article", "catch-item");
     const top = el("div", "catch-item-top");
     const left = el("div");
-    left.appendChild(el("h4", "", `${item.person} - ${item.species}`));
+    left.appendChild(el("h4", "", `${item.person} - ${window.DreamContent?.species(item.species)??item.species}`));
     left.appendChild(el("div", "catch-meta", formatCaughtAt(item.caught_at)+(item.pendingSync?" · Oczekuje na synchronizację":"")));
     if (item.spot_id) {
       left.appendChild(el("div", "muted-small", `Powiązany spot: ${getSpotDisplayName(item, spots)}`));
@@ -616,7 +616,7 @@ function renderCatchesList(catches, spots) {
 
     const badges = el("div", "catch-badges");
     badges.appendChild(el("span", "badge", `Waga: ${Number(item.weight).toFixed(1)} kg`));
-    badges.appendChild(el("span", "badge", `Przynęta: ${normalizeText(contentText('catches',item,'bait',item.bait), 50)}`));
+    badges.appendChild(el("span", "badge", `Przynęta: ${normalizeText(item.bait, 50)}`));
     badges.appendChild(el("span", "badge", `Spot: ${getSpotDisplayName(item, spots)}`));
 
     article.appendChild(top);
@@ -809,7 +809,7 @@ function renderChecklistGroups(items) {
   const categories = [...new Set(items.map(item => item.category))];
   categories.forEach(category => {
     const section = el("section", "checklist-group");
-    section.appendChild(el("h4", "", category));
+    section.appendChild(el("h4", "", window.DreamContent?.category(category)??category));
     const itemsWrap = el("div", "checklist-items");
 
     items.filter(item => item.category === category).forEach(item => {
@@ -1146,11 +1146,11 @@ function updateDashboard(catches, spots = [], checklist = []) {
       sorted.forEach(item => {
         const card = el("article", "last-entry-item");
         const top = el("div", "last-entry-top");
-        top.appendChild(el("strong", "", `${item.person} - ${item.species}`));
+        top.appendChild(el("strong", "", `${item.person} - ${window.DreamContent?.species(item.species)??item.species}`));
         top.appendChild(el("span", "last-entry-weight", `${Number(item.weight).toFixed(1)} kg`));
 
         const meta = el("div", "last-entry-meta");
-        meta.appendChild(el("span", "", `Przynęta: ${normalizeText(contentText('catches',item,'bait',item.bait), 50)}`));
+        meta.appendChild(el("span", "", `Przynęta: ${normalizeText(item.bait, 50)}`));
         meta.appendChild(el("span", "", `Spot: ${getSpotDisplayName(item, spots)}`));
         meta.appendChild(el("span", "", formatCaughtAt(item.caught_at)));
 

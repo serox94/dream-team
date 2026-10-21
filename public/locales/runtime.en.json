@@ -844,5 +844,16 @@
   "Okno obsługi zestawów": "Rig handling window",
   "Bezpieczeństwo 24 h": "24-hour safety",
   "Najważniejsze działanie": "Top action",
-  "PLAN ZASIADKI": "SESSION PLAN"
+  "PLAN ZASIADKI": "SESSION PLAN",
+  "Treść źródłowa zmieniła się.": "The original text has changed.",
+  "Nie znaleziono wyjazdu lub łowiska.": "Trip or lake not found.",
+  "Pomiar nie może pochodzić z przyszłości.": "The measurement cannot be in the future.",
+  "Nietypowa temperatura wody — sprawdź odczyt i potwierdź.": "Unusual water temperature — check and confirm the reading.",
+  "Nieprawidłowe źródło.": "Invalid source.",
+  "Wymagana wersja pomiaru.": "A measurement revision is required.",
+  "Pomiar zmieniono na innym urządzeniu. Odśwież historię.": "The measurement changed on another device. Refresh the history.",
+  "Google Photos: wymagany bezpieczny link HTTPS do albumu.": "Google Photos: a safe HTTPS album link is required.",
+  "Pomiar": "Measurement",
+  "Głębokość pomiaru": "Measurement depth",
+  "Klucz zapisu": "Mutation key"
 }

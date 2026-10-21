@@ -20,7 +20,7 @@
   }
   const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json','accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl',...options.headers},signal});
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
-  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings|content-translations)(?:\?|$)/;
+  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings|content-translations|water-measurements|weather)(?:\?|$)/;
   const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1',accountKey='dreamteam.account.v1';
   const accountId=()=>window.DREAM_MODEL?.currentUser?.id||localStorage.getItem(accountKey)||null;
   let synchronizing=false,syncRetryTimer=null,syncRetryDelay=1000;
@@ -144,7 +144,7 @@
       const entry=readEntries()[path];
       if(!marker||Date.now()-marker>maxAge||!entry?.at||Date.now()-entry.at>maxAge)return null;
       offlineEntries.set(path,entry.at);showOfflineState();
-      return entry.data;
+      return path.startsWith('/api/weather?')?{...entry.data,dreamteam:{...entry.data.dreamteam,stale:true,offline:true}}:entry.data;
     }catch{return null;}
   }
   function showOfflineState(){
@@ -184,6 +184,7 @@
           (english?'Invalid server response. Try again.':'Nieprawidłowa odpowiedź serwera. Spróbuj ponownie.');
         if(!data||!response.ok||data.ok===false)throw Object.assign(new Error(data?.error||(!data||response.status===429?message:`HTTP ${response.status}`)),{code:data?.code,status:response.status});
         if(get)saveReadCache(path,data);
+        else if(window.DreamContent&&/^\/api\/(?:checklist(?:\/|$)|checklist-categories|catches|spots|notes|trips|lakes)/.test(path))await window.DreamContent.load({entity:({'checklist-categories':'categories'})[path.split('/')[2]]||path.split('/')[2],recordId:data.id??path.split('/')[3]});
         return data;
       }catch(error){
         if(mutationKey&&(eligibleFallback||error.name==='AbortError'||error.name==='TypeError'))return queueMutation(path,options.method,payload,mutationKey);
