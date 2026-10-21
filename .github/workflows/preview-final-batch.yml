@@ -2,6 +2,10 @@ name: Preview final batch
 on:
   workflow_dispatch:
     inputs:
+      translation_only:
+        description: Check or activate M2M100 on isolated PRO2 preview only
+        type: boolean
+        default: false
       audit_only:
         description: Targeted isolation/recovery verification only (no shared preview deployment)
         type: boolean
@@ -495,7 +499,7 @@ jobs:
           path: live-preview-qa
 
   pro2-preview:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/pro2-i18n-photos-20261021'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/pro2-i18n-photos-20261021' && !inputs.translation_only
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -529,4 +533,27 @@ jobs:
         with:
           name: pro2-preview-safe-status
           path: pro2-status/
+          retention-days: 7
+
+  pro2-ai:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/pro2-i18n-photos-20261021' && inputs.translation_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Read-only Cloudflare account, cost and M2M100 availability
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/pro2-ai-preflight.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pro2-ai-evidence
+          path: pro2-ai-status/
           retention-days: 7
