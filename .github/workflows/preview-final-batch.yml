@@ -2,6 +2,10 @@ name: Preview final batch
 on:
   workflow_dispatch:
     inputs:
+      ui_only:
+        description: 'Weather A and Catches UI only on retained translated PRO2 preview'
+        type: boolean
+        default: false
       retained_qa_only:
         description: 'Refresh same preview, finish receipt and reuse passed QA only for identical runtime source'
         type: boolean
@@ -507,7 +511,7 @@ jobs:
           path: live-preview-qa
 
   pro2-preview:
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/pro2-i18n-photos-20261021' && !inputs.translation_only
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/pro2-i18n-photos-20261021' && !inputs.translation_only && !inputs.ui_only
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -602,4 +606,51 @@ jobs:
         with:
           name: pro2-ai-evidence
           path: pro2-ai-status/
+          retention-days: 7
+
+  pro2-ui:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/feat/pro2-i18n-photos-20261021' && inputs.ui_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: node scripts/build.mjs
+      - name: Install Chromium for targeted UI only
+        run: |
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Targeted Weather and Catches fixture regression
+        run: node scripts/qa-pro2-ui.mjs
+      - name: Protect retained D1 before UI refresh
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/pro2-ai-checkpoint.mjs
+      - name: Refresh UI on the same translated D1 without inference or migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/pro2-ui-preview.mjs
+      - name: Actual preview weather and Catches PL EN at 390 and 1440
+        env:
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/qa-pro2-ui.mjs --live
+      - name: Verify all existing business and translation rows unchanged
+        if: ${{ always() }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: test ! -f pro2-ui-status/deploy.json || node scripts/pro2-ui-preview.mjs --verify
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pro2-ui-evidence
+          path: |
+            pro2-ui-status/
+            pro2-ai-status/checkpoint.json
           retention-days: 7

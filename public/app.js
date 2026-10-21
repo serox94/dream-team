@@ -52,6 +52,7 @@ function average(values) {
   return values.reduce((sum, value) => sum + Number(value || 0), 0) / values.length;
 }
 
+function catchUi(value){return document.documentElement.lang==='en'?(window.DreamI18n?.t(value)??value):value;}
 function defaultCarpSpecies(){return window.DreamI18n?.lang==='en'?'Carp':'Karp';}
 function formatCaughtAt(value) { return value ? Dream.format(value) : 'Brak daty'; }
 function formatDateForInput(value) { return Dream.dateInput(value); }
@@ -578,8 +579,8 @@ function renderCatchSummary(catches, spots) {
   $("catch-count").textContent = String(catches.length);
   $("catch-total-weight").textContent = `${stats.totalWeight.toFixed(1)} kg`;
   $("catch-biggest").textContent = stats.biggestFish;
-  $("catch-best-spot").textContent = stats.bestSpot;
-  $("catch-best-bait").textContent = stats.bestBait;
+  $("catch-best-spot").textContent = stats.bestSpot === "Brak" ? catchUi("Brak") : stats.bestSpot;
+  $("catch-best-bait").textContent = stats.bestBait === "Brak" ? catchUi("Brak") : stats.bestBait;
   $("catch-best-hour").textContent = stats.bestHour;
 }
 
@@ -615,9 +616,9 @@ function renderCatchesList(catches, spots) {
     top.append(left, actions);
 
     const badges = el("div", "catch-badges");
-    badges.appendChild(el("span", "badge", `Waga: ${Number(item.weight).toFixed(1)} kg`));
+    const weightBadge=el("span","badge"),weightLabel=el("span","",catchUi("Waga:")+" ");weightBadge.append(weightLabel,el("span","",`${Number(item.weight).toFixed(1)} kg`));badges.append(weightBadge);
     const baitBadge=el("span","badge","Przynęta: "),baitValue=el("span","",normalizeText(item.bait,50));baitValue.dataset.userContent="";baitBadge.append(baitValue);badges.append(baitBadge);
-    badges.appendChild(el("span", "badge", `Spot: ${getSpotDisplayName(item, spots)}`));
+    const spotBadge=el("span","badge",catchUi("Spot:")+" "),spotName=getSpotDisplayName(item,spots),spotValue=el("span","",spotName==="Brak"?catchUi("Brak"):spotName);if(spotName!=="Brak")spotValue.dataset.userContent="";spotBadge.append(spotValue);badges.append(spotBadge);
 
     article.appendChild(top);
     article.appendChild(badges);
