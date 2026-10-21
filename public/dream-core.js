@@ -151,12 +151,15 @@
     let banner=document.getElementById('offline-banner');const count=pendingCount();
     if(!offlineEntries.size&&!count){banner?.remove();return;}
     if(!banner){banner=document.createElement('div');banner.id='offline-banner';banner.className='offline-banner';banner.setAttribute('role','status');document.body.prepend(banner);}
+    // Cache refreshes may redraw this banner between keyboard focus and Enter.
+    const restoreConflictFocus=document.activeElement?.id==='resolve-offline-conflict';
     const english=window.DreamI18n?.lang==='en';
     const stale=offlineEntries.size?`${english?'Offline data / last sync':'Dane offline / ostatnia synchronizacja'} ${new Date(Math.min(...offlineEntries.values())).toLocaleString(english?'en-GB':(document.documentElement.lang==='en'?'en-GB':'pl-PL'),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}. `:'';
     const conflicts=readQueue().filter(item=>item.status==='conflict'&&(!accountId()||item.accountId===accountId())).length;
     const other=readQueue().some(item=>accountId()&&item.accountId!==accountId());
     banner.textContent=(other?(english?'Some pending changes belong to another login. Sign in as their owner. ':'Część oczekujących zmian należy do innego loginu. Zaloguj się jako ich właściciel. '):'')+stale+(count?english?`${count} change${count===1?'':'s'} waiting to sync.${conflicts?` ${conflicts} conflict${conflicts===1?'':'s'} — resolve below.`:''}`:`Oczekuje na synchronizację: ${count}.${conflicts?` ${conflicts} konflikt(y) — rozstrzygnij poniżej.`:''}`:'');
     if(conflicts){const button=document.createElement('button');button.id='resolve-offline-conflict';button.type='button';button.textContent=english?'Resolve conflict':'Rozwiąż konflikt';banner.append(document.createTextNode(' '),button);}
+    if(restoreConflictFocus)banner.querySelector('#resolve-offline-conflict')?.focus();
     const failed=readQueue().find(item=>item.status==='error'&&(!accountId()||item.accountId===accountId()));if(failed){const error=document.createElement('p');error.setAttribute('role','alert');error.textContent=window.DreamI18n?.t(failed.error)||failed.error;banner.append(error);}
 
   }
