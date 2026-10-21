@@ -8,6 +8,7 @@
     const trip=model.trips.find(t=>t.id===Dream.readTrip())||model.trips.find(t=>t.id===model.app.activeTripId)||model.trips.find(t=>t.status!=='archived')||model.trips[0];
     if(!trip)throw new Error('Brak wyjazdów w bazie.');
     window.DREAM_MODEL=model;window.DREAM_TRIP=trip;window.DREAM_VIEWED_TRIP_ID=trip.id;
+    await loadScript('domain-glossary.js');
     await loadScript('content-translations.js');
     await window.DreamContent.load();
     Dream.renderHeader();

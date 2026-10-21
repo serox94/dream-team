@@ -62,7 +62,7 @@
     return {
       id: x.id, revision: x.revision, pendingSync: x.pendingSync,
       category: x.category,
-      item_name: x.label,
+      item_name: x.label,notes:x.notes,
       quantity: qty.quantity,
       unit: qty.unit,
       done: Boolean(x.packed),

@@ -19,7 +19,8 @@
   const h=data.hourly,epoch=h.time_epoch?.[i],s=Object.fromEntries(critical.map(k=>[k,at(h,k,i)]));
   const missing=critical.filter(k=>s[k]===null);if(!codes.has(s.weather_code)&&!missing.includes('weather_code'))missing.push('weather_code');
   if(s.wind_speed_10m<0||s.wind_gusts_10m<0||s.precipitation<0||s.cloud_cover<0||s.cloud_cover>100)missing.push('range');
-  const danger=[95,96,99].includes(s.weather_code)||s.wind_speed_10m>=40||s.wind_gusts_10m>=50||s.precipitation>=15||s.temperature_2m>=35||s.temperature_2m<=-15;
+  const currentStorm=i===(root.DreamConditions?.hourIndex(data)??data.hourly.time_epoch.findLastIndex(t=>t<=data.current.time_epoch))&&[95,96,99].includes(data.current.weather_code);
+  const danger=currentStorm||[95,96,99].includes(s.weather_code)||s.wind_speed_10m>=40||s.wind_gusts_10m>=50||s.precipitation>=15||s.temperature_2m>=35||s.temperature_2m<=-15;
   const stale=Boolean(data.dreamteam?.stale)||data.dreamteam?.offline===true;
   const safety=danger?'DANGER':missing.length||stale?'UNKNOWN':s.wind_gusts_10m>=30||s.precipitation>=5?'WARNING':'SAFE';
   const t=trends(h,i);let altitude=solar?.(epoch);if(!finite(altitude)){missing.push('sun_position');altitude=null;}

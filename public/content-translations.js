@@ -1,14 +1,15 @@
 // Browser-local presentation only. Original records and edit values stay unchanged.
 (() => {
- let records=[],byKey=new Map(),automaticStatus=null;
+ let records=[],byKey=new Map(),automaticStatus=null,backfillTimer=null;
  const language=()=>window.DreamLanguage?.get()||document.documentElement.lang||'pl';
  const say=(pl,en)=>language()==='en'?en:pl;
  const key=(entity,id,field)=>[entity,String(id),field].join('|');
- function text(entity,id,field,original){if((entity==='catches'||entity==='spots')&&field==='bait')return original;const item=byKey.get(key(entity,id,field));return item?.status==='current'&&item.sourceText===original?item.translation:original;}
- async function load(changed=null){
+ function text(entity,id,field,original){if((entity==='catches'||entity==='spots')&&field==='bait')return original;const item=byKey.get(key(entity,id,field));return item?.status==='current'&&item.sourceText===original?item.translation:window.DreamGlossary?.display(original,language())??original;}
+ async function load(changed=null){if(backfillTimer){clearTimeout(backfillTimer);backfillTimer=null;}
   try{if(navigator.onLine!==false)automaticStatus=await Dream.api('/api/content-translations/process',{method:'POST',body:JSON.stringify({tripId:window.DREAM_TRIP.id,changed})}).catch(()=>null);const data=await Dream.api('/api/content-translations?tripId='+encodeURIComponent(window.DREAM_TRIP.id)+'&language='+language());records=data.records;byKey=new Map(records.map(r=>[key(r.entity,r.recordId,r.field),r]));}
   catch{records=[];byKey.clear();}
   apply();
+  if(automaticStatus?.nextCursor!=null&&navigator.onLine!==false){let cursor=automaticStatus.nextCursor;const resume=async()=>{try{const batch=await Dream.api('/api/content-translations/process',{method:'POST',body:JSON.stringify({tripId:window.DREAM_TRIP.id,cursor,changed})});cursor=batch.nextCursor;if(cursor!==null)backfillTimer=setTimeout(resume,1000);else{const data=await Dream.api('/api/content-translations?tripId='+encodeURIComponent(window.DREAM_TRIP.id)+'&language='+language());records=data.records;byKey=new Map(records.map(r=>[key(r.entity,r.recordId,r.field),r]));apply();}}catch{}};backfillTimer=setTimeout(resume,1000);}
  }
  function apply(){
   document.querySelectorAll('[data-content-entity]').forEach(host=>{if(host.closest('form'))return;host.textContent=text(host.dataset.contentEntity,host.dataset.contentId,host.dataset.contentField,host.dataset.contentOriginal);});
@@ -36,7 +37,7 @@
  }
  let queued=false;const observer=new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;apply();});});
  observer.observe(document.body,{childList:true,subtree:true});
- function category(original){const row=records.find(r=>r.entity==='categories'&&r.field==='name'&&r.sourceText===original);return row?text('categories',row.recordId,'name',original):original;}
+ function category(original){const row=records.find(r=>r.entity==='categories'&&r.field==='name'&&r.sourceText===original);return row?text('categories',row.recordId,'name',original):(window.DreamGlossary?.display(original,language())??original);}
  const speciesPairs=[['Karp','Carp'],['Karp lustrzeń','Mirror carp'],['Amur','Grass carp']];
  function species(value){const row=speciesPairs.find(p=>p.some(x=>x.toLocaleLowerCase()===String(value).toLocaleLowerCase()));return row?row[language()==='en'?1:0]:value;}
  window.addEventListener('online',()=>load());

@@ -1,16 +1,16 @@
+import '../public/domain-glossary.js';
 import {entities,originals,hash} from './content-translations.js';
 import {body,fail} from './validation.js';
 // Controlled domain dictionary is exact-match only. It is not a general translation engine.
-const pairs=[['Namiot','Tent'],['Podbierak','Landing net'],['Zapasowe baterie','Spare batteries'],['Podpórki pod wędki','Rod rests'],['Śpiwór','Sleeping bag'],['Mata karpiowa','Carp unhooking mat'],['Worek do ważenia','Weigh sling'],['Sprzęt','Equipment'],['Jedzenie / picie','Food / drink'],['Ubrania','Clothing'],['Dokumenty','Documents'],['Elektronika','Electronics'],['Zanęta','Feed'],['Przynęty','Baits']];
-const norm=x=>x.trim().toLocaleLowerCase('pl');
-export function glossary(text,source,target){if(source===target)return text;const index=source==='en'?1:0,row=pairs.find(p=>norm(p[index])===norm(text));return row?.[1-index]??null;}
-export function detect(text,hint='pl'){if(pairs.some(p=>norm(p[0])===norm(text)))return 'pl';if(pairs.some(p=>norm(p[1])===norm(text)))return 'en';if(/[ąćęłńóśźż]/i.test(text))return 'pl';return ['pl','en'].includes(hint)?hint:'pl';}
+const {glossary,detect}=globalThis.DreamGlossary;export {glossary,detect};
 export const providerReady=env=>env.TRANSLATION_ENABLED==='true'&&env.TRANSLATION_FREE_CONFIRMED==='true'&&Boolean(env.AI);
 export async function processTranslations(request,env,active){
  if(!active?.account)fail('Wymagane logowanie indywidualne.',403);
  const x=await body(request);if(!x.tripId)fail('Wymagany tripId.');
  if(!await env.DB.prepare('SELECT id FROM trips WHERE id=?').bind(x.tripId).first())fail('Nie znaleziono wyjazdu.',404);
- const sources=[];for(const entity of Object.keys(entities))sources.push(...await originals(env,entity,null,x.tripId));
+ let sources=[];for(const entity of Object.keys(entities))sources.push(...await originals(env,entity,null,x.tripId));
+ if(x.changed){sources.sort((a,b)=>Number(b.entity===x.changed.entity&&b.recordId===String(x.changed.recordId))-Number(a.entity===x.changed.entity&&a.recordId===String(x.changed.recordId)));}
+ const cursor=Number.isInteger(x.cursor)&&x.cursor>=0?x.cursor:0,scopeCount=sources.length,nextCursor=cursor+3<scopeCount?cursor+3:null;sources=sources.slice(cursor,cursor+3);
  let translated=0,manual=0,failed=0,processed=0;const hint=request.headers.get('accept-language')?.startsWith('en')?'en':'pl';
  for(const source of sources){
   const args=[source.entity,source.recordId,source.field];
@@ -21,7 +21,7 @@ export async function processTranslations(request,env,active){
   }
   const changed=x.changed?.entity===source.entity&&String(x.changed.recordId)===source.recordId;
   const language=changed?detect(source.sourceText,hint):(meta?.source_language||detect(source.sourceText,'pl')),target=language==='pl'?'en':'pl';
-  await env.DB.prepare(`INSERT INTO content_sources(entity,record_id,field,source_hash,source_language) VALUES(?,?,?,?,?) ON CONFLICT(entity,record_id,field) DO UPDATE SET source_hash=excluded.source_hash,source_language=excluded.source_language,updated_at=CURRENT_TIMESTAMP`).bind(...args,source.sourceHash,language).run();
+  if(!meta||meta.source_hash!==source.sourceHash||meta.source_language!==language)await env.DB.prepare(`INSERT INTO content_sources(entity,record_id,field,source_hash,source_language) VALUES(?,?,?,?,?) ON CONFLICT(entity,record_id,field) DO UPDATE SET source_hash=excluded.source_hash,source_language=excluded.source_language,updated_at=CURRENT_TIMESTAMP`).bind(...args,source.sourceHash,language).run();
   const existing=await env.DB.prepare('SELECT * FROM content_translations WHERE entity=? AND record_id=? AND field=? AND language=?').bind(...args,target).first();
   if(existing?.source_hash===source.sourceHash){if(existing.origin==='manual')manual++;continue;}
   // A changed source makes a manual correction stale; never silently replace it.
@@ -46,5 +46,5 @@ export async function processTranslations(request,env,active){
   if(result.meta.changes){translated++;await env.DB.prepare('INSERT OR IGNORE INTO translation_cache(source_hash,source_language,language,text,provider) VALUES(?,?,?,?,?)').bind(source.sourceHash,language,target,output,provider).run();await env.DB.prepare("UPDATE translation_jobs SET status='complete',last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=? AND source_hash=?").bind(...args,target,source.sourceHash).run();}
  }
  const stats=(await env.DB.prepare('SELECT status,COUNT(*) count FROM translation_jobs GROUP BY status').all()).results;
- return {ok:true,engine:providerReady(env)?'cloudflare_m2m100':'glossary_only',providerEnabled:providerReady(env),translated,manual,failed,stats,scopeCount:sources.length};
+ return {ok:true,engine:providerReady(env)?'cloudflare_m2m100':'glossary_only',providerEnabled:providerReady(env),translated,manual,failed,stats,scopeCount,nextCursor};
 }

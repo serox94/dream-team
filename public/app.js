@@ -616,7 +616,7 @@ function renderCatchesList(catches, spots) {
 
     const badges = el("div", "catch-badges");
     badges.appendChild(el("span", "badge", `Waga: ${Number(item.weight).toFixed(1)} kg`));
-    badges.appendChild(el("span", "badge", `Przynęta: ${normalizeText(item.bait, 50)}`));
+    const baitBadge=el("span","badge","Przynęta: "),baitValue=el("span","",normalizeText(item.bait,50));baitValue.dataset.userContent="";baitBadge.append(baitValue);badges.append(baitBadge);
     badges.appendChild(el("span", "badge", `Spot: ${getSpotDisplayName(item, spots)}`));
 
     article.appendChild(top);
