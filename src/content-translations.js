@@ -42,7 +42,7 @@ export async function handleContentTranslations(request,env,active){
  if(!['pl','en'].includes(x.language))fail('Wybierz język PL lub EN.',400,'INVALID_LANGUAGE');
  const source=(await originals(env,entity,id)).find(s=>s.field===field);if(!source)fail('Nie znaleziono tekstu źródłowego.',404,'CONTENT_NOT_FOUND');
  if(x.sourceHash!==source.sourceHash)fail('Treść źródłowa zmieniła się. Odśwież tłumaczenie.',409,'CONTENT_SOURCE_CHANGED');
- const translated=text(x.translation,'Tłumaczenie',20000,true),tokens=value=>value.match(/https?:\/\/\S+|\b\d+(?:[.,]\d+)?\b/g)||[];
+ const translated=text(x.translation,'Tłumaczenie',20000,true),tokens=value=>value.match(/https?:\/\/\S+|(?<![\p{L}\p{N}_])[+-]?\d+(?:[.,]\d+)?/gu)||[];
  if(JSON.stringify(tokens(source.sourceText))!==JSON.stringify(tokens(translated)))fail('Tłumaczenie musi zachować liczby i adresy źródła.',400,'TRANSLATION_TOKENS_CHANGED');
  if(!Number.isInteger(x.revision)||x.revision<0)fail('Nieprawidłowa wersja tłumaczenia.',400,'INVALID_TRANSLATION_VERSION');
  const result=await env.DB.prepare(`INSERT INTO content_translations(entity,record_id,field,language,source_hash,translated_text,updated_by) SELECT ?,?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM ${entities[entity].table} WHERE id=? AND ${source.column}=?) AND (?=0 AND NOT EXISTS(SELECT 1 FROM content_translations WHERE entity=? AND record_id=? AND field=? AND language=?) OR EXISTS(SELECT 1 FROM content_translations WHERE entity=? AND record_id=? AND field=? AND language=? AND revision=?)) ON CONFLICT(entity,record_id,field,language) DO UPDATE SET source_hash=excluded.source_hash,translated_text=excluded.translated_text,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP,revision=content_translations.revision+1,origin='manual'`)

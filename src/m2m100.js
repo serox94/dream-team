@@ -41,25 +41,43 @@ export function chunks(text){
  }return parts;
 }
 function preserveNumbers(original,translated){
- const pattern=/\b\d+(?:[.,]\d+)?\b/g,a=original.match(pattern)||[],b=translated.match(pattern)||[];
+ const pattern=/(?<![\p{L}\p{N}_])[+-]?\d+(?:[.,]\d+)?/gu,a=original.match(pattern)||[],b=translated.match(pattern)||[];
  if(a.length!==b.length||a.some((x,i)=>Number(x.replace(',','.'))!==Number(b[i].replace(',','.'))))throw Error('PROVIDER_TOKENS_CHANGED');
  let i=0;return translated.replace(pattern,()=>a[i++]);
 }
 export async function translateField(env,text,source,target){
+ const reviewed=env.TRANSLATION_REVIEW_ENABLED==='true';
+ const parts=await Promise.all(chunks(text).map(async part=>{
+  if('literal'in part)return part;
+  const value=part.text.trim();if(!value)return {literal:part.text};
+  return {value,left:part.text.match(/^\s*/)[0],right:part.text.match(/\s*$/)[0],key:await hash((reviewed?'m2m100-reviewed-70b-chunk-v1:':'m2m100-chunk-v1:')+value),draftKey:await hash('m2m100-chunk-v1:'+value)};
+ }));
+ // One bounded query per 90 keys, rather than one D1 subrequest per cached
+ // paragraph. Long historic documents must stay below Workers Free's limit.
+ const keys=[...new Set(parts.filter(p=>p.key).flatMap(p=>[p.key,p.draftKey]))],cache=new Map();
+ for(let i=0;i<keys.length;i+=90){const group=keys.slice(i,i+90);const rows=(await env.DB.prepare('SELECT source_hash,text FROM translation_cache WHERE source_language=? AND language=? AND source_hash IN ('+group.map(()=>'?').join(',')+')').bind(source,target,...group).all()).results;for(const row of rows)cache.set(row.source_hash,row.text);}
  let calls=0;const out=[];
- for(const part of chunks(text)){
+ for(const part of parts){
   if('literal'in part){out.push(part.literal);continue;}
-  const value=part.text.trim(),left=part.text.match(/^\s*/)[0],right=part.text.match(/\s*$/)[0];
-  if(!value){out.push(part.text);continue;}
-  const reviewed=env.TRANSLATION_REVIEW_ENABLED==='true',key=await hash((reviewed?'m2m100-reviewed-70b-chunk-v1:':'m2m100-chunk-v1:')+value),cached=await env.DB.prepare('SELECT text FROM translation_cache WHERE source_hash=? AND source_language=? AND language=?').bind(key,source,target).first();
-  let translated=cached?.text;
-  if(!translated){if(calls>=2)return {deferred:true};calls++;
+  const {value,left,right,key,draftKey}=part;let translated=cache.get(key);
+  if(!translated){
+   if(calls>=2)return {deferred:true};calls++;
    const leaseKey='translation.lease.'+key+'.'+source+'.'+target,leaseValue=(Date.now()+60000)+':'+crypto.randomUUID();
    const lease=await env.DB.prepare(`INSERT INTO app_settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(app_settings.value AS INTEGER)<? RETURNING value`).bind(leaseKey,leaseValue,Date.now()).first();
    if(lease?.value!==leaseValue)return {deferred:true};
-   try{let draft;if(reviewed){const oldKey=await hash('m2m100-chunk-v1:'+value);draft=(await env.DB.prepare('SELECT text FROM translation_cache WHERE source_hash=? AND source_language=? AND language=?').bind(oldKey,source,target).first())?.text;}if(!draft){draft=await modelCall(env,value,source,target);if(reviewed)await env.DB.prepare('INSERT OR IGNORE INTO translation_cache(source_hash,source_language,language,text,provider) VALUES(?,?,?,?,?)').bind(await hash('m2m100-chunk-v1:'+value),source,target,draft,'cloudflare_m2m100_draft').run();}translated=preserveNumbers(value,reviewed?await modelCall(env,value,source,target,'review',draft):draft);
-    await env.DB.prepare('INSERT OR IGNORE INTO translation_cache(source_hash,source_language,language,text,provider) VALUES(?,?,?,?,?)').bind(key,source,target,translated,reviewed?'cloudflare_m2m100_reviewed_chunk_v1':'cloudflare_m2m100_chunk_v1').run();
+   try{
+    // Another record can have completed this chunk since the initial bulk read.
+    translated=(await env.DB.prepare('SELECT text FROM translation_cache WHERE source_hash=? AND source_language=? AND language=?').bind(key,source,target).first())?.text;
+    if(!translated){
+     let draft=reviewed?cache.get(draftKey):null;
+     if(!draft){draft=await modelCall(env,value,source,target);if(reviewed)await env.DB.prepare('INSERT OR IGNORE INTO translation_cache(source_hash,source_language,language,text,provider) VALUES(?,?,?,?,?)').bind(draftKey,source,target,draft,'cloudflare_m2m100_draft').run();}
+     translated=preserveNumbers(value,reviewed?await modelCall(env,value,source,target,'review',draft):draft);
+     await env.DB.prepare('INSERT OR IGNORE INTO translation_cache(source_hash,source_language,language,text,provider) VALUES(?,?,?,?,?)').bind(key,source,target,translated,reviewed?'cloudflare_m2m100_reviewed_chunk_v1':'cloudflare_m2m100_chunk_v1').run();
+    }
+    cache.set(key,translated);
    }finally{await env.DB.prepare('DELETE FROM app_settings WHERE key=? AND value=?').bind(leaseKey,leaseValue).run();}
-  }out.push(left+translated+right);
- }return {text:out.join('')};
+  }
+  out.push(left+translated+right);
+ }
+ return {text:out.join('')};
 }

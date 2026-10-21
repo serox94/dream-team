@@ -36,7 +36,7 @@ try{
  const domain=await cf('/workers/subdomain');status.previewUrl='https://'+name+'.'+domain.subdomain+'.workers.dev';
  const login=async username=>{const r=await fetch(status.previewUrl+'/api/login',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username,password:process.env.RYBY_LOGIN_PASSWORD}),redirect:'manual'});assert.equal(r.status,303,'ACCOUNT_LOGIN_'+username);return r.headers.get('set-cookie').split(';')[0];};
  const cookie=await login('Patryk');
- const api=async(path,body,lang='pl',session=cookie)=>{for(let n=0;n<3;n++){const r=await fetch(status.previewUrl+path,{method:body===undefined?'GET':'POST',headers:{cookie:session,'content-type':'application/json','accept-language':lang},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(45000)});if(r.ok)return r.json();if([429,502,503,504].includes(r.status)&&n<2){await r.body?.cancel();await new Promise(resolve=>setTimeout(resolve,1000*(n+1)));continue;}const data=await r.json().catch(()=>({}));throw Object.assign(Error('PREVIEW_HTTP_'+r.status),{safeError:data.error});}};
+ const api=async(path,body,lang='pl',session=cookie)=>{for(let n=0;n<3;n++){const r=await fetch(status.previewUrl+path,{method:body===undefined?'GET':'POST',headers:{cookie:session,'content-type':'application/json','accept-language':lang},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(45000)});if(r.ok)return r.json();if([429,500,502,503,504].includes(r.status)&&n<2){await r.body?.cancel();await new Promise(resolve=>setTimeout(resolve,1000*(n+1)));continue;}const data=await r.json().catch(()=>({}));throw Object.assign(Error('PREVIEW_HTTP_'+r.status),{safeError:data.error});}};
  phase='32 real Cloudflare Llama alternatives to the recorded raw M2M100 benchmark';status.samples=[];
  for(let probe=0;probe<32;probe++){
   const started=Date.now(),answer=await api('/api/content-translations/process',{tripId:'next-trip',probe,reviewOnly:true});status.samples.push({...answer,ms:Date.now()-started});
@@ -47,13 +47,15 @@ try{
  phase='controlled resumable archive backfill';status.batches=0;
  // Reprocess only automatic M2M100 drafts. Originals and manual corrections stay.
  await query(dbId,"UPDATE translation_jobs SET status='pending',attempts=0,last_error=NULL WHERE EXISTS(SELECT 1 FROM content_translations t WHERE t.entity=translation_jobs.entity AND t.record_id=translation_jobs.record_id AND t.field=translation_jobs.field AND t.language=translation_jobs.language AND t.origin='cloudflare_m2m100')");
- for(let pass=0;pass<3;pass++){const pump=async()=>{let cursor=0,guard=0;do{
-   const r=await api('/api/content-translations/process',{tripId:'next-trip',queue:true});status.batches++;cursor=r.nextCursor;
+ const pipelineKey='translation.pipeline-version';if((await query(dbId,'SELECT value FROM app_settings WHERE key=?',[pipelineKey])).results[0]?.value!=='m2m100-reviewed-70b-v1'){
+  await query(dbId,"UPDATE translation_jobs SET status='pending',attempts=0,last_error=NULL WHERE status='failed'");await query(dbId,'INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',[pipelineKey,'m2m100-reviewed-70b-v1']);}
+ for(let pass=0;pass<4;pass++){const pump=async()=>{let cursor=0,guard=0;do{
+   let r;try{r=await api('/api/content-translations/process',{tripId:'next-trip',queue:true});}catch(e){status.transportRetries=(status.transportRetries||0)+1;if(status.transportRetries>8)throw e;await new Promise(resolve=>setTimeout(resolve,1000));continue;}status.batches++;cursor=r.nextCursor;
    if(r.paused)throw Error('FREE_BUDGET_PAUSED');if(++guard>1500)throw Error('BACKFILL_GUARD');
    if(status.batches%20===0){status.progress=r.stats;await writeFile('pro2-ai-status/progress.json',JSON.stringify(status,null,2));console.log('M2M100_BACKFILL '+JSON.stringify({batches:status.batches,stats:r.stats}));}
-  }while(cursor!==null);};await Promise.all([pump(),pump()]);
+  }while(cursor!==null);};const pumps=await Promise.allSettled([pump(),pump()]);status.pumpWarnings=pumps.filter(r=>r.status==='rejected').map(r=>r.reason.message);
   const outstanding=(await query(dbId,"SELECT COUNT(*) count FROM translation_jobs WHERE status NOT IN ('complete','superseded')")).results[0].count;
-  if(!outstanding)break;if(pass<2)await new Promise(r=>setTimeout(r,3000));
+  if(!outstanding)break;if(pass<3)await new Promise(r=>setTimeout(r,20000));
  }
  status.after=(await query(dbId,'SELECT status,COUNT(*) count FROM translation_jobs GROUP BY status')).results;
  status.errors=(await query(dbId,"SELECT last_error,COUNT(*) count FROM translation_jobs WHERE status NOT IN ('complete','superseded') GROUP BY last_error")).results;
@@ -65,4 +67,4 @@ try{
  status.productionWorkerAfter=(await cf('/workers/scripts/dream-team/deployments')).deployments[0].versions[0].version_id;assert.equal(status.productionWorkerAfter,before);
  const incomplete=status.after.filter(s=>!['complete','superseded'].includes(s.status)).reduce((n,s)=>n+s.count,0);status.result=incomplete?'PARTIAL':'PASS';
 }catch(e){status.phase=phase;status.error=e.message;status.http=e.status;status.code=e.code;status.safeError=e.safeError;status.deployDetail=e.deployDetail;process.exitCode=1;}
-finally{await rm(dir,{recursive:true,force:true});await writeFile('pro2-ai-status/activation.json',JSON.stringify(status,null,2));console.log('PRO2_AI_ACTIVATION '+JSON.stringify({...status,samples:status.samples?.length}));}
+finally{await rm(dir,{recursive:true,force:true});await writeFile('pro2-ai-status/activation.json',JSON.stringify(status,null,2));console.log('PRO2_AI_ACTIVATION '+JSON.stringify({result:status.result,error:status.error,safeError:status.safeError,phase:status.phase,build:status.build,after:status.after,errors:status.errors,budget:status.budget,samples:status.samples?.length,quality:status.quality?{pass:status.quality.pass,total:status.quality.total}:null,productionWrites:0,productionDeployments:0}));}
