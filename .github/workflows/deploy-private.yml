@@ -3,45 +3,63 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: Reviewed full candidate commit SHA
+        description: Exact approved PRO2 application commit
         required: true
       action:
-        description: Explicit approved maintenance operation
+        description: Manual operation (inspect has zero writes)
         type: choice
-        options: [deploy, migrate, initialize, rollback]
-        default: deploy
+        options: [inspect, prepare, deploy, verify]
+        default: inspect
       recovery_manifest_key:
-        description: Private R2 release manifest key (no secrets in workflow inputs)
-        required: true
+        description: Private R2 release manifest key
+        required: false
 concurrency:
   group: dream-team-production
   cancel-in-progress: false
 permissions:
   contents: read
+  actions: read
 jobs:
-  release:
+  pro2-release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/ops/pro2-release-20261021'
     environment: production
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
+          path: operator
+      - uses: actions/checkout@v4
+        with:
           ref: ${{ inputs.ref }}
+          path: candidate
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-      - run: npm ci && npm test
-      - name: Require private recovery evidence and explicit production approval
+          cache-dependency-path: candidate/package-lock.json
+      - run: npm ci
+        working-directory: candidate
+      - name: Run manual PRO2 operation with existing production approval gate
+        working-directory: candidate
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
           DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+          RELEASE_CANDIDATE: ${{ inputs.ref }}
           RELEASE_ACTION: ${{ inputs.action }}
           RELEASE_MANIFEST_KEY: ${{ inputs.recovery_manifest_key }}
-          RELEASE_CANDIDATE: ${{ inputs.ref }}
-        run: node scripts/release-workflow.mjs
-      # A failed verification leaves traffic in maintenance. Never deploy an old tag,
-      # reset D1/R2, rotate the pepper or perform an automatic production rollback.
+        run: |
+          cp ../operator/scripts/pro2-production-ops.mjs scripts/pro2-production-ops.mjs
+          node scripts/pro2-production-ops.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pro2-production-safe-status
+          path: candidate/pro2-production-status/
+          retention-days: 7
