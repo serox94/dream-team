@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import '../public/domain-glossary.js';import {chunks,modelCall,translateField} from '../src/m2m100.js';import {hash} from '../src/content-translations.js';import {database} from './db.mjs';
+import '../public/domain-glossary.js';import {chunks,modelCall,translateField} from '../src/m2m100.js';import {handleContentTranslations,hash} from '../src/content-translations.js';import {database,initializeTestAccounts} from './db.mjs';
 test('PL/EN classifier recognises ASCII English independently of interface language and covers domain phrases',()=>{
  for(const s of ['Landing net','Bait boat','Sleeping bag','Bring a tent and a sleeping bag.','The fish were feeding near the reeds after dark.','Check spare batteries before using the bait boat.','Terminal tackle'])assert.equal(DreamGlossary.detect(s,'pl'),'en',s);
  for(const s of ['Namiot','Podbierak','Kulki proteinowe','Zabierz namiot i podbierak','Przed wyjazdem sprawdz baterie','Łódka zanętowa'])assert.equal(DreamGlossary.detect(s,'en'),'pl',s);
@@ -22,4 +22,13 @@ test('long cached historical documents use bounded bulk D1 reads rather than one
 test('automatic numbers preserve decimal values next to units and reject a changed sign',async()=>{
  const DB=database(),env={DB,AI:{run:async()=>({translated_text:'Temperature -1.3°C; depth 2 m.'})}};
  try{assert.equal((await translateField(env,'Temperatura -1,3°C; głębokość 2m.','pl','en')).text,'Temperature -1,3°C; depth 2 m.');env.AI.run=async()=>({translated_text:'Temperature 1.3°C; depth 3 m.'});await assert.rejects(()=>translateField(env,'Temperatura -1,3°C; głębokość 3m.','pl','en'),/PROVIDER_TOKENS_CHANGED/);}finally{DB.close();}
+});
+
+test('reclassified English originals cannot be replaced by old automatic English round-trip output',async()=>{
+ const DB=database(),env={DB,INDIVIDUAL_ACCOUNTS:'true',RYBY_LOGIN_USERNAME:'fixture',RYBY_LOGIN_PASSWORD:'fixture-password',RYBY_SESSION_SECRET:'fixture-only-secret-more-than-32-chars'};
+ try{await initializeTestAccounts(env);const actor=DB.sqlite.prepare("SELECT id FROM auth_accounts WHERE username='Patryk'").get().id,text='Bring a tent and a sleeping bag.',id=String(DB.sqlite.prepare("INSERT INTO checklist_items(trip_id,category,label) VALUES('next-trip','sprzęt',?)").run(text).lastInsertRowid),h=await hash(text);
+ DB.sqlite.prepare('INSERT INTO content_sources(entity,record_id,field,source_hash,source_language) VALUES(?,?,?,?,?)').run('checklist',id,'label',h,'en');
+ DB.sqlite.prepare('INSERT INTO content_translations(entity,record_id,field,language,source_hash,translated_text,updated_by,origin) VALUES(?,?,?,?,?,?,?,?)').run('checklist',id,'label','en',h,'Wrong old English output',actor,'cloudflare_m2m100');
+ const data=await handleContentTranslations(new Request('https://test/api/content-translations?tripId=next-trip&language=en'),env,{}),row=data.records.find(r=>r.entity==='checklist'&&r.recordId===id&&r.field==='label');assert.equal(row.status,'original');assert.equal(row.translation,text);assert.equal(DB.sqlite.prepare('SELECT label FROM checklist_items WHERE id=?').get(id).label,text);
+ }finally{DB.close();}
 });

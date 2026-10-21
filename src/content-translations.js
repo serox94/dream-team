@@ -33,8 +33,10 @@ export async function handleContentTranslations(request,env,active){
   if(!entity&&!tripId)fail('Wymagany tripId.',400,'CONTENT_SCOPE_REQUIRED');
   const source=[];for(const key of entity?[entity]:Object.keys(entities))source.push(...await originals(env,key,recordId,tripId));
   const saved=(await env.DB.prepare('SELECT entity,record_id,field,source_hash,translated_text,updated_at,revision,origin FROM content_translations WHERE language=?').bind(language).all()).results;
+  const metadata=(await env.DB.prepare('SELECT entity,record_id,field,source_hash,source_language FROM content_sources').all()).results;
+  const metaByKey=new Map(metadata.map(r=>[[r.entity,r.record_id,r.field].join('|'),r]));
   const byKey=new Map(saved.map(t=>[[t.entity,t.record_id,t.field].join('|'),t]));
-  return {ok:true,automaticTranslation:env.TRANSLATION_ENABLED==='true'&&env.TRANSLATION_FREE_CONFIRMED==='true'?'cloudflare_m2m100':'glossary_only_provider_not_enabled',language,records:source.map(({column,raw,...item})=>{const translated=byKey.get([item.entity,item.recordId,item.field].join('|'));return {...item,translation:translated?.translated_text??'',revision:translated?.revision??0,status:!translated?'missing':translated.source_hash===item.sourceHash?'current':'stale',updatedAt:translated?.updated_at??null,origin:translated?.origin??null};})};
+  return {ok:true,automaticTranslation:env.TRANSLATION_ENABLED==='true'&&env.TRANSLATION_FREE_CONFIRMED==='true'?'cloudflare_m2m100':'glossary_only_provider_not_enabled',language,records:source.map(({column,raw,...item})=>{const k=[item.entity,item.recordId,item.field].join('|'),meta=metaByKey.get(k),translated=byKey.get(k);if(meta?.source_hash===item.sourceHash&&meta.source_language===language)return {...item,sourceLanguage:meta.source_language,translation:item.sourceText,revision:0,status:'original',updatedAt:meta.updated_at??null,origin:'original'};return {...item,sourceLanguage:meta?.source_language??null,translation:translated?.translated_text??'',revision:translated?.revision??0,status:!translated?'missing':translated.source_hash===item.sourceHash?'current':'stale',updatedAt:translated?.updated_at??null,origin:translated?.origin??null};})};
  }
  if(request.method!=='PUT')fail('Niedozwolona metoda.',405);
  if(!active?.account)fail('Wymagane logowanie indywidualne.',403,'INDIVIDUAL_ACCOUNT_REQUIRED');
