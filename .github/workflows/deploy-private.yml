@@ -56,6 +56,8 @@ jobs:
           RELEASE_MANIFEST_KEY: ${{ inputs.recovery_manifest_key }}
         run: |
           cp ../operator/scripts/pro2-production-ops.mjs scripts/pro2-production-ops.mjs
+          cp ../operator/scripts/pro2-production-prepare.mjs scripts/pro2-production-prepare.mjs
+          if [ "${{ inputs.action }}" != "inspect" ]; then node scripts/build.mjs; fi
           node scripts/pro2-production-ops.mjs
       - uses: actions/upload-artifact@v4
         if: always()

@@ -31,7 +31,7 @@ async function inspection(){
  status.france=await q(productionId,"SELECT id,name,start_at,end_at FROM trips WHERE id='next-trip'");check(status.france.length===1&&status.france[0].start_at.startsWith('2026-11-14')&&status.france[0].end_at.startsWith('2026-11-21'),'FRANCE_ID_MISMATCH');
  const worker=(await cf('/workers/scripts')).find(w=>w.id==='dream-team');check(worker?.tag,'WORKER_TAG');
  const builds=await cf('/builds/workers/'+worker.tag+'/builds?per_page=100');const list=Array.isArray(builds)?builds:builds.builds;check(Array.isArray(list),'BUILD_QUEUE_SHAPE');status.pendingCloudflareBuilds=list.filter(x=>['queued','pending','initializing','running','building'].includes(x.status)).length;check(!status.pendingCloudflareBuilds,'CLOUDFLARE_BUILD_ACTIVE');
- const triggers=await cf('/builds/workers/'+worker.tag+'/triggers');status.buildTriggers=triggers;
+ const triggers=await cf('/builds/workers/'+worker.tag+'/triggers');status.buildTriggers=(Array.isArray(triggers)?triggers:triggers.triggers).map(t=>({name:t.trigger_name,branches:t.branch_includes,excluded:t.branch_excludes,deployCommand:t.deploy_command}));
  const runs=(await gh('/actions/runs?per_page=100')).workflow_runs;status.otherReleaseRuns=runs.filter(r=>String(r.id)!==run&&r.path==='.github/workflows/deploy-private.yml'&&r.status!=='completed').map(r=>({id:r.id,status:r.status,head:r.head_sha}));check(!status.otherReleaseRuns.length,'OTHER_RELEASE_ACTIVE');
  status.productionCron=await cf('/workers/scripts/dream-team/schedules');status.backupCron=await cf('/workers/scripts/dream-team-d1-backup/schedules');
  const subs=await cf('/subscriptions');status.subscriptions=subs.map(s=>({id:s.rate_plan?.id,contract:s.rate_plan?.is_contract,price:s.price}));check(subs.length&&subs.every(s=>s.rate_plan?.id==='r2_paid'&&s.rate_plan?.is_contract===false),'WORKERS_FREE_NOT_CONFIRMED');status.freeOnly={workersPaid:false,neuronsDailyHardStop:10000,paidFeaturesActivated:false};
@@ -46,6 +46,6 @@ async function inspection(){
 }
 try{
  assert.equal(process.env.GITHUB_EVENT_NAME,'workflow_dispatch');assert.equal(process.env.GITHUB_REF,'refs/heads/ops/pro2-release-20261021');assert.equal(process.env.RELEASE_CANDIDATE,APPROVED);assert.equal(execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),APPROVED);
- check(action==='inspect','OPERATION_NOT_IMPLEMENTED');await inspection();
+ check(['inspect','prepare'].includes(action),'OPERATION_NOT_IMPLEMENTED');await inspection();if(action==='prepare'){const {prepare}=await import('./pro2-production-prepare.mjs');status.result='BLOCKED';await prepare(status);}
 }catch(e){status.error=/^[A-Z0-9_]+$/.test(e.message)?e.message:'OPERATION_GATE_FAILED';status.http=e.status;status.code=e.code;status.detail=e.actual!==undefined&&['string','number'].includes(typeof e.actual)?String(e.actual):undefined;process.exitCode=1;}
 finally{await mkdir('pro2-production-status',{recursive:true});await writeFile('pro2-production-status/'+action+'.json',JSON.stringify(status,null,2));console.log('PRO2_PRODUCTION '+JSON.stringify(status));}
