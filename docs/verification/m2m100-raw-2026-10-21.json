@@ -1,290 +1,290 @@
 [
   {
-    "number": 1,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Kulki proteinowe",
-    "raw": "Protein Bullets"
+    "raw": "Protein Bullets",
+    "ms": 514
   },
   {
-    "number": 2,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Podbierak",
-    "raw": "Pickup"
+    "raw": "Pickup",
+    "ms": 760
   },
   {
-    "number": 3,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Namiot",
-    "raw": "tents"
+    "raw": "tents",
+    "ms": 855
   },
   {
-    "number": 4,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Łódka zanętowa",
-    "raw": "Boat Engraving"
+    "raw": "Boat Engraving",
+    "ms": 818
   },
   {
-    "number": 5,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Mata karpiowa",
-    "raw": "Mata Carpiowa"
+    "raw": "Mata Carpiowa",
+    "ms": 721
   },
   {
-    "number": 6,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Zestaw końcowy",
-    "raw": "Final Set"
+    "raw": "Final Set",
+    "ms": 406
   },
   {
-    "number": 7,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Worek do ważenia",
-    "raw": "Bag for Weighting"
+    "raw": "Bag for Weighting",
+    "ms": 977
   },
   {
-    "number": 8,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Śpiwór",
-    "raw": "Sleeping"
+    "raw": "Sleeping",
+    "ms": 246
   },
   {
-    "number": 9,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Zapasowe baterie",
-    "raw": "Reserve Batteries"
+    "raw": "Reserve Batteries",
+    "ms": 355
   },
   {
-    "number": 10,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Podpórki pod wędki",
-    "raw": "Support for fishing"
+    "raw": "Support for fishing",
+    "ms": 1414
   },
   {
-    "number": 11,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Przypon karpiowy",
-    "raw": "Carpentry"
+    "raw": "Carpentry",
+    "ms": 428
   },
   {
-    "number": 12,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Żyłka główna",
-    "raw": "HIGH PRINCIPAL"
+    "raw": "HIGH PRINCIPAL",
+    "ms": 571
   },
   {
-    "number": 13,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Haczyk bezzadziorowy",
-    "raw": "Hacks Untold"
+    "raw": "Hacks Untold",
+    "ms": 810
   },
   {
-    "number": 14,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Sygnalizator brań",
-    "raw": "Brain Signal"
+    "raw": "Brain Signal",
+    "ms": 1248
   },
   {
-    "number": 15,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Zabierz podbierak i matę karpiową.",
-    "raw": "Bring a carpet and a carpet."
+    "raw": "Bring a carpet and a carpet.",
+    "ms": 845
   },
   {
-    "number": 16,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
-    "text": "Po zmroku *** żerowały przy trzcinach.",
-    "raw": "In the dark, the fish eaten at the trees."
+    "text": "Po zmroku ryby żerowały przy trzcinach.",
+    "raw": "In the dark, the fish eaten at the trees.",
+    "ms": 1499
   },
   {
-    "number": 17,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "pl",
     "target": "en",
     "text": "Na stanowisku jest prąd i woda pitna.",
-    "raw": "There is electricity and drinking water."
+    "raw": "There is electricity and drinking water.",
+    "ms": 477
   },
   {
-    "number": 18,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Landing net",
-    "raw": "lądowanie netto"
+    "raw": "lądowanie netto",
+    "ms": 647
   },
   {
-    "number": 19,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Bait boat",
-    "raw": "Łódź Bait"
+    "raw": "Łódź Bait",
+    "ms": 1005
   },
   {
-    "number": 20,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Sleeping bag",
-    "raw": "Śpiąca torba"
+    "raw": "Śpiąca torba",
+    "ms": 562
   },
   {
-    "number": 21,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Carp unhooking mat",
-    "raw": "Karp Unhooking Mat"
+    "raw": "Karp Unhooking Mat",
+    "ms": 668
   },
   {
-    "number": 22,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Terminal tackle",
-    "raw": "Rozwiązywanie terminali"
+    "raw": "Rozwiązywanie terminali",
+    "ms": 1077
   },
   {
-    "number": 23,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Weigh sling",
-    "raw": "Waga Sling"
+    "raw": "Waga Sling",
+    "ms": 501
   },
   {
-    "number": 24,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Spare batteries",
-    "raw": "Oszczędzaj baterie"
+    "raw": "Oszczędzaj baterie",
+    "ms": 773
   },
   {
-    "number": 25,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Rod rests",
-    "raw": "Rod pozostaje"
+    "raw": "Rod pozostaje",
+    "ms": 232
   },
   {
-    "number": 26,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Barbless hook",
-    "raw": "bezbarwny hook"
+    "raw": "bezbarwny hook",
+    "ms": 2224
   },
   {
-    "number": 27,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Main line",
-    "raw": "Główna linia"
+    "raw": "Główna linia",
+    "ms": 1101
   },
   {
-    "number": 28,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Bite alarm",
-    "raw": "Ugryź alarm"
+    "raw": "Ugryź alarm",
+    "ms": 821
   },
   {
-    "number": 29,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Bring a tent and a sleeping bag.",
-    "raw": "Weź ze sobą namiot i torbę do spania."
+    "raw": "Weź ze sobą namiot i torbę do spania.",
+    "ms": 878
   },
   {
-    "number": 30,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "The fish were feeding near the reeds after dark.",
-    "raw": "Ryby karmiły się w pobliżu żłobka po zmroku."
+    "raw": "Ryby karmiły się w pobliżu żłobka po zmroku.",
+    "ms": 1533
   },
   {
-    "number": 31,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "The peg has electricity and drinking water.",
-    "raw": "Gmina posiada prąd i wodę pitną."
+    "raw": "Gmina posiada prąd i wodę pitną.",
+    "ms": 1557
   },
   {
-    "number": 32,
     "ok": true,
     "model": "@cf/meta/m2m100-1.2b",
     "source": "en",
     "target": "pl",
     "text": "Check the batteries before using the bait boat.",
-    "raw": "Sprawdź baterie przed użyciem łodzi."
+    "raw": "Sprawdź baterie przed użyciem łodzi.",
+    "ms": 834
   }
 ]

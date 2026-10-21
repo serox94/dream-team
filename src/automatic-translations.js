@@ -10,6 +10,7 @@ export async function processTranslations(request,env,active){
  const x=await body(request);if(!x.tripId)fail('Wymagany tripId.');
  if(!await env.DB.prepare('SELECT id FROM trips WHERE id=?').bind(x.tripId).first())fail('Nie znaleziono wyjazdu.',404);
  if(x.probe!==undefined){if(env.APP_ENV!=='preview'||env.TRANSLATION_QA_ENABLED!=='true'||!providerReady(env)||!Number.isInteger(x.probe)||!samples[x.probe])fail('Test modelu niedostępny.',403);const [source,text]=samples[x.probe],target=source==='pl'?'en':'pl';return {ok:true,model:x.reviewOnly?REVIEW_MODEL:MODEL,source,target,text,raw:await modelCall(env,text,source,target,x.reviewOnly?'review':'m2m100')};}
+ if(env.TRANSLATION_QA_ENABLED==='true'&&!x.queue)return {ok:true,providerEnabled:false,engine:'quality_validation_in_progress',nextCursor:null};
  let sources=[];
  if(x.queue){const pending=await env.DB.prepare("SELECT entity,record_id,field FROM translation_jobs WHERE status='pending' OR (status='failed' AND attempts<3 AND updated_at<datetime('now','-1 minute')) OR (status='processing' AND updated_at<datetime('now','-5 minutes')) ORDER BY updated_at,entity,record_id,field LIMIT 1").first();if(pending)sources=(await originals(env,pending.entity,pending.record_id)).filter(s=>s.field===pending.field);}
  else for(const entity of Object.keys(entities))sources.push(...await originals(env,entity,null,x.tripId));
