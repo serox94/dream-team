@@ -855,5 +855,6 @@
   "Google Photos: wymagany bezpieczny link HTTPS do albumu.": "Google Photos: a safe HTTPS album link is required.",
   "Pomiar": "Measurement",
   "Głębokość pomiaru": "Measurement depth",
-  "Klucz zapisu": "Mutation key"
+  "Klucz zapisu": "Mutation key",
+  "Test modelu niedostępny.": "Model test is unavailable."
 }
