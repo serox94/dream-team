@@ -8,7 +8,7 @@ on:
       action:
         description: Manual operation (inspect has zero writes)
         type: choice
-        options: [inspect, prepare, deploy, verify]
+        options: [inspect, prepare, finish-prepare, deploy]
         default: inspect
       recovery_manifest_key:
         description: Private R2 release manifest key
@@ -41,6 +41,12 @@ jobs:
           cache-dependency-path: candidate/package-lock.json
       - run: npm ci
         working-directory: candidate
+      - name: Production browser tooling (only the approved deploy operation)
+        if: inputs.action == 'deploy'
+        working-directory: candidate
+        run: |
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install --with-deps chromium
       - name: Run manual PRO2 operation with existing production approval gate
         working-directory: candidate
         env:
@@ -56,7 +62,9 @@ jobs:
           RELEASE_MANIFEST_KEY: ${{ inputs.recovery_manifest_key }}
         run: |
           cp ../operator/scripts/pro2-production-ops.mjs scripts/pro2-production-ops.mjs
-          cp ../operator/scripts/pro2-production-prepare.mjs scripts/pro2-production-prepare.mjs
+          cp ../operator/scripts/pro2-production-*.mjs scripts/
+          cp ../operator/tests/pro2-production-ops.test.mjs tests/
+          node --test tests/pro2-production-ops.test.mjs
           if [ "${{ inputs.action }}" != "inspect" ]; then node scripts/build.mjs; fi
           node scripts/pro2-production-ops.mjs
       - uses: actions/upload-artifact@v4

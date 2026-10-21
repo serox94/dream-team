@@ -21,7 +21,7 @@ export async function matchedImport(db){
   const s=sources.find(s=>s.entity===t.entity&&s.record_id===t.record_id&&s.field===t.field&&s.source_hash===t.source_hash&&s.source_language!==t.language),j=jobs.find(j=>j.entity===t.entity&&j.record_id===t.record_id&&j.field===t.field&&j.language===t.language&&j.source_hash===t.source_hash);if(!s||!j)continue;
   // An existing production translation, including a manual correction, always wins.
   if(db.prepare('SELECT 1 FROM content_translations WHERE entity=? AND record_id=? AND field=? AND language=?').get(t.entity,t.record_id,t.field,t.language))continue;
-  selected.push({translation:{...t,updated_by:null},source:s,job:j});
+  const author=db.prepare('SELECT id FROM auth_accounts WHERE id=?').get(t.updated_by)?.id||db.prepare("SELECT id FROM auth_accounts WHERE username='Patryk' COLLATE NOCASE AND active=1").get()?.id;check(author,'IMPORT_AUTHOR_NOT_IN_PRODUCTION');selected.push({translation:{...t,updated_by:author},source:s,job:j});
  }
  // Copy only cache entries for selected full-field hashes and their actual chunk keys.
  const keys=new Set(selected.map(r=>r.translation.source_hash));const {chunks}=await import('../src/m2m100.js');const {hash}=await import('../src/content-translations.js');
@@ -30,9 +30,16 @@ export async function matchedImport(db){
  return {records:selected,cache:selectedCache,matched:selected.length,eligible:input.size,excluded:translations.length-selected.length};
 }
 export function applyMatchedLocal(db,transfer){
- const insert=(table,row)=>{const cols=Object.keys(row);db.prepare('INSERT OR IGNORE INTO '+table+'('+cols.join(',')+') VALUES('+cols.map(()=>'?').join(',')+')').run(...cols.map(k=>row[k]));};
+ const insert=(table,row)=>{const cols=Object.keys(row);db.prepare('INSERT INTO '+table+'('+cols.join(',')+') VALUES('+cols.map(()=>'?').join(',')+') ON CONFLICT DO NOTHING').run(...cols.map(k=>row[k]));};
  for(const r of transfer.records){insert('content_sources',r.source);insert('content_translations',r.translation);insert('translation_jobs',r.job);}for(const c of transfer.cache)insert('translation_cache',c);
  db.prepare("INSERT INTO app_settings(key,value) VALUES('translation.pipeline-version','m2m100-reviewed-70b-v1') ON CONFLICT(key) DO UPDATE SET value=excluded.value").run();
+}
+export async function insertTransfer(id,transfer){
+ const groups={content_sources:transfer.records.map(r=>r.source),content_translations:transfer.records.map(r=>r.translation),translation_jobs:transfer.records.map(r=>r.job),translation_cache:transfer.cache};
+ for(const [table,rows]of Object.entries(groups)){
+  if(!rows.length)continue;const columns=Object.keys(rows[0]),size=Math.max(1,Math.floor(90/columns.length));
+  for(let start=0;start<rows.length;start+=size){const batch=rows.slice(start,start+size);check(batch.every(r=>JSON.stringify(Object.keys(r))===JSON.stringify(columns)),'IMPORT_ROW_COLUMNS');await query(id,'INSERT INTO '+table+'('+columns.join(',')+') VALUES '+batch.map(()=> '('+columns.map(()=>'?').join(',')+')').join(',')+' ON CONFLICT DO NOTHING',batch.flatMap(r=>columns.map(k=>r[k])));}
+ }
 }
 export async function privatePut(bucket,key,file,dir){wrangler(['r2','object','put',bucket+'/'+key,'--remote','--file',file]);const copy=join(dir,randomUUID()+'.verify');wrangler(['r2','object','get',bucket+'/'+key,'--remote','--file',copy]);await chmod(copy,0o600);check(sha(await readFile(copy))===sha(await readFile(file)),'PRIVATE_BACKUP_ROUNDTRIP');return sha(await readFile(file));}
 export async function prepare(status){
@@ -57,13 +64,14 @@ export async function prepare(status){
   const transfer=await matchedImport(rehearsal);check(transfer.matched===400,'ORIGINAL_TRANSLATION_IMPORT_COUNT_CHANGED');applyMatchedLocal(rehearsal,transfer);
   const france=rehearsal.prepare("SELECT * FROM trips WHERE id='next-trip'").get();check(france.start_at.startsWith('2026-11-14')&&france.end_at.startsWith('2026-11-21'),'FRANCE_ID_MISMATCH');rehearsal.prepare('UPDATE trips SET google_photos_url=? WHERE id=?').run('https://photos.app.goo.gl/THtvVFEPAogMtsuG7','next-trip');
   const transferFile=await configFile(dir,transfer,'approved-translations.json');const transferSha=await privatePut(archive,'approved-translations.json',transferFile,dir);status.translationImport={matched:transfer.matched,eligible:transfer.eligible,excluded:transfer.excluded,cache:transfer.cache.length,sha256:transferSha};
+  check(rehearsal.prepare('SELECT COUNT(*) n FROM content_translations').get().n===400,'LOCAL_TRANSLATIONS_NOT_SAVED');
   status.migrationRehearsal={result:'PASS',from:29,to:30,accountRowsUnchanged:true};
   // The fresh clone is disposable; remove copied sessions before any candidate exposure.
   await query(clone.uuid,'DELETE FROM auth_sessions');await query(clone.uuid,'DELETE FROM auth_login_limits');
-  const insert=async(table,row)=>{const cols=Object.keys(row);await query(clone.uuid,'INSERT OR IGNORE INTO '+table+'('+cols.join(',')+') VALUES('+cols.map(()=>'?').join(',')+')',cols.map(k=>row[k]));};
-  for(const r of transfer.records){await insert('content_sources',r.source);await insert('content_translations',r.translation);await insert('translation_jobs',r.job);}for(const c of transfer.cache)await insert('translation_cache',c);
+  await insertTransfer(clone.uuid,transfer);
+  check((await q(clone.uuid,'SELECT COUNT(*) n FROM content_translations'))[0].n===400,'IMPORTED_TRANSLATIONS_NOT_SAVED');
   await query(clone.uuid,"INSERT INTO app_settings(key,value) VALUES('translation.pipeline-version','m2m100-reviewed-70b-v1') ON CONFLICT(key) DO UPDATE SET value=excluded.value");await query(clone.uuid,'UPDATE trips SET google_photos_url=? WHERE id=?',['https://photos.app.goo.gl/THtvVFEPAogMtsuG7','next-trip']);
-  status.importRehearsal={result:'PASS',completed:(await q(clone.uuid,"SELECT COUNT(*) n FROM translation_jobs WHERE status='complete'"))[0].n};
+  status.importRehearsal={result:'PASS',savedTranslations:(await q(clone.uuid,'SELECT COUNT(*) n FROM content_translations'))[0].n,completed:(await q(clone.uuid,"SELECT COUNT(*) n FROM translation_jobs WHERE status='complete'"))[0].n};
   phase='private R2 backup and restore';
   const ioConfig=await configFile(dir,{name:name+'-io',main:process.cwd()+'/scripts/restore-io-worker.js',workers_dev:true,compatibility_date:base.compatibility_date,triggers:{crons:[]},r2_buckets:[{binding:'SOURCE',bucket_name:'dream-team-media'},{binding:'ARCHIVE',bucket_name:archive},{binding:'RESTORED',bucket_name:restoredMedia}]},'io.jsonc');ioCreated=true;
   const output=wrangler(['deploy','--config',ioConfig]),ioUrl=output.match(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/)?.[0];check(ioUrl,'IO_URL');const key=randomBytes(32).toString('hex');wrangler(['secret','bulk','--config',ioConfig],JSON.stringify({RECOVERY_KEY:key}));
