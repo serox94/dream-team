@@ -1,0 +1,149 @@
+{
+  "result": "PASS",
+  "build": "f09cb989d79212892bb1b481e5238079f7b772a8",
+  "preview": "https://dream-team-pro2-preview.sewerynski00.workers.dev",
+  "productionRequests": 0,
+  "tests": [
+    {
+      "test": "Patryk PL UI Namiot → Maciek EN UI Tent",
+      "result": "PASS",
+      "id": 110
+    },
+    {
+      "test": "Maciek EN UI Landing net → Patryk PL UI Podbierak",
+      "result": "PASS",
+      "id": 111
+    },
+    {
+      "test": "ASCII EN in PL UI, real model, edit same ID and packed state",
+      "result": "PASS"
+    },
+    {
+      "test": "translated D1 record after reload and offline",
+      "result": "PASS"
+    },
+    {
+      "test": "mobile language change and reload",
+      "result": "PASS"
+    },
+    {
+      "test": "fresh browser context, same account and persistent translation",
+      "result": "PASS"
+    },
+    {
+      "test": "historical trip has persisted translations",
+      "result": "PASS",
+      "current": 14
+    },
+    {
+      "test": "six commercial baits unchanged, three controlled species, live UI and API field exclusion",
+      "result": "PASS"
+    }
+  ],
+  "generalSentence": {
+    "entity": "checklist",
+    "recordId": "112",
+    "field": "label",
+    "sourceText": "Check the spare batteries before using the bait boat.",
+    "sourceHash": "f59fb1f895d0fa5e53f7265171c79503053907d56fde9da5d23c2ffa5363a8c2",
+    "sourceLanguage": "en",
+    "translation": "Sprawdź zapasowe baterie przed użyciem łódki zanętowej.",
+    "revision": 1,
+    "status": "current",
+    "updatedAt": "2026-10-21 16:47:31",
+    "origin": "cloudflare_m2m100_llama_review"
+  },
+  "editedTranslation": {
+    "row": {
+      "entity": "checklist",
+      "recordId": "112",
+      "field": "label",
+      "sourceText": "Bring a tent and a sleeping bag.",
+      "sourceHash": "3413d56ba32ebf4375bfb935a316f7dd8d53a48cf5fd1b75c4c228f4467026f7",
+      "sourceLanguage": "en",
+      "translation": "Weź ze sobą namiot i śpiwór.",
+      "revision": 2,
+      "status": "current",
+      "updatedAt": "2026-10-21 16:47:42",
+      "origin": "cloudflare_m2m100_llama_review"
+    },
+    "attempts": [
+      {
+        "ok": true,
+        "engine": "cloudflare_m2m100",
+        "providerEnabled": true,
+        "translated": 1,
+        "manual": 0,
+        "failed": 0,
+        "paused": false,
+        "stats": [
+          {
+            "status": "complete",
+            "count": 409
+          },
+          {
+            "status": "superseded",
+            "count": 5
+          }
+        ],
+        "scopeCount": 160,
+        "nextCursor": 1
+      }
+    ]
+  },
+  "cleanup": [
+    {
+      "kind": "catches",
+      "id": 5,
+      "status": 200
+    },
+    {
+      "kind": "catches",
+      "id": 6,
+      "status": 200
+    },
+    {
+      "kind": "catches",
+      "id": 7,
+      "status": 200
+    },
+    {
+      "kind": "catches",
+      "id": 8,
+      "status": 200
+    },
+    {
+      "kind": "catches",
+      "id": 9,
+      "status": 200
+    },
+    {
+      "kind": "catches",
+      "id": 10,
+      "status": 200
+    },
+    {
+      "kind": "checklist",
+      "id": 110,
+      "status": 200
+    },
+    {
+      "kind": "checklist",
+      "id": 111,
+      "status": 200
+    },
+    {
+      "kind": "checklist",
+      "id": 112,
+      "status": 200
+    }
+  ],
+  "workflow": "https://github.com/serox94/dream-team/actions/runs/39637591723",
+  "sourceObjects": {
+    "src": "9c3b8638b29b86ecefdda8c5f5adf857cff1bad8",
+    "public": "f68c6a0490324bca06fca605f50d8ced3fcbfe3a",
+    "migrations": "768dc94b961baf410a1b21b58a18e3c18bc059bb",
+    "package.json": "5c7786ffc501e6fcece3b809548fb2382e395add",
+    "package-lock.json": "e48e179180cd45ac493fb6c30055624294e09bf1"
+  }
+}

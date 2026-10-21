@@ -2,6 +2,10 @@ name: Preview final batch
 on:
   workflow_dispatch:
     inputs:
+      retained_qa_only:
+        description: 'Refresh same preview, finish receipt and reuse passed QA only for identical runtime source'
+        type: boolean
+        default: false
       checkpoint_only:
         description: 'Read and checkpoint retained PRO2 D1 only; no deployment or model calls'
         type: boolean
@@ -571,15 +575,22 @@ jobs:
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/pro2-ai-run.mjs
       - name: Install real Chromium for two-account translation verification
-        if: ${{ !inputs.checkpoint_only }}
+        if: ${{ !inputs.checkpoint_only && !inputs.retained_qa_only }}
         run: |
           npm install --no-save --package-lock=false playwright@1.63.0
           npx playwright install --with-deps chromium
       - name: Patryk PL, Maciek EN, shared UI records, edit, restart and offline
-        if: ${{ !inputs.checkpoint_only }}
+        if: ${{ !inputs.checkpoint_only && !inputs.retained_qa_only }}
         env:
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
         run: node scripts/qa-pro2-ai-live.mjs
+      - name: Retain passed actual two-account QA for identical runtime and clean interrupted disposable records
+        if: ${{ !inputs.checkpoint_only && inputs.retained_qa_only }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/pro2-ai-retained-qa.mjs
       - name: Read final D1 counts, retained translations, exact bindings and production version
         if: ${{ always() && !inputs.checkpoint_only }}
         env:

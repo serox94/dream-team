@@ -54,3 +54,13 @@ Draft PR: https://github.com/serox94/dream-team/pull/14
 
 READY TO MERGE: NO — final workflow evidence and approved-A visual acceptance remain the review gate; do not infer readiness from an intermediate backfill count.
 READY TO DEPLOY PRODUCTION: NO — no production consent, required schema30, and final review.
+
+## Retained preview completion
+
+The real two-account Chromium run [39637591723](https://github.com/serox94/dream-team/actions/runs/39637591723), runtime `f09cb989d79212892bb1b481e5238079f7b772a8`, passed all eight cases, including immediate source edit, unchanged packed state, reload/offline, historical records, protected commercial baits and controlled species. Exact results and source tree objects are in `docs/verification/pro2-two-account-live-2026-10-21.json`. Validate 39637428758 and Responsive UI QA 39637428645 passed for that runtime. They are not manually repeated for evidence-only changes.
+
+All original 400 field jobs are complete (including the previously pending 398). The actual queue after disposable QA contains 409 complete, 0 pending/failed/processing and 5 superseded directions. The application cost ledger is 216976/240000 normalized units on 2026-10-21; this is not exact account-wide neuron telemetry. Final receipts must state both the raw queue and the original backlog rather than inflate business counts with tests.
+
+The last PARTIAL receipt compared an originally pending disposable record 109 as though it had been complete. Its translation legitimately changed when resumed. The corrected receipt excludes outstanding revisions and separately verifies a retained baseline of 403 prior translation rows, excluding only the known failed document17 target. Private checkpoints include Time Travel and verified R2/in-memory reconstruction. Never rerun the fresh-copy provisioning workflow to refresh this translated preview.
+
+The retained-QA operator only accepts the recorded PASS when runtime source trees and dependencies are byte-identical. It soft-deletes the exact validated disposable records left by the interrupted initial test, and preserves all historic IDs and translations. Production remains untouched. Approved-A weather visual acceptance remains OPEN; READY TO MERGE: NO; READY TO DEPLOY PRODUCTION: NO.
