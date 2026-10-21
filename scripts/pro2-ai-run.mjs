@@ -44,10 +44,9 @@ try{
  status.quality=assessSamples(status.samples);await writeFile('pro2-ai-status/alternative-quality.json',JSON.stringify(status.quality,null,2));
  assert.ok(status.quality.pass>=30&&status.quality.checks.slice(0,9).every(x=>x.pass),'ALTERNATIVE_QUALITY_GATE');
  phase='controlled resumable archive backfill';status.batches=0;
- // Reprocess only automatic M2M100 drafts. Originals and manual corrections stay.
- await query(dbId,"UPDATE translation_jobs SET status='pending',attempts=0,last_error=NULL WHERE EXISTS(SELECT 1 FROM content_translations t WHERE t.entity=translation_jobs.entity AND t.record_id=translation_jobs.record_id AND t.field=translation_jobs.field AND t.language=translation_jobs.language AND t.origin='cloudflare_m2m100')");
- const pipelineKey='translation.pipeline-version';if((await query(dbId,'SELECT value FROM app_settings WHERE key=?',[pipelineKey])).results[0]?.value!=='m2m100-reviewed-70b-v1'){
-  await query(dbId,"UPDATE translation_jobs SET status='pending',attempts=0,last_error=NULL WHERE status='failed'");await query(dbId,'INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',[pipelineKey,'m2m100-reviewed-70b-v1']);}
+ // Resume only queued/retryable work. The existing pipeline migration and
+ // successful translations have already been verified; never reset their jobs.
+ assert.equal((await query(dbId,"SELECT value FROM app_settings WHERE key='translation.pipeline-version'")).results[0]?.value,'m2m100-reviewed-70b-v1');
  for(let pass=0;pass<4;pass++){const pump=async()=>{let cursor=0,guard=0;do{
    let r;try{r=await api('/api/content-translations/process',{tripId:'next-trip',queue:true});}catch(e){status.transportRetries=(status.transportRetries||0)+1;if(status.transportRetries>8)throw e;await new Promise(resolve=>setTimeout(resolve,1000));continue;}status.batches++;cursor=r.nextCursor;
    if(r.paused)throw Error('FREE_BUDGET_PAUSED');if(++guard>1500)throw Error('BACKFILL_GUARD');

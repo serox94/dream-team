@@ -32,3 +32,8 @@ test('reclassified English originals cannot be replaced by old automatic English
  const data=await handleContentTranslations(new Request('https://test/api/content-translations?tripId=next-trip&language=en'),env,{}),row=data.records.find(r=>r.entity==='checklist'&&r.recordId===id&&r.field==='label');assert.equal(row.status,'original');assert.equal(row.translation,text);assert.equal(DB.sqlite.prepare('SELECT label FROM checklist_items WHERE id=?').get(id).label,text);
  }finally{DB.close();}
 });
+
+test('review prompt requires Arabic digits while numeric validation still rejects changed values',async()=>{
+ const DB=database();let input;const env={DB,TRANSLATION_REVIEW_ENABLED:'true',AI:{run:async(model,x)=>{if(model.includes('m2m100'))return {translated_text:'Choose three zones at 10–12 m.'};input=x;return {response:'Choose 3 zones at 10–12 m.'};}}};
+ try{assert.equal((await translateField(env,'Wybierz 3 strefy na 10–12 m.','pl','en')).text,'Choose 3 zones at 10–12 m.');assert.match(input.messages[0].content,/\["3","10","12"\]/);assert.match(input.messages[0].content,/never spell them out/);}finally{DB.close();}
+});
