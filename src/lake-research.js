@@ -1,3 +1,4 @@
+import {tavilyUsage} from './research-provider-status.js';
 import { InputError } from './validation.js';
 
 const reply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store'}});
@@ -55,6 +56,7 @@ export function suggestions(facts){
 export function provider(env){
   if(!env.TAVILY_API_KEY)return null;
   const call=async(path,payload)=>{
+    if(env.RESEARCH_PREVIEW==='true'){const usage=await tavilyUsage(env);if(!usage.freeOnlyConfirmed||usage.available<2)fail('Nie potwierdzono dostępnego bezpłatnego limitu Tavily. Wywołanie zatrzymane.',429);}
     const response=await fetch('https://api.tavily.com/'+path,{method:'POST',headers:{authorization:'Bearer '+env.TAVILY_API_KEY,'content-type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(14000)});
     if(response.status===429||response.status===402)fail(limitMessage,429);
     if(!response.ok)throw new Error('Dostawca wyszukiwania źródeł jest chwilowo niedostępny.');
