@@ -1,7 +1,11 @@
 name: Isolated lake research preview
 on:
+  workflow_dispatch:
   push:
     branches: [experiment/lake-research-20261022]
+    # Documentation and fixture-only fixes retain the already-tested application
+    # and existing D1. They must not deploy or replay the live research UI suite.
+    paths: [public/**, src/**, migrations/**, package.json, package-lock.json, wrangler.jsonc, scripts/research-preview*.mjs, scripts/qa-research-live.mjs, scripts/recovery-common.mjs]
 permissions:
   contents: read
 concurrency:
