@@ -41,6 +41,17 @@ async function context(lang,width){
 }
 async function ready(p,lang){await p.locator('html[data-ready=true]').waitFor({timeout:45000});assert.equal(await p.locator('html').getAttribute('lang'),lang);}
 async function overflow(p){assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth),await p.evaluate(()=>innerWidth),'horizontal overflow');}
+// Full section evidence at the tested width. A tall section gets a taller
+// capture viewport so sticky navigation never paints over the screenshot.
+// The 390x844 layout/interaction checks still run at the normal phone height.
+async function sectionShot(p,node,path){
+ const viewport=p.viewportSize(),height=(await node.boundingBox()).height;
+ const chrome=await p.evaluate(()=>{const h=document.querySelector('.site-header'),n=document.querySelector('.bottom-nav');return {top:h&&['sticky','fixed'].includes(getComputedStyle(h).position)?h.getBoundingClientRect().height:0,bottom:n&&getComputedStyle(n).display!=='none'?n.getBoundingClientRect().height:0};});
+ await p.setViewportSize({...viewport,height:Math.max(viewport.height,Math.ceil(height+chrome.top+chrome.bottom+48))});
+ await node.evaluate((el,top)=>window.scrollTo({top:scrollY+el.getBoundingClientRect().top-top,behavior:'instant'}),chrome.top+24);
+ const rect=await node.boundingBox();assert.ok(rect.y>=chrome.top);assert.ok(rect.y+rect.height<=p.viewportSize().height-chrome.bottom);
+ await node.screenshot({path});await p.setViewportSize(viewport);
+}
 const luminance=c=>{const rgb=c.match(/[\d.]+/g).slice(0,3).map(Number).map(n=>{n/=255;return n<=.04045?n/12.92:((n+.055)/1.055)**2.4;});return .2126*rgb[0]+.7152*rgb[1]+.0722*rgb[2];};
 async function charts(p,lang){
  const before=await p.evaluate(()=>JSON.stringify(DreamWeatherPro2.model));
@@ -60,7 +71,7 @@ try{
  for(const lang of ['pl','en'])for(const width of [390,1440]){
   const ctx=await context(lang,width),p=await ctx.newPage(),errors=[];page=p;p.on('pageerror',e=>errors.push(e.message));
   await p.goto(base+'/pages/pogoda.html',{waitUntil:'domcontentloaded'});await ready(p,lang);await p.locator('#pro2[data-loaded=true]').waitFor({timeout:45000});
-  const c=await charts(p,lang);await overflow(p);await c.details.locator('.wx-row').screenshot({path:`${out}/weather-charts-${lang}-${width}.png`});
+  const c=await charts(p,lang);await overflow(p);await sectionShot(p,c.details.locator('.wx-row'),`${out}/weather-charts-${lang}-${width}.png`);
   await c.details.locator('summary').scrollIntoViewIfNeeded();await p.screenshot({path:`${out}/weather-analytics-${lang}-${width}.png`});
   await p.locator('#pro2-48').click();const next=p.locator('details.wx-card');await next.locator(':scope > summary').click();assert.equal(await p.locator('[data-hour]').count(),48);assert.ok((await next.locator('.wx-chart-times').first().innerText()).length>15);await overflow(p);
   report.tests.push({screen:'weather',lang,width,result:'PASS',charts:c.result,range:c.expected});
@@ -69,7 +80,7 @@ try{
   assert.equal(await link.getAttribute('href'),album);assert.equal(await link.getAttribute('target'),'_blank');assert.match(await link.getAttribute('rel'),/noopener/);
   assert.match(await link.innerText(),lang==='en'?/Open Google Photos album/:/Otwórz album Google Photos/);
   const box=await link.boundingBox();assert.ok(box.height>=44&&box.width>180);
-  assert.equal(await link.evaluate(e=>getComputedStyle(e).display),'inline-flex');await overflow(p);await photos.screenshot({path:`${out}/photos-${lang}-${width}.png`});
+  assert.equal(await link.evaluate(e=>getComputedStyle(e).display),'inline-flex');await overflow(p);await sectionShot(p,photos,`${out}/photos-${lang}-${width}.png`);
   report.tests.push({screen:'photos',lang,width,result:'PASS',href:album,button:box});
 
   await p.goto(base+'/pages/checklisty.html',{waitUntil:'domcontentloaded'});await ready(p,lang);const labels=p.locator('#template-categories label');await labels.first().waitFor();
@@ -77,7 +88,7 @@ try{
   assert.ok(layout.length>=3);for(const r of layout){assert.ok(r.boxWidth>=22&&r.boxWidth<=28&&r.boxHeight>=22);assert.ok(r.textWidth>=140,JSON.stringify(r));assert.ok(r.labelHeight>=44);assert.ok(r.textRight<=r.right&&r.scroll<=r.client);assert.equal(r.writingMode,'horizontal-tb');if(width===390)assert.ok(r.font>=16);}
   if(width===390)assert.ok(layout.every(r=>Math.abs(r.left-layout[0].left)<1));
   const first=labels.first(),checkbox=first.locator('input');assert.equal(await checkbox.isChecked(),true);await first.locator('span').click();assert.equal(await checkbox.isChecked(),false);await first.locator('span').click();assert.equal(await checkbox.isChecked(),true);await checkbox.focus();await p.keyboard.press('Space');assert.equal(await checkbox.isChecked(),false);await p.keyboard.press('Space');assert.equal(await checkbox.isChecked(),true);
-  await overflow(p);await p.locator('#template-create').screenshot({path:`${out}/categories-${lang}-${width}.png`});
+  await overflow(p);await sectionShot(p,p.locator('#template-create fieldset'),`${out}/categories-${lang}-${width}.png`);
   report.tests.push({screen:'categories',lang,width,result:'PASS',layout,labelTapAndKeyboard:'PASS'});
   assert.deepEqual(errors,[]);if(live)assert.ok((await ctx.request.post(base+'/api/logout',{headers:{origin:base}})).ok());await ctx.close();
  }
