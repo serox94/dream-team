@@ -41,7 +41,12 @@ export async function execute(status,action){
   }
   if(path==='/backup'`);
   await writeFile(join(dir,'io.mjs'),ioSource);const ioConfig=await configFile(dir,{name:name+'-io',main:join(dir,'io.mjs'),workers_dev:true,compatibility_date:base.compatibility_date,triggers:{crons:[]},r2_buckets:[{binding:'SOURCE',bucket_name:'dream-team-media'},{binding:'ARCHIVE',bucket_name:archive},{binding:'RESTORED',bucket_name:media}]},'io.jsonc');ioCreated=true;
-  const ioOut=wrangler(['deploy','--config',ioConfig]),ioUrl=ioOut.match(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/)?.[0];check(ioUrl,'IO_URL');const key=randomBytes(32).toString('hex');wrangler(['secret','bulk','--config',ioConfig],JSON.stringify({RECOVERY_KEY:key}));
+  // Publish code and the recovery secret in ONE version; there is no earlier keyless
+  // version that another edge can serve after a separate secret-bulk deployment.
+  const key=randomBytes(32).toString('hex'),form=new FormData();
+  form.append('metadata',JSON.stringify({main_module:'main.mjs',compatibility_date:base.compatibility_date,bindings:[{type:'r2_bucket',name:'SOURCE',bucket_name:'dream-team-media'},{type:'r2_bucket',name:'ARCHIVE',bucket_name:archive},{type:'r2_bucket',name:'RESTORED',bucket_name:media},{type:'secret_text',name:'RECOVERY_KEY',text:key}]}));form.append('main.mjs',new Blob([ioSource],{type:'application/javascript+module'}),'main.mjs');
+  assertSandbox(name+'-io');const upload=await fetch('https://api.cloudflare.com/client/v4/accounts/'+process.env.CLOUDFLARE_ACCOUNT_ID+'/workers/scripts/'+name+'-io',{method:'PUT',headers:{authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN},body:form,signal:AbortSignal.timeout(120000)});const uploaded=await upload.json();check(upload.ok&&uploaded.success,'PRIVATE_IO_DEPLOY_FAILED');
+  await cf('/workers/scripts/'+name+'-io/subdomain','POST',{enabled:true});const subdomain=await cf('/workers/subdomain');check(/^[a-z0-9-]+$/.test(subdomain.subdomain),'IO_SUBDOMAIN');const ioUrl='https://'+name+'-io.'+subdomain.subdomain+'.workers.dev';
   async function io(path,method='GET'){for(let i=0;i<20;i++){const r=await fetch(ioUrl+path,{method,headers:{'x-recovery-key':key},signal:AbortSignal.timeout(120000)});if(r.status===200){const d=await r.json();check(d.ok,'R2_OPERATION_FAILED');return d;}if(![401,404,502,503,504].includes(r.status)||i===19)throw Error('R2_OPERATION_FAILED');await new Promise(r=>setTimeout(r,1500));}}
   await io('/ready');const r2=await io('/backup','POST'),restored=await privateRestore(ioUrl,key);check(restored.data.objects===r2.objects,'R2_RESTORE_COUNT');status.backupR2={result:'PASS',objects:r2.objects,manifestSha256:r2.manifestSha256,restore:'PASS'};
   setPhase('isolated candidate smoke before maintenance');
