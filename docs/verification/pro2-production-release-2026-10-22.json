@@ -1,0 +1,277 @@
+{
+  "format": "dreamteam-production-release-evidence-v1",
+  "deployment": "SUCCESS",
+  "releasedAt": "2026-10-22T03:53:16Z",
+  "applicationCommit": "4294ce0718f706f2ee72b0c32757ee6913ce1de0",
+  "mergedCommit": "2a2f9bf062a8e145e27573374b27b6f6e3198c54",
+  "applicationTree": "8232c7f2decbb0c8bec4562e415203d3ba7bae89",
+  "treeIdentical": true,
+  "workerVersion": "fec4759e-c439-489a-bff1-6c4ebb6f799b",
+  "workerName": "dream-team",
+  "productionUrl": "https://dream-team.sewerynski00.workers.dev",
+  "schema": 30,
+  "migrationsApplied": 30,
+  "maintenance": "OFF",
+  "counts": {
+    "trips": {
+      "all": 4,
+      "active": 4
+    },
+    "catches": {
+      "all": 3,
+      "active": 3
+    },
+    "checklist_items": {
+      "all": 103,
+      "active": 103
+    }
+  },
+  "tripDocumentsPreserved": 84,
+  "originalAccountsPreserved": 4,
+  "originalSessionsPreserved": true,
+  "originalSessionCount": 3,
+  "credentialsUnchanged": true,
+  "protectedAccount": {
+    "active": true,
+    "protected": true,
+    "mustChangePassword": true,
+    "credentialsUnchanged": true,
+    "passwordReset": false
+  },
+  "translationQueue": {
+    "complete": 400,
+    "pending": 0,
+    "failed": 0,
+    "processing": 0,
+    "superseded": 0
+  },
+  "importedTranslations": 400,
+  "preview": {
+    "database": "c45a6a34-3ca4-46fb-bef5-ff17b8d9caee",
+    "worker": "344273a4-3019-4680-b7c3-3622279d4e4a",
+    "queue": [
+      {
+        "status": "complete",
+        "n": 410
+      },
+      {
+        "status": "superseded",
+        "n": 5
+      }
+    ],
+    "savedTranslations": 411,
+    "original400Preserved": true,
+    "qaRowsExcluded": 11
+  },
+  "twoAccount": {
+    "result": "PASS",
+    "plToEn": "Tent",
+    "enToPl": "Podbierak",
+    "sameSharedRecords": true,
+    "uiVerified": true
+  },
+  "modelResponses": [
+    {
+      "source": "pl",
+      "target": "en",
+      "input": "Sprawdź zapasową latarkę przed wieczornym obchodem stanowiska.",
+      "output": "Check the spare torch before the evening round of the peg.",
+      "origin": "cloudflare_m2m100_llama_review",
+      "fullFieldCacheBefore": 0
+    },
+    {
+      "source": "en",
+      "target": "pl",
+      "input": "Pack the spare headlamp before the evening walk around the lake.",
+      "output": "Zapakuj zapasową latarkę przed wieczornym spacerem wokół jeziora.",
+      "origin": "cloudflare_m2m100_llama_review",
+      "fullFieldCacheBefore": 0
+    }
+  ],
+  "ui": [
+    {
+      "lang": "pl",
+      "width": 390,
+      "result": "PASS",
+      "scroll": 390,
+      "provider": "Open-Meteo",
+      "hours": 48,
+      "score": 46,
+      "errors": []
+    },
+    {
+      "lang": "pl",
+      "width": 1440,
+      "result": "PASS",
+      "scroll": 1440,
+      "provider": "Open-Meteo",
+      "hours": 48,
+      "score": 46,
+      "errors": []
+    },
+    {
+      "lang": "en",
+      "width": 390,
+      "result": "PASS",
+      "scroll": 390,
+      "provider": "Open-Meteo",
+      "hours": 48,
+      "score": 46,
+      "errors": []
+    },
+    {
+      "lang": "en",
+      "width": 1440,
+      "result": "PASS",
+      "scroll": 1440,
+      "provider": "Open-Meteo",
+      "hours": 48,
+      "score": 46,
+      "errors": []
+    }
+  ],
+  "waterSave": {
+    "result": "PASS",
+    "source": "deeper",
+    "uiForm": true,
+    "persistedInD1": true,
+    "temporaryMeasurementRemovedAfterTest": true
+  },
+  "offlinePwa": "PASS",
+  "photos": {
+    "result": "PASS",
+    "tripId": "next-trip",
+    "album": "https://photos.app.goo.gl/THtvVFEPAogMtsuG7",
+    "catchButton": true,
+    "archiveData": true,
+    "archiveButton": true
+  },
+  "archive": {
+    "result": "PASS",
+    "currentTranslations": 14
+  },
+  "baitsAndSpecies": {
+    "originalDataUnchanged": true,
+    "productionUiBaitsUnchanged": true,
+    "productionUiSpeciesPLEN": true,
+    "priorSixBaitEvidenceRetained": true
+  },
+  "smokeCleanup": [
+    {
+      "kind": "checklist",
+      "id": 104,
+      "removed": true
+    },
+    {
+      "kind": "checklist",
+      "id": 105,
+      "removed": true
+    },
+    {
+      "kind": "checklist",
+      "id": 106,
+      "removed": true
+    },
+    {
+      "kind": "checklist",
+      "id": 107,
+      "removed": true
+    },
+    {
+      "kind": "catch",
+      "id": 5,
+      "removed": true
+    },
+    {
+      "kind": "catch",
+      "id": 6,
+      "removed": true
+    },
+    {
+      "kind": "water",
+      "id": "5c959dcf-c133-4a13-909d-c15cd6d44316",
+      "removed": true
+    }
+  ],
+  "budget": {
+    "date": "2026-10-22",
+    "usedNormalizedUnits": 1002,
+    "dailyNormalizedUnitCap": 240000,
+    "remainingNormalizedUnits": 238998,
+    "workersPaid": false,
+    "neuronsDailyFreeHardStop": 10000,
+    "accountWideNeuronsMeasured": false
+  },
+  "cron": {
+    "application": {
+      "schedules": [
+        {
+          "cron": "0 6 * * *",
+          "created_on": "2026-10-20T09:17:44.29838Z",
+          "modified_on": "2026-10-20T09:17:44.29838Z"
+        }
+      ]
+    },
+    "backup": {
+      "schedules": [
+        {
+          "cron": "17 3 * * *",
+          "created_on": "2026-09-29T06:09:43.285182Z",
+          "modified_on": "2026-09-29T12:13:04.442168Z"
+        }
+      ]
+    },
+    "newScheduledOccurrenceObserved": false
+  },
+  "d1Integrity": "PASS: foreign_key_check empty, quick_check ok",
+  "r2Integrity": {
+    "result": "PASS",
+    "objects": 0
+  },
+  "backup": {
+    "d1": {
+      "result": "PASS",
+      "sha256": "cf980795f32b447aa871c1c262542aa651f3a962ef65b6e0557210bebadf8fa7",
+      "key": "private-releases/pro2-39718448811-pre-maintenance.sql",
+      "bookmarkSaved": true
+    },
+    "r2": "PASS",
+    "previousWorker": "27ea7f61-1feb-4404-bb26-9478c51c88bd",
+    "previousCommit": "a21b8af58c7c29510b2889042f36800df7e46da1",
+    "restoreRehearsal": "PASS before production maintenance"
+  },
+  "approval": {
+    "visual": "APPROVED",
+    "ownerApprovedSource": "4294ce0718f706f2ee72b0c32757ee6913ce1de0",
+    "temporaryEnvironmentVariable": "removed after successful GitHub reauthentication",
+    "environmentProtectionRulesChanged": false
+  },
+  "runs": {
+    "prepare": 39718077896,
+    "deploy": 39718448811,
+    "job": 119626091568,
+    "artifact": 12400940480,
+    "initialPrepareBlockedPendingBuild": 39717863862
+  },
+  "retainedEvidence": [
+    {
+      "id": 39642960743,
+      "head": "4294ce0718f706f2ee72b0c32757ee6913ce1de0",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 39638708808,
+      "head": "68b3de257f208c099214db41f78f3376c45e347f",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 39637591723,
+      "head": "f09cb989d79212892bb1b481e5238079f7b772a8",
+      "status": "completed",
+      "conclusion": "failure"
+    }
+  ],
+  "fullAuditsBenchmarksOrBackfillRepeated": false
+}
