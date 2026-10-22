@@ -1,6 +1,6 @@
 // Protect the retained isolated preview before any deploy, queue or test writes.
 import assert from 'node:assert/strict';import {createHash} from 'node:crypto';import {mkdtemp,writeFile,readFile,rm,mkdir} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {cf,query,assertSandbox,wrangler} from './recovery-common.mjs';import {verifyCheckpointRestore} from './checkpoint-restore.mjs';import {originals,hash} from '../src/content-translations.js';import {chunks} from '../src/m2m100.js';import {remoteDb} from './recovery-common.mjs';
-assert.equal(process.env.GITHUB_REF,'refs/heads/feat/pro2-i18n-photos-20261021');
+assert.ok(['refs/heads/feat/pro2-i18n-photos-20261021','refs/heads/fix/pro2-ui-readability-20261022'].includes(process.env.GITHUB_REF));
 const id='c45a6a34-3ca4-46fb-bef5-ff17b8d9caee',bucket='dream-team-audit-39580535456-media';const db=await cf('/d1/database/'+id);assertSandbox(db.name,id);assert.equal(db.name,'dream-team-audit-39580535456-db');
 const deployments=await cf('/workers/scripts/dream-team-pro2-preview/deployments'),version=await cf('/workers/scripts/dream-team-pro2-preview/versions/'+deployments.deployments[0].versions[0].version_id);assert.equal(version.resources.bindings.find(b=>b.name==='DB').id,id);
 const digest=v=>createHash('sha256').update(typeof v==='string'?v:JSON.stringify(v)).digest('hex');const q=async(sql,params=[])=>(await query(id,sql,params)).results;
