@@ -11,3 +11,19 @@
  #pro2 .wx-forecast{grid-template-columns:1fr;gap:8px;margin:8px 0}#pro2 .wx-rain{gap:10px;padding:10px 12px}#pro2 .wx-rain h3{font-size:14px}#pro2 .wx-rain p{font-size:13px;line-height:1.35}#pro2 .wx-tomorrow{padding:10px 12px}#pro2 .wx-tomorrow p{font-size:13px}#pro2 .wx-alert{margin:8px 0;padding:9px 12px;font-size:12px}#pro2 .wx-alert strong{font-size:12px}#pro2 .wx-update{margin:6px 0 18px;font-size:12px}
  #pro2 .wx-contributions{grid-template-columns:repeat(2,1fr)}#pro2 .wx-days{display:flex;overflow:auto}#pro2 .wx-day{flex:0 0 112px}#pro2 .wx-form-grid{grid-template-columns:1fr}#pro2 .wx-row:not(.wx-forecast){grid-template-columns:1fr}#pro2 .wx-head>div:has(#pro2-24){white-space:nowrap}
 }
+
+/* Chart labels stay at readable CSS sizes instead of shrinking with the SVG. */
+#pro2 .wx-figure{margin:0;min-width:0}
+#pro2 .wx-figure figcaption{margin-bottom:10px}
+#pro2 .wx-figure h3{line-height:1.5}
+#pro2 .wx-figure h3 span{display:inline-block;color:#d1ddcc;font-size:14px;font-weight:400}
+#pro2 .wx-chart-frame{background:#0e1912;border:1px solid #49614f;border-radius:12px;padding:12px 10px}
+#pro2 .wx-chart-plot{display:grid;grid-template-columns:56px minmax(0,1fr);gap:6px;align-items:stretch}
+#pro2 .wx-chart-values{display:flex;flex-direction:column;justify-content:space-between;padding:4px 0;color:#d9e4d6;font-size:12px;line-height:16px;text-align:right;font-variant-numeric:tabular-nums}
+#pro2 .wx-chart{width:100%;height:176px;max-height:none;overflow:visible}
+#pro2 .wx-chart-grid{fill:none;stroke:#738d7b;stroke-width:1;stroke-opacity:.65;vector-effect:non-scaling-stroke}
+#pro2 .wx-chart-line{fill:none;stroke:#e0f3ad;stroke-width:3.25;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+#pro2 .wx-chart-point{fill:#e0f3ad}
+#pro2 .wx-chart-times{display:flex;justify-content:space-between;gap:12px;margin:8px 0 0 62px;color:#d9e4d6;font-size:12px;line-height:1.5;font-variant-numeric:tabular-nums}
+#pro2 .wx-chart-times span:last-child{text-align:right}
+@media(max-width:767px){#pro2 .wx-chart-times{margin-left:0}#pro2 .wx-chart-frame{padding:12px 8px}}

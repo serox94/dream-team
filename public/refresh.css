@@ -306,3 +306,16 @@ body[data-page="ustawienia"] input[type="checkbox"] { width:auto; }
 
 /* Catches labels and protected user values remain separate, with a readable gap. */
 .catch-badges .badge{column-gap:4px}
+
+/* Trip album CTA: scoped to Photos, without changing the other form buttons. */
+.trip-photos-link{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:12px 16px;border-radius:12px;text-decoration:none;font-weight:700;line-height:1.4;text-align:center;max-width:100%;white-space:normal}
+.trip-photos-link:hover{border-color:var(--accent);background:#304734}
+.trip-photos-link:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#trip-photos{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-bottom:24px;border-color:var(--border-strong);background:linear-gradient(120deg,#1d3022,#152019)}
+#trip-photos .trip-photos-copy{min-width:0}
+#trip-photos h2{margin:0 0 8px;font-size:1.2rem}
+#trip-photos p{margin:0;max-width:46ch;color:var(--muted);line-height:1.55}
+#trip-photos .trip-photos-action{flex:0 0 auto;max-width:100%}
+#trip-photos .trip-photos-link{background:var(--accent);border:1px solid var(--accent);color:#14241b;box-shadow:0 4px 14px #0002}
+#trip-photos .trip-photos-link:hover{background:#d4e7b2;border-color:#d4e7b2}
+@media(max-width:640px){#trip-photos{flex-direction:column;align-items:stretch;gap:16px}#trip-photos .trip-photos-link{width:100%}}

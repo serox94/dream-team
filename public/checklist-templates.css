@@ -1,1 +1,11 @@
 .checklist-templates{margin-top:1.25rem}.checklist-templates form,.template-card{display:grid;gap:.6rem}.checklist-templates fieldset{border:1px solid #49604e;border-radius:8px}.checklist-templates #template-categories{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8rem),1fr));gap:.4rem}.checklist-templates fieldset label{display:flex;align-items:center;gap:.35rem;margin:0;min-width:0;overflow-wrap:anywhere}.checklist-templates fieldset input{flex:none}.checklist-templates fieldset label span{min-width:0}.template-card{padding:.7rem;border:1px solid #49604e;border-radius:8px;margin:.7rem 0}.template-card summary{cursor:pointer;font-weight:700}.template-item-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr));gap:.4rem;border-top:1px solid #49604e;padding:.5rem 0}.template-item-row input,.template-item-row select{max-width:100%;min-width:0}.template-card button{margin:.2rem .4rem .2rem 0}
+
+/* A checkbox is a fixed control, never a full-width text input. */
+.checklist-templates fieldset{min-width:0;margin:0;padding:12px}
+.checklist-templates #template-categories{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:8px}
+.checklist-templates fieldset label{min-height:48px;padding:10px 12px;gap:12px;border:1px solid #49604e;border-radius:10px;background:#1d2c22;color:var(--text);cursor:pointer;overflow-wrap:normal}
+.checklist-templates input[type="checkbox"]{width:24px;height:24px;min-height:24px;flex:0 0 24px;padding:0;margin:0;accent-color:var(--accent);cursor:pointer}
+.checklist-templates fieldset label span{flex:1;white-space:normal;word-break:normal;overflow-wrap:break-word;line-height:1.45}
+.checklist-templates fieldset label:has(input:checked){border-color:#91ab78;background:#263b2a}
+.checklist-templates fieldset label:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:640px){.checklist-templates #template-categories{grid-template-columns:minmax(0,1fr)}.checklist-templates fieldset{padding:10px}.checklist-templates fieldset label{font-size:16px}}
