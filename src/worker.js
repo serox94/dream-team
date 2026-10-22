@@ -13,6 +13,7 @@ import {handleDeeperMedia} from './deeper-media.js';
 import {handleDeeperAI} from './deeper-ai.js';
 import {checklistTemplates,applyChecklistTemplates} from './checklist-templates.js';
 import {authConfigured,session,login,logout,loginAssets,individualAccounts,accountUsername,accountList,changeSharedPassword} from './auth.js';
+import {tavilyUsage} from './research-provider-status.js';
 import {handleLakeResearch,handleLakeCandidates,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
 
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
@@ -370,6 +371,7 @@ async function privateFetch(request,env,ctx,active){
     const url=new URL(request.url),method=request.method,path=url.pathname;
     try{
       if(!path.startsWith('/api/'))return env.ASSETS.fetch(path==='/'?new Request(new URL('/index.html',url),request):request);
+      if(path==='/api/research-provider-status'&&method==='GET'&&env.APP_ENV==='preview'&&env.RESEARCH_PREVIEW==='true')return json({ok:true,...await tavilyUsage(env)});
       if(path==='/api/health'&&method==='GET'){
         const version=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
         return json({ok:true,app:'dream-team',version:'1.2.0',database:'connected',schemaVersion:version?.value||null});

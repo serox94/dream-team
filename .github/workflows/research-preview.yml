@@ -26,6 +26,16 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
         run: node scripts/research-preview-preflight.mjs
+      - name: Validate application syntax and local resources
+        run: node scripts/build.mjs
+      - name: Protect source and deploy isolated research preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: node scripts/research-preview-deploy.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
