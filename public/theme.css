@@ -1,0 +1,139 @@
+/* Dark keeps the established stylesheets. Only Light supplies this shared palette. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f4eb; --bg-2: #f1f1e7; --bg-soft: #ecefe5;
+  --card: #fffefb; --card-2: #edf1e6;
+  --surface: #fffefb; --surface-soft: #edf1e6; --surface-hover: #e3ead9;
+  --surface-input: #fff; --track: #dbe4d3; --selection: #e5edd8;
+  --border: #c9d2c2; --border-strong: #869b80;
+  --text: #172b23; --muted: #435b4e; --muted-2: #536a5a;
+  --accent: #45642d; --accent-2: #35654c; --accent-3: #806138; --on-accent: #fff;
+  --danger: #9d3329; --warning: #75520f; --success: #2f6242;
+  --ui-info-bg: #eef4f4; --ui-info-br: #91b0a8; --ui-info-tx: #224b48;
+  --ui-success-bg: #edf4e7; --ui-success-br: #8da982; --ui-success-tx: #28542d;
+  --ui-warn-bg: #fcf1d8; --ui-warn-br: #b19352; --ui-warn-tx: #67460b;
+  --ui-danger-bg: #faeee9; --ui-danger-br: #c58e7f; --ui-danger-tx: #922c22;
+  --chart-bg: #f9faf4; --chart-line: #3d621d; --chart-grid: #7d9273;
+  --shadow: 0 14px 38px rgb(29 48 28 / 8%); --shadow-soft: 0 8px 24px rgb(29 48 28 / 5%);
+  color: var(--text); background: var(--bg);
+}
+:root[data-theme-switching] *, :root[data-theme-switching] *::before, :root[data-theme-switching] *::after { transition: none !important; }
+/* A single native switch, usable with touch, Enter and Space. */
+#dream-theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: 0 0 44px; width: 44px; height: 44px; min-height: 44px; padding: 0; margin: 0;
+  border: 1px solid var(--border-strong, #718365); border-radius: 12px;
+  background: var(--card-2, #141e19); color: var(--text, #f2f3e9);
+  font-size: 21px; line-height: 1; cursor: pointer;
+}
+#dream-theme-toggle:hover { background: var(--bg-soft, #17231d); }
+#dream-theme-toggle:focus-visible { outline: 3px solid var(--accent, #bfd393); outline-offset: 3px; }
+.login-card { position: relative; }
+.login-card #dream-theme-toggle { position: absolute; right: 22px; top: 22px; }
+.header-top:has(#dream-theme-toggle) { flex-wrap: nowrap; }
+.header-top:has(#dream-theme-toggle) > div:first-child { min-width: 0; }
+@media (max-width: 640px) {
+  .header-top:has(#dream-theme-toggle) > div:first-child { flex: 1 1 0; }
+  .header-top:has(#dream-theme-toggle) h1 { white-space: nowrap; }
+  .header-top:has(#dream-theme-toggle) .trip-box { flex: 0 1 105px; }
+}
+@media (max-width: 767px) {
+  body:has(#pro2) .header-top:has(#dream-theme-toggle) > div:first-child { width: calc(100% - 144px) !important; }
+}
+
+/* Shared surfaces: legacy modules use the same roles as the newer screens. */
+html[data-theme="light"] {
+  body { color: var(--text); background: radial-gradient(ellipse at 85% 0%, #e7eddc80, transparent 38%), var(--bg); }
+  .login-card { box-shadow: var(--shadow); }
+  .site-header { background: #f6f4ebf5; box-shadow: 0 5px 20px #2030200a; }
+  .hero-card, .panel-card, .stat-card, .knowledge-card, .catch-item, .spot-card,
+  .checklist-group, #checklist-groups .checklist-group, .weather-hour-card, .weather-day-card,
+  .dashboard-mini-card, .login-card, .location-photo-card, .hero-side-card,
+  .knowledge-entry, .field-guide, .media-card, .guide-media, .deeper-shot {
+    background: var(--surface); border-color: var(--border);
+  }
+  .hero-card { background: radial-gradient(ellipse at 95% 0%, #e1e9cf90, transparent 60%), var(--surface); }
+  .trip-box, .dream-trip-select, .mini-stats div, .dream-detail-list > div,
+  .check-item-row, #checklist-groups .check-item-row, .small-stat-box, .spot-meta-box,
+  .empty-box, .spot-map-hint, .weather-interpretation, .field-guide-facts > div,
+  .dashboard-snapshot > div, .trip-facts span, .entry-tags span, .guide-mini-pill,
+  .knowledge-matrix, .tool-result, .scan-checklist label, .chirp-practice,
+  .wizard-candidate, .knowledge-home-grid a, .deeper-shot-placeholder,
+  .check-item-badge, .badge, .section-chip, .guide-caption, .photo-caption,
+  .last-entry-item, .catch-note, .weather-note, .weather-row, .weather-chip,
+  .hero-pill, .carp-forecast-grid > div,
+  .location-photo-card .photo-caption, .sonar-diagram figcaption {
+    background: var(--surface-soft); color: var(--text); border-color: var(--border);
+  }
+  input, select, textarea { color: var(--text); background: var(--surface-input); border-color: var(--border-strong); }
+  input::placeholder, textarea::placeholder { color: var(--muted-2); opacity: 1; }
+  input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+  :focus-visible { outline-color: var(--accent); }
+  button { background: var(--accent); color: var(--on-accent); }
+  button:hover { background: #344e21; }
+  .secondary-btn, .edit-btn, .quick-links a, .dream-action, .hero-actions a,
+  .field-guide-links a, .field-guide-actions a:not(:first-child),
+  .knowledge-shortcuts a, .article-related a, .quick-cross a,
+  .knowledge-chips button, .filter-bar .filter-btn {
+    background: var(--surface-soft); color: var(--text); border-color: var(--border-strong);
+  }
+  .secondary-btn:hover, .edit-btn:hover, .quick-links a:hover, .dream-action:hover,
+  .hero-actions a:hover, .knowledge-chips button:hover { background: var(--surface-hover); }
+  .hero-actions a:first-child, .field-guide-actions a:first-child,
+  .knowledge-chips button.selected, .filter-bar .filter-btn.active,
+  #check-toolbar .filter-btn.active, .main-nav a.active, .main-nav a:hover {
+    background: var(--accent); color: var(--on-accent); border-color: var(--accent);
+  }
+  .hero-actions a:first-child:hover { background: #344e21; }
+  .danger-btn, .danger-btn:hover { color: var(--ui-danger-tx); background: var(--ui-danger-bg); border-color: var(--ui-danger-br); }
+  .form-message.error, .error, #media-status.error, .login-error { color: var(--danger); }
+  .login-card .error { background: var(--ui-danger-bg); border-color: var(--ui-danger-br); }
+  .eyebrow, .article-sources a, .source-catalog-list a { color: var(--accent); }
+  .intro, .login-hint, #trip-manager small, .trip-box small { color: var(--muted); }
+  .mark, .header-top h1::before { background: var(--accent); color: var(--on-accent); }
+  .score-track, .readiness-track, .dashboard-progress, .pb-track, .progress-bar { background: var(--track); }
+  .score-good { color: var(--success) !important; }
+  .score-mid { color: var(--warning) !important; }
+  .score-bad { color: var(--danger) !important; }
+  .alert-card { background: var(--surface); color: var(--text); }
+  .status-info { background: var(--ui-info-bg); color: var(--ui-info-tx); }
+  .status-success { background: var(--ui-success-bg); color: var(--ui-success-tx); }
+  .status-warn { background: var(--ui-warn-bg); color: var(--ui-warn-tx); }
+  .status-danger { background: var(--ui-danger-bg); color: var(--ui-danger-tx); }
+  .offline-banner { background: var(--ui-warn-bg); color: var(--ui-warn-tx); border-bottom: 1px solid var(--ui-warn-br); }
+  #offline-conflict-dialog { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+  dialog::backdrop { background: #172b2366; }
+  #catch-form .form-actions { background: var(--surface); }
+  .check-item-row.is-done { opacity: 1; }
+  .checklist-templates fieldset, .template-card, .template-item-row, .participant-profile,
+  #trip-manager fieldset, .recovery-row { border-color: var(--border-strong); }
+  .checklist-templates fieldset label { background: var(--surface); border-color: var(--border-strong); }
+  .checklist-templates fieldset label:has(input:checked) { background: var(--selection); border-color: var(--accent); }
+  #trip-photos { background: linear-gradient(120deg, var(--selection), var(--surface)); }
+  #trip-photos .trip-photos-link { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: none; }
+  #trip-photos .trip-photos-link:hover { background: #344e21; }
+  /* Photo overlays stay dark so captions retain contrast over the photographs. */
+  .hero-side-body, .hero-side-body strong { color: #fff; }
+  .hero-side-body span { color: #e9efe4; }
+  @media (max-width: 900px) {
+    .main-nav { background: var(--surface) !important; box-shadow: var(--shadow) !important; }
+    .main-nav > .language-selector { background: var(--surface); border-color: var(--border); }
+    .bottom-nav { background: #fffefbf7; }
+    .bottom-nav a, .bottom-nav button { color: var(--muted); background: transparent; }
+    .bottom-nav .active, .bottom-nav a:hover, .bottom-nav button[aria-expanded="true"] { color: var(--accent); background: var(--selection); }
+    .bottom-nav .nav-add-catch, .bottom-nav .nav-add-catch.active, .bottom-nav .nav-add-catch:hover { background: var(--accent); color: var(--on-accent); }
+  }
+  /* Local weather tokens must follow the global palette, without changing any calculations. */
+  #pro2 { --p: var(--surface); --p2: var(--surface-soft); --line: var(--border); --text: #172b23; --muted: #435b4e; --lime: var(--accent); }
+  #pro2 .wx-activity { background: linear-gradient(135deg, var(--selection), var(--surface)); }
+  #pro2 .wx-alert { background: var(--ui-warn-bg); border-color: var(--ui-warn-br); color: var(--ui-warn-tx); }
+  #pro2 .wx-alert[data-state="SAFE"] { background: var(--ui-success-bg); border-color: var(--ui-success-br); color: var(--ui-success-tx); }
+  #pro2 .wx-alert[data-state="DANGER"] { background: var(--ui-danger-bg); border-color: var(--ui-danger-br); color: var(--ui-danger-tx); }
+  #pro2 .wx-figure h3 span, #pro2 .wx-chart-values, #pro2 .wx-chart-times { color: var(--muted); }
+  #pro2 .wx-chart-frame { background: var(--chart-bg); border-color: var(--border-strong); }
+  #pro2 .wx-chart-line { stroke: var(--chart-line); }
+  #pro2 .wx-chart-point { fill: var(--chart-line); }
+  #pro2 .wx-chart-grid { stroke: var(--chart-grid); stroke-opacity: 1; }
+  .pro2-language button { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+  .pro2-language button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+}
