@@ -492,10 +492,9 @@ async function handleRequest(request,env,ctx){
         return protectedResponse(Response.redirect(url.origin+'/login',302));
       }
       if(path==='/api/logout'&&method==='POST')return await logout(env,active);
-      if(active.account?.mustChangePassword&&!['/api/account/password','/account-password.html','/account-password.js','/login.css','/language-preference.js'].includes(path)){
-        if(path.startsWith('/api/'))return json({ok:false,error:'Zmień hasło początkowe przed korzystaniem z aplikacji.',code:'PASSWORD_CHANGE_REQUIRED'},403);
-        return protectedResponse(Response.redirect(url.origin+'/account-password.html',303),active);
-      }
+      // The team's existing credentials are valid without a forced first-login
+      // rotation. Preserve credential versions and every existing session.
+      if(['/account-password','/account-password.html'].includes(path))return protectedResponse(Response.redirect(url.origin+'/pages/ustawienia.html',303),active);
       return protectedResponse(await privateFetch(request,env,ctx,active),active);
     }catch(error){
       console.error('Private request failed:',error);

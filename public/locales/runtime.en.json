@@ -861,5 +861,6 @@
   "Spot:": "Spot:",
   "Brak": "None",
   "Połów zapisany.": "Catch saved.",
-  "Połów czeka na synchronizację.": "Catch is waiting to sync."
+  "Połów czeka na synchronizację.": "Catch is waiting to sync.",
+  "Nowe hasło nie może być puste.": "The new password cannot be empty."
 }

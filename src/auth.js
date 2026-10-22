@@ -164,11 +164,10 @@ export async function initializeProtectedAccount(env,password,{reset=false,expec
 export async function changeSharedPassword(request,env,active){
   const x=await body(request),current=x.currentPassword,next=x.newPassword;
   if(typeof current!=='string'||typeof next!=='string'||!current.length||current.length>256||next.length>256)fail('Nieprawidłowe hasło.');
-  if(next.length<8)fail('Nowe hasło musi mieć co najmniej 8 znaków.');
+  if(!next.length)fail('Nowe hasło nie może być puste.');
   const own=await env.DB.prepare('SELECT * FROM auth_account_credentials WHERE account_id=?').bind(active.account.id).first();
   const row=own||await sharedCredential(env);
   if(!await verifyPassword(env,current,row))fail('Obecne hasło jest nieprawidłowe.',403);
-  if(own?.must_change&&!(typeof x.sharedPassword==='string'&&x.sharedPassword.length<=256&&await verifyPassword(env,x.sharedPassword,await sharedCredential(env))))fail('Potwierdź obecne wspólne hasło zespołu.',403,'BOOTSTRAP_CONFIRMATION_REQUIRED');
   if(next===current)fail('Nowe hasło musi różnić się od obecnego.',400,'PASSWORD_UNCHANGED');
   const salt=hex(crypto.getRandomValues(new Uint8Array(32))),hash=await passwordHash(env,next,salt);
   if(own){
