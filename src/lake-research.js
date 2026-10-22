@@ -1,3 +1,5 @@
+import {researchProfile,stepResearch,proposeLocation,approveLocation} from './research-engine.js';
+import {researchGear} from './research-facts.js';
 import {tavilyUsage} from './research-provider-status.js';
 import { InputError } from './validation.js';
 
@@ -121,7 +123,7 @@ export async function profile(env,lakeId){
   const changes=await all(db,'SELECT field,old_value oldValue,new_value newValue,changed_at changedAt FROM lake_fact_changes WHERE lake_id=? ORDER BY changed_at DESC LIMIT 20',lakeId);
   const days=last?.completedAt?(Date.now()-Date.parse(last.completedAt))/86400000:Infinity;
   const checks=[...Object.keys(fields).map(field=>({field,found:facts.some(f=>f.field===field&&f.status==='potwierdzone')})),{field:'country',found:Boolean(lake.country)},{field:'gps',found:lake.latitude!=null&&lake.longitude!=null}];
-  return {ok:true,lake:{...lake,factsJson:undefined,facts:JSON.parse(lake.factsJson||'{}')},facts,sources,changes,coverage:{found:checks.filter(c=>c.found).length,total:checks.length,checks},missingFields:checks.filter(c=>!c.found).map(c=>c.field),lastResearch:last,status:facts.some(f=>f.status==='sprzeczne')?'konflikt źródeł':days>30?'wymaga odświeżenia':'aktualne'};
+  return {ok:true,research:await researchProfile(env,lakeId),lake:{...lake,factsJson:undefined,facts:JSON.parse(lake.factsJson||'{}')},facts,sources,changes,coverage:{found:checks.filter(c=>c.found).length,total:checks.length,checks},missingFields:checks.filter(c=>!c.found).map(c=>c.field),lastResearch:last,status:facts.some(f=>f.status==='sprzeczne')?'konflikt źródeł':days>30?'wymaga odświeżenia':'aktualne'};
 }
 export async function handleLakeCandidates(request,env){
   const x=await request.json(),name=String(x.name||'').trim(),country=String(x.country||'').trim();
@@ -149,24 +151,12 @@ export async function handleLakeResearch(request,env,lakeId,action){
     catch(error){await finish(db,id,'failed',error.message);throw error;}
   }
   if(action==='research'){
-    const url=safeSourceUrl(x.url||lake.source_url),title=String(x.title||lake.name).slice(0,150),sourceType=['official','regulation','operator','manual'].includes(x.sourceType)?x.sourceType:'manual';
-    if(!web)return reply({ok:false,error:'Automatyczne wyszukiwanie źródeł nie jest skonfigurowane. Zapisz źródło i fakty ręcznie.'},503);
-    const id=await reserve(db,lakeId,'extract',2);
-    try{
-      const rows=await all(db,"SELECT key,value FROM app_settings WHERE key IN ('research_languages','research_official_first')");
-      const preferences=Object.fromEntries(rows.map(row=>[row.key,row.value]));
-      const pages=await web.research(lake.name,lake.country||'',url,sourceType,{languages:preferences.research_languages,official:preferences.research_official_first});
-      if(!pages.length)fail('Brak treści do ekstrakcji. Dodaj fakty ręcznie.',422);
-      let count=0;
-      for(const page of pages){
-        const found=extractFacts(page.content),pageType=['official','regulation','operator','manual'].includes(page.sourceType)?page.sourceType:sourceType;
-        const sourceId=await saveSource(db,lakeId,page.url,page.title||title,pageType);
-        for(const fact of found){await saveFact(db,lakeId,sourceId,{...fact,sourceType:pageType});count++;}
-      }
-      await finish(db,id,'completed',`${count} faktów z ${pages.length} źródeł`);
-      return reply({ok:true,count,sourcesChecked:pages.length,profile:await profile(env,lakeId)});
-    }catch(error){await finish(db,id,'failed',error.message);throw error;}
+    const url=safeSourceUrl(x.url||lake.source_url);
+    const result=await stepResearch(env,lakeId,url);
+    return reply({ok:true,count:result.facts.length,sourcesChecked:result.pages.length,research:result,profile:await profile(env,lakeId)});
   }
+  if(action==='gps-propose')return reply({ok:true,research:await proposeLocation(env,lakeId,x)});
+  if(action==='gps-approve')return reply({ok:true,research:await approveLocation(env,lakeId,x)});
   if(action==='facts'){
     const url=safeSourceUrl(x.url),field=fieldName(x.field),value=String(x.value||'').trim();if(!value||value.length>500)fail('Podaj krótki fakt (maksymalnie 500 znaków).');
     const sourceType=['official','regulation','official_social','operator','directory','community','manual'].includes(x.sourceType)?x.sourceType:'manual';
@@ -183,7 +173,7 @@ export async function handleLakeResearch(request,env,lakeId,action){
 }
 export async function handleSuggestions(request,env,tripId){
   const trip=await one(env.DB,'SELECT id,lake_id FROM trips WHERE id=?',tripId);if(!trip)fail('Nie znaleziono wyjazdu.',404);
-  const data=await profile(env,trip.lake_id),items=suggestions(data.facts);
+  const data=await profile(env,trip.lake_id),items=data.research.facts.length?researchGear(data.research.facts):suggestions(data.facts);
   if(request.method==='GET')return reply({ok:true,items,advice:data.facts.filter(f=>['bottom','depth','weed'].includes(f.field)).map(f=>({type:'SUGESTIA WĘDKARSKA',field:f.field,value:f.value,sourceUrl:f.url}))});
   const x=await request.json();if(!Array.isArray(x.labels)||x.labels.length>20)fail('Wybierz pozycje do dodania.');
   const labels=[...new Set(x.labels)];if(labels.some(l=>!items.some(i=>i.label===l)))fail('Nieznana propozycja.');

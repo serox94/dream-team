@@ -1,0 +1,7 @@
+-- Additive research evidence; never updates historical facts or translations.
+CREATE TABLE IF NOT EXISTS research_pages(lake_id TEXT NOT NULL REFERENCES lakes(id),url TEXT NOT NULL,content TEXT NOT NULL,checked_at TEXT NOT NULL,scope TEXT NOT NULL,PRIMARY KEY(lake_id,url));
+CREATE TABLE IF NOT EXISTS research_observations(id TEXT PRIMARY KEY,lake_id TEXT NOT NULL REFERENCES lakes(id),url TEXT NOT NULL,field TEXT NOT NULL,evidence TEXT NOT NULL,data_json TEXT NOT NULL,checked_at TEXT NOT NULL,UNIQUE(lake_id,url,field,evidence));
+CREATE TABLE IF NOT EXISTS research_jobs(id TEXT PRIMARY KEY,lake_id TEXT NOT NULL REFERENCES lakes(id),source_url TEXT NOT NULL,status TEXT NOT NULL,queue_json TEXT NOT NULL DEFAULT '[]',lease_until TEXT,attempts INTEGER NOT NULL DEFAULT 0,credits_reserved REAL NOT NULL DEFAULT 0,credits_actual REAL NOT NULL DEFAULT 0,message TEXT,started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,completed_at TEXT);
+CREATE UNIQUE INDEX IF NOT EXISTS research_active_job ON research_jobs(lake_id) WHERE status IN ('pending','processing');
+CREATE TABLE IF NOT EXISTS research_locations(id TEXT PRIMARY KEY,lake_id TEXT NOT NULL REFERENCES lakes(id),latitude REAL NOT NULL,longitude REAL NOT NULL,kind TEXT NOT NULL,url TEXT NOT NULL,evidence TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'proposed',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(lake_id,latitude,longitude,kind));
+INSERT OR REPLACE INTO app_settings(key,value,updated_at) VALUES('schema_version','31',CURRENT_TIMESTAMP);

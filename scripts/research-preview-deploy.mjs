@@ -28,6 +28,14 @@ try{
   await query(clone.uuid,"INSERT INTO app_settings(key,value) VALUES('research.preview.identity',?)",[identity]);report.snapshotSha256=dump.sha256;
  }
  check(clone.uuid!==productionId&&clone.uuid!==pro2Id&&clone.uuid!=='5d32f54f-f953-463f-8519-745e51417986','PROTECTED_DB');
+ const schema=(await q(clone.uuid,"SELECT value FROM app_settings WHERE key='schema_version'"))[0]?.value;
+ if(schema==='30'){
+  const migration='0031_research_evidence.sql',migrateConfig=await configFile(dir,{name:'dream-team-audit-2026102231',compatibility_date:base.compatibility_date,d1_databases:[{binding:'DB',database_name:dbName,database_id:clone.uuid}]},'migration.jsonc');
+  wrangler(['d1','execute',dbName,'--remote','--config',migrateConfig,'--file','migrations/'+migration]);
+  await query(clone.uuid,'INSERT INTO d1_migrations(name) VALUES(?)',[migration]);
+ }
+ check((await q(clone.uuid,"SELECT value FROM app_settings WHERE key='schema_version'"))[0]?.value==='31','RESEARCH_SCHEMA_NOT_READY');
+ check((await q(clone.uuid,'PRAGMA foreign_key_check')).length===0,'RESEARCH_FOREIGN_KEY_CHECK');
  const gate=randomBytes(32).toString('hex'),secretsFile=await configFile(dir,{RESEARCH_PROXY_KEY:gate,...Object.fromEntries(['RYBY_LOGIN_USERNAME','RYBY_LOGIN_PASSWORD','RYBY_SESSION_SECRET'].map(k=>[k,process.env[k]]))},'secrets.json');
  const wrapper=join(dir,'version.mjs');await writeFile(wrapper,`import app from ${JSON.stringify(process.cwd()+'/src/worker.js')};export default{async fetch(r,e,c){if(!e.RESEARCH_PROXY_KEY||r.headers.get('x-research-proxy-key')!==e.RESEARCH_PROXY_KEY)return new Response('Unavailable',{status:503});const u=new URL(r.url),origin=new URL(${JSON.stringify(publicUrl)});u.protocol=origin.protocol;u.host=origin.host;const h=new Headers(r.headers);h.delete('x-research-proxy-key');return app.fetch(new Request(u,new Request(r,{headers:h})),e,c);},scheduled(){}};`);
  phase='upload private version with isolated bindings; no active deployment';console.log('RESEARCH_PHASE '+phase);

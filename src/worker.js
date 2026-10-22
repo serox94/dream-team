@@ -119,7 +119,7 @@ async function saveTrip(request,env,id,ctx) {
   }
   return json({ok:true,id},Object.keys(current).length?200:201);
 }
-async function saveLake(request,env,id) {
+async function saveLake(request,env,id,ctx) {
   const x=await body(request),c=id?await one(env,'SELECT * FROM lakes WHERE id=?',id):{};
   if(!c) fail('Nie znaleziono łowiska.',404);
   const name=text(pick(x,'name',c.name),'Nazwa łowiska',150,true),country=text(pick(x,'country',c.country),'Kraj',100);
@@ -130,6 +130,11 @@ async function saveLake(request,env,id) {
   const image=webUrl(pick(x,'imageUrl',c.image_url),'Zdjęcie'),source=webUrl(pick(x,'sourceUrl',c.source_url),'Źródło');
   if(id) await run(env,`UPDATE lakes SET name=?,country=?,latitude=?,longitude=?,image_url=?,facts_json=?,source_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,name,country,lat,lon,image,JSON.stringify(f),source,id);
   else {id=crypto.randomUUID();await run(env,`INSERT INTO lakes(id,name,country,latitude,longitude,image_url,facts_json,source_url) VALUES(?,?,?,?,?,?,?,?)`,id,name,country,lat,lon,image,JSON.stringify(f),source);}
+  // Confirmed URL save starts a bounded evidence pass; UI can resume its persisted job.
+  if(source&&source!==c.source_url&&x.researchConfirmed===true){
+    const setting=await one(env,"SELECT value FROM app_settings WHERE key='research_auto'");
+    if(setting?.value!=='off')ctx?.waitUntil(handleLakeResearch(new Request('https://internal/api/research',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url:source})}),env,id,'research').catch(()=>{}));
+  }
   return json({ok:true,id},c.id?200:201);
 }
 // Delete a lake only when it is not used by any trip (including archived trips).
@@ -138,11 +143,12 @@ async function deleteLake(env,id) {
   if(!await one(env,'SELECT id FROM lakes WHERE id=?',id))fail('Nie znaleziono łowiska.',404);
   const used=await one(env,'SELECT COUNT(*) count FROM trips WHERE lake_id=?',id);
   if(Number(used?.count)>0)fail('Łowisko jest przypisane do wyjazdów lub archiwum. Aby zachować historię, nie można go usunąć.',409);
-  const running=await one(env,"SELECT id FROM lake_research_runs WHERE lake_id=? AND status IN ('reserved','running') LIMIT 1",id);
+  const running=await one(env,"SELECT id FROM lake_research_runs WHERE lake_id=? AND status IN ('reserved','running') UNION ALL SELECT id FROM research_jobs WHERE lake_id=? AND status IN ('pending','processing') LIMIT 1",id,id);
   if(running)fail('Trwa sprawdzanie informacji o łowisku. Spróbuj ponownie po zakończeniu.',409);
   // Foreign keys from facts/changes to sources require deleting children first.
   try{
     await env.DB.batch([
+      ...['research_observations','research_pages','research_jobs','research_locations'].map(table=>stmt(env,'DELETE FROM '+table+' WHERE lake_id=?',id)),
       stmt(env,'DELETE FROM lake_fact_changes WHERE lake_id=?',id),
       stmt(env,'DELETE FROM lake_facts WHERE lake_id=?',id),
       stmt(env,'DELETE FROM lake_research_runs WHERE lake_id=?',id),
@@ -364,7 +370,7 @@ async function removeOrRestore(request,env,kind,id,restore){
 }
 async function exportData(env){
   const data={format:'dream-team-backup-v1',exportedAt:new Date().toISOString(),tables:{}};
-  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','content_translations','content_sources','translation_jobs','translation_cache','water_measurements','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
+  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','research_pages','research_observations','research_jobs','research_locations','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','content_translations','content_sources','translation_jobs','translation_cache','water_measurements','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
   return json(data,200,{'content-disposition':`attachment; filename="dream-team-backup-${new Date().toISOString().slice(0,10)}.json"`});
 }
 async function privateFetch(request,env,ctx,active){
@@ -407,7 +413,7 @@ async function privateFetch(request,env,ctx,active){
       }
       if(path==='/api/lake-candidates'&&method==='POST')return await handleLakeCandidates(request,env);
       if(path==='/api/settings'&&['GET','PATCH'].includes(method))return await settings(request,env);
-      let researchMatch=path.match(/^\/api\/lakes\/([^/]+)\/(profile|candidates|research|facts|sources)$/);
+      let researchMatch=path.match(/^\/api\/lakes\/([^/]+)\/(profile|candidates|research|facts|sources|gps-propose|gps-approve)$/);
       if(researchMatch)return await handleLakeResearch(request,env,decodeURIComponent(researchMatch[1]),researchMatch[2]);
       researchMatch=path.match(/^\/api\/trips\/([^/]+)\/suggestions$/);
       if(researchMatch&&['GET','POST'].includes(method))return await handleSuggestions(request,env,decodeURIComponent(researchMatch[1]));
@@ -423,7 +429,7 @@ async function privateFetch(request,env,ctx,active){
         return json({ok:true,items});
       }
       if(path==='/api/trips'&&method==='POST')return await saveTrip(request,env,null,ctx);
-      if(path==='/api/lakes'&&method==='POST')return await saveLake(request,env);
+      if(path==='/api/lakes'&&method==='POST')return await saveLake(request,env,null,ctx);
       if(path==='/api/anglers'&&method==='POST')return await createAngler(request,env);
       const anglerMatch=path.match(/^\/api\/anglers\/([^/]+)$/);
       if(anglerMatch&&method==='PATCH')return await updateAngler(request,env,decodeURIComponent(anglerMatch[1]));
@@ -432,7 +438,7 @@ async function privateFetch(request,env,ctx,active){
         const id=decodeURIComponent(m[2]);
         if(m[1]==='trips'&&m[3]&&method==='POST')return await activate(env,id);
         if(!m[3]&&m[1]==='lakes'&&method==='DELETE')return await deleteLake(env,id);
-        if(!m[3]&&method==='PUT')return await (m[1]==='trips'?saveTrip(request,env,id,ctx):saveLake(request,env,id));
+        if(!m[3]&&method==='PUT')return await (m[1]==='trips'?saveTrip(request,env,id,ctx):saveLake(request,env,id,ctx));
       }
       m=path.match(/^\/api\/(catches|spots|checklist)(?:\/(\d+)(\/restore)?)?$/);
       if(m){
