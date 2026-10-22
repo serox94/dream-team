@@ -5,14 +5,14 @@ import {cf,query,productionId,sha,wrangler,configFile,exportSql,assertSandbox,im
 import {inspectSql,verifySnapshot,rowsDigest,identifier} from './d1-snapshot.mjs';
 import {privateRestore} from './recovery-transport.mjs';
 import {APPROVED,PRODUCTION,check,git,tree,gh,queueGate,requireApproval} from './ui-release-core.mjs';
-import {smoke} from './ui-smoke.mjs';
 const q=async(id,sql,args=[])=>(await query(id,sql,args)).results;
 async function privatePut(bucket,key,file,dir){wrangler(['r2','object','put',bucket+'/'+key,'--remote','--file',file]);const copy=join(dir,randomUUID()+'.verify');wrangler(['r2','object','get',bucket+'/'+key,'--remote','--file',copy]);await chmod(copy,0o600);check(sha(await readFile(copy))===sha(await readFile(file)),'PRIVATE_BACKUP_ROUNDTRIP');return sha(await readFile(file));}
-export async function verifyRows(snapshot,{maintenance=false,operational=false}={}){
- for(const t of snapshot.tables){if(operational&&['auth_sessions','auth_login_limits'].includes(t.name))continue;let a=await q(productionId,'SELECT * FROM '+identifier(t.name)),b=t.rows;if(maintenance&&t.name==='app_settings'){a=a.filter(r=>r.key!=='maintenance_mode');b=b.filter(r=>r.key!=='maintenance_mode');}check(rowsDigest(a)===rowsDigest(b),'PRESERVATION_'+t.name.toUpperCase());}
- if(operational){const existing=await q(productionId,'SELECT * FROM auth_sessions');for(const s of snapshot.tables.find(t=>t.name==='auth_sessions').rows)check(existing.some(r=>rowsDigest([r])===rowsDigest([s])),'PREEXISTING_SESSION_CHANGED');}
+export async function verifyRows(snapshot,{maintenance=false,operational=false,read=sql=>q(productionId,sql)}={}){
+ for(const t of snapshot.tables){if(operational&&['auth_sessions','auth_login_limits'].includes(t.name))continue;let a=await read('SELECT * FROM '+identifier(t.name)),b=t.rows;if(maintenance&&t.name==='app_settings'){a=a.filter(r=>r.key!=='maintenance_mode');b=b.filter(r=>r.key!=='maintenance_mode');}check(rowsDigest(a)===rowsDigest(b),'PRESERVATION_'+t.name.toUpperCase());}
+ if(operational){const existing=await read('SELECT * FROM auth_sessions');for(const s of snapshot.tables.find(t=>t.name==='auth_sessions').rows)check(existing.some(r=>rowsDigest([r])===rowsDigest([s])),'PREEXISTING_SESSION_CHANGED');}
 }
 export async function execute(status,action){
+ const {smoke}=await import('./ui-smoke.mjs');
  const candidate=process.env.RELEASE_CANDIDATE,run=process.env.GITHUB_RUN_ID,name='dream-team-audit-'+run,dir=await mkdtemp(join(tmpdir(),'ui-release-private-')),base=JSON.parse(await readFile('wrangler.jsonc','utf8'));
  const archive=name+'-archive',media=name+'-media';let clone,ioCreated=false,canaryCreated=false,maintenance=false,deployed=false,originalMaintenance,sourceVersion;let phase='release gates';
  const http=(path,options={})=>fetch(PRODUCTION+path,{redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(45000),...options});
