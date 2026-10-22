@@ -58,7 +58,7 @@ async function listShot(p,path){
 async function shot(p,path){await p.evaluate(()=>{document.activeElement?.blur();scrollTo({top:0,behavior:'instant'})});await p.screenshot({path});}
 async function darkUnchanged(p){
  const sample=()=>[...document.querySelectorAll('body,.hero-card,.panel-card,.stat-card,.catch-item,.bottom-nav a,input,select,#pro2 .wx-card,#pro2 .wx-chart-line')].map(e=>{const s=getComputedStyle(e);return [s.color,s.background,s.borderColor,s.boxShadow,s.fontSize,s.stroke,s.strokeWidth];});
- const before=await p.evaluate(sample);await p.evaluate(()=>{document.querySelector('link[href="/theme.css"]').disabled=true});const original=await p.evaluate(sample);await p.evaluate(()=>{document.querySelector('link[href="/theme.css"]').disabled=false});assert.deepEqual(before,original,'Dark presentation differs from established styles');
+ const before=await p.evaluate(sample);await p.evaluate(()=>{document.querySelector('link[href="/theme.css"]').sheet.disabled=true});const original=await p.evaluate(sample);await p.evaluate(()=>{document.querySelector('link[href="/theme.css"]').sheet.disabled=false});assert.deepEqual(before,original,'Dark presentation differs from established styles');
 }
 try{
  if(!offlineOnly){
