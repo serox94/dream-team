@@ -7,8 +7,9 @@ export async function smoke(url,build,{gate,pwa=false}={}){
  try{
   for(const [username,lang,width]of [['Patryk','pl',390],['Maciek','en',1440]]){
    const c=await browser.newContext({viewport:{width,height:width===390?844:1024},serviceWorkers:pwa?'allow':'block',extraHTTPHeaders:gate?{'x-release-gate':gate}:{}});
-   const errors=[];let logged=false;
+   const errors=[];let logged=false;console.log('UI_SMOKE_ACCOUNT '+username+' '+lang+' '+width);
    try{
+    const publicLogin=await c.request.get(url+'/login');check(publicLogin.status()===200&&publicLogin.headers()['x-dreamteam-build']===build,'SMOKE_PUBLIC_BUILD');
     const login=await c.request.post(url+'/api/login',{form:{username,password:process.env.RYBY_LOGIN_PASSWORD},maxRedirects:0});check(login.status()===303,'SMOKE_LOGIN');logged=true;
     const bootstrap=await c.request.get(url+'/api/bootstrap');check(bootstrap.ok(),'SMOKE_SESSION');
     for(const path of ['/api/health','/api/content-translations?tripId=next-trip&language='+lang,'/api/water-measurements?tripId=next-trip'])check((await c.request.get(url+path)).ok(),'SMOKE_API');
@@ -17,7 +18,7 @@ export async function smoke(url,build,{gate,pwa=false}={}){
     await c.route('**/api/**',async r=>{if(r.request().method()==='GET')return r.continue();if(new URL(r.request().url()).pathname==='/api/content-translations/process'){result.suppressedInference++;return r.fulfill({json:{ok:true,providerEnabled:false,nextCursor:null,translated:0}});}result.businessWrites++;return r.abort();});
     const p=await c.newPage();p.on('pageerror',e=>errors.push(e.message));
     for(const path of ['/','/pages/pogoda.html','/pages/checklisty.html','/pages/polowy.html','/pages/wyjazdy.html']){
-     const response=await p.goto(url+path,{waitUntil:'domcontentloaded'});check(response.status()===200&&response.headers()['x-dreamteam-build']===build,'SMOKE_BUILD');await p.locator('html[data-ready=true]').waitFor({timeout:45000});
+     console.log('UI_SMOKE_SCREEN '+path+' '+lang+' '+width);const response=await p.goto(url+path,{waitUntil:'domcontentloaded'});check(response.status()===200,'SMOKE_PRIVATE_ROUTE');await p.locator('html[data-ready=true]').waitFor({timeout:45000});
      if(path.includes('pogoda')){await p.locator('#pro2[data-loaded=true]').waitFor({timeout:45000});check(await p.locator('#pro2').innerText(),'WEATHER_EMPTY');}
      check(await p.locator('html').getAttribute('lang')===lang,'SMOKE_LANGUAGE');
      for(const theme of ['dark','light']){await p.evaluate(t=>DreamTheme.set(t),theme);check(await p.locator('html').getAttribute('data-theme')===theme,'SMOKE_THEME');check(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'SMOKE_OVERFLOW');}

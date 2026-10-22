@@ -15,10 +15,10 @@ export async function queueGate(){
  const worker=(await cf('/workers/scripts')).find(w=>w.id==='dream-team');check(worker?.tag,'WORKER_TAG');
  const [raw,triggers,hooks,runs]=await Promise.all([cf('/builds/workers/'+worker.tag+'/builds?per_page=100'),cf('/builds/workers/'+worker.tag+'/triggers'),cf('/builds/workers/'+worker.tag+'/deploy_hooks'),gh('/actions/runs?per_page=100')]);
  const list=(x,key)=>{const a=Array.isArray(x)?x:x[key];check(Array.isArray(a),'UNRECOGNIZED_BUILD_RESPONSE');return a;};
- const builds=list(raw,'builds'),ts=list(triggers,'triggers'),hs=list(hooks,'deploy_hooks');
+ const builds=list(raw,'builds'),ts=list(triggers,'triggers'),hs=list(hooks,'deploy_hooks');check(!hs.length,'DEPLOY_HOOKS_PRESENT');
  const pending=builds.filter(b=>['queued','pending','initializing','running','building'].includes(b.status));check(!pending.length,'CLOUDFLARE_BUILD_ACTIVE');
  check(!runs.workflow_runs.some(r=>String(r.id)!==process.env.GITHUB_RUN_ID&&r.path==='.github/workflows/deploy-private.yml'&&r.status!=='completed'),'OTHER_PRODUCTION_RELEASE_ACTIVE');
- // main's package command invokes the unchanged legacy operator with NO action/file arguments:
+ // main's package command invokes the unchanged legacy operator WITHOUT a manifest file:
  // it fails before network access. Non-main builds may only upload inactive versions.
  const approvedCommands=['npm run deploy:production','npx wrangler versions upload'];
  check(ts.every(t=>approvedCommands.includes(t.deploy_command)),'UNCONTROLLED_DEPLOY_COMMAND');
