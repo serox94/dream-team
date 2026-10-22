@@ -20,7 +20,7 @@ export async function execute(status,action){
  const setPhase=x=>{phase=x;console.log('UI_PHASE '+x);};
  try{
   check(/^private-releases\/[a-f0-9-]+\.json$/.test(process.env.RELEASE_MANIFEST_KEY||''),'PRIVATE_MANIFEST_KEY_REQUIRED');
-  if(action==='deploy'){requireApproval(process.env.DREAMTEAM_PRODUCTION_APPROVED);check(status.pr15.merged&&status.pr16.merged,'APPROVED_PRS_NOT_MERGED');check(status.main===candidate,'MAIN_MOVED');check(tree(candidate)===tree(APPROVED),'MERGED_TREE_CHANGED');}
+  if(action==='deploy'){requireApproval(process.env.DREAMTEAM_PRODUCTION_APPROVED);check(status.sourceCommit==='4294ce0718f706f2ee72b0c32757ee6913ce1de0','UI_RELEASE_ALREADY_COMPLETED_OR_SOURCE_CHANGED');check(status.pr15.merged&&status.pr16.merged,'APPROVED_PRS_NOT_MERGED');check(status.main===candidate,'MAIN_MOVED');check(tree(candidate)===tree(APPROVED),'MERGED_TREE_CHANGED');}
   sourceVersion=status.worker;check(/^[a-f0-9]{40}$/.test(status.sourceCommit),'SOURCE_COMMIT_UNKNOWN');check(/export const requiredSchema=30;/.test(git('show',status.sourceCommit+':src/ensure-schema.js')),'SOURCE_ROLLBACK_SCHEMA_NOT_PROVEN');
   setPhase('fresh private checkpoint');
   const [settings,deployments,version]=await Promise.all([cf('/workers/scripts/dream-team/settings'),cf('/workers/scripts/dream-team/deployments'),cf('/workers/scripts/dream-team/versions/'+sourceVersion)]);
