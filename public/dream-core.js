@@ -20,7 +20,7 @@
   }
   const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json','accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl',...options.headers},signal});
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
-  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings|content-translations|water-measurements|weather)(?:\?|$)/;
+  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings|content-translations|water-measurements|weather|lakes\/[a-zA-Z0-9_-]+\/profile)(?:\?|$)/;
   const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1',accountKey='dreamteam.account.v1';
   const accountId=()=>window.DREAM_MODEL?.currentUser?.id||localStorage.getItem(accountKey)||null;
   let synchronizing=false,syncRetryTimer=null,syncRetryDelay=1000;
