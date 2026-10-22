@@ -1,15 +1,16 @@
 import {InputError} from './validation.js';
 import {tavilyUsage} from './research-provider-status.js';
-import {parseResearch,discoverUrls,sourceScope,gpsCandidates,concepts} from './research-facts.js';
+import {parseResearch,discoverUrls,sourceScope,gpsCandidates,concepts,PARSER_VERSION} from './research-facts.js';
 const all=async(db,s,...v)=>(await db.prepare(s).bind(...v).all()).results,one=(db,s,...v)=>db.prepare(s).bind(...v).first(),run=(db,s,...v)=>db.prepare(s).bind(...v).run();
 const fail=(m,s=400)=>{throw new InputError(m,s);};
 const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(n=>n.toString(16).padStart(2,'0')).join('');
 const fresh=p=>Date.now()-Date.parse(p.checked_at)<14*86400000;
 export async function researchProfile(env,lakeId){
- const db=env.DB,rows=await all(db,'SELECT data_json FROM research_observations WHERE lake_id=? ORDER BY field,checked_at DESC',lakeId),facts=rows.map(r=>JSON.parse(r.data_json)),pages=await all(db,'SELECT url,checked_at checkedAt,scope FROM research_pages WHERE lake_id=?',lakeId),job=await one(db,'SELECT id,status,queue_json,attempts,credits_reserved,credits_actual,message,started_at,completed_at FROM research_jobs WHERE lake_id=? ORDER BY started_at DESC,rowid DESC LIMIT 1',lakeId),locations=await all(db,'SELECT * FROM research_locations WHERE lake_id=? ORDER BY created_at',lakeId);
+ const db=env.DB,rows=await all(db,'SELECT data_json FROM research_observations WHERE lake_id=? ORDER BY field,checked_at DESC',lakeId),facts=rows.map(r=>JSON.parse(r.data_json)).filter(f=>f.parserVersion===PARSER_VERSION),pages=await all(db,'SELECT url,checked_at checkedAt,scope FROM research_pages WHERE lake_id=?',lakeId),job=await one(db,'SELECT id,status,queue_json,attempts,credits_reserved,credits_actual,message,started_at,completed_at FROM research_jobs WHERE lake_id=? ORDER BY started_at DESC,rowid DESC LIMIT 1',lakeId),locations=await all(db,'SELECT * FROM research_locations WHERE lake_id=? ORDER BY created_at',lakeId);
  const missing=Object.keys(concepts).filter(k=>!facts.some(f=>f.field===k));
  // Conflicts require the same subject, ownership, conditions AND scope. Different fish/use is not a contradiction.
  const conflicts=[];for(const f of facts.filter(f=>f.base!=='UNKNOWN'&&!f.conditional))for(const g of facts){if(f.url>=g.url||g.conditional||f.field!==g.field||f.ownership!==g.ownership||f.scope!==g.scope||g.base==='UNKNOWN')continue;if(f.base!==g.base&&f.evidence.toLowerCase().replace(/[^a-z ]/g,'').slice(0,30)===g.evidence.toLowerCase().replace(/[^a-z ]/g,'').slice(0,30))conflicts.push({field:f.field,urls:[f.url,g.url]});}
+ for(const field of ['area','depth']){const found=facts.filter(f=>f.field===field&&f.normalized!=null);if(new Set(found.map(f=>f.normalized)).size>1)conflicts.push({field,reason:'NUMERIC_OR_HISTORICAL_DIFFERENCE',values:found.map(f=>({value:f.normalized,url:f.url,checkedAt:f.checkedAt,effectiveYear:f.effectiveYear}))});}
  return {facts,pages,missing,conflicts,locations,job:job?{...job,queue:JSON.parse(job.queue_json),queue_json:undefined}:null,historyNotice:'Current source check; applicability to historical trips is not established.'};
 }
 export async function queueResearch(env,lakeId,url){
@@ -33,8 +34,13 @@ async function extract(env,job,urls){
  await run(env.DB,'UPDATE research_jobs SET credits_actual=credits_actual+? WHERE id=?',actual,job.id);
  return data;
 }
+async function storeEvidence(db,lakeId,p){
+ const facts=parseResearch(p.content,{url:p.url,checkedAt:p.checked_at,scope:p.scope}),statements=[];
+ for(const f of facts){const id=await hash(lakeId+'|'+p.url+'|'+f.field+'|'+f.evidence);statements.push(db.prepare('INSERT INTO research_observations(id,lake_id,url,field,evidence,data_json,checked_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET data_json=excluded.data_json,checked_at=excluded.checked_at').bind(id,lakeId,p.url,f.field,f.evidence,JSON.stringify({...f,id}),p.checked_at));}
+ for(let i=0;i<statements.length;i+=50)await db.batch(statements.slice(i,i+50));
+}
 export async function stepResearch(env,lakeId,url){
- const db=env.DB,job=await queueResearch(env,lakeId,url);if(job.status==='complete')return {reused:true,...await researchProfile(env,lakeId)};
+ const db=env.DB,job=await queueResearch(env,lakeId,url);if(job.status==='complete'){const marker=await one(db,'SELECT value FROM app_settings WHERE key=?','research.parser.'+lakeId);if(marker?.value!==PARSER_VERSION){for(const p of await all(db,'SELECT * FROM research_pages WHERE lake_id=?',lakeId))await storeEvidence(db,lakeId,p);await run(db,'INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)','research.parser.'+lakeId,PARSER_VERSION);}return {reused:true,...await researchProfile(env,lakeId)};}
  // An expired processing lease may have charged a request: retain budget and require reconciliation, never repeat blindly.
  if(job.status==='processing'&&job.lease_until&&Date.parse(job.lease_until)<Date.now()){await run(db,"UPDATE research_jobs SET status='uncertain',message='LEASE_EXPIRED_RECONCILE_USAGE',lease_until=NULL WHERE id=?",job.id);fail('RESEARCH_LEASE_EXPIRED_RECONCILE_USAGE',409);}
  const lease=new Date(Date.now()+60000).toISOString(),acquired=await run(db,"UPDATE research_jobs SET status='processing',lease_until=?,attempts=attempts+1 WHERE id=? AND status='pending'",lease,job.id);
@@ -46,10 +52,7 @@ export async function stepResearch(env,lakeId,url){
   if(uncached.length){const data=await extract(env,job,uncached);for(const u of uncached){const result=(data.results||[]).find(r=>r.url===u&&r.raw_content);if(!result){failed.push(u);continue;}pages.push({url:u,content:String(result.raw_content).slice(0,160000),checked_at:new Date().toISOString(),scope:sourceScope(u,url)});}}
   for(const p of pages){
    await run(db,'INSERT INTO research_pages(lake_id,url,content,checked_at,scope) VALUES(?,?,?,?,?) ON CONFLICT(lake_id,url) DO UPDATE SET content=excluded.content,checked_at=excluded.checked_at,scope=excluded.scope',lakeId,p.url,p.content,p.checked_at,p.scope);
-   const facts=parseResearch(p.content,{url:p.url,checkedAt:p.checked_at,scope:p.scope});
-   const statements=[];
-   for(const f of facts){const id=await hash(lakeId+'|'+p.url+'|'+f.field+'|'+f.evidence);statements.push(db.prepare('INSERT INTO research_observations(id,lake_id,url,field,evidence,data_json,checked_at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET data_json=excluded.data_json,checked_at=excluded.checked_at').bind(id,lakeId,p.url,f.field,f.evidence,JSON.stringify({...f,id}),p.checked_at));}
-   for(let i=0;i<statements.length;i+=50)await db.batch(statements.slice(i,i+50));
+   await storeEvidence(db,lakeId,p);
    for(const g of gpsCandidates(p.content,p.url)){await run(db,'INSERT OR IGNORE INTO research_locations(id,lake_id,latitude,longitude,kind,url,evidence) VALUES(?,?,?,?,?,?,?)',crypto.randomUUID(),lakeId,g.latitude,g.longitude,g.kind,g.url,g.evidence);}
    if(p.url===url){const discovered=discoverUrls(p.content,url);for(const u of discovered)if(!batch.includes(u)&&!rest.includes(u))rest.push(u);}
   }

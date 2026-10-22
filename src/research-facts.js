@@ -1,3 +1,4 @@
+export const PARSER_VERSION='2026-10-22-v2';
 // Conservative, evidence-preserving rules. No model calls and no historical rewrites.
 export const concepts={
  rods:['Wędki','Rods',/\brods?\b|hengels?|ruten|cannes|wędk/iu],bait_boats:['Łódki zanętowe','Bait boats',/bait\s*boats?|feeding\s*boats?|voerboten|futterboot|bateaux? amorceurs?|łódk.{0,12}zanęt/iu],
@@ -6,7 +7,7 @@ export const concepts={
  lifejacket:['Kamizelka ratunkowa','Life jacket',/life\s*jacket|reddingsvest|schwimmweste|gilet de sauvetage|kamizelk/iu],distance:['Dystans łowienia','Fishing distance',/further|distance|afstand|entfernung|odległo|dystans/iu],bait:['Przynęty i nęcenie','Bait and feeding',/particles?|tiger\s*nuts?|peanuts?|baitfish|live bait|dead bait|boilies|zanęt|orzech|partikel|appât/iu],
  fishcare:['Ochrona ryb','Fish care',/sturgeon|carp.{0,30}(?:unhook|weigh|photograph)|unhook.{0,30}carp|catch.{0,5}release|jesiotr|ochron.{0,8}ryb/iu],safety:['Bezpieczeństwo','Safety',/fire|barbecue|\bbbq\b|bucket|safety|veilig|feuer|ogień|bezpieczeń/iu],camp:['Obóz','Camp',/tents?|bivv|namiot|zelt|tente/iu],
  depth:['Głębokość','Depth',/depth|deep|diepte|tiefe|profond|głęboko/iu],area:['Powierzchnia (z datą źródła)','Area (source date)',/hectares?|\bha\b|powierzch|oppervlakte|fläche/iu],bottom:['Dno','Bottom',/bottom|lake bed|bodem|fond du|dno/iu],weed:['Roślinność','Weed',/weed|waterplant|herbier|kraut|roślinno/iu],fish:['Ryby i rekordy (z datą źródła)','Fish and records (source date)',/carp|sturgeon|catfish|pike|karp|jesiotr|steur|meerval|record/iu],pegs:['Stanowiska','Swims',/swims?|pegs?|stekken?|postes?|stanowisk/iu],
- electricity:['Prąd','Electricity',/electricity|electrical|power\s*(?:supply|socket)|stroom|elektriciteit|électricité|strom|prąd/iu],toilets:['Toalety','Toilets',/toilets?|\bwc\b|toilettes/iu],showers:['Prysznice','Showers',/showers?|douche|dusche|prysznic/iu],parking:['Parking','Parking',/parking|parkeren|parkplatz|stationnement/iu],water:['Woda pitna','Drinking water',/drinking water|drinkwater|trinkwasser|eau potable|wod[ay] pitn/iu],shop:['Sklep','Shop',/\bshop\b|winkel|magasin|geschäft|sklep/iu],rental:['Wynajem','Rental',/rental|renting|hire|huur|location de|wynajem/iu],arrival:['Przyjazd / wyjazd','Arrival / departure',/arrival|departure|aankomst|vertrek|anreise|abreise|arrivée|départ|przyjazd|wyjazd/iu],contact:['Kontakt i dojazd','Contact and access',/\baddress\b|adres|contact|telephone|e-mail|email|@|postal|route/iu]
+ electricity:['Prąd','Electricity',/electricity|electrical|\bpower\b|stroom|elektriciteit|électricité|strom|prąd/iu],toilets:['Toalety','Toilets',/toilets?|\bwc\b|toilettes/iu],showers:['Prysznice','Showers',/showers?|douche|dusche|prysznic/iu],parking:['Parking','Parking',/parking|parkeren|parkplatz|stationnement/iu],water:['Woda pitna','Drinking water',/drinking water|drinkwater|trinkwasser|eau potable|wod[ay] pitn/iu],shop:['Sklep','Shop',/\bshop\b|winkel|magasin|geschäft|sklep/iu],rental:['Wynajem','Rental',/rental|renting|hire|huur|location de|wynajem/iu],arrival:['Przyjazd / wyjazd','Arrival / departure',/arrival|departure|aankomst|vertrek|anreise|abreise|arrivée|départ|przyjazd|wyjazd/iu],contact:['Kontakt i dojazd','Contact and access',/\baddress\b|adres|contact|telephone|e-mail|email|@|postal|route/iu]
 };
 const prohibited=/prohibit|forbidden|not permitted|not allowed|not allow|not use|no (?:own|live|petrol|diesel|storage)|strictly (?:not|forbid)|verboden|niet toegestaan|interdit|verboten|nicht erlaubt|zakaz|zabronion|nie wolno/iu;
 const mandatory=/compulsory|mandatory|required|must|obligat|verplicht|pflicht|obowiązk|wymagan|należy/iu;
@@ -15,8 +16,10 @@ export function classifyRule(text){
  const optional=/not (?:required|mandatory|compulsory)|niet verplicht|nicht erforderlich|nie (?:jest )?wymagan|non obligatoire/iu.test(text);
  const max=/not (?:fish )?(?:further|more) than|maximum|maximaal|maksymaln/iu.test(text);
  const base=optional?'PERMITTED':max?'PERMITTED':prohibited.test(text)?'PROHIBITED':mandatory.test(text)?'REQUIRED':allowed.test(text)?'PERMITTED':'UNKNOWN';
+ const affirmative=text.replace(/not (?:allowed|permitted)|niet toegestaan|nicht erlaubt|nie (?:jest )?dozwolon\w*/giu,'');
+ const mixed=prohibited.test(text)&&allowed.test(affirmative);
  const conditional=/\b(?:if|unless|except|only|when|provided that)\b|alleen|tenzij|nur|wenn|sauf|uniquement|seulement|tylko|jeżeli|pod warunkiem/iu.test(text)||max;
- return {rule:conditional&&base!=='UNKNOWN'?'CONDITIONAL':base,base,optional,conditional};
+ return {rule:mixed||conditional&&base!=='UNKNOWN'?'CONDITIONAL':base,base:mixed?'UNKNOWN':base,optional,conditional:conditional||mixed};
 }
 export function sourceScope(url,confirmedUrl){
  try{const a=new URL(url),b=new URL(confirmedUrl);if(a.protocol!=='https:'||a.hostname!==b.hostname||a.username||a.password||a.port)return 'reject';const p=decodeURIComponent(a.pathname).toLowerCase(),c=decodeURIComponent(b.pathname).toLowerCase();
@@ -33,7 +36,8 @@ export function discoverUrls(content,confirmedUrl){
 }
 const clean=s=>s.replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[*_#>]/g,'').replace(/\s+/g,' ').trim();
 export function parseResearch(content,{url,language=null,checkedAt=new Date().toISOString(),scope='lake'}={}){
- const rows=String(content).split(/\n\s*\n|\n(?=\s*(?:\d+[.)]|[-*] ))/).map(clean).filter(x=>x.length>=20&&x.length<=2200),out=[];
+ const body=String(content).split(/\n#{4,6}\s*fishing adventure\s*\n/i)[0].replace(/^[\s\S]*?(?=^#{1,3} )/m,'');
+ const rows=body.split(/\n\s*\n|\n(?=\s*(?:\d+[.)]|[-*] ))/).map(clean).filter(x=>x.length>=20&&x.length<=2200),out=[];
  for(const paragraph of rows){
   // Each numbered rule retains its exception/provided-equipment context.
   if(/adventure lagoon/i.test(paragraph)&&!/fishing adventure lake/i.test(paragraph))continue;
@@ -46,9 +50,10 @@ export function parseResearch(content,{url,language=null,checkedAt=new Date().to
     if(field==='rods'){const m=evidence.match(/\b(\d+|three|drie|drei|trois|trzy)\s+(?:rods?|hengels?|ruten|cannes|wędki)/iu);if(m)normalized=Number.isFinite(+m[1])?+m[1]:3;}
     if(field==='depth'){const m=evidence.match(/(?:depth|deep|diepte|tiefe|profondeur|głęboko).{0,45}?(\d+(?:[.,]\d+)?)\s*(?:met(?:re|er)s?|m)\b/iu)||evidence.match(/(\d+(?:[.,]\d+)?)\s*m(?:et(?:re|er)s?)?\s*(?:deep|depth|tief|diep)/iu);if(!m)continue;normalized=Number(m[1].replace(',','.'));}
     if(field==='distance'){const m=evidence.match(/(\d+)\s*(?:met(?:re|er)s?|m)\b/iu);if(m)normalized=+m[1];}
+    if(field==='area'){const m=evidence.match(/(\d+(?:[.,]\d+)?)\s*(?:hectares?|ha)\b/iu);if(m)normalized=Number(m[1].replace(',','.'));}
     const provided=/(?:supplied|provided|available|ter beschikking|bereitgestellt|zapewnia).{0,60}(?:free|gratis|bezpłat)|free of charge/iu.test(evidence);
     const ownership=/\bown\b|eigen|propre|własn/iu.test(evidence)?'own':'unspecified';
-    out.push({field,labelPl:pl,labelEn:en,evidence,sourceLanguage:language||languageFromUrl(url),...c,normalized,provided,ownership,scope,verification:'source_supported',checkedAt,url,effectiveYear:(evidence.match(/\b(20\d{2})\b/)||[])[1]||null});
+    out.push({parserVersion:PARSER_VERSION,field,labelPl:pl,labelEn:en,evidence,sourceLanguage:language||languageFromUrl(url),...c,normalized,provided,ownership,scope,verification:'source_supported',checkedAt,url,effectiveYear:(evidence.match(/\b(20\d{2})\b/)||[])[1]||null});
    }
   }
  }
