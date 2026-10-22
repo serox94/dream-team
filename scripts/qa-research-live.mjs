@@ -35,6 +35,6 @@ try{
  }
  test('isolated D1 foreign keys',!(await q('PRAGMA foreign_key_check')).length);
  const after=await counts();for(const t of Object.keys(before)){const same=before[t].n===after[t].n&&before[t].digest===after[t].digest;test('preserved '+t,same,{before:before[t].n,after:after[t].n});}report.integrity={before,after};
- report.result=report.failures.length?'PARTIAL':'PASS';
+ report.result=report.failures.length?'PARTIAL':'PASS';if(report.failures.length)process.exitCode=1;
 }catch(e){report.error=String(e.message).slice(0,600);report.result='FAIL';process.exitCode=1;}
 finally{if(browser)await browser.close();if(cookie)await fetch(base+'/api/logout',{method:'POST',headers:{cookie,origin:base}}).catch(()=>{});await writeFile('research-status/live-qa.json',JSON.stringify(report,null,2));console.log('RESEARCH_LIVE_QA '+JSON.stringify(report));}

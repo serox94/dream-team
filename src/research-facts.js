@@ -1,4 +1,4 @@
-export const PARSER_VERSION='2026-10-22-v2';
+export const PARSER_VERSION='2026-10-22-v4';
 // Conservative, evidence-preserving rules. No model calls and no historical rewrites.
 export const concepts={
  rods:['Wędki','Rods',/\brods?\b|hengels?|ruten|cannes|wędk/iu],bait_boats:['Łódki zanętowe','Bait boats',/bait\s*boats?|feeding\s*boats?|voerboten|futterboot|bateaux? amorceurs?|łódk.{0,12}zanęt/iu],
@@ -46,14 +46,22 @@ export function parseResearch(content,{url,language=null,checkedAt=new Date().to
    for(const [field,[pl,en,rx]] of Object.entries(concepts)){
     if(!rx.test(evidence))continue;if(field==='boats'&&concepts.bait_boats[2].test(evidence)&&!/(?:electric motor|petrol|rental|life jacket|manned)/i.test(evidence))continue;
     if(scope==='site'&&!['contact','parking','toilets','showers','shop','water','map'].includes(field))continue;
-    let c=classifyRule(evidence),normalized=null;
+    const relevant=evidence.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ż])/u).filter(sentence=>rx.test(sentence)).join(' ');
+    let c=classifyRule(relevant||evidence),normalized=null;
     if(field==='rods'){const m=evidence.match(/\b(\d+|three|drie|drei|trois|trzy)\s+(?:rods?|hengels?|ruten|cannes|wędki)/iu);if(m)normalized=Number.isFinite(+m[1])?+m[1]:3;}
     if(field==='depth'){const m=evidence.match(/(?:depth|deep|diepte|tiefe|profondeur|głęboko).{0,45}?(\d+(?:[.,]\d+)?)\s*(?:met(?:re|er)s?|m)\b/iu)||evidence.match(/(\d+(?:[.,]\d+)?)\s*m(?:et(?:re|er)s?)?\s*(?:deep|depth|tief|diep)/iu);if(!m)continue;normalized=Number(m[1].replace(',','.'));}
     if(field==='distance'){const m=evidence.match(/(\d+)\s*(?:met(?:re|er)s?|m)\b/iu);if(m)normalized=+m[1];}
     if(field==='area'){const m=evidence.match(/(\d+(?:[.,]\d+)?)\s*(?:hectares?|ha)\b/iu);if(m)normalized=Number(m[1].replace(',','.'));}
+    // Navigation titles and gear catalogues are not regulations. Keep descriptive
+    // facts only when the sentence contains a concrete value or assertion.
+    const ruleField=['rods','bait_boats','boats','leadcore','hooks','rigs','net','mat','sling','disinfectant','lifejacket','distance','bait','fishcare','safety','camp'].includes(field);
+    const informative=/\b(?:is|are|has|have|available|provided|supplied|offers?|equipped|open|allowed|prohibited|forbidden|must|required|compulsory|only|up to|maximum|minimum)\b|toegestaan|verboden|verplicht|beschikbaar|aanwezig|erlaubt|verboten|pflicht|vorhanden|autorisé|interdit|obligatoire|disponible|dozwolon|zabronion|obowiązk|dostępn|wynajem|\d/iu.test(relevant);
+    if(!informative)continue;
+    if(ruleField&&c.rule==='UNKNOWN'&&!/(?:provided|supplied).{0,50}(?:free|gratis)|free of charge/iu.test(evidence))continue;
+    if(field==='rods'&&c.base==='UNKNOWN'&&normalized==null)continue;
     const provided=/(?:supplied|provided|available|ter beschikking|bereitgestellt|zapewnia).{0,60}(?:free|gratis|bezpłat)|free of charge/iu.test(evidence);
     const ownership=/\bown\b|eigen|propre|własn/iu.test(evidence)?'own':'unspecified';
-    out.push({parserVersion:PARSER_VERSION,field,labelPl:pl,labelEn:en,evidence,sourceLanguage:language||languageFromUrl(url),...c,normalized,provided,ownership,scope,verification:'source_supported',checkedAt,url,effectiveYear:(evidence.match(/\b(20\d{2})\b/)||[])[1]||null});
+    out.push({parserVersion:PARSER_VERSION,field,labelPl:pl,labelEn:en,evidence,sourceLanguage:language||languageFromUrl(url),...c,normalized,quantityKind:field==='area'&&/added|larger|extra|powiększ|vergroot/i.test(evidence)?'change':'absolute',provided,ownership,scope,verification:'source_supported',checkedAt,url,effectiveYear:(evidence.match(/\b(20\d{2})\b/)||[])[1]||null});
    }
   }
  }
