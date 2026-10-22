@@ -1,4 +1,4 @@
-export const PARSER_VERSION='2026-10-22-v5';
+export const PARSER_VERSION='2026-10-22-v6';
 // Conservative, evidence-preserving rules. No model calls and no historical rewrites.
 export const concepts={
  rods:['Wędki','Rods',/\brods?\b|hengels?|ruten|cannes|wędk/iu],bait_boats:['Łódki zanętowe','Bait boats',/bait\s*boats?|feeding\s*boats?|voerboten|futterboot|bateaux? amorceurs?|łódk.{0,12}zanęt/iu],
@@ -14,7 +14,7 @@ const mandatory=/compulsory|mandatory|required|must|obligat|verplicht|pflicht|ob
 const allowed=/allowed|permitted|may (?:be|use)|can (?:be|use)|toegestaan|erlaubt|autorisé|dozwolon|można/iu;
 export function classifyRule(text){
  const optional=/not (?:required|mandatory|compulsory)|niet verplicht|nicht erforderlich|nie (?:jest )?wymagan|non obligatoire/iu.test(text);
- const max=/not (?:fish )?(?:further|more) than|maximum|maximaal|maksymaln/iu.test(text);
+ const max=/not (?:(?:allowed (?:to fish )?)|fish )?(?:further|more) than|maximum|maximaal|maksymaln/iu.test(text);
  const base=optional?'PERMITTED':max?'PERMITTED':prohibited.test(text)?'PROHIBITED':mandatory.test(text)?'REQUIRED':allowed.test(text)?'PERMITTED':'UNKNOWN';
  const affirmative=text.replace(/not (?:allowed|permitted)|niet toegestaan|nicht erlaubt|nie (?:jest )?dozwolon\w*/giu,'');
  const mixed=prohibited.test(text)&&allowed.test(affirmative);
@@ -61,7 +61,7 @@ export function parseResearch(content,{url,language=null,checkedAt=new Date().to
     if(field==='rods'&&c.base==='UNKNOWN'&&normalized==null)continue;
     const provided=/(?:supplied|provided|available|ter beschikking|bereitgestellt|zapewnia).{0,60}(?:free|gratis|bezpłat)|free of charge/iu.test(evidence);
     const ownership=/\bown\b|eigen|propre|własn/iu.test(evidence)?'own':'unspecified';
-    out.push({parserVersion:PARSER_VERSION,field,labelPl:pl,labelEn:en,evidence,sourceLanguage:language||languageFromUrl(url),...c,normalized,swimNumbers:field==='electricity'?electricitySwims(evidence):[],quantityKind:field==='area'&&/added|larger|extra|powiększ|vergroot/i.test(evidence)?'change':'absolute',provided,ownership,scope,verification:'source_supported',checkedAt,url,effectiveYear:(evidence.match(/\b(20\d{2})\b/)||[])[1]||null});
+    out.push({parserVersion:PARSER_VERSION,field,labelPl:field==='distance'&&c.conditional?'Maksymalny dystans łowienia':pl,labelEn:field==='distance'&&c.conditional?'Maximum fishing distance':en,evidence,sourceLanguage:language||languageFromUrl(url),...c,normalized,swimNumbers:field==='electricity'?electricitySwims(evidence):[],quantityKind:field==='area'&&/added|larger|extra|powiększ|vergroot/i.test(evidence)?'change':'absolute',provided,ownership,scope,verification:'source_supported',checkedAt,url,effectiveYear:(evidence.match(/\b(20\d{2})\b/)||[])[1]||null});
    }
   }
  }
