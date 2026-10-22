@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {classifyRule,parseResearch,sourceScope,discoverUrls,gpsCandidates,researchGear} from '../src/research-facts.js';
-import {freeBudget} from '../src/research-provider-status.js';import {stepResearch,proposeLocation,approveLocation} from '../src/research-engine.js';import {database} from './db.mjs';
+import {freeBudget} from '../src/research-provider-status.js';import {stepResearch,proposeLocation,approveLocation,mapAssets} from '../src/research-engine.js';import {database} from './db.mjs';
 const url='https://www.fishingadventure.nl/en/informatie/reglement-fishing-adventure-lake/';
 const data={key:{limit:250,usage:3},account:{current_plan:'Researcher',plan_limit:1000,plan_usage:3,paygo_usage:0,paygo_limit:null}};
 test('free plan and key headroom do not claim null proves PAYGO disabled',()=>{const x=freeBudget(data);assert.equal(x.freeOnlyConfirmed,true);assert.equal(x.paygoDisabledConfirmed,false);assert.equal(x.available,237);for(const account of [{...data.account,current_plan:'Project'},{...data.account,paygo_usage:1},{...data.account,paygo_limit:undefined}])assert.equal(freeBudget({...data,account}).freeOnlyConfirmed,false);assert.equal(freeBudget({...data,key:{limit:250,usage:249}}).available,0);assert.equal(freeBudget({...data,account:{...data.account,plan_usage:999}}).available,0);});
@@ -15,3 +15,5 @@ test('real DB transaction flow: cache, dedup, serialized lease, failure budgets 
 test('a prohibition is not diluted by permission for another item in the same rule',()=>{const f=parseResearch('The use of leadcore and H-markers is prohibited. Rod markers are allowed.',{url});assert.equal(f.find(x=>x.field==='leadcore').base,'PROHIBITED');});
 
 test('navigation and rental headings do not become rod restrictions',()=>{const f=parseResearch('### Rods boats and bait boats\n\n[Rental rods and boats](https://lake.test/rental)\n\nFishing with 3 rods is allowed.',{url});assert.equal(f.filter(x=>x.field==='rods').length,1);});
+
+test('map year is source metadata, Lagoon assets are excluded and history stays unverified',()=>{const maps=mapAssets('<img src="https://assets.test/2025/12/Rutbekerveld-Map-2026.jpg"><img src="https://assets.test/Lagoon-Map-2026.jpg">',url);assert.equal(maps.length,1);assert.equal(maps[0].year,2026);assert.equal(maps[0].historicalApplicability,'unverified');});

@@ -5,6 +5,17 @@ const all=async(db,s,...v)=>(await db.prepare(s).bind(...v).all()).results,one=(
 const fail=(m,s=400)=>{throw new InputError(m,s);};
 const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(n=>n.toString(16).padStart(2,'0')).join('');
 const fresh=p=>Date.now()-Date.parse(p.checked_at)<14*86400000;
+export function mapAssets(html,sourceUrl){
+ const found=[];for(const m of String(html).matchAll(/(?:src|data-src)=["']([^"']+)["']/gi)){try{const u=new URL(m[1].replaceAll('&amp;','&'),sourceUrl);if(u.protocol!=='https:'||u.username||u.password||u.port||!/map|plattegrond|kaart/i.test(u.pathname)||/lagoon/i.test(u.pathname)||!/\.(?:jpg|jpeg|png|webp)$/i.test(u.pathname))continue;const years=[...u.pathname.matchAll(/(?:^|[^\d])(20\d{2})(?=[^\d]|$)/g)].map(x=>+x[1]);found.push({url:u.href,year:years.at(-1)||null,sourceUrl,scope:'current_source_map',historicalApplicability:'unverified'});}catch{}}
+ return [...new Map(found.map(x=>[x.url,x])).values()];
+}
+async function checkMapOnce(env,lakeId){
+ const key='research.map.'+lakeId,old=await one(env.DB,'SELECT value FROM app_settings WHERE key=?',key);if(old)return JSON.parse(old.value);
+ const pages=await all(env.DB,'SELECT url FROM research_pages WHERE lake_id=?',lakeId),page=pages.find(p=>/plattegrond|map|kaart/i.test(new URL(p.url).pathname));if(!page)return {status:'no_map_source',assets:[]};
+ let result={status:'unavailable',sourceUrl:page.url,assets:[],checkedAt:new Date().toISOString()};
+ try{const r=await fetch(page.url,{redirect:'error',headers:{accept:'text/html'},signal:AbortSignal.timeout(12000)});if(r.ok&&r.headers.get('content-type')?.includes('text/html')){const reader=r.body.getReader();let html='',bytes=0;const decoder=new TextDecoder();while(bytes<700000){const chunk=await reader.read();if(chunk.done)break;bytes+=chunk.value.length;html+=decoder.decode(chunk.value,{stream:true});}await reader.cancel();const assets=mapAssets(html,page.url);result={...result,status:assets.length?'source_map_found':'image_metadata_not_found',assets};}}catch{}
+ await run(env.DB,'INSERT OR IGNORE INTO app_settings(key,value) VALUES(?,?)',key,JSON.stringify(result));return result;
+}
 export async function researchProfile(env,lakeId){
  const db=env.DB,rows=await all(db,'SELECT data_json FROM research_observations WHERE lake_id=? ORDER BY field,checked_at DESC',lakeId),facts=rows.map(r=>JSON.parse(r.data_json)).filter(f=>f.parserVersion===PARSER_VERSION),pages=await all(db,'SELECT url,checked_at checkedAt,scope FROM research_pages WHERE lake_id=?',lakeId),job=await one(db,'SELECT id,status,queue_json,attempts,credits_reserved,credits_actual,message,started_at,completed_at FROM research_jobs WHERE lake_id=? ORDER BY started_at DESC,rowid DESC LIMIT 1',lakeId),locations=await all(db,'SELECT * FROM research_locations WHERE lake_id=? ORDER BY created_at',lakeId);
  const unique=new Map();for(const f of facts){const key=f.field+'|'+f.evidence.replace(/\s+/g,' ').toLowerCase();if(unique.has(key)){unique.get(key).sources.push({url:f.url,checkedAt:f.checkedAt});}else unique.set(key,{...f,sources:[{url:f.url,checkedAt:f.checkedAt}]});}facts.splice(0,facts.length,...unique.values());
@@ -12,7 +23,8 @@ export async function researchProfile(env,lakeId){
  // Conflicts require the same subject, ownership, conditions AND scope. Different fish/use is not a contradiction.
  const conflicts=[];for(const f of facts.filter(f=>f.base!=='UNKNOWN'&&!f.conditional))for(const g of facts){if(f.url>=g.url||g.conditional||f.field!==g.field||f.ownership!==g.ownership||f.scope!==g.scope||g.base==='UNKNOWN')continue;if(f.base!==g.base&&f.evidence.toLowerCase().replace(/[^a-z ]/g,'').slice(0,30)===g.evidence.toLowerCase().replace(/[^a-z ]/g,'').slice(0,30))conflicts.push({field:f.field,urls:[f.url,g.url]});}
  for(const field of ['area','depth']){const found=facts.filter(f=>f.field===field&&f.normalized!=null&&f.quantityKind!=='change');if(new Set(found.map(f=>f.normalized)).size>1)conflicts.push({field,reason:'NUMERIC_OR_HISTORICAL_DIFFERENCE',values:found.map(f=>({value:f.normalized,url:f.url,checkedAt:f.checkedAt,effectiveYear:f.effectiveYear}))});}
- return {facts,pages,missing,conflicts,locations,job:job?{...job,queue:JSON.parse(job.queue_json),queue_json:undefined}:null,historyNotice:'Current source check; applicability to historical trips is not established.'};
+ const mapRow=await one(db,'SELECT value FROM app_settings WHERE key=?','research.map.'+lakeId);
+ return {facts,pages,missing,conflicts,locations,mapEvidence:mapRow?JSON.parse(mapRow.value):null,job:job?{...job,queue:JSON.parse(job.queue_json),queue_json:undefined}:null,historyNotice:'Current source check; applicability to historical trips is not established.'};
 }
 export async function queueResearch(env,lakeId,url){
  const db=env.DB,active=await one(db,"SELECT * FROM research_jobs WHERE lake_id=? AND status IN ('pending','processing')",lakeId);
@@ -41,7 +53,7 @@ async function storeEvidence(db,lakeId,p){
  for(let i=0;i<statements.length;i+=50)await db.batch(statements.slice(i,i+50));
 }
 export async function stepResearch(env,lakeId,url){
- const db=env.DB,job=await queueResearch(env,lakeId,url);if(job.status==='complete'){const marker=await one(db,'SELECT value FROM app_settings WHERE key=?','research.parser.'+lakeId);if(marker?.value!==PARSER_VERSION){for(const p of await all(db,'SELECT * FROM research_pages WHERE lake_id=?',lakeId))await storeEvidence(db,lakeId,p);await run(db,'INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)','research.parser.'+lakeId,PARSER_VERSION);}return {reused:true,...await researchProfile(env,lakeId)};}
+ const db=env.DB,job=await queueResearch(env,lakeId,url);if(job.status==='complete'){const marker=await one(db,'SELECT value FROM app_settings WHERE key=?','research.parser.'+lakeId);if(marker?.value!==PARSER_VERSION){for(const p of await all(db,'SELECT * FROM research_pages WHERE lake_id=?',lakeId))await storeEvidence(db,lakeId,p);await run(db,'INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)','research.parser.'+lakeId,PARSER_VERSION);}await checkMapOnce(env,lakeId);return {reused:true,...await researchProfile(env,lakeId)};}
  // An expired processing lease may have charged a request: retain budget and require reconciliation, never repeat blindly.
  if(job.status==='processing'&&job.lease_until&&Date.parse(job.lease_until)<Date.now()){await run(db,"UPDATE research_jobs SET status='uncertain',message='LEASE_EXPIRED_RECONCILE_USAGE',lease_until=NULL WHERE id=?",job.id);fail('RESEARCH_LEASE_EXPIRED_RECONCILE_USAGE',409);}
  const lease=new Date(Date.now()+60000).toISOString(),acquired=await run(db,"UPDATE research_jobs SET status='processing',lease_until=?,attempts=attempts+1 WHERE id=? AND status='pending'",lease,job.id);
