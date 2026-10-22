@@ -30,7 +30,7 @@ test('all migrations, bootstrap, participants, original PB and legacy content su
  const s=setup(),b=(await s.req('bootstrap')).data;
  assert.equal(b.trips.length,4);assert.equal(b.lakes.length,3);assert.ok(b.trips.every(t=>t.participants.length===2));assert.ok(b.anglers.every(a=>a.pbKg===13));
  assert.equal(b.lakes.find(l=>l.id==='plaine2').facts.contentPack,'plaine2');
- assert.equal((await s.req('health')).data.schemaVersion,'30');s.DB.close();
+ assert.equal((await s.req('health')).data.schemaVersion,'31');s.DB.close();
 });
 test('create/edit/clear a catch; trip isolation; soft delete and restore; PB recalculates',async()=>{
  const s=setup(),r=await s.req('catches','POST',catchData);assert.equal(r.status,201);const id=r.data.id;
@@ -139,7 +139,7 @@ test('category migration, rename, order and safe move retain packed rows',async(
 });
 test('settings persist allowed preferences without accepting secrets',async()=>{
  const s=setup();try{
-  const original=await s.req('settings');assert.equal(original.data.schemaVersion,30);
+  const original=await s.req('settings');assert.equal(original.data.schemaVersion,31);
   assert.equal((await s.req('settings','PATCH',{research_auto:'off',research_languages:'PL,EN,FR,DE,NL',trip_time_zone:'Europe/Warsaw'})).status,200);
   const current=(await s.req('settings')).data.settings;assert.equal(current.research_auto,'off');assert.equal(current.research_languages,'PL,EN,FR,DE,NL');
   assert.equal((await s.req('settings','PATCH',{api_key:'unsafe'})).status,400);
@@ -189,29 +189,17 @@ test('lake profile stores cited facts, flags conflicts and adds only approved ch
   assert.equal((await s.req(`lakes/${lake}/facts`,'POST',{url:'https://127.0.0.1/rules',field:'rods',value:'2'})).status,400);
  }finally{s.DB.close();}
 });
-test('fixture research identifies candidates, extracts cited facts, detects changes and stops at quota',async()=>{
- const s=setup(),originalFetch=globalThis.fetch;
+test('fixture research extracts cited evidence, reuses cache and stops at a reserved quota',async()=>{
+ const s=setup(),originalFetch=globalThis.fetch;let calls=0;
  try{
   const lake=(await s.req('lakes','POST',{name:'Fikcyjne Jezioro',country:'Polska'})).data.id;
   assert.match((await s.req(`lakes/${lake}/candidates`,'POST',{})).data.message,/konfiguracji/);
-  s.env.TAVILY_API_KEY='fixture-only';let rule='Wymagana kołyska';
-  globalThis.fetch=async(url,options)=>{
-   assert.equal(new URL(url).hostname,'api.tavily.com');assert.match(options.headers.authorization,/fixture-only/);
-   if(url.endsWith('/search'))return Response.json({results:[{title:'Fikcyjne Jezioro',url:'https://lake.example/rules',content:'Polska, region testowy'}]});
-   return Response.json({results:[{url:'https://lake.example/rules',raw_content:`Kołyska: ${rule}\nLiczba wędek: 2`}]});
-  };
-  const candidates=await s.req(`lakes/${lake}/candidates`,'POST',{});assert.equal(candidates.data.candidates.length,1);
-  s.DB.sqlite.prepare("UPDATE lake_research_runs SET started_at='2026-01-01' WHERE lake_id=?").run(lake);
-  const first=await s.req(`lakes/${lake}/research`,'POST',{url:candidates.data.candidates[0].url,title:'Regulamin',sourceType:'official'});
-  assert.equal(first.status,200);assert.equal(first.data.count,2);assert.equal(first.data.profile.sources.length,1);
-  assert.equal((await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules'})).status,429);
-  s.DB.sqlite.prepare("UPDATE lake_research_runs SET started_at='2026-01-01' WHERE lake_id=?").run(lake);
-  rule='Kołyska nie jest wymagana';
-  const second=await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules',sourceType:'official'});
-  assert.equal(second.data.profile.changes.length,1);assert.equal(second.data.profile.changes[0].oldValue,'Wymagana kołyska');
-  s.DB.sqlite.prepare("UPDATE lake_research_runs SET started_at=CURRENT_TIMESTAMP,credits_used=900 WHERE lake_id=?").run(lake);
-  assert.equal((await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules'})).status,429);
-  assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM lake_sources WHERE lake_id=?').get(lake).n,1);
+  s.env.TAVILY_API_KEY='fixture-only';
+  globalThis.fetch=async(url,options)=>{assert.equal(new URL(url).hostname,'api.tavily.com');assert.match(options.headers.authorization,/fixture-only/);if(url.endsWith('/usage'))return Response.json({key:{limit:250,usage:3},account:{current_plan:'Researcher',plan_limit:1000,plan_usage:3,paygo_usage:0,paygo_limit:null}});calls++;return Response.json({results:[{url:'https://lake.example/rules',raw_content:'Fishing with 3 rods is allowed.\n\nLeadcore is prohibited.'}],usage:{credits:1}});};
+  const first=await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules'});assert.equal(first.status,200);assert.equal(first.data.research.job.status,'complete');assert.ok(first.data.research.facts.some(f=>f.field==='leadcore'&&f.base==='PROHIBITED'));assert.equal(calls,1);
+  const second=await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules'});assert.equal(second.status,200);assert.equal(second.data.research.reused,true);assert.equal(calls,1);
+  s.DB.sqlite.prepare("UPDATE research_jobs SET status='pending',credits_reserved=4,queue_json='[\"https://lake.example/other\"]' WHERE lake_id=?").run(lake);
+  assert.equal((await s.req(`lakes/${lake}/research`,'POST',{url:'https://lake.example/rules'})).status,429);assert.equal(calls,1);assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM research_pages WHERE lake_id=?').get(lake).n,1);
  }finally{globalThis.fetch=originalFetch;s.DB.close();}
 });
 test('unlabeled regulation requirements are cited but negated requirements never become checklist suggestions',()=>{

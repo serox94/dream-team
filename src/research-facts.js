@@ -1,4 +1,4 @@
-export const PARSER_VERSION='2026-10-22-v4';
+export const PARSER_VERSION='2026-10-22-v5';
 // Conservative, evidence-preserving rules. No model calls and no historical rewrites.
 export const concepts={
  rods:['Wędki','Rods',/\brods?\b|hengels?|ruten|cannes|wędk/iu],bait_boats:['Łódki zanętowe','Bait boats',/bait\s*boats?|feeding\s*boats?|voerboten|futterboot|bateaux? amorceurs?|łódk.{0,12}zanęt/iu],
@@ -61,7 +61,7 @@ export function parseResearch(content,{url,language=null,checkedAt=new Date().to
     if(field==='rods'&&c.base==='UNKNOWN'&&normalized==null)continue;
     const provided=/(?:supplied|provided|available|ter beschikking|bereitgestellt|zapewnia).{0,60}(?:free|gratis|bezpłat)|free of charge/iu.test(evidence);
     const ownership=/\bown\b|eigen|propre|własn/iu.test(evidence)?'own':'unspecified';
-    out.push({parserVersion:PARSER_VERSION,field,labelPl:pl,labelEn:en,evidence,sourceLanguage:language||languageFromUrl(url),...c,normalized,quantityKind:field==='area'&&/added|larger|extra|powiększ|vergroot/i.test(evidence)?'change':'absolute',provided,ownership,scope,verification:'source_supported',checkedAt,url,effectiveYear:(evidence.match(/\b(20\d{2})\b/)||[])[1]||null});
+    out.push({parserVersion:PARSER_VERSION,field,labelPl:pl,labelEn:en,evidence,sourceLanguage:language||languageFromUrl(url),...c,normalized,swimNumbers:field==='electricity'?electricitySwims(evidence):[],quantityKind:field==='area'&&/added|larger|extra|powiększ|vergroot/i.test(evidence)?'change':'absolute',provided,ownership,scope,verification:'source_supported',checkedAt,url,effectiveYear:(evidence.match(/\b(20\d{2})\b/)||[])[1]||null});
    }
   }
  }
@@ -75,3 +75,5 @@ export function gpsCandidates(content,url){
  }return [...new Map(out.map(p=>[p.latitude+','+p.longitude,p])).values()];
 }
 export function researchGear(facts){return facts.filter(f=>f.base==='REQUIRED'&&!f.optional&&!f.provided&&['disinfectant','lifejacket'].includes(f.field)).map(f=>({label:f.labelPl,labelEn:f.labelEn,reason:f.evidence,sourceUrl:f.url,sourceType:'regulation',conditional:f.conditional}));}
+
+export function electricitySwims(text){const positive=String(text).split(/(?<=[.!?])\s+/u).find(s=>/electricity|power|stroom|prąd/iu.test(s)&&!/not available|no power|geen stroom|brak prądu/iu.test(s)&&/available|beschikbaar|aanwezig|dostępn/iu.test(s));const list=positive?.match(/(?:swims?|pegs?|stekken?|stanowisk\w*)\s*(?:numbers?\s*)?[:#]?\s*(\d{1,3}\b(?:\s*(?:[,;]|\band\b|\ben\b|\bi\b)\s*\d{1,3}\b)*)/iu)?.[1];return list?[...new Set((list.match(/\d+/g)||[]).map(Number))]:[];}

@@ -29,6 +29,7 @@ jobs:
       - name: API and browser DOM regression tests
         if: steps.scope.outputs.restore_only != 'true'
         run: npm test
+        timeout-minutes: 8
       - name: Check JavaScript syntax
         if: steps.scope.outputs.restore_only != 'true'
         run: |
