@@ -1,0 +1,63 @@
+name: Approved schema31 production operation
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: Exact separately approved release-candidate SHA
+        required: true
+      private_manifest_key:
+        description: Existing fresh receipt key for apply/recover only
+        required: false
+      action:
+        type: choice
+        options: [release, apply, recover]
+        default: release
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  release:
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Prepare fresh private checkpoint and both schema31 canaries
+        if: inputs.action == 'release'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+          DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+          CONFIRMED_RELEASE: ${{ inputs.candidate }}
+        run: node scripts/production31-prepare.mjs
+      - name: Exact approved code and fresh private recovery receipt
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+          DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+          CONFIRMED_RELEASE: ${{ inputs.candidate }}
+          RELEASE_MANIFEST_KEY: ${{ env.RELEASE_MANIFEST_KEY || inputs.private_manifest_key }}
+        run: node scripts/production31.mjs ${{ inputs.action == 'recover' && 'recover' || 'apply' }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production31-safe-status
+          path: production31-status/

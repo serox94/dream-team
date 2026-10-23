@@ -3,7 +3,7 @@
 import {readFile,writeFile,mkdtemp,rm,mkdir,chmod} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {randomBytes} from 'node:crypto';
 import {cf,query,wrangler,configFile,exportSql,productionId,assertSandbox,sha} from './recovery-common.mjs';
 import {inspectSql,restoreSnapshot,rowsDigest,identifier} from './d1-snapshot.mjs';import {privateRestore} from './recovery-transport.mjs';
-const name='dream-team-audit-2026102331',archive=name+'-archive',media=name+'-media',dbName=name+'-db',identity='release-candidate-20261023-v1';
+const name=process.env.RC_CHECKPOINT_NAME||'dream-team-audit-2026102331',archive=name+'-archive',media=name+'-media',dbName=name+'-db',identity=process.env.RC_CHECKPOINT_IDENTITY||'release-candidate-20261023-v1';assertSandbox(name);if(!/^release-candidate-|^production31-/.test(identity))throw Error('COPY_IDENTITY_REQUIRED');
 const check=(v,c)=>{if(!v)throw Error(c);};const dir=await mkdtemp(join(tmpdir(),'rc-copy-private-'));await mkdir('rc-status',{recursive:true});let ioCreated=false;const ioName='dream-team-audit-'+process.env.GITHUB_RUN_ID+'-io';
 const report={result:'BLOCKED',productionWrites:0,productionExports:0,measuredD1Reads:0,copyName:dbName};
 const q=async(id,sql,params=[])=>{if(id===productionId&&!/^\s*(?:SELECT|PRAGMA)\b/i.test(sql))throw Error('PRODUCTION_WRITE_FORBIDDEN');const r=await query(id,sql,params);report.measuredD1Reads+=r.meta?.rows_read||0;check(report.measuredD1Reads<=18000,'COPY_D1_READ_CAP');return r;};

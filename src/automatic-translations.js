@@ -20,7 +20,7 @@ export async function processTranslations(request,env,active){
  const hint=request.headers.get('accept-language')?.startsWith('en')?'en':'pl';
  // A complete saved field must not start another cursor sweep or job UPDATE.
  const needed=[];for(const source of sources){const entries=saved.filter(r=>r.entity===source.entity&&r.record_id===source.recordId&&r.field===source.field),meta=entries[0];
-  const language=x.source?.language||classify(source.sourceText,priority?hint:meta?.source_language||'pl').language,target=language==='pl'?'en':'pl',existing=known.get([source.entity,source.recordId,source.field,target].join('|'));
+  const language=x.source?.language||(meta?.metadata_hash===source.sourceHash&&meta.source_language?meta.source_language:classify(source.sourceText,priority?hint:'pl').language),target=language==='pl'?'en':'pl',existing=known.get([source.entity,source.recordId,source.field,target].join('|'));
   if(!x.source&&meta?.metadata_hash===source.sourceHash&&meta.source_language===language&&existing?.source_hash===source.sourceHash&&!(existing.origin==='cloudflare_m2m100'&&env.TRANSLATION_REVIEW_ENABLED==='true'))continue;
   const job=await env.DB.prepare('SELECT status,attempts,updated_at FROM translation_jobs WHERE entity=? AND record_id=? AND field=? AND language=?').bind(source.entity,source.recordId,source.field,target).first();
   if(!x.source&&job?.status==='manual_review'&&existing?.origin==='manual')continue;
