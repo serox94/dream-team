@@ -22,7 +22,8 @@ export async function fetchReadiness(baseUrl,{variant,headers={},timeoutMs=4000,
  if(login.status===200){
   const feature=await fetcher(new URL('/api/lake-candidates',baseUrl),opts);result.featureStatus=feature.status;
   // Only the boolean discriminator is retained. Never log response bodies.
-  const data=await feature.json().catch(()=>null);
+  const raw=await feature.text();let data;try{data=JSON.parse(raw);}catch{}
+  result.featureKind=data?'JSON':raw==='Unavailable'?'ISOLATION_GATE':'NON_JSON';result.featureRay=safeRay(feature.headers.get('cf-ray'));result.featureBuild=safeSha(feature.headers.get('x-dreamteam-build'));
   if(feature.status===401&&data?.ok===false)result.featureVariant='full';
   if(feature.status===503&&data?.error==='Research temporarily paused during recovery.')result.featureVariant='schema31-fallback';
  }
@@ -46,7 +47,7 @@ export async function waitForVersionReady({expected,previousVersionId,staleBuild
    else{
     const remaining=maxMs-(now()-start);if(remaining<=0)break;
     const p=await probe(AbortSignal.any([AbortSignal.timeout(remaining),...(signal?[signal]:[])]));
-    Object.assign(a,{status:p.status,receivedBuild:p.build,invalidBuild:p.invalidBuild||false,ray:p.ray,responseVersion:p.responseVersion,featureStatus:p.featureStatus,featureVariant:p.featureVariant});
+    Object.assign(a,{status:p.status,receivedBuild:p.build,invalidBuild:p.invalidBuild||false,ray:p.ray,responseVersion:p.responseVersion,featureStatus:p.featureStatus,featureVariant:p.featureVariant,featureKind:p.featureKind,featureRay:p.featureRay,featureBuild:p.featureBuild});
     if(p.responseVersion&&p.responseVersion!==expected.id){a.reason='RESPONSE_VERSION_MISMATCH';terminal=true;}
     else if(p.status===503&&p.build===expected.build){a.reason='APPLICATION_SCHEMA_OR_MAINTENANCE';terminal=true;}
     else if(p.status===404&&!p.build)a.reason='ROUTING_UNCONFIRMED';
@@ -54,7 +55,8 @@ export async function waitForVersionReady({expected,previousVersionId,staleBuild
     else if(p.status!==200){a.reason='HTTP_STATUS_MISMATCH';terminal=true;}
     else if(!p.build){a.reason='BUILD_HEADER_MISSING_OR_INVALID';terminal=true;}
     else if(p.build!==expected.build){if(staleBuilds.includes(p.build))a.reason='STALE_BUILD_OBSERVED';else{a.reason='BUILD_MISMATCH';terminal=true;}}
-    else if(p.featureVariant!==expected.variant){a.reason='APPLICATION_VARIANT_MISMATCH';terminal=true;}
+    else if(p.featureVariant==='unknown'&&[502,503,504].includes(p.featureStatus)&&p.featureKind!=='JSON')a.reason='FEATURE_ROUTE_UNCONFIRMED';
+    else if(p.featureVariant!==expected.variant){if(previousVersionId&&['full','schema31-fallback'].includes(p.featureVariant))a.reason='PREVIOUS_VARIANT_STILL_SERVING';else{a.reason='APPLICATION_VARIANT_MISMATCH';terminal=true;}}
     else{a.reason='IDENTITY_READY';good=true;}
    }
   }catch(e){if(e.report)throw e;a.reason=['AbortError','TimeoutError','TypeError'].includes(e.name)?'TRANSIENT_TRANSPORT_UNCONFIRMED':'CONTROL_PLANE_UNAVAILABLE';}
