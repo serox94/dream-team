@@ -1,23 +1,28 @@
-name: Check scheduled D1 backup
+name: Schema31 recovery completion verification
 on:
-  push:
-    branches: [main]
-    paths: [.github/workflows/backup-health.yml, scripts/check-backup-health.mjs]
   workflow_dispatch:
-  schedule:
-    - cron: '0 4 * * *'
 permissions:
   contents: read
 jobs:
-  check:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: Verify latest private R2 SQL backup and cron, read only
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Read-only diagnosis of pinned candidate and safe fallback
         env:
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: node scripts/check-backup-health.mjs
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/schema31-inspect.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: schema31-safe-status
+          path: schema31-status/
