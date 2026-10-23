@@ -3,6 +3,7 @@ import {mkdtemp,readFile,rm,mkdir,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {transformSync} from 'esbuild';
 import {cf,query,wrangler,productionId} from './recovery-common.mjs';
 import {ensureSchema} from '../src/ensure-schema.js';
 const check=(x,c)=>{if(!x)throw Error(c);};
@@ -24,7 +25,10 @@ try{
  const source=exact.modules?.find(x=>x.name===exact.main_module);check(source,'PINNED_CODE_UNAVAILABLE');const bytes=Buffer.from(source.content_base64,'base64');report.candidate.bundleSha256=createHash('sha256').update(bytes).digest('hex');
  check(execFileSync('git',['diff','--name-only','db4190d2f8836786e25656807c1417b42118880e','HEAD','--','src','public','migrations'],{encoding:'utf8'}).trim()==='','APP_TREE_CHANGED');
  execFileSync(process.execPath,['scripts/build.mjs'],{stdio:['ignore','pipe','pipe']});wrangler(['deploy','--dry-run','--outdir',join(dir,'bundle')]);const compiled=await readFile(join(dir,'bundle','worker.js'));report.candidate.approvedBundleMatches=bytes.equals(compiled);report.candidate.compiledSha256=createHash('sha256').update(compiled).digest('hex');
+ const normalized=s=>transformSync(s.toString(),{loader:'js',minifyWhitespace:true,legalComments:'none'}).code;report.candidate.executableMatchesApproved=normalized(bytes)===normalized(compiled);
  const versionUrl=exact.urls?.find(x=>x.includes(candidate.id.slice(0,8))&&x.endsWith('.workers.dev'));if(versionUrl){report.candidateVersionUrl=versionUrl;report.candidateProbes=[];for(const p of ['/login','/login.html','/api/lake-candidates'])report.candidateProbes.push({path:p,...await probe(versionUrl+p)});}
+ // One narrow historical query, dry (no saved query or telemetry settings write).
+ try{const logs=await cf('/workers/observability/telemetry/query','POST',{queryId:'schema31-release39905061217-diagnosis',dry:true,view:'events',limit:30,timeframe:{from:Date.parse('2026-10-23T05:22:44Z'),to:Date.parse('2026-10-23T05:22:51Z')},parameters:{datasets:['cloudflare-workers'],filters:[{key:'$metadata.service',operation:'eq',type:'string',value:'dream-team'}]}});const events=logs.events?.events||[];report.historicalTelemetry={available:true,events:events.map(x=>({timestamp:x.timestamp||x.$metadata?.timestamp,status:x.statusCode||x.$metadata?.statusCode,version:x.$workers?.scriptVersion?.id||null,ray:x.rayId||null})),rawRequestDataOmitted:true};}catch(e){report.historicalTelemetry={available:false,status:e.status||null,code:e.code||null};}
  report.counts={};for(const t of ['trips','catches','checklist_items','auth_accounts','auth_sessions','content_translations'])report.counts[t]=(await read('SELECT COUNT(*) n FROM '+t)).results[0].n;
  report.schema=(await read("SELECT value FROM app_settings WHERE key='schema_version'")).results[0]?.value;report.maintenance=(await read("SELECT value FROM app_settings WHERE key='maintenance_mode'")).results[0]?.value;report.migrations=(await read('SELECT COUNT(*) n FROM d1_migrations')).results[0].n;
  check((await cf('/workers/scripts/dream-team/deployments')).deployments[0].id===deployments[0].id,'PRODUCTION_CHANGED');check(report.schema==='31'&&report.maintenance==='off','PRODUCTION_STATE_CHANGED');report.result='PASS';
