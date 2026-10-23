@@ -110,3 +110,27 @@ There is no forced initial password change and no eight-character minimum.
 The previous schema28/30 workflow is retired and fails closed. Default npm deploy
 also fails closed without an explicit action, exact confirmation and private
 schema31 receipt. Use neither historical release-operator.mjs nor old scripts.
+
+## D1 read budget and growth
+
+The read-only preparation check queries account-wide analytics before remote
+work. It emits WATCH at 3.5M reads/day (70%), HIGH at 4.25M (85%), and stops
+preparation before 4.8M including its 50k reserve. These thresholds protect
+administrative work; they do not deny normal anglers access to their records.
+Cloudflare daily-limit notifications should remain enabled. No paid plan is
+activated. Analytics can lag, so the 200k safety margin is intentional.
+
+Browser reports and API probes record actual Cloudflare rows_read/rows_written.
+A current catalogue does not start processing or a queue timer. Changed records
+use exact IDs and composite indexes; queue retries wait five seconds and retain
+leases, source revisions and the durable AI budget. Immutable migration names
+are cached per binding/build, while maintenance/schema are read freshly.
+
+The bounded baseline reports both the first legacy process batch and the new
+terminal check honestly: the terminal check can individually read more rows,
+because it checks all incomplete fields once. Compare the normal user operation
+(catalogue GET plus the old redundant process POST versus catalogue GET only),
+and the exact-record lookup. A legacy cursor sweep is not extrapolated as a
+measured total. Large future trips still need to retrieve their visible content;
+paginate when data size warrants it. Periodic exports/full-table comparisons
+belong to explicit recovery drills, never normal page loads or polling.

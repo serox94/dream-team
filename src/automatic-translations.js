@@ -22,11 +22,11 @@ export async function processTranslations(request,env,active){
  const needed=[];for(const source of sources){const entries=saved.filter(r=>r.entity===source.entity&&r.record_id===source.recordId&&r.field===source.field),meta=entries[0];
   const language=x.source?.language||(meta?.metadata_hash===source.sourceHash&&meta.source_language?meta.source_language:classify(source.sourceText,priority?hint:'pl').language),target=language==='pl'?'en':'pl',existing=known.get([source.entity,source.recordId,source.field,target].join('|'));
   if(!x.source&&meta?.metadata_hash===source.sourceHash&&meta.source_language===language&&existing?.source_hash===source.sourceHash&&!(existing.origin==='cloudflare_m2m100'&&env.TRANSLATION_REVIEW_ENABLED==='true'))continue;
-  const job=await env.DB.prepare('SELECT status,attempts,updated_at FROM translation_jobs WHERE entity=? AND record_id=? AND field=? AND language=?').bind(source.entity,source.recordId,source.field,target).first();
+  const job=await env.DB.prepare('SELECT status,attempts,updated_at,source_hash FROM translation_jobs WHERE entity=? AND record_id=? AND field=? AND language=?').bind(source.entity,source.recordId,source.field,target).first();
   if(!x.source&&job?.status==='manual_review'&&existing?.origin==='manual')continue;
-  if(job?.status==='pending'&&!providerReady(env)&&!glossary(source.sourceText,language,target)){const cached=await env.DB.prepare('SELECT text FROM translation_cache WHERE source_hash=? AND source_language=? AND language=?').bind(source.sourceHash,language,target).first();if(!cached)continue;}
-  if(job?.status==='failed'&&(job.attempts>=3||Date.now()-Date.parse(job.updated_at+'Z')<60000))continue;
-  if(job?.status==='processing'&&Date.now()-Date.parse(job.updated_at+'Z')<300000)continue;
+  if(job?.source_hash===source.sourceHash&&job.status==='pending'&&!providerReady(env)&&!glossary(source.sourceText,language,target)){const cached=await env.DB.prepare('SELECT text FROM translation_cache WHERE source_hash=? AND source_language=? AND language=?').bind(source.sourceHash,language,target).first();if(!cached)continue;}
+  if(job?.source_hash===source.sourceHash&&job.status==='failed'&&(job.attempts>=3||Date.now()-Date.parse(job.updated_at+'Z')<60000))continue;
+  if(job?.source_hash===source.sourceHash&&job.status==='processing'&&Date.now()-Date.parse(job.updated_at+'Z')<300000)continue;
   needed.push(source);
  }
  const scopeCount=needed.length,batch=providerReady(env)?1:3;let nextCursor=scopeCount>batch?0:null;sources=needed.slice(0,batch);
@@ -60,7 +60,7 @@ export async function processTranslations(request,env,active){
    if(!lease.meta.changes)continue;
    processed++;provider=env.TRANSLATION_REVIEW_ENABLED==='true'?'cloudflare_m2m100_llama_review':'cloudflare_m2m100';
    try{const answer=await translateField(env,source.sourceText,language,target);
-    if(answer.deferred){await env.DB.prepare("UPDATE translation_jobs SET status='pending',attempts=MAX(0,attempts-1),updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=?").bind(...args,target).run();nextCursor=cursor;continue;}output=answer.text;
+    if(answer.deferred){await env.DB.prepare("UPDATE translation_jobs SET status='pending',attempts=MAX(0,attempts-1),updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=?").bind(...args,target).run();nextCursor=0;continue;}output=answer.text;
    }catch(error){output=null;failed++;paused=['TRANSLATION_DAILY_BUDGET','TRANSLATION_PROVIDER_QUOTA'].includes(error.message);await env.DB.prepare("UPDATE translation_jobs SET status=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=? AND source_hash=?").bind(paused?'pending':'failed',['PROVIDER_TIMEOUT','INVALID_PROVIDER_OUTPUT','PROVIDER_TOKENS_CHANGED','TRANSLATION_DAILY_BUDGET','TRANSLATION_PROVIDER_QUOTA'].includes(error.message)?error.message:'PROVIDER_UNAVAILABLE',...args,target,source.sourceHash).run();if(paused)nextCursor=null;}
 
   }
