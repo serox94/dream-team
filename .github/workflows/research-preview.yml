@@ -1,0 +1,60 @@
+name: Isolated lake research preview
+on:
+  workflow_dispatch:
+  push:
+    branches: [experiment/lake-research-20261022]
+    # Documentation and fixture-only fixes retain the already-tested application
+    # and existing D1. They must not deploy or replay the live research UI suite.
+    paths: [public/**, src/**, migrations/**, package.json, package-lock.json, wrangler.jsonc, scripts/research-preview*.mjs, scripts/qa-research-live.mjs, scripts/recovery-common.mjs]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-research-preview
+  cancel-in-progress: false
+jobs:
+  research-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Read-only provider and isolation preflight
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        run: node scripts/research-preview-preflight.mjs
+      - name: Validate application syntax and local resources
+        run: node scripts/build.mjs
+      - name: Targeted research regression
+        run: node --test tests/preview-d1-meter.test.mjs tests/research-engine.test.mjs tests/research-provider.test.mjs tests/research-locales.test.mjs tests/lake-management-ui.test.mjs
+      - name: Protect source and deploy isolated research preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: node scripts/research-preview-deploy.mjs
+      - name: Install browser for targeted preview QA
+        run: |
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install chromium
+      - name: Real Fishing Adventure research and PL/EN preview QA
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/qa-research-live.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research-preview-safe-status
+          path: research-status/
+          retention-days: 7

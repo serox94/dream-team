@@ -42,98 +42,184 @@
 }
 
 /* Shared surfaces: legacy modules use the same roles as the newer screens. */
-html[data-theme="light"] {
-  body { color: var(--text); background: radial-gradient(ellipse at 85% 0%, #e7eddc80, transparent 38%), var(--bg); }
-  .login-card { box-shadow: var(--shadow); }
-  .site-header { background: #f6f4ebf5; box-shadow: 0 5px 20px #2030200a; }
-  .hero-card, .panel-card, .stat-card, .knowledge-card, .catch-item, .spot-card,
-  .checklist-group, #checklist-groups .checklist-group, .weather-hour-card, .weather-day-card,
-  .dashboard-mini-card, .login-card, .location-photo-card, .hero-side-card,
-  .knowledge-entry, .field-guide, .media-card, .guide-media, .deeper-shot {
+html[data-theme="light"] body { color: var(--text); background: radial-gradient(ellipse at 85% 0%, #e7eddc80, transparent 38%), var(--bg); }
+html[data-theme="light"] .login-card { box-shadow: var(--shadow); }
+html[data-theme="light"] .site-header { background: #f6f4ebf5; box-shadow: 0 5px 20px #2030200a; }
+html[data-theme="light"] .hero-card,
+html[data-theme="light"] .panel-card,
+html[data-theme="light"] .stat-card,
+html[data-theme="light"] .knowledge-card,
+html[data-theme="light"] .catch-item,
+html[data-theme="light"] .spot-card,
+html[data-theme="light"] .checklist-group,
+html[data-theme="light"] #checklist-groups .checklist-group,
+html[data-theme="light"] .weather-hour-card,
+html[data-theme="light"] .weather-day-card,
+html[data-theme="light"] .dashboard-mini-card,
+html[data-theme="light"] .login-card,
+html[data-theme="light"] .location-photo-card,
+html[data-theme="light"] .hero-side-card,
+html[data-theme="light"] .knowledge-entry,
+html[data-theme="light"] .field-guide,
+html[data-theme="light"] .media-card,
+html[data-theme="light"] .guide-media,
+html[data-theme="light"] .deeper-shot {
     background: var(--surface); border-color: var(--border);
   }
-  .hero-card { background: radial-gradient(ellipse at 95% 0%, #e1e9cf90, transparent 60%), var(--surface); }
-  .trip-box, .dream-trip-select, .mini-stats div, .dream-detail-list > div,
-  .check-item-row, #checklist-groups .check-item-row, .small-stat-box, .spot-meta-box,
-  .empty-box, .spot-map-hint, .weather-interpretation, .field-guide-facts > div,
-  .dashboard-snapshot > div, .trip-facts span, .entry-tags span, .guide-mini-pill,
-  .knowledge-matrix, .tool-result, .scan-checklist label, .chirp-practice,
-  .wizard-candidate, .knowledge-home-grid a, .deeper-shot-placeholder,
-  .check-item-badge, .badge, .section-chip, .guide-caption, .photo-caption,
-  .last-entry-item, .catch-note, .weather-note, .weather-row, .weather-chip,
-  .hero-pill, .carp-forecast-grid > div,
-  .location-photo-card .photo-caption, .sonar-diagram figcaption {
+html[data-theme="light"] .hero-card { background: radial-gradient(ellipse at 95% 0%, #e1e9cf90, transparent 60%), var(--surface); }
+html[data-theme="light"] .trip-box,
+html[data-theme="light"] .dream-trip-select,
+html[data-theme="light"] .mini-stats div,
+html[data-theme="light"] .dream-detail-list > div,
+html[data-theme="light"] .check-item-row,
+html[data-theme="light"] #checklist-groups .check-item-row,
+html[data-theme="light"] .small-stat-box,
+html[data-theme="light"] .spot-meta-box,
+html[data-theme="light"] .empty-box,
+html[data-theme="light"] .spot-map-hint,
+html[data-theme="light"] .weather-interpretation,
+html[data-theme="light"] .field-guide-facts > div,
+html[data-theme="light"] .dashboard-snapshot > div,
+html[data-theme="light"] .trip-facts span,
+html[data-theme="light"] .entry-tags span,
+html[data-theme="light"] .guide-mini-pill,
+html[data-theme="light"] .knowledge-matrix,
+html[data-theme="light"] .tool-result,
+html[data-theme="light"] .scan-checklist label,
+html[data-theme="light"] .chirp-practice,
+html[data-theme="light"] .wizard-candidate,
+html[data-theme="light"] .knowledge-home-grid a,
+html[data-theme="light"] .deeper-shot-placeholder,
+html[data-theme="light"] .check-item-badge,
+html[data-theme="light"] .badge,
+html[data-theme="light"] .section-chip,
+html[data-theme="light"] .guide-caption,
+html[data-theme="light"] .photo-caption,
+html[data-theme="light"] .last-entry-item,
+html[data-theme="light"] .catch-note,
+html[data-theme="light"] .weather-note,
+html[data-theme="light"] .weather-row,
+html[data-theme="light"] .weather-chip,
+html[data-theme="light"] .hero-pill,
+html[data-theme="light"] .carp-forecast-grid > div,
+html[data-theme="light"] .location-photo-card .photo-caption,
+html[data-theme="light"] .sonar-diagram figcaption {
     background: var(--surface-soft); color: var(--text); border-color: var(--border);
   }
-  input, select, textarea { color: var(--text); background: var(--surface-input); border-color: var(--border-strong); }
-  input::placeholder, textarea::placeholder { color: var(--muted-2); opacity: 1; }
-  input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
-  :focus-visible { outline-color: var(--accent); }
-  button { background: var(--accent); color: var(--on-accent); }
-  button:hover { background: #344e21; }
-  .secondary-btn, .edit-btn, .quick-links a, .dream-action, .hero-actions a,
-  .field-guide-links a, .field-guide-actions a:not(:first-child),
-  .knowledge-shortcuts a, .article-related a, .quick-cross a,
-  .knowledge-chips button, .filter-bar .filter-btn {
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea { color: var(--text); background: var(--surface-input); border-color: var(--border-strong); }
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder { color: var(--muted-2); opacity: 1; }
+html[data-theme="light"] input[type="checkbox"],
+html[data-theme="light"] input[type="radio"] { accent-color: var(--accent); }
+html[data-theme="light"] :focus-visible { outline-color: var(--accent); }
+html[data-theme="light"] button { background: var(--accent); color: var(--on-accent); }
+html[data-theme="light"] button:hover { background: #344e21; }
+html[data-theme="light"] .secondary-btn,
+html[data-theme="light"] .edit-btn,
+html[data-theme="light"] .quick-links a,
+html[data-theme="light"] .dream-action,
+html[data-theme="light"] .hero-actions a,
+html[data-theme="light"] .field-guide-links a,
+html[data-theme="light"] .field-guide-actions a:not(:first-child),
+html[data-theme="light"] .knowledge-shortcuts a,
+html[data-theme="light"] .article-related a,
+html[data-theme="light"] .quick-cross a,
+html[data-theme="light"] .knowledge-chips button,
+html[data-theme="light"] .filter-bar .filter-btn {
     background: var(--surface-soft); color: var(--text); border-color: var(--border-strong);
   }
-  .secondary-btn:hover, .edit-btn:hover, .quick-links a:hover, .dream-action:hover,
-  .hero-actions a:hover, .knowledge-chips button:hover { background: var(--surface-hover); }
-  .hero-actions a:first-child, .field-guide-actions a:first-child,
-  .knowledge-chips button.selected, .filter-bar .filter-btn.active,
-  #check-toolbar .filter-btn.active, .main-nav a.active, .main-nav a:hover {
+html[data-theme="light"] .secondary-btn:hover,
+html[data-theme="light"] .edit-btn:hover,
+html[data-theme="light"] .quick-links a:hover,
+html[data-theme="light"] .dream-action:hover,
+html[data-theme="light"] .hero-actions a:hover,
+html[data-theme="light"] .knowledge-chips button:hover { background: var(--surface-hover); }
+html[data-theme="light"] .hero-actions a:first-child,
+html[data-theme="light"] .field-guide-actions a:first-child,
+html[data-theme="light"] .knowledge-chips button.selected,
+html[data-theme="light"] .filter-bar .filter-btn.active,
+html[data-theme="light"] #check-toolbar .filter-btn.active,
+html[data-theme="light"] .main-nav a.active,
+html[data-theme="light"] .main-nav a:hover {
     background: var(--accent); color: var(--on-accent); border-color: var(--accent);
   }
-  .hero-actions a:first-child:hover { background: #344e21; }
-  .danger-btn, .danger-btn:hover { color: var(--ui-danger-tx); background: var(--ui-danger-bg); border-color: var(--ui-danger-br); }
-  .form-message.error, .error, #media-status.error, .login-error { color: var(--danger); }
-  .login-card .error { background: var(--ui-danger-bg); border-color: var(--ui-danger-br); }
-  .eyebrow, .article-sources a, .source-catalog-list a { color: var(--accent); }
-  .intro, .login-hint, #trip-manager small, .trip-box small { color: var(--muted); }
-  .mark, .header-top h1::before { background: var(--accent); color: var(--on-accent); }
-  .score-track, .readiness-track, .dashboard-progress, .pb-track, .progress-bar { background: var(--track); }
-  .score-good { color: var(--success) !important; }
-  .score-mid { color: var(--warning) !important; }
-  .score-bad { color: var(--danger) !important; }
-  .alert-card { background: var(--surface); color: var(--text); }
-  .status-info { background: var(--ui-info-bg); color: var(--ui-info-tx); }
-  .status-success { background: var(--ui-success-bg); color: var(--ui-success-tx); }
-  .status-warn { background: var(--ui-warn-bg); color: var(--ui-warn-tx); }
-  .status-danger { background: var(--ui-danger-bg); color: var(--ui-danger-tx); }
-  .offline-banner { background: var(--ui-warn-bg); color: var(--ui-warn-tx); border-bottom: 1px solid var(--ui-warn-br); }
-  #offline-conflict-dialog { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
-  dialog::backdrop { background: #172b2366; }
-  #catch-form .form-actions { background: var(--surface); }
-  .check-item-row.is-done { opacity: 1; }
-  .checklist-templates fieldset, .template-card, .template-item-row, .participant-profile,
-  #trip-manager fieldset, .recovery-row { border-color: var(--border-strong); }
-  .checklist-templates fieldset label { background: var(--surface); border-color: var(--border-strong); }
-  .checklist-templates fieldset label:has(input:checked) { background: var(--selection); border-color: var(--accent); }
-  #trip-photos { background: linear-gradient(120deg, var(--selection), var(--surface)); }
-  #trip-photos .trip-photos-link { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: none; }
-  #trip-photos .trip-photos-link:hover { background: #344e21; }
-  /* Photo overlays stay dark so captions retain contrast over the photographs. */
-  .hero-side-body, .hero-side-body strong { color: #fff; }
-  .hero-side-body span { color: #e9efe4; }
-  @media (max-width: 900px) {
-    .main-nav { background: var(--surface) !important; box-shadow: var(--shadow) !important; }
-    .main-nav > .language-selector { background: var(--surface); border-color: var(--border); }
-    .bottom-nav { background: #fffefbf7; }
-    .bottom-nav a, .bottom-nav button { color: var(--muted); background: transparent; }
-    .bottom-nav .active, .bottom-nav a:hover, .bottom-nav button[aria-expanded="true"] { color: var(--accent); background: var(--selection); }
-    .bottom-nav .nav-add-catch, .bottom-nav .nav-add-catch.active, .bottom-nav .nav-add-catch:hover { background: var(--accent); color: var(--on-accent); }
-  }
-  /* Local weather tokens must follow the global palette, without changing any calculations. */
-  #pro2 { --p: var(--surface); --p2: var(--surface-soft); --line: var(--border); --text: #172b23; --muted: #435b4e; --lime: var(--accent); }
-  #pro2 .wx-activity { background: linear-gradient(135deg, var(--selection), var(--surface)); }
-  #pro2 .wx-alert { background: var(--ui-warn-bg); border-color: var(--ui-warn-br); color: var(--ui-warn-tx); }
-  #pro2 .wx-alert[data-state="SAFE"] { background: var(--ui-success-bg); border-color: var(--ui-success-br); color: var(--ui-success-tx); }
-  #pro2 .wx-alert[data-state="DANGER"] { background: var(--ui-danger-bg); border-color: var(--ui-danger-br); color: var(--ui-danger-tx); }
-  #pro2 .wx-figure h3 span, #pro2 .wx-chart-values, #pro2 .wx-chart-times { color: var(--muted); }
-  #pro2 .wx-chart-frame { background: var(--chart-bg); border-color: var(--border-strong); }
-  #pro2 .wx-chart-line { stroke: var(--chart-line); }
-  #pro2 .wx-chart-point { fill: var(--chart-line); }
-  #pro2 .wx-chart-grid { stroke: var(--chart-grid); stroke-opacity: 1; }
-  .pro2-language button { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
-  .pro2-language button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+html[data-theme="light"] .hero-actions a:first-child:hover { background: #344e21; }
+html[data-theme="light"] .danger-btn,
+html[data-theme="light"] .danger-btn:hover { color: var(--ui-danger-tx); background: var(--ui-danger-bg); border-color: var(--ui-danger-br); }
+html[data-theme="light"] .form-message.error,
+html[data-theme="light"] .error,
+html[data-theme="light"] #media-status.error,
+html[data-theme="light"] .login-error { color: var(--danger); }
+html[data-theme="light"] .login-card .error { background: var(--ui-danger-bg); border-color: var(--ui-danger-br); }
+html[data-theme="light"] .eyebrow,
+html[data-theme="light"] .article-sources a,
+html[data-theme="light"] .source-catalog-list a { color: var(--accent); }
+html[data-theme="light"] .intro,
+html[data-theme="light"] .login-hint,
+html[data-theme="light"] #trip-manager small,
+html[data-theme="light"] .trip-box small { color: var(--muted); }
+html[data-theme="light"] .mark,
+html[data-theme="light"] .header-top h1::before { background: var(--accent); color: var(--on-accent); }
+html[data-theme="light"] .score-track,
+html[data-theme="light"] .readiness-track,
+html[data-theme="light"] .dashboard-progress,
+html[data-theme="light"] .pb-track,
+html[data-theme="light"] .progress-bar { background: var(--track); }
+html[data-theme="light"] .score-good { color: var(--success) !important; }
+html[data-theme="light"] .score-mid { color: var(--warning) !important; }
+html[data-theme="light"] .score-bad { color: var(--danger) !important; }
+html[data-theme="light"] .alert-card { background: var(--surface); color: var(--text); }
+html[data-theme="light"] .status-info { background: var(--ui-info-bg); color: var(--ui-info-tx); }
+html[data-theme="light"] .status-success { background: var(--ui-success-bg); color: var(--ui-success-tx); }
+html[data-theme="light"] .status-warn { background: var(--ui-warn-bg); color: var(--ui-warn-tx); }
+html[data-theme="light"] .status-danger { background: var(--ui-danger-bg); color: var(--ui-danger-tx); }
+html[data-theme="light"] .offline-banner { background: var(--ui-warn-bg); color: var(--ui-warn-tx); border-bottom: 1px solid var(--ui-warn-br); }
+html[data-theme="light"] #offline-conflict-dialog { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+html[data-theme="light"] dialog::backdrop { background: #172b2366; }
+html[data-theme="light"] #catch-form .form-actions { background: var(--surface); }
+html[data-theme="light"] .check-item-row.is-done { opacity: 1; }
+html[data-theme="light"] .checklist-templates fieldset,
+html[data-theme="light"] .template-card,
+html[data-theme="light"] .template-item-row,
+html[data-theme="light"] .participant-profile,
+html[data-theme="light"] #trip-manager fieldset,
+html[data-theme="light"] .recovery-row { border-color: var(--border-strong); }
+html[data-theme="light"] .checklist-templates fieldset label { background: var(--surface); border-color: var(--border-strong); }
+html[data-theme="light"] .checklist-templates fieldset label:has(input:checked) { background: var(--selection); border-color: var(--accent); }
+html[data-theme="light"] #trip-photos { background: linear-gradient(120deg, var(--selection), var(--surface)); }
+html[data-theme="light"] #trip-photos .trip-photos-link { background: var(--accent); color: var(--on-accent); border-color: var(--accent); box-shadow: none; }
+html[data-theme="light"] #trip-photos .trip-photos-link:hover { background: #344e21; }
+/* Photo overlays stay dark so captions retain contrast over the photographs. */
+html[data-theme="light"] .hero-side-body,
+html[data-theme="light"] .hero-side-body strong { color: #fff; }
+html[data-theme="light"] .hero-side-body span { color: #e9efe4; }
+@media (max-width: 900px) {
+html[data-theme="light"] .main-nav { background: var(--surface) !important; box-shadow: var(--shadow) !important; }
+html[data-theme="light"] .main-nav > .language-selector { background: var(--surface); border-color: var(--border); }
+html[data-theme="light"] .bottom-nav { background: #fffefbf7; }
+html[data-theme="light"] .bottom-nav a,
+html[data-theme="light"] .bottom-nav button { color: var(--muted); background: transparent; }
+html[data-theme="light"] .bottom-nav .active,
+html[data-theme="light"] .bottom-nav a:hover,
+html[data-theme="light"] .bottom-nav button[aria-expanded="true"] { color: var(--accent); background: var(--selection); }
+html[data-theme="light"] .bottom-nav .nav-add-catch,
+html[data-theme="light"] .bottom-nav .nav-add-catch.active,
+html[data-theme="light"] .bottom-nav .nav-add-catch:hover { background: var(--accent); color: var(--on-accent); }
 }
+/* Local weather tokens must follow the global palette, without changing any calculations. */
+html[data-theme="light"] #pro2 { --p: var(--surface); --p2: var(--surface-soft); --line: var(--border); --text: #172b23; --muted: #435b4e; --lime: var(--accent); }
+html[data-theme="light"] #pro2 .wx-activity { background: linear-gradient(135deg, var(--selection), var(--surface)); }
+html[data-theme="light"] #pro2 .wx-alert { background: var(--ui-warn-bg); border-color: var(--ui-warn-br); color: var(--ui-warn-tx); }
+html[data-theme="light"] #pro2 .wx-alert[data-state="SAFE"] { background: var(--ui-success-bg); border-color: var(--ui-success-br); color: var(--ui-success-tx); }
+html[data-theme="light"] #pro2 .wx-alert[data-state="DANGER"] { background: var(--ui-danger-bg); border-color: var(--ui-danger-br); color: var(--ui-danger-tx); }
+html[data-theme="light"] #pro2 .wx-figure h3 span,
+html[data-theme="light"] #pro2 .wx-chart-values,
+html[data-theme="light"] #pro2 .wx-chart-times { color: var(--muted); }
+html[data-theme="light"] #pro2 .wx-chart-frame { background: var(--chart-bg); border-color: var(--border-strong); }
+html[data-theme="light"] #pro2 .wx-chart-line { stroke: var(--chart-line); }
+html[data-theme="light"] #pro2 .wx-chart-point { fill: var(--chart-line); }
+html[data-theme="light"] #pro2 .wx-chart-grid { stroke: var(--chart-grid); stroke-opacity: 1; }
+html[data-theme="light"] .pro2-language button { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+html[data-theme="light"] .pro2-language button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }

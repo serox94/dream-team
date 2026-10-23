@@ -42,7 +42,7 @@ export async function session(request,env){
     'SELECT s.expires_at,u.id,u.username,u.angler_id anglerId,u.protected,a.name,a.default_language defaultLanguage,COALESCE(p.must_change,0) mustChangePassword FROM auth_sessions s JOIN auth_accounts u ON u.id=s.account_id AND u.active=1 JOIN anglers a ON a.id=u.angler_id JOIN auth_credential c ON c.id=1 LEFT JOIN auth_account_credentials p ON p.account_id=u.id WHERE s.id_hash=? AND s.auth_version=COALESCE(p.version,c.version)':
     'SELECT expires_at FROM auth_sessions WHERE id_hash=?').bind(idHash).first();
   if(!row||row.expires_at<current||row.expires_at<expires)return null;
-  const account=individual?{id:row.id,username:row.username,anglerId:row.protected?null:row.anglerId,name:row.name,defaultLanguage:row.defaultLanguage,protected:Boolean(row.protected),mustChangePassword:Boolean(row.mustChangePassword)}:null;
+  const account=individual?{id:row.id,username:row.username,anglerId:row.protected?null:row.anglerId,name:row.name,defaultLanguage:row.defaultLanguage,protected:Boolean(row.protected),mustChangePassword:false,passwordPolicy:row.protected?'protected':env.ANGLER_PASSWORD_POLICY==='shared'?'shared':'legacy'}:null;
   let refreshCookie=null;
   if(expires-current<ageSeconds-renewalSeconds){
     const next=current+ageSeconds;
@@ -63,12 +63,12 @@ export async function login(request,env){
   // failures must not all read zero and overwrite the counter with one.
   const slot=await env.DB.prepare('INSERT INTO auth_login_limits(id_hash,attempts,reset_at) VALUES(?,1,?) ON CONFLICT(id_hash) DO UPDATE SET attempts=CASE WHEN reset_at<=? THEN 1 ELSE attempts+1 END,reset_at=CASE WHEN reset_at<=? THEN ? ELSE reset_at END WHERE reset_at<=? OR attempts<8').bind(ipHash,current+900,current,current,current+900,current).run();
   if(!slot.meta.changes)return redirect('/login?error=limit');
-  let account,credential,valid;
+  let account,credential,sessionCredential,sharedPolicy=false,valid;
   if(individualAccounts(env)){
     credential=await sharedCredential(env);
     const loginName=env.APP_ENV==='preview'&&env.AUTH_LEGACY_ALIAS&&username===env.RYBY_LOGIN_USERNAME?env.AUTH_LEGACY_ALIAS:username.trim();
-    account=await env.DB.prepare('SELECT id FROM auth_accounts WHERE username=? COLLATE NOCASE AND active=1').bind(loginName).first();
-    if(account){const own=await env.DB.prepare('SELECT * FROM auth_account_credentials WHERE account_id=?').bind(account.id).first();if(own)credential={...own,individual:true};}
+    account=await env.DB.prepare('SELECT id,protected FROM auth_accounts WHERE username=? COLLATE NOCASE AND active=1').bind(loginName).first();
+    if(account){const own=await env.DB.prepare('SELECT * FROM auth_account_credentials WHERE account_id=?').bind(account.id).first();sharedPolicy=env.ANGLER_PASSWORD_POLICY==='shared'&&!account.protected;sessionCredential=own||credential;if(own&&!sharedPolicy)credential={...own,individual:true};}
     valid=await verifyPassword(env,password,credential);
     valid=Boolean(account)&&valid;
   }else{
@@ -82,7 +82,7 @@ export async function login(request,env){
   }
   await env.DB.prepare('DELETE FROM auth_login_limits WHERE id_hash=?').bind(ipHash).run();
   const id=b64(crypto.getRandomValues(new Uint8Array(32))),expires=current+ageSeconds;
-  const stored=individualAccounts(env)?await env.DB.prepare('INSERT INTO auth_sessions(id_hash,expires_at,account_id,auth_version) SELECT ?,?,u.id,COALESCE(p.version,c.version) FROM auth_accounts u JOIN auth_credential c ON c.id=1 LEFT JOIN auth_account_credentials p ON p.account_id=u.id WHERE u.id=? AND u.active=1 AND COALESCE(p.version,c.version)=? AND COALESCE(p.salt,c.salt)=?').bind(hex(await digest(id)),expires,account.id,credential.version,credential.salt).run():await env.DB.prepare('INSERT INTO auth_sessions(id_hash,expires_at,account_id,auth_version) VALUES(?,?,NULL,NULL)').bind(hex(await digest(id)),expires).run();
+  const stored=sharedPolicy?await env.DB.prepare('INSERT INTO auth_sessions(id_hash,expires_at,account_id,auth_version) SELECT ?,?,u.id,COALESCE(p.version,c.version) FROM auth_accounts u JOIN auth_credential c ON c.id=1 LEFT JOIN auth_account_credentials p ON p.account_id=u.id WHERE u.id=? AND u.active=1 AND u.protected=0 AND c.version=? AND c.salt=? AND COALESCE(p.version,c.version)=? AND COALESCE(p.salt,c.salt)=?').bind(hex(await digest(id)),expires,account.id,credential.version,credential.salt,sessionCredential.version,sessionCredential.salt).run():individualAccounts(env)?await env.DB.prepare('INSERT INTO auth_sessions(id_hash,expires_at,account_id,auth_version) SELECT ?,?,u.id,COALESCE(p.version,c.version) FROM auth_accounts u JOIN auth_credential c ON c.id=1 LEFT JOIN auth_account_credentials p ON p.account_id=u.id WHERE u.id=? AND u.active=1 AND COALESCE(p.version,c.version)=? AND COALESCE(p.salt,c.salt)=?').bind(hex(await digest(id)),expires,account.id,credential.version,credential.salt).run():await env.DB.prepare('INSERT INTO auth_sessions(id_hash,expires_at,account_id,auth_version) VALUES(?,?,NULL,NULL)').bind(hex(await digest(id)),expires).run();
   if(!stored.meta.changes)return redirect('/login?error=credentials');
   const result=redirect('/');result.headers.set('set-cookie',formatCookie(await issue(await signingKey(env),id,expires),ageSeconds));return result;
 }
@@ -162,13 +162,13 @@ export async function initializeProtectedAccount(env,password,{reset=false,expec
  return {initialized:true};
 }
 export async function changeSharedPassword(request,env,active){
+  if(env.ANGLER_PASSWORD_POLICY==='shared'&&!active.account.protected)fail('Wspólne hasło zespołu jest zarządzane przez właściciela.',403,'TEAM_PASSWORD_MANAGED');
   const x=await body(request),current=x.currentPassword,next=x.newPassword;
   if(typeof current!=='string'||typeof next!=='string'||!current.length||current.length>256||next.length>256)fail('Nieprawidłowe hasło.');
-  if(next.length<8)fail('Nowe hasło musi mieć co najmniej 8 znaków.');
+  if(!next.length)fail('Nowe hasło nie może być puste.');
   const own=await env.DB.prepare('SELECT * FROM auth_account_credentials WHERE account_id=?').bind(active.account.id).first();
   const row=own||await sharedCredential(env);
   if(!await verifyPassword(env,current,row))fail('Obecne hasło jest nieprawidłowe.',403);
-  if(own?.must_change&&!(typeof x.sharedPassword==='string'&&x.sharedPassword.length<=256&&await verifyPassword(env,x.sharedPassword,await sharedCredential(env))))fail('Potwierdź obecne wspólne hasło zespołu.',403,'BOOTSTRAP_CONFIRMATION_REQUIRED');
   if(next===current)fail('Nowe hasło musi różnić się od obecnego.',400,'PASSWORD_UNCHANGED');
   const salt=hex(crypto.getRandomValues(new Uint8Array(32))),hash=await passwordHash(env,next,salt);
   if(own){

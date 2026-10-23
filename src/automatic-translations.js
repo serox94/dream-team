@@ -1,5 +1,5 @@
 import '../public/domain-glossary.js';
-import {entities,originals,hash} from './content-translations.js';
+import {entities,originals,hash,matchedTranslations} from './content-translations.js';
 import {body,fail} from './validation.js';
 import {modelCall,translateField,samples,MODEL,REVIEW_MODEL} from './m2m100.js';
 // Controlled domain dictionary is exact-match only. It is not a general translation engine.
@@ -12,11 +12,25 @@ export async function processTranslations(request,env,active){
  if(x.probe!==undefined){if(env.APP_ENV!=='preview'||env.TRANSLATION_QA_ENABLED!=='true'||!providerReady(env)||!Number.isInteger(x.probe)||!samples[x.probe])fail('Test modelu niedostępny.',403);const [source,text]=samples[x.probe],target=source==='pl'?'en':'pl';return {ok:true,model:x.reviewOnly?REVIEW_MODEL:MODEL,source,target,text,raw:await modelCall(env,text,source,target,x.reviewOnly?'review':'m2m100')};}
  if(env.TRANSLATION_QA_ENABLED==='true'&&!x.queue)return {ok:true,providerEnabled:false,engine:'quality_validation_in_progress',nextCursor:null};
  let sources=[];
+ const priority=x.changed||x.source;
  if(x.queue){const pending=await env.DB.prepare("SELECT entity,record_id,field FROM translation_jobs WHERE status='pending' OR (status='failed' AND attempts<3 AND updated_at<datetime('now','-1 minute')) OR (status='processing' AND updated_at<datetime('now','-5 minutes')) ORDER BY updated_at,entity,record_id,field LIMIT 1").first();if(pending)sources=(await originals(env,pending.entity,pending.record_id)).filter(s=>s.field===pending.field);}
+ else if(priority&&entities[priority.entity]&&priority.recordId!=null)sources=(await originals(env,priority.entity,String(priority.recordId),x.tripId)).filter(s=>!priority.field||s.field===priority.field);
  else for(const entity of Object.keys(entities))sources.push(...await originals(env,entity,null,x.tripId));
- const priority=x.changed||x.source;if(priority){sources.sort((a,b)=>Number(b.entity===priority.entity&&b.recordId===String(priority.recordId)&&(!priority.field||b.field===priority.field))-Number(a.entity===priority.entity&&a.recordId===String(priority.recordId)&&(!priority.field||a.field===priority.field)));}
- const cursor=!x.queue&&Number.isInteger(x.cursor)&&x.cursor>=0?x.cursor:0,scopeCount=sources.length,batch=providerReady(env)?1:3;let nextCursor=cursor+batch<scopeCount?cursor+batch:null;sources=sources.slice(cursor,cursor+batch);
- let translated=0,manual=0,failed=0,processed=0,paused=false;const hint=request.headers.get('accept-language')?.startsWith('en')?'en':'pl';
+ const saved=await matchedTranslations(env,sources),known=new Map(saved.map(r=>[[r.entity,r.record_id,r.field,r.language].join('|'),r]));
+ const hint=request.headers.get('accept-language')?.startsWith('en')?'en':'pl';
+ // A complete saved field must not start another cursor sweep or job UPDATE.
+ const needed=[];for(const source of sources){const entries=saved.filter(r=>r.entity===source.entity&&r.record_id===source.recordId&&r.field===source.field),meta=entries[0];
+  const language=x.source?.language||(meta?.metadata_hash===source.sourceHash&&meta.source_language?meta.source_language:classify(source.sourceText,priority?hint:'pl').language),target=language==='pl'?'en':'pl',existing=known.get([source.entity,source.recordId,source.field,target].join('|'));
+  if(!x.source&&meta?.metadata_hash===source.sourceHash&&meta.source_language===language&&existing?.source_hash===source.sourceHash&&!(existing.origin==='cloudflare_m2m100'&&env.TRANSLATION_REVIEW_ENABLED==='true'))continue;
+  const job=await env.DB.prepare('SELECT status,attempts,updated_at,source_hash FROM translation_jobs WHERE entity=? AND record_id=? AND field=? AND language=?').bind(source.entity,source.recordId,source.field,target).first();
+  if(!x.source&&job?.status==='manual_review'&&existing?.origin==='manual')continue;
+  if(job?.source_hash===source.sourceHash&&job.status==='pending'&&!providerReady(env)&&!glossary(source.sourceText,language,target)){const cached=await env.DB.prepare('SELECT text FROM translation_cache WHERE source_hash=? AND source_language=? AND language=?').bind(source.sourceHash,language,target).first();if(!cached)continue;}
+  if(job?.source_hash===source.sourceHash&&job.status==='failed'&&(job.attempts>=3||Date.now()-Date.parse(job.updated_at+'Z')<60000))continue;
+  if(job?.source_hash===source.sourceHash&&job.status==='processing'&&Date.now()-Date.parse(job.updated_at+'Z')<300000)continue;
+  needed.push(source);
+ }
+ const scopeCount=needed.length,batch=providerReady(env)?1:3;let nextCursor=scopeCount>batch?0:null;sources=needed.slice(0,batch);
+ let translated=0,manual=0,failed=0,processed=0,paused=false;
  for(const source of sources){
   const args=[source.entity,source.recordId,source.field];
   let meta=await env.DB.prepare('SELECT * FROM content_sources WHERE entity=? AND record_id=? AND field=?').bind(...args).first();
@@ -46,7 +60,7 @@ export async function processTranslations(request,env,active){
    if(!lease.meta.changes)continue;
    processed++;provider=env.TRANSLATION_REVIEW_ENABLED==='true'?'cloudflare_m2m100_llama_review':'cloudflare_m2m100';
    try{const answer=await translateField(env,source.sourceText,language,target);
-    if(answer.deferred){await env.DB.prepare("UPDATE translation_jobs SET status='pending',attempts=MAX(0,attempts-1),updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=?").bind(...args,target).run();nextCursor=cursor;continue;}output=answer.text;
+    if(answer.deferred){await env.DB.prepare("UPDATE translation_jobs SET status='pending',attempts=MAX(0,attempts-1),updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=?").bind(...args,target).run();nextCursor=0;continue;}output=answer.text;
    }catch(error){output=null;failed++;paused=['TRANSLATION_DAILY_BUDGET','TRANSLATION_PROVIDER_QUOTA'].includes(error.message);await env.DB.prepare("UPDATE translation_jobs SET status=?,last_error=?,updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=? AND source_hash=?").bind(paused?'pending':'failed',['PROVIDER_TIMEOUT','INVALID_PROVIDER_OUTPUT','PROVIDER_TOKENS_CHANGED','TRANSLATION_DAILY_BUDGET','TRANSLATION_PROVIDER_QUOTA'].includes(error.message)?error.message:'PROVIDER_UNAVAILABLE',...args,target,source.sourceHash).run();if(paused)nextCursor=null;}
 
   }
@@ -56,6 +70,7 @@ export async function processTranslations(request,env,active){
   if(result.meta.changes){translated++;await env.DB.prepare('INSERT INTO translation_cache(source_hash,source_language,language,text,provider) VALUES(?,?,?,?,?) ON CONFLICT(source_hash,source_language,language) DO UPDATE SET text=excluded.text,provider=excluded.provider').bind(source.sourceHash,language,target,output,provider).run();await env.DB.prepare("UPDATE translation_jobs SET status='complete',last_error=NULL,updated_at=CURRENT_TIMESTAMP WHERE entity=? AND record_id=? AND field=? AND language=? AND source_hash=?").bind(...args,target,source.sourceHash).run();}
  }
  if(x.queue){const remaining=await env.DB.prepare("SELECT COUNT(*) count FROM translation_jobs WHERE status='pending' OR (status='failed' AND attempts<3 AND updated_at<datetime('now','-1 minute'))").first();nextCursor=remaining.count&&!paused?0:null;}
- const stats=(await env.DB.prepare('SELECT status,COUNT(*) count FROM translation_jobs GROUP BY status').all()).results;
+ // Global counters are operator-only and requested explicitly, never once per field.
+ const stats=x.includeStats?(await env.DB.prepare('SELECT status,COUNT(*) count FROM translation_jobs GROUP BY status').all()).results:[];
  return {ok:true,engine:providerReady(env)?'cloudflare_m2m100':'glossary_only',providerEnabled:providerReady(env),translated,manual,failed,paused,stats,scopeCount,nextCursor};
 }
