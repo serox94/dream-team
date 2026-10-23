@@ -22,7 +22,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/schema31-inspect.mjs
       - name: Readiness and transition regressions
-        run: node --test tests/schema31-readiness.test.mjs tests/schema31-transition.test.mjs
+        run: node --test tests/schema31-*.test.mjs
       - name: Chromium only, no font or system environment reinstall
         run: |
           npm install --no-save --package-lock=false playwright@1.63.0

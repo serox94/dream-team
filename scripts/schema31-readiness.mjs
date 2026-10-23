@@ -6,6 +6,7 @@ const safeSha=x=>sha.test(x||'')?x:null;
 const safeRay=x=>/^[a-f0-9]{16}-[A-Z0-9]{3,8}$/.test(x||'')?x:null;
 const safeId=x=>uuid.test(x||'')?x:null;
 const check=(x,c)=>{if(!x)throw Error(c);};
+async function bounded(promise,signal){if(signal.aborted)throw signal.reason;let abort;const stopped=new Promise((_,reject)=>{abort=()=>reject(signal.reason);signal.addEventListener('abort',abort,{once:true});});try{return await Promise.race([promise,stopped]);}finally{signal.removeEventListener('abort',abort);}}
 export function versionIdentity(version){
  const vars=Object.fromEntries(version.resources.bindings.filter(x=>x.type==='plain_text').map(x=>[x.name,x.text]));
  return {id:version.id,build:vars.APP_BUILD,variant:vars.APP_VARIANT||'full'};
@@ -36,7 +37,8 @@ export async function waitForVersionReady({expected,previousVersionId,staleBuild
   const a={attempt:index+1,expectedBuild:expected.build,expectedVersion:expected.id,expectedVariant:expected.variant,status:null,receivedBuild:null,ray:null,responseVersion:null};
   let terminal=false,good=false;
   try{
-   const state=await readControlPlane(),versions=state.versions;
+   const remainingForApi=maxMs-(now()-start);if(remainingForApi<=0)break;const apiSignal=AbortSignal.any([AbortSignal.timeout(remainingForApi),...(signal?[signal]:[])]);
+   const state=await bounded(readControlPlane(apiSignal),apiSignal),versions=state.versions;
    a.controlPlaneSource=state.source||'deployment';a.controlPlaneVersion=versions?.length===1?safeId(versions[0].version_id):null;
    if(versions?.length!==1||versions[0].percentage!==100){a.reason='UNEXPECTED_TRAFFIC_SPLIT';terminal=true;}
    else if(versions[0].version_id!==expected.id){if(versions[0].version_id===previousVersionId)a.reason='CONTROL_PLANE_PENDING';else{a.reason='UNEXPECTED_ACTIVE_VERSION';terminal=true;}}
