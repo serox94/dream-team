@@ -115,7 +115,7 @@ schema31 receipt. Use neither historical release-operator.mjs nor old scripts.
 
 The read-only preparation check queries account-wide analytics before remote
 work. It emits WATCH at 3.5M reads/day (70%), HIGH at 4.25M (85%), and stops
-preparation before 4.8M including its 50k reserve. These thresholds protect
+preparation before 4.8M including its 60k reserve. These thresholds protect
 administrative work; they do not deny normal anglers access to their records.
 Cloudflare daily-limit notifications should remain enabled. No paid plan is
 activated. Analytics can lag, so the 200k safety margin is intentional.
