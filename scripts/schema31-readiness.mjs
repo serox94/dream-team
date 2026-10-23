@@ -49,6 +49,7 @@ export async function waitForVersionReady({expected,previousVersionId,staleBuild
     Object.assign(a,{status:p.status,receivedBuild:p.build,invalidBuild:p.invalidBuild||false,ray:p.ray,responseVersion:p.responseVersion,featureStatus:p.featureStatus,featureVariant:p.featureVariant});
     if(p.responseVersion&&p.responseVersion!==expected.id){a.reason='RESPONSE_VERSION_MISMATCH';terminal=true;}
     else if(p.status===503&&p.build===expected.build){a.reason='APPLICATION_SCHEMA_OR_MAINTENANCE';terminal=true;}
+    else if(p.status===404&&!p.build)a.reason='ROUTING_UNCONFIRMED';
     else if([502,503,504].includes(p.status))a.reason='TRANSIENT_HTTP_UNCONFIRMED';
     else if(p.status!==200){a.reason='HTTP_STATUS_MISMATCH';terminal=true;}
     else if(!p.build){a.reason='BUILD_HEADER_MISSING_OR_INVALID';terminal=true;}
