@@ -1,5 +1,9 @@
 # One official DreamTeam schema31 release
 
+> Historical schema30-to-31 runbook. Migration 31 has already completed.
+> For recovery completion from schema31 fallback use `SCHEMA31_PROMOTION.md`.
+> Do not rerun the old release/apply action against the current production state.
+
 This runbook is preparation only. No merge, production migration, password reset,
 production deployment or maintenance change has been performed by preparing it.
 

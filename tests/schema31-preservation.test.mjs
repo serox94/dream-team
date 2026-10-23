@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {verifyPreservedRows} from '../scripts/schema31-preservation.mjs';
+const tables=['auth_accounts','auth_credential','auth_account_credentials','auth_sessions','trips','catches','checklist_items','content_translations'],snapshot=()=>Object.fromEntries(tables.map(t=>[t,[{id:1,value:t}]]));
+test('final preservation reads every scoped table and preserves the private baseline',async()=>{const baseline=snapshot(),seen=[];assert.equal(await verifyPreservedRows(async t=>baseline[t].map(x=>({...x})),baseline,{onTable:t=>seen.push(t)}),'PASS');assert.deepEqual(seen,tables);});
+test('missing baseline or changed account/session/business row cannot pass',async()=>{await assert.rejects(verifyPreservedRows(async()=>[],{}),/BASELINE_MISSING/);const b=snapshot();await assert.rejects(verifyPreservedRows(async t=>t==='auth_sessions'?[]:b[t],b),/PRODUCTION_PRESERVATION_CHANGED/);});
