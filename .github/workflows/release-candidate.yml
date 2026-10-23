@@ -28,6 +28,11 @@ jobs:
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
         run: node scripts/rc-preflight.mjs
+      - name: Current isolated D1 restore and additive migration 30 to 31
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/rc-copy-proof.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
