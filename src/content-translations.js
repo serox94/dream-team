@@ -26,16 +26,25 @@ export async function originals(env,entity,recordId,tripId){
  const rows=(await env.DB.prepare(`SELECT id,${config.fields.join(',')} FROM ${config.table}${where} ORDER BY id`).bind(...params).all()).results;
  const result=[];for(const row of rows)for(const item of fields(row,config))result.push({entity,recordId:String(row.id),...item,sourceHash:await hash(item.sourceText)});return result;
 }
+// Exact composite primary-key lookups; never scan another trip's translation catalogue.
+export async function matchedTranslations(env,source,language=null){
+ if(!source.length)return [];
+ const keys=source.map(s=>[s.entity,s.recordId,s.field]);
+ return (await env.DB.prepare(`WITH wanted AS (SELECT json_extract(value,'$[0]') entity,json_extract(value,'$[1]') record_id,json_extract(value,'$[2]') field FROM json_each(?))
+ SELECT w.entity,w.record_id,w.field,s.source_hash metadata_hash,s.source_language,
+ t.language,t.source_hash,t.translated_text,t.updated_at,t.revision,t.origin
+ FROM wanted w LEFT JOIN content_sources s ON s.entity=w.entity AND s.record_id=w.record_id AND s.field=w.field
+ LEFT JOIN content_translations t ON t.entity=w.entity AND t.record_id=w.record_id AND t.field=w.field AND (? IS NULL OR t.language=?)`).bind(JSON.stringify(keys),language,language).all()).results;
+}
 export async function handleContentTranslations(request,env,active){
  const url=new URL(request.url),language=url.searchParams.get('language')||'en';if(!['pl','en'].includes(language))fail('Wybierz język PL lub EN.',400,'INVALID_LANGUAGE');
  if(request.method==='GET'){
   const entity=url.searchParams.get('entity'),recordId=url.searchParams.get('recordId'),tripId=url.searchParams.get('tripId');
   if(!entity&&!tripId)fail('Wymagany tripId.',400,'CONTENT_SCOPE_REQUIRED');
   const source=[];for(const key of entity?[entity]:Object.keys(entities))source.push(...await originals(env,key,recordId,tripId));
-  const saved=(await env.DB.prepare('SELECT entity,record_id,field,source_hash,translated_text,updated_at,revision,origin FROM content_translations WHERE language=?').bind(language).all()).results;
-  const metadata=(await env.DB.prepare('SELECT entity,record_id,field,source_hash,source_language FROM content_sources').all()).results;
-  const metaByKey=new Map(metadata.map(r=>[[r.entity,r.record_id,r.field].join('|'),r]));
-  const byKey=new Map(saved.map(t=>[[t.entity,t.record_id,t.field].join('|'),t]));
+  const saved=await matchedTranslations(env,source,language);
+  const metaByKey=new Map(saved.map(r=>[[r.entity,r.record_id,r.field].join('|'),{source_hash:r.metadata_hash,source_language:r.source_language}]));
+  const byKey=new Map(saved.filter(t=>t.source_hash).map(t=>[[t.entity,t.record_id,t.field].join('|'),t]));
   return {ok:true,automaticTranslation:env.TRANSLATION_ENABLED==='true'&&env.TRANSLATION_FREE_CONFIRMED==='true'?'cloudflare_m2m100':'glossary_only_provider_not_enabled',language,records:source.map(({column,raw,...item})=>{const k=[item.entity,item.recordId,item.field].join('|'),meta=metaByKey.get(k),translated=byKey.get(k);if(meta?.source_hash===item.sourceHash&&meta.source_language===language)return {...item,sourceLanguage:meta.source_language,translation:item.sourceText,revision:0,status:'original',updatedAt:meta.updated_at??null,origin:'original'};return {...item,sourceLanguage:meta?.source_language??null,translation:translated?.translated_text??'',revision:translated?.revision??0,status:!translated?'missing':translated.source_hash===item.sourceHash?'current':'stale',updatedAt:translated?.updated_at??null,origin:translated?.origin??null};})};
  }
  if(request.method!=='PUT')fail('Niedozwolona metoda.',405);

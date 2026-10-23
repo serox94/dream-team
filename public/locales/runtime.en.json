@@ -885,5 +885,7 @@
   "Zmiana GPS jeziora wymaga wyraźnego zatwierdzenia propozycji.": "Changing lake GPS requires explicit approval of the proposal.",
   "GPS_EXPLICIT_LAKE_APPROVAL_REQUIRED": "Changing lake GPS requires explicit approval of the proposal.",
   "GPS zmienił się. Odśwież dane przed zatwierdzeniem.": "GPS has changed. Reload the data before approval.",
-  "GPS_CHANGED_RELOAD_BEFORE_APPROVAL": "GPS has changed. Reload the data before approval."
+  "GPS_CHANGED_RELOAD_BEFORE_APPROVAL": "GPS has changed. Reload the data before approval.",
+  "Nowe hasło nie może być puste.": "The new password cannot be empty.",
+  "Wspólne hasło zespołu jest zarządzane przez właściciela.": "The team password is managed by the owner."
 }
