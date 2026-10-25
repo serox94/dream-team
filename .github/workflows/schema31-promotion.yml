@@ -1,0 +1,56 @@
+name: Schema31 fallback to full (new approval required)
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [check, prepare, promote]
+        default: check
+      operator:
+        description: Exact separately approved operator SHA (not an application rebuild)
+        required: true
+      rehearsal_run:
+        description: Successful isolated recovery-completion verification run
+        required: false
+      private_receipt:
+        description: Fresh schema31 promotion receipt for promote only
+        required: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
+jobs:
+  completion:
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.operator }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Only the newly approved schema31 procedure; no old release or migration
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+          CONFIRMED_OPERATOR: ${{ inputs.operator }}
+          CONFIRMED_RELEASE: db4190d2f8836786e25656807c1417b42118880e
+          SCHEMA31_REHEARSAL_RUN: ${{ inputs.rehearsal_run }}
+          PROMOTION_RECEIPT: ${{ inputs.private_receipt }}
+          PROMOTION_ACTION: ${{ inputs.action }}
+        run: node scripts/schema31-promote.mjs "$PROMOTION_ACTION"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: schema31-completion-safe-status
+          path: schema31-status/promotion.json

@@ -1,0 +1,481 @@
+{
+  "workflow": 39939111862,
+  "testedOperator": "3ea87c97d3f89679d8e01788b190c8917b2f1a54",
+  "approvedApplication": "db4190d2f8836786e25656807c1417b42118880e",
+  "main": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+  "rootCauseConfirmed": false,
+  "historicalLogs": {
+    "http": 403,
+    "code": 10000
+  },
+  "executableMatchesApproved": true,
+  "production": {
+    "activeWorker": "21a90928-ac5c-4ea6-9101-8fbf4b0498e0",
+    "variant": "schema31-fallback",
+    "schema": 31,
+    "migrations": 31,
+    "maintenance": "off",
+    "counts": {
+      "trips": 5,
+      "catches": 3,
+      "checklist_items": 103,
+      "auth_accounts": 4,
+      "auth_sessions": 3,
+      "content_translations": 402
+    },
+    "originalSessionsPreserved": 3,
+    "completedTranslations": 402,
+    "approval": "no",
+    "writes": 0,
+    "exports": 0,
+    "providerCalls": 0
+  },
+  "tests": {
+    "operator": 30,
+    "integration": [
+      {
+        "label": "existing isolated copy matches current production business/auth/evidence rows",
+        "result": "PASS"
+      },
+      {
+        "label": "production schema31 FK and integrity, read only",
+        "result": "PASS"
+      },
+      {
+        "label": "sandbox remains closed without its private gate",
+        "result": "PASS"
+      },
+      {
+        "label": "Patryk fallback login, distinct identity and no forced change",
+        "result": "PASS"
+      },
+      {
+        "label": "Maciek fallback login, distinct identity and no forced change",
+        "result": "PASS"
+      },
+      {
+        "label": "Paddy fallback login, distinct identity and no forced change",
+        "result": "PASS"
+      },
+      {
+        "label": "fallback scheduled handler remains paused",
+        "result": "PASS"
+      },
+      {
+        "label": "same three sessions survive real fallback to full traffic switch",
+        "result": "PASS"
+      },
+      {
+        "label": "real isolated post-activation failure recovers only tested schema31 fallback",
+        "result": "PASS"
+      },
+      {
+        "label": "Patryk fresh full login uses unchanged shared credential",
+        "result": "PASS"
+      },
+      {
+        "label": "Maciek fresh full login uses unchanged shared credential",
+        "result": "PASS"
+      },
+      {
+        "label": "Paddy fresh full login uses unchanged shared credential",
+        "result": "PASS"
+      },
+      {
+        "label": "incorrect password denied",
+        "result": "PASS"
+      },
+      {
+        "label": "protected login follows the preserved independent credential",
+        "result": "PASS"
+      },
+      {
+        "label": "angler cannot disable protected account",
+        "result": "PASS"
+      },
+      {
+        "label": "shared password change remains forbidden",
+        "result": "PASS"
+      },
+      {
+        "label": "Google Photos retains the correct trip album",
+        "result": "PASS"
+      },
+      {
+        "label": "Adventure 2025 remains available",
+        "result": "PASS"
+      },
+      {
+        "label": "full application reads the existing eight-page research cache",
+        "result": "PASS"
+      },
+      {
+        "label": "real isolated write and replay have one revision and one receipt",
+        "result": "PASS"
+      },
+      {
+        "label": "full scheduled handler resumes schema guard and waitUntil work",
+        "result": "PASS"
+      },
+      {
+        "label": "backup schedule remains unchanged",
+        "result": "PASS"
+      },
+      {
+        "label": "auth_credential original rows preserved on the isolated promoted app",
+        "result": "PASS"
+      },
+      {
+        "label": "auth_account_credentials original rows preserved on the isolated promoted app",
+        "result": "PASS"
+      },
+      {
+        "label": "trips original rows preserved on the isolated promoted app",
+        "result": "PASS"
+      },
+      {
+        "label": "catches original rows preserved on the isolated promoted app",
+        "result": "PASS"
+      },
+      {
+        "label": "content_translations original rows preserved on the isolated promoted app",
+        "result": "PASS"
+      },
+      {
+        "label": "production remains exact safe fallback and maintenance OFF",
+        "result": "PASS"
+      }
+    ],
+    "browser": {
+      "result": "PASS",
+      "tests": [
+        "/pages/checklisty.html boot and retained Patryk session",
+        "/pages/checklisty.html no overflow or JavaScript errors",
+        "/pages/pogoda.html boot and retained Patryk session",
+        "/pages/pogoda.html no overflow or JavaScript errors",
+        "Weather PRO current temperature and hourly carp index",
+        "/pages/polowy.html boot and retained Patryk session",
+        "/pages/polowy.html no overflow or JavaScript errors",
+        "Google Photos CTA",
+        "Dark switch",
+        "offline/PWA preserves account and selected theme"
+      ],
+      "rowsRead": 6947,
+      "reusedEvidence": {
+        "validate": 39902213393,
+        "responsive": 39902213286,
+        "integrated": 39902208041
+      }
+    },
+    "promotion": {
+      "result": "PASS",
+      "schemaMigration": false,
+      "maintenanceChanges": false,
+      "readiness": {
+        "result": "PASS",
+        "expected": {
+          "id": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+          "build": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+          "variant": "full"
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00cd1cae38596-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a4f00cd2eacc072c-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          },
+          {
+            "attempt": 2,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00cd8de237816-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a4f00cda397807d1-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          }
+        ],
+        "elapsedMs": 1750,
+        "transition": "READY_WITHOUT_TRANSIENT",
+        "propagationConfirmed": false
+      },
+      "verification": "THREE_EXISTING_SESSIONS_PASS"
+    },
+    "injectedRecovery": {
+      "result": "BLOCKED",
+      "schemaMigration": false,
+      "maintenanceChanges": false,
+      "readiness": {
+        "result": "PASS",
+        "expected": {
+          "id": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+          "build": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+          "variant": "full"
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00cf018404c91-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a4f00cf16bfc9bd0-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          },
+          {
+            "attempt": 2,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00cf72b1d8596-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 503,
+            "featureVariant": "schema31-fallback",
+            "featureKind": "JSON",
+            "featureRay": "a4f00cf7cc8868e8-MSP",
+            "featureBuild": null,
+            "reason": "PREVIOUS_VARIANT_STILL_SERVING"
+          },
+          {
+            "attempt": 3,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00d01a8177816-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a4f00d038b9b9181-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          },
+          {
+            "attempt": 4,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00d128ac4ffae-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a4f00d1328d5e18a-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          }
+        ],
+        "elapsedMs": 6017,
+        "transition": "RECOVERED_AFTER_OBSERVED_TRANSIENT",
+        "propagationConfirmed": false
+      },
+      "error": "INJECTED_POST_ACTIVATION_FAILURE",
+      "recoveryReadiness": {
+        "result": "PASS",
+        "expected": {
+          "id": "a43d1e60-c16c-4353-ae4e-31a47b30afb0",
+          "build": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+          "variant": "schema31-fallback"
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "a43d1e60-c16c-4353-ae4e-31a47b30afb0",
+            "expectedVariant": "schema31-fallback",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00d186b6c9bd0-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "a43d1e60-c16c-4353-ae4e-31a47b30afb0",
+            "invalidBuild": false,
+            "featureStatus": 503,
+            "featureVariant": "schema31-fallback",
+            "featureKind": "JSON",
+            "featureRay": "a4f00d18fc3b8596-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          },
+          {
+            "attempt": 2,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "a43d1e60-c16c-4353-ae4e-31a47b30afb0",
+            "expectedVariant": "schema31-fallback",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00d1e3be19200-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "a43d1e60-c16c-4353-ae4e-31a47b30afb0",
+            "invalidBuild": false,
+            "featureStatus": 503,
+            "featureVariant": "schema31-fallback",
+            "featureKind": "JSON",
+            "featureRay": "a4f00d1ecec08596-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          }
+        ],
+        "elapsedMs": 1344,
+        "transition": "READY_WITHOUT_TRANSIENT",
+        "propagationConfirmed": false
+      },
+      "recovery": "TESTED_SCHEMA31_FALLBACK"
+    },
+    "finalPromotion": {
+      "result": "PASS",
+      "schemaMigration": false,
+      "maintenanceChanges": false,
+      "readiness": {
+        "result": "PASS",
+        "expected": {
+          "id": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+          "build": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+          "variant": "full"
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00d256ad668e8-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a4f00d26bd0df310-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          },
+          {
+            "attempt": 2,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00d2d2f89072c-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 503,
+            "featureVariant": "schema31-fallback",
+            "featureKind": "JSON",
+            "featureRay": "a4f00d2dea9e9b4f-MSP",
+            "featureBuild": null,
+            "reason": "PREVIOUS_VARIANT_STILL_SERVING"
+          },
+          {
+            "attempt": 3,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00d363ce3ff48-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a4f00d3778fd9200-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          },
+          {
+            "attempt": 4,
+            "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "expectedVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+            "ray": "a4f00d470dc28596-MSP",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "controlPlaneVersion": "8329c8e5-757c-4989-8177-05fa6976f1c2",
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a4f00d47bbe49bd0-MSP",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          }
+        ],
+        "elapsedMs": 5926,
+        "transition": "RECOVERED_AFTER_OBSERVED_TRANSIENT",
+        "propagationConfirmed": false
+      },
+      "verification": "THREE_EXISTING_SESSIONS_PASS"
+    },
+    "finalPreservation": "PASS"
+  },
+  "cost": {
+    "dayReadsBefore": 254474,
+    "inspect": 588,
+    "operatorCheck": 3985,
+    "rehearsal": {
+      "production": 5369,
+      "isolated": 10724
+    }
+  },
+  "ownerCredentialReviewRequired": true
+}
