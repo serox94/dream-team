@@ -1,0 +1,64 @@
+{
+  "result": "PASS",
+  "tests": [
+    "full pinned version active at 100%",
+    "schema31 maintenance OFF",
+    "D1 integrity",
+    "Patryk real login",
+    "Patryk separate identity and no forced change",
+    "Photos trip album",
+    "Adventure 2025 preserved",
+    "saved research cache and evidence",
+    "desktop no overflow",
+    "EN after actual language switch",
+    "EN retained across modules",
+    "Dark EN desktop"
+  ],
+  "rowsRead": 4474,
+  "worker": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+  "state": [
+    {
+      "key": "maintenance_mode",
+      "value": "off"
+    },
+    {
+      "key": "schema_version",
+      "value": "31"
+    }
+  ],
+  "counts": {
+    "trips": 5,
+    "catches": 3,
+    "checklist": 103,
+    "accounts": 4,
+    "sessions": 3,
+    "translations": 402
+  },
+  "schedules": {
+    "main": {
+      "schedules": [
+        {
+          "cron": "0 6 * * *",
+          "created_on": "2026-10-20T09:17:44.29838Z",
+          "modified_on": "2026-10-20T09:17:44.29838Z"
+        }
+      ]
+    },
+    "backup": {
+      "schedules": [
+        {
+          "cron": "17 3 * * *",
+          "created_on": "2026-09-29T06:09:43.285182Z",
+          "modified_on": "2026-09-29T12:13:04.442168Z"
+        }
+      ]
+    }
+  },
+  "reusedProductionChecks": {
+    "run": 40241844684,
+    "passed": 26,
+    "omitted": "unfinished desktop/language only"
+  },
+  "stage": "language_ready",
+  "languageControls": []
+}

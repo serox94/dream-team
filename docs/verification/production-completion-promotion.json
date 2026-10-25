@@ -1,0 +1,121 @@
+{
+  "result": "PASS",
+  "action": "promote",
+  "operator": "dee8f231693cc7779b39aa628990b24e7e4ef37d",
+  "application": "db4190d2f8836786e25656807c1417b42118880e",
+  "productionMigrations": 0,
+  "maintenanceChanges": false,
+  "passwordResets": 0,
+  "sessionPurges": 0,
+  "providerCalls": 0,
+  "rowsRead": 5099,
+  "dayReads": 47871,
+  "pinnedReadiness": {
+    "result": "PASS",
+    "expected": {
+      "id": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+      "build": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+      "variant": "full"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+        "expectedVersion": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+        "expectedVariant": "full",
+        "status": 200,
+        "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+        "ray": "a504c0262ca21fa8-SJC",
+        "responseVersion": null,
+        "controlPlaneSource": "immutable-version-route",
+        "controlPlaneVersion": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+        "invalidBuild": false,
+        "featureStatus": 401,
+        "featureVariant": "full",
+        "featureKind": "JSON",
+        "featureRay": "a504c02a399ded3e-SJC",
+        "featureBuild": null,
+        "reason": "IDENTITY_READY"
+      },
+      {
+        "attempt": 2,
+        "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+        "expectedVersion": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+        "expectedVariant": "full",
+        "status": 200,
+        "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+        "ray": "a504c0308d39e8d9-SJC",
+        "responseVersion": null,
+        "controlPlaneSource": "immutable-version-route",
+        "controlPlaneVersion": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+        "invalidBuild": false,
+        "featureStatus": 401,
+        "featureVariant": "full",
+        "featureKind": "JSON",
+        "featureRay": "a504c0322ec5e16d-SJC",
+        "featureBuild": null,
+        "reason": "IDENTITY_READY"
+      }
+    ],
+    "elapsedMs": 2489,
+    "transition": "READY_WITHOUT_TRANSIENT",
+    "propagationConfirmed": false
+  },
+  "schemaMigration": false,
+  "readiness": {
+    "result": "PASS",
+    "expected": {
+      "id": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+      "build": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+      "variant": "full"
+    },
+    "attempts": [
+      {
+        "attempt": 1,
+        "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+        "expectedVersion": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+        "expectedVariant": "full",
+        "status": 200,
+        "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+        "ray": "a504c082b9201fa8-SJC",
+        "responseVersion": null,
+        "controlPlaneSource": "deployment",
+        "controlPlaneVersion": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+        "invalidBuild": false,
+        "featureStatus": 401,
+        "featureVariant": "full",
+        "featureKind": "JSON",
+        "featureRay": "a504c0853b02ed3e-SJC",
+        "featureBuild": null,
+        "reason": "IDENTITY_READY"
+      },
+      {
+        "attempt": 2,
+        "expectedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+        "expectedVersion": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+        "expectedVariant": "full",
+        "status": 200,
+        "receivedBuild": "2b38f99fda6c4c231d2abcaa0ac7c8ef69d77333",
+        "ray": "a504c08d996be8d9-SJC",
+        "responseVersion": null,
+        "controlPlaneSource": "deployment",
+        "controlPlaneVersion": "de1408b8-08d8-4253-ba41-c0288d09cf65",
+        "invalidBuild": false,
+        "featureStatus": 401,
+        "featureVariant": "full",
+        "featureKind": "JSON",
+        "featureRay": "a504c0900e1e5527-SJC",
+        "featureBuild": null,
+        "reason": "IDENTITY_READY"
+      }
+    ],
+    "elapsedMs": 2546,
+    "transition": "READY_WITHOUT_TRANSIENT",
+    "propagationConfirmed": false
+  },
+  "verification": {
+    "anglerLogins": 3,
+    "distinctIdentities": true,
+    "forcedChange": false
+  }
+}
