@@ -1,52 +1,32 @@
-name: Schema31 recovery completion verification
+name: Production functional verification (no deploy)
 on:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: dream-team-schema31-verification
+  group: dream-team-production-smoke
   cancel-in-progress: false
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 16
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
       - run: npm ci --ignore-scripts
-      - name: Read-only diagnosis of pinned candidate and safe fallback
+      - run: npm install --no-save --package-lock=false playwright@1.63.0
+      - run: npx playwright install chromium
+      - name: Actual production screens and read-only integrity (own temporary sessions only)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/schema31-inspect.mjs
-      - name: Readiness and transition regressions
-        run: node --test tests/schema31-*.test.mjs
-      - name: New production operator check mode only, approval stays no
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          DREAMTEAM_PRODUCTION_APPROVED: "no"
-        run: node scripts/schema31-promote.mjs check
-      - name: Chromium only, no font or system environment reinstall
-        run: |
-          npm install --no-save --package-lock=false playwright@1.63.0
-          npx playwright install chromium
-      - name: Real isolated promotion and schema31 fallback recovery
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
-          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
-        run: node scripts/schema31-rehearse.mjs
+        run: node scripts/qa-production-completion.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: schema31-safe-status
-          path: schema31-status/
+          name: production-functional-proof
+          path: production-smoke/
