@@ -74,7 +74,8 @@ test('trip score uses two independent scales, a personal photo, readiness and st
  s.DB.sqlite.exec("UPDATE checklist_items SET assigned_to='Maciek' WHERE label='Testowy podbierak'");
  const p=await page(s,'/');
  try{
-  assert.match(p.d.querySelector('.hero-side-card img').src,/patryk-maciek\.jpeg$/);
+  assert.match(p.d.getElementById('dream-crew-photo').src,/patryk-maciek\.avif$/);
+  assert.equal(p.d.getElementById('dream-crew-caption').textContent,'Patryk + Maciek');
   assert.equal(p.d.querySelectorAll('.score-chart').length,2);
   assert.equal(p.d.querySelectorAll('.score-row').length,4);
   assert.match(p.d.getElementById('trip-score-total').textContent,/2 ryb.*23,0 kg/);
@@ -86,6 +87,45 @@ test('trip score uses two independent scales, a personal photo, readiness and st
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
+test('three-person trip automatically selects the approved Patryk-Maciek-Paddy photo',async()=>{
+ const s=await testServe({seed:true});
+ s.DB.sqlite.prepare('INSERT INTO anglers(id,name,pb_kg) VALUES(?,?,?)').run('paddy','Paddy',13);
+ s.DB.sqlite.prepare('INSERT INTO trip_participants(trip_id,angler_id) VALUES(?,?)').run('next-trip','paddy');
+ const p=await page(s,'/');
+ try{
+  const img=p.d.getElementById('dream-crew-photo');
+  assert.match(img.src,/\/assets\/img\/patryk-maciek-paddy\.avif$/);
+  assert.equal(img.alt,'Patryk, Maciek i Paddy nad wodą');
+  assert.equal(p.d.getElementById('dream-crew-caption').textContent,'Patryk + Maciek + Paddy');
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+
+test('a trip without both original anglers never shows a misleading crew photograph',async()=>{
+ const s=await testServe({seed:true});
+ s.DB.sqlite.prepare('DELETE FROM trip_participants WHERE trip_id=? AND angler_id=?').run('next-trip','maciek');
+ const p=await page(s,'/');
+ try{
+  assert.match(p.d.getElementById('dream-crew-photo').src,/\/assets\/img\/lowisko\.jpg$/);
+  assert.equal(p.d.getElementById('dream-crew-caption').textContent,'Wyjazd DreamTeam');
+  assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close();}
+});
+
+test('both approved crew photos exist as optimized public image assets',async()=>{
+ const s=await testServe({seed:true});
+ try{
+  for(const name of ['patryk-maciek.avif','patryk-maciek-paddy.avif']){
+   const res=await fetch(s.url+'/assets/img/'+name);
+   assert.equal(res.status,200,name);
+   assert.equal(res.headers.get('content-type'),'image/avif',name);
+   const bytes=new Uint8Array(await res.arrayBuffer());
+   assert.ok(bytes.length>20000&&bytes.length<180000,'optimized photo size: '+name);
+   assert.equal(new TextDecoder().decode(bytes.slice(4,12)),'ftypavif',name);
+  }
+ }finally{await s.close();}
+});
+
 test('field mode follows active trip dates and guide reads the selected lake facts',async()=>{
  const s=await testServe({seed:true});
  s.DB.sqlite.prepare("UPDATE trips SET start_at=?,end_at=? WHERE id='next-trip'").run(new Date(Date.now()-86400000).toISOString(),new Date(Date.now()+86400000).toISOString());
