@@ -49,6 +49,7 @@ jobs:
           RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
           RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
           RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+          RETAINED_RECOVERY_RUN: '40399303677'
           VERIFIED_APP_BUILD: a1c58a91d741da1975baa9003d927e8915e19445
         run: node scripts/schema32-rehearse.mjs
       - name: One cached or bounded free-provider integration on retained preview
