@@ -23,9 +23,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Scope retained checkpoint verification
         id: scope
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/qa-restore-scope.mjs
       - uses: actions/setup-node@v4
         if: steps.scope.outputs.restore_only != 'true'
