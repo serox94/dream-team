@@ -39,15 +39,24 @@ function factSubject(f){
  const subjects=f.field==='bait'?['self-prepared','purchased','tiger nuts','particles','pellet','boilies']:f.field==='hooks'?['barbless','barbed']:f.field==='boats'?['petrol','electric','rowing']:['net','mat','sling','fishcare'].includes(f.field)?['sturgeon','carp','catfish']:[];
  return subjects.filter(s=>text.includes(s)).join('|')||'general';
 }
+const parsedEvidenceCache=new WeakMap();
 export async function researchProfile(env,lakeId){
- const db=env.DB,rows=await all(db,'SELECT o.data_json FROM research_observations o JOIN research_pages p ON p.lake_id=o.lake_id AND p.url=o.url AND p.checked_at=o.checked_at WHERE o.lake_id=? ORDER BY o.field,o.checked_at DESC',lakeId),facts=rows.map(r=>JSON.parse(r.data_json)).filter(f=>f.parserVersion===PARSER_VERSION),pages=await all(db,'SELECT url,checked_at checkedAt,scope FROM research_pages WHERE lake_id=?',lakeId),job=await one(db,'SELECT id,source_url,status,queue_json,attempts,credits_reserved,credits_actual,message,started_at,completed_at FROM research_jobs WHERE lake_id=? ORDER BY started_at DESC,rowid DESC LIMIT 1',lakeId),locations=await all(db,'SELECT * FROM research_locations WHERE lake_id=? ORDER BY created_at',lakeId);
+ const db=env.DB,rows=await all(db,'SELECT o.data_json FROM research_observations o JOIN research_pages p ON p.lake_id=o.lake_id AND p.url=o.url AND p.checked_at=o.checked_at WHERE o.lake_id=? ORDER BY o.field,o.checked_at DESC',lakeId),facts=rows.map(r=>JSON.parse(r.data_json)),pages=await all(db,'SELECT url,checked_at checkedAt,scope FROM research_pages WHERE lake_id=?',lakeId),job=await one(db,'SELECT id,source_url,status,queue_json,attempts,credits_reserved,credits_actual,message,started_at,completed_at FROM research_jobs WHERE lake_id=? ORDER BY started_at DESC,rowid DESC LIMIT 1',lakeId),locations=await all(db,'SELECT * FROM research_locations WHERE lake_id=? ORDER BY created_at',lakeId);
+ // Reinterpret old evidence locally; never repeat extraction just because the parser changed.
+ if(facts.some(f=>f.parserVersion!==PARSER_VERSION)){
+  const identity=db.schemaCacheIdentity||db;let cache=parsedEvidenceCache.get(identity);if(!cache){cache=new Map();parsedEvidenceCache.set(identity,cache);}
+  const signature=PARSER_VERSION+'|'+JSON.stringify(pages);let parsed=cache.get(lakeId);
+  if(parsed?.signature!==signature){const values=[];for(const p of await all(db,'SELECT url,content,checked_at,scope FROM research_pages WHERE lake_id=?',lakeId))for(const f of parseResearch(p.content,{url:p.url,checkedAt:p.checked_at,scope:p.scope}))values.push({...f,id:await hash(lakeId+'|'+p.url+'|'+f.field+'|'+f.evidence)});parsed={signature,values};if(cache.size>=100)cache.delete(cache.keys().next().value);cache.set(lakeId,parsed);}
+  facts.splice(0,facts.length,...parsed.values);
+ }
+
  const unique=new Map();for(const f of facts){const key=f.field+'|'+f.evidence.replace(/\s+/g,' ').toLowerCase();if(unique.has(key)){unique.get(key).sources.push({url:f.url,checkedAt:f.checkedAt});}else unique.set(key,{...f,sources:[{url:f.url,checkedAt:f.checkedAt}]});}facts.splice(0,facts.length,...unique.values());
  const missing=Object.keys(concepts).filter(k=>!facts.some(f=>f.field===k));
  // Conflicts require the same subject, ownership, conditions AND scope. Different fish/use is not a contradiction.
  const conflicts=[];for(const f of facts.filter(f=>f.base!=='UNKNOWN'&&!f.conditional))for(const g of facts){if(f.url>=g.url||g.conditional||f.field!==g.field||f.ownership!==g.ownership||f.scope!==g.scope||g.base==='UNKNOWN')continue;if(((f.base==='PROHIBITED')!==(g.base==='PROHIBITED'))&&factSubject(f)===factSubject(g))conflicts.push({field:f.field,urls:[f.url,g.url]});}
  for(const field of ['area','depth']){const found=facts.filter(f=>f.field===field&&f.normalized!=null&&f.quantityKind!=='change');if(new Set(found.map(f=>f.normalized)).size>1)conflicts.push({field,reason:'NUMERIC_OR_HISTORICAL_DIFFERENCE',values:found.map(f=>({value:f.normalized,url:f.url,checkedAt:f.checkedAt,effectiveYear:f.effectiveYear}))});}
  const mapRow=await one(db,'SELECT value FROM app_settings WHERE key=?','research.map.'+lakeId);
- return {facts,pages,missing,conflicts,locations,mapEvidence:mapRow?JSON.parse(mapRow.value):null,job:job?{...job,queue:JSON.parse(job.queue_json),queue_json:undefined}:null,historyNotice:'Current source check; applicability to historical trips is not established.'};
+ return {facts,pages,missing,fields:Object.entries(concepts).map(([field,[labelPl,labelEn]])=>({field,labelPl,labelEn})),conflicts,locations,mapEvidence:mapRow?JSON.parse(mapRow.value):null,job:job?{...job,queue:JSON.parse(job.queue_json),queue_json:undefined}:null,historyNotice:'Current source check; applicability to historical trips is not established.'};
 }
 export async function queueResearch(env,lakeId,url,options={}){
  const db=env.DB,active=await one(db,"SELECT * FROM research_jobs WHERE lake_id=? AND status IN ('pending','processing')",lakeId);

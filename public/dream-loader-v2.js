@@ -63,6 +63,7 @@
     if(document.getElementById('settings-form')){await loadScript('settings.js');await window.initDreamSettings();await window.DreamContent.editor(document.querySelector('#settings-management')?.parentElement||document.querySelector('main'));}
     await loadScript('lake-manager.js');
     if(document.getElementById('lake-manager'))await DreamLakeManager.mount();
+    await DreamLakeManager.loadAdviceWords();
     const profileSections={dojazd:[2,3,4],mapa:[2],teren:[0,3,4],porady:[0,1]};
     if(profileSections[document.body.dataset.page]){try{const p=await Dream.api(`/api/lakes/${encodeURIComponent(trip.lakeId)}/manager?tripId=${encodeURIComponent(trip.id)}`);const host=document.createElement('div');host.className='shared-lake-evidence';document.querySelector('main').append(host);DreamLakeManager.renderProfile(host,p,{section:profileSections[document.body.dataset.page]});}catch(error){Dream.notice(error.message,true);}}
     await loadScript('help-guide.js');DreamHelp.mount();

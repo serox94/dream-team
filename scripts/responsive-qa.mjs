@@ -207,18 +207,10 @@ try{
       }
       if(width===390&&route==='/pages/wyjazdy.html'){
         await page.locator('#create-trip').click();
-        await page.locator('#wizard-lake-name').fill('Kamień');
-        await page.locator('#wizard-country').fill('Polska');
-        await page.locator('#wizard-start').fill('2027-06-12');
-        await page.locator('#wizard-end').fill('2027-06-19');
-        await page.locator('#trip-wizard').screenshot({path:`${screenshotDir}/new-lake-wizard-390.png`});
-        await page.locator('#wizard-search').click();
-        await page.locator('#wizard-candidates').getByText(/OCZEKUJE NA TAVILY_API_KEY/).waitFor();
-        await page.locator('#trip-wizard-form button[type="submit"]').click();
-        await page.locator('#wizard-result').waitFor();
-        assert.match(await page.locator('#wizard-result').innerText(),/Wyszukiwanie źródeł: \d+\/38 pól znalezionych/,'D: visible coverage');
-        assert.match(await page.locator('#wizard-result').innerText(),/Regulamin.*brak danych/s,'D: missing facts shown');
-        await page.locator('#wizard-result').screenshot({path:`${screenshotDir}/new-lake-result-390.png`});
+        await page.locator('#trip-name').fill('Przegląd formularza wyjazdu');
+        assert.ok(await page.locator('#trip-lake option').count()>0,'saved fisheries are reusable');
+        assert.equal(await page.locator('#trip-edit a[href="/pages/lowiska.html"]').count(),1,'separate persistent fishery manager');
+        await page.locator('#trip-editor-panel').screenshot({path:`${screenshotDir}/saved-lake-trip-390.png`});
       }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)||width===1280&&['/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)){
         const label=route==='/'?'dashboard':route.split('/').pop().replace('.html','');

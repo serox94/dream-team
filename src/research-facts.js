@@ -1,4 +1,4 @@
-export const PARSER_VERSION='2026-10-26-v7';
+export const PARSER_VERSION='2026-10-26-v8';
 // Conservative, evidence-preserving rules. No model calls and no historical rewrites.
 export const concepts={
  address:['Adres','Address',/address|adres|adresse|anschrift/iu],phone:['Telefon','Telephone',/telephone|telefon|phone|tel[:.]/iu],email:['E-mail','Email',/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/iu],access:['Dojazd','Access',/access|entrance|gate|reception|dojazd|brama|recepcj|zufahrt|ingang|receptie/iu],grocery:['Sklepy spożywcze','Grocery stores',/supermarket|grocery|supermarch|spożywcz|supermarkt/iu],tackle:['Sklepy wędkarskie','Tackle shops',/tackle shop|fishing shop|hengelsport|sklep.{0,12}wędkarsk|angelgeschäft/iu],fuel:['Stacje paliw','Fuel stations',/petrol station|gas station|fuel station|stacj.{0,12}paliw|tankstelle|tankstation/iu],pharmacy:['Apteki','Pharmacies',/pharmac|aptek|apotheke|apotheek/iu],medical:['Pomoc medyczna','Medical services',/hospital|medical cent|emergency department|szpital|przychodni|krankenhaus|ziekenhuis/iu],map:['Mapy źródłowe','Source maps',/lake map|swim map|mapa.{0,12}(?:łowisk|stanowisk)|plattegrond|carte.{0,10}(?:lac|postes)/iu],bathymetry:['Mapa głębokości','Depth map',/bathymetr|depth map|contour map|mapa.{0,10}(?:głęboko|batymetry)|dieptekaart/iu],
@@ -58,9 +58,10 @@ export function parseResearch(content,{url,language=null,checkedAt=new Date().to
     const ruleField=['rods','bait_boats','boats','leadcore','hooks','rigs','net','mat','sling','disinfectant','lifejacket','distance','bait','fishcare','safety','camp'].includes(field);
     const informative=/\b(?:is|are|has|have|available|provided|supplied|offers?|equipped|open|allowed|prohibited|forbidden|must|required|compulsory|only|up to|maximum|minimum)\b|toegestaan|verboden|verplicht|beschikbaar|aanwezig|erlaubt|verboten|pflicht|vorhanden|autorisé|interdit|obligatoire|disponible|dozwolon|zabronion|obowiązk|dostępn|wynajem|\d/iu.test(relevant);
     if(!informative)continue;
-    if(ruleField&&c.rule==='UNKNOWN'&&!/(?:provided|supplied).{0,50}(?:free|gratis)|free of charge/iu.test(evidence))continue;
+    const providedText=(relevant||evidence)+(/(?:these|they) are (?:supplied|provided)/iu.test(evidence)?' '+evidence:'');
+    const provided=!/not (?:provided|supplied|available)|nie zapewni/iu.test(providedText)&&(/(?:provided|supplied)(?! that)|ter beschikking|bereitgestellt|zapewnia/iu.test(providedText)||/available.{0,60}(?:free|gratis|bezpłat)|free of charge/iu.test(providedText));
+    if(ruleField&&c.rule==='UNKNOWN'&&!provided)continue;
     if(field==='rods'&&c.base==='UNKNOWN'&&normalized==null)continue;
-    const provided=/(?:supplied|provided|available|ter beschikking|bereitgestellt|zapewnia).{0,60}(?:free|gratis|bezpłat)|free of charge/iu.test(evidence);
     const ownership=/\bown\b|eigen|propre|własn/iu.test(evidence)?'own':'unspecified';
     out.push({parserVersion:PARSER_VERSION,field,labelPl:field==='distance'&&c.conditional?'Maksymalny dystans łowienia':pl,labelEn:field==='distance'&&c.conditional?'Maximum fishing distance':en,evidence,sourceLanguage:language||languageFromUrl(url),...c,normalized,swimNumbers:field==='electricity'?electricitySwims(evidence):[],quantityKind:field==='area'&&/added|larger|extra|powiększ|vergroot/i.test(evidence)?'change':'absolute',provided,ownership,scope,verification:'source_supported',checkedAt,url,effectiveYear:(evidence.match(/\b(20\d{2})\b/)||[])[1]||null});
    }
