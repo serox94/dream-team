@@ -220,7 +220,7 @@ try{
       await page.close();
     }
     const login=await context.newPage(),loginResponse=await login.goto(loginPreview.url+'/login');
-    assert.equal(loginResponse.status(),200);
+    assert.equal(loginResponse.status(),200);await login.waitForFunction(()=>[...document.querySelectorAll('.login-logo img')].every(img=>img.complete&&img.naturalWidth>0));
     const loginDimensions=await login.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
     assert.ok(loginDimensions.scroll<=loginDimensions.viewport+1,`${width} login: horizontal overflow`);
     const manifestResponse=await login.request.get(loginPreview.url+'/manifest.webmanifest');

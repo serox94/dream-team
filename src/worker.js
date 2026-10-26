@@ -484,7 +484,7 @@ async function handleRequest(request,env,ctx){
       const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));
       const result=protectedResponse(asset);
       result.headers.set('x-dreamteam-build',env.APP_BUILD||'local');result.headers.set('x-dreamteam-auth-mode',individualAccounts(env)?'individual':'legacy');if(env.APP_RELEASE_ID)result.headers.set('x-dreamteam-release',env.APP_RELEASE_ID);
-      if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+      if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
       return result;
     }
     if(!authConfigured(env))return json({ok:false,error:'Logowanie nie jest jeszcze skonfigurowane.'},503);
