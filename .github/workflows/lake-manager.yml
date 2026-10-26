@@ -1,0 +1,44 @@
+name: Integrated Lake Manager
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/automatic-lake-manager-20261026]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-lake-manager
+  cancel-in-progress: false
+jobs:
+  integrated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Install browser only
+        run: |
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install chromium
+      - name: Complete fishery and trip workflows plus 16-screen responsive matrix
+        run: node scripts/qa-lake-manager.mjs
+      - name: Protect and update existing isolated preview, retain all history
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: node scripts/lake-manager-preview.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lake-manager-evidence
+          path: |
+            qa-lake-manager/
+            rc-status/
+          retention-days: 14

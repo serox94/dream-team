@@ -8,3 +8,7 @@ public/vendor/
 .preview-account-integrity.json
 qa-pro2/
 pro2-status/
+
+node_modules
+
+qa-lake-manager/

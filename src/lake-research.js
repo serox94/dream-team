@@ -17,7 +17,7 @@ const ruleGear={cradle:'Kołyska / mata do odhaczania',landing_net:'Duży podbie
 
 export function safeSourceUrl(value){
   let url;try{url=new URL(value);}catch{fail('Podaj pełny adres HTTPS źródła.');}
-  if(url.protocol!=='https:'||url.username||url.password||url.port||url.href.length>2048||!url.hostname.includes('.')||/^(localhost|.*\.local|.*\.internal)$/i.test(url.hostname)||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(url.hostname)||url.hostname.includes(':'))fail('Podaj publiczny adres HTTPS źródła.');
+  if(url.protocol!=='https:'||url.username||url.password||url.port||url.href.length>2048||!url.hostname.includes('.')||/^(localhost|.*\.local|.*\.internal|.*\.localhost|.*\.home\.arpa|.*\.onion)$/i.test(url.hostname)||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(url.hostname)||url.hostname.includes(':'))fail('Podaj publiczny adres HTTPS źródła.');
   url.hash='';return url.href;
 }
 const fieldName=value=>{if(!/^[a-z][a-z_]{1,40}$/.test(value||''))fail('Nieprawidłowe pole faktu.');return value;};

@@ -90,7 +90,7 @@ export async function logout(env,active){
   await env.DB.prepare('DELETE FROM auth_sessions WHERE id_hash=?').bind(active.idHash).run();
   return response(200,JSON.stringify({ok:true}),{'content-type':'application/json; charset=utf-8','set-cookie':formatCookie('',0)});
 }
-export const loginAssets=new Set(['/login','/login.html','/login.css','/login.js','/theme.css','/theme.js','/i18n.js','/language-preference.js','/locales/pl.json','/locales/en.json','/locales/runtime.en.json','/manifest.webmanifest','/icons/ryby-192.png','/icons/ryby-512.png']);
+export const loginAssets=new Set(['/login','/login.html','/login.css','/login.js','/theme.css','/theme.js','/i18n.js','/language-preference.js','/locales/pl.json','/locales/en.json','/locales/runtime.en.json','/manifest.webmanifest','/icons/ryby-192.png','/icons/ryby-512.png','/icons/dreamteam-180.png','/icons/dreamteam-192.png','/icons/dreamteam-512.png','/icons/dreamteam-maskable-512.png','/assets/brand/dreamteam-logo.svg','/assets/brand/dreamteam-logo-light.svg']);
 
 export const individualAccounts=env=>env.INDIVIDUAL_ACCOUNTS==='true';
 const iterations=100000;

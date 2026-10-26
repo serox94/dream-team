@@ -1,6 +1,7 @@
-export const PARSER_VERSION='2026-10-22-v6';
+export const PARSER_VERSION='2026-10-26-v7';
 // Conservative, evidence-preserving rules. No model calls and no historical rewrites.
 export const concepts={
+ address:['Adres','Address',/address|adres|adresse|anschrift/iu],phone:['Telefon','Telephone',/telephone|telefon|phone|tel[:.]/iu],email:['E-mail','Email',/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/iu],access:['Dojazd','Access',/access|entrance|gate|reception|dojazd|brama|recepcj|zufahrt|ingang|receptie/iu],grocery:['Sklepy spożywcze','Grocery stores',/supermarket|grocery|supermarch|spożywcz|supermarkt/iu],tackle:['Sklepy wędkarskie','Tackle shops',/tackle shop|fishing shop|hengelsport|sklep.{0,12}wędkarsk|angelgeschäft/iu],fuel:['Stacje paliw','Fuel stations',/petrol station|gas station|fuel station|stacj.{0,12}paliw|tankstelle|tankstation/iu],pharmacy:['Apteki','Pharmacies',/pharmac|aptek|apotheke|apotheek/iu],medical:['Pomoc medyczna','Medical services',/hospital|medical cent|emergency department|szpital|przychodni|krankenhaus|ziekenhuis/iu],map:['Mapy źródłowe','Source maps',/lake map|swim map|mapa.{0,12}(?:łowisk|stanowisk)|plattegrond|carte.{0,10}(?:lac|postes)/iu],bathymetry:['Mapa głębokości','Depth map',/bathymetr|depth map|contour map|mapa.{0,10}(?:głęboko|batymetry)|dieptekaart/iu],
  rods:['Wędki','Rods',/\brods?\b|hengels?|ruten|cannes|wędk/iu],bait_boats:['Łódki zanętowe','Bait boats',/bait\s*boats?|feeding\s*boats?|voerboten|futterboot|bateaux? amorceurs?|łódk.{0,12}zanęt/iu],
  boats:['Łodzie','Boats',/\bboats?\b|\bboot\b|boten|bateaux|łodzi|łódź/iu],leadcore:['Leadcore','Leadcore',/leadcore/iu],hooks:['Haki','Hooks',/hooks?|haken|hameçons|haczy/iu],rigs:['Zestawy i leadery','Rigs and leaders',/rigs?|leaders?|shock.?leader|zestaw|przypon|vorfach|montage/iu],
  net:['Podbierak','Landing net',/landing\s*nets?|schepnet|kescher|épuisette|podbierak/iu],mat:['Mata','Unhooking mat',/unhooking\s*mat|onthaakmat|ab.?hakmatte|matelas|mat[ayę] (?:karpi|do)/iu],sling:['Sling i przechowywanie','Sling and retention',/sling|storage\s*bag|retention|zak[ -]?do|worek|worków/iu],disinfectant:['Dezynfekcja ran','Wound disinfectant',/disinfect|antisept|wound|desinf|dezynfek|ontsmet/iu],
@@ -40,12 +41,12 @@ export function parseResearch(content,{url,language=null,checkedAt=new Date().to
  const rows=body.split(/\n\s*\n|\n(?=\s*(?:\d+[.)]|[-*] ))/).map(clean).filter(x=>x.length>=20&&x.length<=2200),out=[];
  for(const paragraph of rows){
   // Each numbered rule retains its exception/provided-equipment context.
-  if(/adventure lagoon/i.test(paragraph)&&!/fishing adventure lake/i.test(paragraph))continue;
+  if(/adventure lagoon/i.test(paragraph)&&!/fishing adventure lake/i.test(paragraph)&&!/lagoon/i.test(url||''))continue;
   const sentences=paragraph.length>900?paragraph.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ż])/):[paragraph];
   for(const evidence of sentences){if(evidence.length<20||evidence.length>1200||/^home\s|cookie|privacy policy|all rights reserved/i.test(evidence))continue;
    for(const [field,[pl,en,rx]] of Object.entries(concepts)){
     if(!rx.test(evidence))continue;if(field==='boats'&&concepts.bait_boats[2].test(evidence)&&!/(?:electric motor|petrol|rental|life jacket|manned)/i.test(evidence))continue;
-    if(scope==='site'&&!['contact','parking','toilets','showers','shop','water','map'].includes(field))continue;
+    if(scope==='site'&&!['contact','address','phone','email','access','parking','toilets','showers','shop','grocery','tackle','fuel','pharmacy','medical','water','map'].includes(field))continue;
     const relevant=evidence.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ż])/u).filter(sentence=>rx.test(sentence)).join(' ');
     let c=classifyRule(relevant||evidence),normalized=null;
     if(field==='rods'){const m=evidence.match(/\b(\d+|three|drie|drei|trois|trzy)\s+(?:rods?|hengels?|ruten|cannes|wędki)/iu);if(m)normalized=Number.isFinite(+m[1])?+m[1]:3;}

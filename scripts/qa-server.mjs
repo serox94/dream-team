@@ -6,20 +6,21 @@ import {fileURLToPath} from 'node:url';
 import worker from '../src/worker.js';
 import {database,initializeTestAccounts} from '../tests/db.mjs';
 const publicDir=path.resolve(fileURLToPath(new URL('../public/',import.meta.url))); 
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json'};
-export async function serve({port=0,seed=false,weatherFetch,testSession=true}={}){
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.avif':'image/avif','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json'};
+export async function serve({port=0,seed=false,weatherFetch,testSession=true,researchFixture=false}={}){
  const DB=database();
  const mediaObjects=new Map();
  const MEDIA={async put(key,body){mediaObjects.set(key,new Uint8Array(body));},async get(key){const bytes=mediaObjects.get(key);return bytes?{body:bytes,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)}:null;},async delete(key){mediaObjects.delete(key);}};
  const AI={async run(){return {response:JSON.stringify({observed:'A change in the bottom profile',bottom:'uncertain',hardness:'uncertain',weed:'uncertain',structure:'possible drop-off',fishEcho:'uncertain',interference:'uncertain',spotsA:'edge',spotsB:'base',spotsC:'top',confidence:'low'})};}};
  const env={INDIVIDUAL_ACCOUNTS:'true',APP_ENV:'preview',AUTH_LEGACY_ALIAS:'Patryk',DB,MEDIA,AI,AI_FREE_ONLY:'true',ASSETS:null,WEATHER_FETCH:weatherFetch,RYBY_LOGIN_USERNAME:'local-fixture-user',RYBY_LOGIN_PASSWORD:'local-fixture-password',RYBY_SESSION_SECRET:'local-fixture-session-secret-with-32-chars'};
+ if(researchFixture)env.TAVILY_API_KEY='local-research-fixture-only';
  await initializeTestAccounts(env);
  let testCookie='';
  if(seed){
   DB.sqlite.exec("INSERT INTO catches(trip_id,angler_id,caught_at,weight_kg,species,bait) VALUES('next-trip','maciek','2026-09-03T10:00:00Z',18,'Karp','tuti'),('next-trip','patryk','2026-09-03T11:00:00Z',5,'Karp','coco');");
   DB.sqlite.exec("INSERT INTO checklist_items(trip_id,category,label,packed,quantity) VALUES('next-trip','sprzęt','Testowy podbierak',1,'1 szt.'),('next-trip','jedzenie / picie','Testowa woda',0,'5 litry');");
  }
- const requests=[];
+ const requests=[],background=new Set();const context={waitUntil(p){background.add(p);p.finally(()=>background.delete(p)).catch(()=>{});}};
  const ASSETS={async fetch(request){
   let pathname=decodeURIComponent(new URL(request.url).pathname);
   if(pathname==='/__qa')return new Response(`<!doctype html><html lang="pl"><title>Local responsive QA</title><style>body{background:#dde3e2;font:16px system-ui}iframe{border:1px solid #777;display:block;background:white;max-width:100%}nav{display:flex;gap:12px;padding:8px}</style><nav><label>Strona <select id="page"><option value="/">Dashboard</option>${['wyjazdy','polowy','checklisty','mapa','pogoda','dojazd','regulamin','wezly','rigi','porady','encyklopedia','sonar'].map(s=>`<option value="/pages/${s}.html">${s}</option>`).join('')}</select></label><button data-w="390">Mobile 390</button><button data-w="1280">Desktop 1280</button></nav><iframe title="Aplikacja testowa" id="frame" src="/" width="390" height="844"></iframe><script>page.onchange=()=>frame.src=page.value;document.querySelectorAll('button').forEach(b=>b.onclick=()=>frame.width=b.dataset.w)</script></html>`,{headers:{'content-type':'text/html; charset=utf-8'}});
@@ -35,7 +36,7 @@ export async function serve({port=0,seed=false,weatherFetch,testSession=true}={}
    const chunks=[];for await(const chunk of req)chunks.push(chunk);
    const headers={...req.headers};if(testSession&&testCookie&&!headers.cookie)headers.cookie=testCookie;
    const request=new Request(`http://${req.headers.host}${req.url}`,{method:req.method,headers,body:['GET','HEAD'].includes(req.method)?undefined:Buffer.concat(chunks)});
-   const response=await worker.fetch(request,env);
+   const response=await worker.fetch(request,env,context);
    const record={method:req.method,url:req.url,status:response.status};
    requests.push(record);
    res.writeHead(response.status,Object.fromEntries(response.headers));res.end(Buffer.from(await response.arrayBuffer()));
@@ -48,7 +49,7 @@ export async function serve({port=0,seed=false,weatherFetch,testSession=true}={}
   if(signed.status!==303)throw Error('Local QA login failed');
   testCookie=signed.headers.get('set-cookie').split(';')[0];
  }
- return {DB,mediaObjects,requests,url:`http://127.0.0.1:${server.address().port}`,async close(){await new Promise(r=>server.close(r));DB.close();}};
+ return {DB,mediaObjects,requests,async dispatchScheduled(){const waits=[];await worker.scheduled({cron:'*/5 * * * *'},env,{waitUntil:p=>waits.push(p)});await Promise.all(waits);},url:`http://127.0.0.1:${server.address().port}`,async close(){await new Promise(r=>server.close(r));await Promise.allSettled([...background]);DB.close();}};
 }
 if(process.argv[1]===fileURLToPath(import.meta.url)){
  const preview=await serve({port:Number(process.env.RYBY_QA_PORT||8787),seed:true});

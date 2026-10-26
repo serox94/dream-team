@@ -3,6 +3,7 @@
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
+    await loadScript('app-shell.js');
     const model=await Dream.api('/api/bootstrap');
     if(model.currentUser&&window.DreamLanguage?.activate(model.currentUser)){location.reload();return;}
     const trip=model.trips.find(t=>t.id===Dream.readTrip())||model.trips.find(t=>t.id===model.app.activeTripId)||model.trips.find(t=>t.status!=='archived')||model.trips[0];
@@ -35,10 +36,23 @@
     await loadScript('app-plus.js');
     await loadScript('field-mode.js');
     if(document.getElementById('trip-score-charts'))await loadScript('dashboard-chart.js');
+    // Lake evidence is stored independently of legacy trip documents.
+    // Load it only on the rules page and never overwrite saved trip data.
+    const rulesPage=/\/pages\/regulamin(?:\.html)?$/.test(location.pathname);
+    const requestedLakeId=rulesPage?new URLSearchParams(location.search).get('lakeId'):null;
+    const selectedLake=requestedLakeId?model.lakes.find(l=>l.id===requestedLakeId):null;
+    let lakeResearch=null,lakeResearchError=null;
+    if(rulesPage){
+      try{
+        if(requestedLakeId&&!selectedLake)throw Error(document.documentElement.lang==='en'?'Fishery not found.':'Nie znaleziono łowiska.');
+        const id=selectedLake?.id||trip.lakeId;
+        if(id)lakeResearch=await Dream.api(`/api/lakes/${encodeURIComponent(id)}/manager${!selectedLake?'?tripId='+encodeURIComponent(trip.id):''}`);
+      }catch(error){lakeResearchError=error.message;}
+    }
     await loadScript('trip-renderer-v2.js');
     const documents=await Dream.api(`/api/documents?tripId=${encodeURIComponent(trip.id)}`).then(d=>d.documents);
     window.DREAM_DOCUMENTS=documents;
-    await window.DreamTripRenderer.render({model,trip,documents});
+    await window.DreamTripRenderer.render({model,trip,documents,lakeResearch,lakeResearchError,selectedLake});
     window.initDreamPlus();
     if(document.getElementById('weather-current-temp')){if(!document.getElementById('pro2'))await loadScript('fixes.js');}
     if(document.getElementById('trip-manager')||document.getElementById('settings-management'))await loadScript('trip-manager.js');
@@ -47,6 +61,11 @@
     if(document.body.dataset.page==='checklisty')await loadScript('checklist-templates.js');
     if(document.querySelector('.location-photo-card'))await loadScript('trip-peg-enhancer.js');
     if(document.getElementById('settings-form')){await loadScript('settings.js');await window.initDreamSettings();await window.DreamContent.editor(document.querySelector('#settings-management')?.parentElement||document.querySelector('main'));}
+    await loadScript('lake-manager.js');
+    if(document.getElementById('lake-manager'))await DreamLakeManager.mount();
+    const profileSections={dojazd:[2,3,4],mapa:[2],teren:[0,3,4],porady:[0,1]};
+    if(profileSections[document.body.dataset.page]){try{const p=await Dream.api(`/api/lakes/${encodeURIComponent(trip.lakeId)}/manager?tripId=${encodeURIComponent(trip.id)}`);const host=document.createElement('div');host.className='shared-lake-evidence';document.querySelector('main').append(host);DreamLakeManager.renderProfile(host,p,{section:profileSections[document.body.dataset.page]});}catch(error){Dream.notice(error.message,true);}}
+    await loadScript('help-guide.js');DreamHelp.mount();
     document.documentElement.dataset.ready='true';
     Dream.registerShell();
     document.dispatchEvent(new Event('dream:ready'));

@@ -30,7 +30,9 @@ try{
         const readyMs=await page.evaluate(()=>Math.round(performance.now()));
         await page.waitForFunction(()=>document.getElementById('dashboard-weather-now')?.textContent.includes('15°C'));
         await page.waitForFunction(()=>typeof window.renderDreamChart==='function');
-        assert.match(await page.locator('.hero-side-card img').getAttribute('src'),/patryk-maciek\.jpeg$/);
+        assert.match(await page.locator('#dream-crew-photo').getAttribute('src'),/patryk-maciek\.avif$/);
+        assert.equal(await page.locator('#dream-crew-caption').innerText(),'Patryk + Maciek');
+        await page.waitForFunction(()=>{const img=document.getElementById('dream-crew-photo');return img?.complete&&img.naturalWidth>0;},{timeout:10000});
         assert.equal(await page.locator('.score-chart').count(),2);
         assert.equal(await page.locator('.score-row').count(),4);
         assert.match(await page.locator('#trip-score-total').innerText(),/2 ryb.*23,0 kg/);

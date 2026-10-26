@@ -53,6 +53,34 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     return `<section class="panel-card source-panel"><div class="section-head"><h3>🔎 Źródła i weryfikacja</h3><span class="section-chip">dane łowiska</span></div><div class="quick-links">${[...seen.entries()].map(([url,label]) => `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`).join('')}</div></section>`;
   }
 
+  // The crew photo belongs to the selected trip, not to the logged-in account.
+  // Never show the photo of three anglers for a different participant list.
+  function renderCrewBanner(trip){
+    const photo=document.getElementById('dream-crew-photo');
+    if(!photo)return;
+    const caption=document.getElementById('dream-crew-caption');
+    const subtitle=document.getElementById('dream-crew-subtitle');
+    const english=(window.DreamLanguage?.get?.()||document.documentElement.lang)==='en';
+    const participants=(trip.participants||[]).map(p=>String(p.name||'').toLocaleLowerCase('pl').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').split(/[^a-z]+/g));
+    const contains=name=>participants.some(tokens=>tokens.includes(name));
+    const hasDuo=contains('patryk')&&contains('maciek');
+    const hasTrio=hasDuo&&contains('paddy');
+    const source=hasTrio?'/assets/img/patryk-maciek-paddy.avif':hasDuo?'/assets/img/patryk-maciek.avif':'/assets/img/lowisko.jpg';
+    const title=hasTrio?'Patryk + Maciek + Paddy':hasDuo?'Patryk + Maciek':english?'DreamTeam trip':'Wyjazd DreamTeam';
+    const description=hasTrio?(english?'Patryk, Maciek and Paddy by the water':'Patryk, Maciek i Paddy nad wodą'):hasDuo?(english?'Patryk and Maciek by the water':'Patryk i Maciek nad wodą'):(english?'Fishing lake':'Widok łowiska');
+    photo.onerror=()=>{
+      // A missing photo must not show a different crew or leave a broken icon.
+      photo.onerror=null;
+      photo.src='/assets/img/lowisko.jpg';
+      photo.alt=english?'Fishing lake':'Widok łowiska';
+      if(subtitle)subtitle.textContent=english?'Crew photo unavailable':'Zdjęcie załogi niedostępne';
+    };
+    if(photo.getAttribute('src')!==source)photo.src=source;
+    photo.alt=description;
+    if(caption)caption.textContent=title;
+    if(subtitle)subtitle.textContent=english?'DreamTeam on the water':'DreamTeam nad wodą';
+  }
+
   function renderDashboard(trip) {
     const p=profileOf(trip), hero=document.querySelector('.dashboard-hero');
     if(!hero)return;
@@ -64,6 +92,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     set('dashboard-peg',trip.peg||'do ustalenia');
     set('dashboard-dates',trip.start?`${date(trip.start)} – ${date(trip.end)}`:'do ustalenia');
     set('dashboard-crew',trip.participants.map(a=>a.name).join(' · ')||'do ustalenia');
+    renderCrewBanner(trip);
     const stats=document.querySelector('main .dashboard-secondary-stats');
     if(stats&&!document.getElementById('dream-team-alltime-value'))stats.insertAdjacentHTML('beforeend','<article class="stat-card status-success"><span class="label">👑 Rekord z zapisanych połowów — wszystkie wyjazdy</span><strong id="dream-team-alltime-value">—</strong></article>');
     const target=document.getElementById('angler-stats');
@@ -113,20 +142,60 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
       ${sources(docs,p)}`;
   }
 
-  function renderRules(trip, docs) {
+  // Research evidence belongs to the lake, not to trip_documents or facts_json.
+  // Render the saved, cited rules without rewriting archived trips or inventing a summary.
+  function researchRules(profile,error){
+    const tr=(pl,en)=>window.DreamLanguage?.get?.()==='en'||document.documentElement.lang==='en'?en:pl;
+    if(error)return panel(tr('Research łowiska','Lake research'),'INFO',note(tr('Nie udało się pobrać zapisanych zasad: ','Could not load saved rules: ')+error,'warn'));
+    const allowed=new Set(['rods','distance','leadcore','hooks','rigs','bait_boats','boats','lifejacket','net','mat','sling','disinfectant','fishcare','bait','safety','camp']);
+    const facts=(profile?.research?.facts||[]).filter(f=>allowed.has(f.field)&&f.scope!=='site');
+    const pages=profile?.research?.pages||[];
+    if(!facts.length){
+      return panel(tr('Regulamin z researchu','Research regulations'),'INFO',
+        note(tr('Brak zapisanych zasad dla tego łowiska. Wyszukanie strony nie jest jeszcze pobraniem regulaminu. Otwórz profil łowiska i wybierz „Zbierz dane z URL”.','No saved rules for this lake. Finding a website does not yet import its regulations. Open the lake profile and run research for the confirmed URL.'),'warn'));
+    }
+    const types={
+      PROHIBITED:[tr('ZABRONIONE','PROHIBITED'),'danger'],
+      REQUIRED:[tr('OBOWIĄZKOWE','REQUIRED'),'warn'],
+      CONDITIONAL:[tr('WARUNKOWE','CONDITIONAL'),'warn'],
+      PERMITTED:[tr('DOZWOLONE','PERMITTED'),'success'],
+      UNKNOWN:[tr('NIEUSTALONE','UNCONFIRMED'),'info']
+    };
+    const groups=[
+      [tr('Wędki, dystans i zestawy','Rods, distance and rigs'),['rods','distance','leadcore','hooks','rigs']],
+      [tr('Łodzie, łódki i bezpieczeństwo','Boats and safety'),['bait_boats','boats','lifejacket','safety']],
+      [tr('Ochrona ryb','Fish care'),['net','mat','sling','disinfectant','fishcare']],
+      [tr('Przynęty i nęcenie','Bait and feeding'),['bait']],
+      [tr('Pobyt i obozowanie','Camping'),['camp']]
+    ];
+    const detail=f=>{
+      const [label,colour]=types[f.rule]||types.UNKNOWN;
+      const source=typeof f.url==='string'&&/^https:\/\/[^\s]+$/i.test(f.url)?`<a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">${tr('Otwórz źródło','Open source')}</a>`:'';
+      const number=f.normalized!=null?` — ${esc(f.normalized)}${f.field==='distance'?' m':''}`:'';
+      return `<article class="research-fact"><strong>${esc(tr(f.labelPl||f.field,f.labelEn||f.field))}${number}</strong> <span class="research-rule status-${colour}">${label}</span>${f.conditional&&f.base!=='UNKNOWN'?` <small>${tr('Warunki i wyjątki w oryginale','See conditions and exceptions in original')}</small>`:''}${f.provided?` <small>${tr('Sprzęt zapewnia łowisko — sprawdź zasady własnego wyposażenia','Provided by fishery — check rules for your own equipment')}</small>`:''}<p class="preserve-lines">${esc(f.evidence||'')}</p><small>${tr('Sprawdzono','Checked')}: ${esc(f.checkedAt||'—')} · ${tr('Rok obowiązywania','Effective year')}: ${esc(f.effectiveYear||tr('niepotwierdzony','unverified'))} · ${source}</small></article>`;
+    };
+    return `<section class="panel-card research-regulation" data-lake-research-rules><h3>${tr('Zasady ze sprawdzonych źródeł','Rules from checked sources')}</h3><p>${facts.length} ${tr('zapisanych informacji o zasadach','saved regulation facts')} · ${pages.length} ${tr('źródeł','sources')}. ${tr('To treść źródłowa, nie automatycznie zatwierdzony regulamin na datę wyjazdu. Warunki i wyjątki sprawdzaj w oryginale.','This is source evidence, not a confirmed regulation for the trip dates. Verify conditions and exceptions in the original.')}</p>${groups.map(([title,keys],i)=>{const group=facts.filter(x=>keys.includes(x.field));return group.length?`<details ${i===0?'open':''}><summary>${esc(title)} (${group.length})</summary><div class="research-facts">${group.map(detail).join('')}</div></details>`:'';}).join('')}</section>`;
+  }
+
+  function renderRules(trip, docs, lakeResearch, selectedLake, lakeResearchError) {
     const m = main(); if (!m) return;
-    const f = factsOf(trip), p = profileOf(trip);
-    const rules = docs.filter(d => d.kind === 'rules' || d.kind === 'equipment');
+    const separateLake=selectedLake?.id&&selectedLake.id!==trip.lakeId;
+    const f = separateLake?(selectedLake.facts||{}):factsOf(trip), p = lakeResearch?.lake||selectedLake||profileOf(trip);
+    const relatedDocs=separateLake?[]:docs;
+    const rules = relatedDocs.filter(d => d.kind === 'rules' || d.kind === 'equipment');
     const by = titleRx => rules.filter(d => titleRx.test(d.title));
     const tackle = by(/wędk|wywóz|link|zestaw|hak|sprzęt/i);
     const fish = by(/ochron|ryb|carp|mata|worek/i);
     const boat = by(/łód|ponton|bezpieczeń/i);
     const stay = rules.filter(d => !tackle.includes(d) && !fish.includes(d) && !boat.includes(d));
+    const savedRules=lakeResearch?.research?.facts?.some(f=>['rods','distance','leadcore','hooks','rigs','bait_boats','boats','lifejacket','net','mat','sling','disinfectant','fishcare','bait','safety','camp'].includes(f.field)&&f.scope!=='site');
+    const showLegacy=rules.length>0||!savedRules;
 
     const renderGroup = (title, chip, group, fallback) => panel(title, chip, `<div class="weather-interpretation">${group.map(docNotes).join('') || note(fallback, 'info')}</div>`);
 
-    m.innerHTML = `<section class="hero-card"><h2>📜 Regulamin łowiska</h2><p>Najważniejsze zasady dla ${esc(trip.lake)}. Kolory pomagają od razu odróżnić zakaz, obowiązek i rzeczy dozwolone.</p></section>
-      <section class="stats-grid">
+    m.innerHTML = `<section class="hero-card"><h2>📜 Regulamin łowiska</h2><p>Najważniejsze zasady dla ${esc(p.name||trip.lake)}. Kolory pomagają od razu odróżnić zakaz, obowiązek i rzeczy dozwolone.</p></section>
+      ${researchRules(lakeResearch,lakeResearchError)}
+      ${showLegacy?`<section class="stats-grid">
         ${stat('🎣 Wędki', f.rods, 'info')}
         ${stat('🤖 Łódka zanętowa', f.baitBoat, /dozwol/i.test(f.baitBoat || '') ? 'success' : 'warn')}
         ${stat('🛥️ Łódź / ponton', f.boat, /dozwol/i.test(f.boat || '') ? 'success' : 'warn')}
@@ -140,7 +209,8 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
         ${renderGroup('🚤 Łódź i bezpieczeństwo', 'WODA', boat, f.boat || 'Brak danych.')}
         ${renderGroup('🏕️ Pobyt i zachowanie', 'PORZĄDEK', stay, 'Przed wyjazdem ponownie sprawdź aktualny regulamin operatora.')}
       </section>
-      ${sources(docs,p)}`;
+      `:''}
+      ${sources(relatedDocs,p)}`;
   }
 
   function renderAdvice(trip, docs) {
@@ -185,18 +255,18 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
       ${sources(docs,p)}`;
   }
 
-  async function render({ trip, documents }) {
+  async function render({ trip, documents, lakeResearch=null, lakeResearchError=null, selectedLake=null }) {
     if (!trip) return;
     const path = route();
     if (path === '' || path === '/' || path.endsWith('/index')) renderDashboard(trip);
     if (path.endsWith('/pages/teren')) window.DreamField?.renderGuide(trip, documents || []);
     if (path.endsWith('/pages/mapa')) renderMap(trip);
-    const profile=profileOf(trip),pack=profile.facts?.contentPack;
+    const profile=profileOf(trip),pack=selectedLake?.id&&selectedLake.id!==trip.lakeId?null:profile.facts?.contentPack;
     const topic=path.endsWith('/pages/regulamin')?'rules':path.endsWith('/pages/dojazd')?'logistics':path.endsWith('/pages/porady')?'advice':null;
     const extra=topic?profile.facts?.[topic+'Text']:null;
-    if(extra)documents=[...(documents||[]),{kind:topic==='advice'?'overview':topic,title:'Zapisane informacje o łowisku',content:extra}];
+    if(extra&&(!selectedLake||selectedLake.id===trip.lakeId))documents=[...(documents||[]),{kind:topic==='advice'?'overview':topic,title:'Zapisane informacje o łowisku',content:extra}];
     document.querySelectorAll('[data-lake-only]').forEach(el=>el.hidden=el.dataset.lakeOnly!==pack);
-    if(pack==='plaine2' && /\/pages\/(dojazd|regulamin|porady)$/.test(path)){
+    if(pack==='plaine2' && !(topic==='rules'&&lakeResearch?.research?.facts?.length) && /\/pages\/(dojazd|regulamin|porady)$/.test(path)){
       const name=path.split('/').pop();
       const response=await fetch(`/data/lakes/plaine2/${name}.html`);
       if(!response.ok)throw new Error('Nie udało się wczytać zachowanej wiedzy o łowisku.');
@@ -205,7 +275,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
       return;
     }
     if (path.endsWith('/pages/dojazd')) renderDirections(trip, documents || []);
-    if (path.endsWith('/pages/regulamin')) renderRules(trip, documents || []);
+    if (path.endsWith('/pages/regulamin')) renderRules(trip, documents || [], lakeResearch, selectedLake, lakeResearchError);
     if (path.endsWith('/pages/porady')) renderAdvice(trip, documents || []);
   }
 
