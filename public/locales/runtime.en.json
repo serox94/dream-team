@@ -897,5 +897,6 @@
   "Nieprawidłowe łowisko wyjazdu.": "The fishery does not match the trip.",
   "Trwa już 10 analiz. Poczekaj na ukończenie partii.": "Ten research jobs are already running. Wait for a batch to finish.",
   "Szablony wybierz przy tworzeniu wyjazdu.": "Select templates when creating a trip.",
-  "Niepewny wynik dostawcy. Najpierw rozlicz poprzednie wywołanie.": "Uncertain provider outcome. Reconcile the previous call first."
+  "Niepewny wynik dostawcy. Najpierw rozlicz poprzednie wywołanie.": "Uncertain provider outcome. Reconcile the previous call first.",
+  "Profil zapisano. Uruchom przygotowanie ponownie.": "Profile saved. Start preparation again."
 }

@@ -117,6 +117,7 @@ async function saveLake(request,env,id,ctx) {
   const x=await body(request),c=id?await one(env,'SELECT * FROM lakes WHERE id=?',id):{};
   if(!c) fail('Nie znaleziono łowiska.',404);
   const submittedSources=has(x,'sources')?profileSources(x.sources):null;
+  if(submittedSources&&!submittedSources.length)fail('Wybierz właściwe łowisko lub dodaj źródło.');
   const name=text(pick(x,'name',c.name),'Nazwa łowiska',150,true),country=text(pick(x,'country',c.country),'Kraj',100);
   if(submittedSources&&(!country||country.length<2))fail('Podaj nazwę i kraj łowiska.');
   if(!id){const duplicate=await one(env,"SELECT id FROM lakes WHERE lower(replace(replace(name,'Jezioro ',''),'Łowisko ',''))=lower(replace(replace(?,'Jezioro ',''),'Łowisko ','')) AND lower(COALESCE(country,''))=lower(COALESCE(?,'')) LIMIT 1",name,country);if(duplicate)fail('To łowisko już istnieje. Wybierz jego profil z listy.',409);}
@@ -127,12 +128,12 @@ async function saveLake(request,env,id,ctx) {
   if(id) await run(env,`UPDATE lakes SET name=?,country=?,latitude=?,longitude=?,image_url=?,facts_json=?,source_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,name,country,lat,lon,image,JSON.stringify(f),source,id);
   else {id=crypto.randomUUID();await run(env,`INSERT INTO lakes(id,name,country,latitude,longitude,image_url,facts_json,source_url) VALUES(?,?,?,?,?,?,?,?)`,id,name,country,lat,lon,image,JSON.stringify(f),source);}
   // Confirmed URL save starts a bounded evidence pass; UI can resume its persisted job.
-  if(submittedSources?.length)await prepareLakeProfile(env,id,submittedSources,ctx);
+  let profileError=null;if(submittedSources?.length)try{await prepareLakeProfile(env,id,submittedSources,ctx);}catch(error){profileError=error instanceof InputError?error.message:'Profil zapisano. Uruchom przygotowanie ponownie.';}
   if(!submittedSources&&source&&source!==c.source_url&&x.researchConfirmed===true){
     const setting=await one(env,"SELECT value FROM app_settings WHERE key='research_auto'");
     if(setting?.value!=='off')ctx?.waitUntil(handleLakeResearch(new Request('https://internal/api/research',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url:source})}),env,id,'research').catch(()=>{}));
   }
-  return json({ok:true,id},c.id?200:201);
+  return json({ok:true,id,...(profileError?{profileError}: {})},c.id?200:201);
 }
 // Delete a lake only when it is not used by any trip (including archived trips).
 // Its source/research records are lake-owned; never cascade into trip history.

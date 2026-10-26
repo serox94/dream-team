@@ -56,7 +56,7 @@ export async function researchProfile(env,lakeId){
  const conflicts=[];for(const f of facts.filter(f=>f.base!=='UNKNOWN'&&!f.conditional))for(const g of facts){if(f.url>=g.url||g.conditional||f.field!==g.field||f.ownership!==g.ownership||f.scope!==g.scope||g.base==='UNKNOWN')continue;if(((f.base==='PROHIBITED')!==(g.base==='PROHIBITED'))&&factSubject(f)===factSubject(g))conflicts.push({field:f.field,urls:[f.url,g.url]});}
  for(const field of ['area','depth']){const found=facts.filter(f=>f.field===field&&f.normalized!=null&&f.quantityKind!=='change');if(new Set(found.map(f=>f.normalized)).size>1)conflicts.push({field,reason:'NUMERIC_OR_HISTORICAL_DIFFERENCE',values:found.map(f=>({value:f.normalized,url:f.url,checkedAt:f.checkedAt,effectiveYear:f.effectiveYear}))});}
  const mapRow=await one(db,'SELECT value FROM app_settings WHERE key=?','research.map.'+lakeId);
- return {facts,pages,missing,fields:Object.entries(concepts).map(([field,[labelPl,labelEn]])=>({field,labelPl,labelEn})),conflicts,locations,mapEvidence:mapRow?JSON.parse(mapRow.value):null,job:job?{...job,queue:JSON.parse(job.queue_json),queue_json:undefined}:null,historyNotice:'Current source check; applicability to historical trips is not established.'};
+ return {facts,pages,missing,fields:[...Object.entries(concepts).map(([field,[labelPl,labelEn]])=>({field,labelPl,labelEn})),{field:'other_rules',labelPl:'Pozostałe zasady',labelEn:'Other rules'}],conflicts,locations,mapEvidence:mapRow?JSON.parse(mapRow.value):null,job:job?{...job,queue:JSON.parse(job.queue_json),queue_json:undefined}:null,historyNotice:'Current source check; applicability to historical trips is not established.'};
 }
 export async function queueResearch(env,lakeId,url,options={}){
  const db=env.DB,active=await one(db,"SELECT * FROM research_jobs WHERE lake_id=? AND status IN ('pending','processing')",lakeId);
@@ -67,12 +67,12 @@ export async function queueResearch(env,lakeId,url,options={}){
  const id=crypto.randomUUID();await run(db,"INSERT OR IGNORE INTO research_jobs(id,lake_id,source_url,status,queue_json,confirmed_sources_json) VALUES(?,?,?,'pending',?,?)",id,lakeId,url,JSON.stringify(options.sources||[url]),JSON.stringify(options.sources||[]));return await one(db,'SELECT * FROM research_jobs WHERE id=?',id)||await one(db,"SELECT * FROM research_jobs WHERE lake_id=? AND status IN ('pending','processing')",lakeId);
 }
 async function extract(env,job,urls,includeImages=false){
- const usage=await tavilyUsage(env);if(!usage.freeOnlyConfirmed||usage.available<3)fail('TAVILY_FREE_BUDGET_UNVERIFIED',429);
+ const usage=await tavilyUsage(env,{timeoutMs:5000});if(!usage.freeOnlyConfirmed||usage.available<3)fail('TAVILY_FREE_BUDGET_UNVERIFIED',429);
  // Reserve worst-case rounded basic-extract cost before network IO. Keep reservations after unknown failures.
  const cost=Math.ceil(urls.length/5),month=new Date().toISOString().slice(0,7);
  const r=await run(env.DB,`UPDATE research_jobs SET credits_reserved=credits_reserved+? WHERE id=? AND credits_reserved+?<=4 AND (SELECT COALESCE(SUM(credits_reserved),0) FROM research_jobs WHERE substr(started_at,1,7)=?)+?<=100`,cost,job.id,cost,month,cost);
  if(r.meta.changes!==1)fail('RESEARCH_LOCAL_BUDGET_EXHAUSTED',429);
- let response;try{response=await fetch('https://api.tavily.com/extract',{method:'POST',headers:{authorization:'Bearer '+env.TAVILY_API_KEY,'content-type':'application/json'},body:JSON.stringify({urls,extract_depth:'basic',format:'markdown',timeout:15,include_usage:true,...(includeImages?{include_images:true}:{})}),signal:AbortSignal.timeout(22000)});}catch{fail('TAVILY_OUTCOME_UNCERTAIN_NO_AUTOMATIC_RETRY',504);}
+ let response;try{response=await fetch('https://api.tavily.com/extract',{method:'POST',headers:{authorization:'Bearer '+env.TAVILY_API_KEY,'content-type':'application/json'},body:JSON.stringify({urls,extract_depth:'basic',format:'markdown',timeout:15,include_usage:true,...(includeImages?{include_images:true}:{})}),signal:AbortSignal.timeout(18000)});}catch{fail('TAVILY_OUTCOME_UNCERTAIN_NO_AUTOMATIC_RETRY',504);}
  if(!response.ok)fail('TAVILY_HTTP_ERROR',[402,429].includes(response.status)?429:502);
  const data=await response.json(),actual=data.usage?.credits;
  if(!Number.isFinite(actual)||actual<0||actual>cost)fail('TAVILY_USAGE_UNCERTAIN_NO_AUTOMATIC_RETRY',502);
@@ -82,7 +82,7 @@ async function extract(env,job,urls,includeImages=false){
 async function discoverAdditional(env,job,primary){
  const db=env.DB,marker=await one(db,'SELECT value FROM app_settings WHERE key=?','research.discovery.'+job.lake_id);
  if(marker&&Date.now()-Date.parse(marker.value)<14*86400000)return [];
- const usage=await tavilyUsage(env);if(!usage.freeOnlyConfirmed||usage.available<3)fail('TAVILY_FREE_BUDGET_UNVERIFIED',429);
+ const usage=await tavilyUsage(env,{timeoutMs:5000});if(!usage.freeOnlyConfirmed||usage.available<3)fail('TAVILY_FREE_BUDGET_UNVERIFIED',429);
  const reserved=await run(db,"UPDATE research_jobs SET discovery_done=1,credits_reserved=credits_reserved+1 WHERE id=? AND discovery_done=0 AND credits_reserved+1<=4 AND (SELECT COALESCE(SUM(credits_reserved),0) FROM research_jobs WHERE substr(started_at,1,7)=?)+1<=100",job.id,new Date().toISOString().slice(0,7));
  if(reserved.meta.changes!==1)return [];
  const lake=await one(db,'SELECT name,country FROM lakes WHERE id=?',job.lake_id);
