@@ -1,87 +1,35 @@
-name: Integrated Lake Manager
+name: Schema32 bounded read-only production checkpoint
 on:
-  workflow_dispatch:
   push:
-    branches: [feat/automatic-lake-manager-20261026]
+    branches: [ops/schema32-readonly-20261026]
 permissions:
   contents: read
-  actions: read
 concurrency:
-  group: dream-team-lake-manager
+  group: dream-team-readonly-checkpoint
   cancel-in-progress: false
 jobs:
-  integrated:
+  checkpoint:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-      - name: Inspect and recover pinned existing preview before further tests
+      - name: Bounded production metadata, schema, counters, queues and D1 headroom
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/schema32-preview-recover.mjs
-      - name: Retain exact application, Validate, UI and real-preview PASS evidence
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/schema32-retained-evidence.mjs
-      - run: npm ci
-      - name: Build existing assets and install browser only
-        run: |
-          node scripts/build.mjs
-          npm install --no-save --package-lock=false playwright@1.63.0
-          npx playwright install chromium
-      - name: Targeted operator regression only
-        run: |
-          node --check scripts/schema32-rehearse.mjs
-          node --check scripts/schema32-preview-recover.mjs
-          node --check scripts/schema32-retained-evidence.mjs
-          node --test tests/schema32-readiness.test.mjs tests/schema32-transition.test.mjs tests/schema32-release-gates.test.mjs
-          node --test tests/research-source-quality.test.mjs tests/research-engine.test.mjs tests/lake-manager.test.mjs tests/regulamin-research-ui.test.mjs tests/research-locales.test.mjs tests/research-provider.test.mjs
-      - name: Real isolated full-fallback-recovery transitions and preserved sessions
+          REQUIRE_PRODUCTION_IDLE: 'true'
+        run: node scripts/lake-manager-preflight.mjs
+      - name: Existing scheduled backup health without creating a backup
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
-          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
-          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
-          RETAINED_RECOVERY_RUN: '40399303677'
-          GITHUB_TOKEN: ${{ github.token }}
-          VERIFIED_APP_BUILD: a1c58a91d741da1975baa9003d927e8915e19445
-        run: |
-          node scripts/schema32-retained-evidence.mjs --schema32-only
-          node scripts/schema32-provider-cache.mjs
-
-      - name: Update only preview code on the existing schema32 database
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
-          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
-          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
-        run: |
-          node scripts/lake-manager-preview.mjs
-          node scripts/schema32-accept-extraction.mjs
-      - name: Recheck affected real preview integration using existing evidence
-        env:
-          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
-        run: node scripts/qa-lake-manager-live.mjs
-      - name: One cached or bounded free-provider integration on retained preview
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
-        run: node scripts/qa-lake-manager-provider.mjs
+        run: node scripts/check-backup-health.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: lake-manager-evidence
-          path: |
-            rc-status/
-            schema32-status/
+          name: read-only-production-checkpoint
+          path: rc-status/lake-manager-preflight.json
           retention-days: 14
