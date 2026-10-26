@@ -27,6 +27,7 @@ jobs:
       RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
       RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
       DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+      REQUIRE_PRODUCTION_IDLE: 'true'
       CONFIRMED_RELEASE: ${{ inputs.candidate }}
       VERIFIED_MANAGER_RUN: ${{ inputs.verified_manager_run }}
     steps:
