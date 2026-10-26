@@ -12,9 +12,9 @@ const fixture=url=>url.includes('facilities')?'Electricity is available at swim 
 globalThis.fetch=async(u,o)=>{const url=String(u);if(!url.startsWith('https://api.tavily.com/'))return originalFetch(u,o);if(url.endsWith('/usage'))return Response.json(usage);credits++;if(url.endsWith('/search'))return Response.json({results:[],usage:{credits:1}});return Response.json({results:JSON.parse(o.body).urls.filter(u=>fixture(u)).map(url=>({url,raw_content:fixture(url)})),usage:{credits:1}});};
 const preview=await serve({seed:true,researchFixture:true,weatherFetch:async()=>Response.json(weatherFixture())});
 const originalTrips=preview.DB.sqlite.prepare('SELECT COUNT(*) n FROM trips').get().n;preview.DB.sqlite.prepare("INSERT OR IGNORE INTO anglers(id,name) VALUES('paddy','Paddy')").run();
-const browser=await chromium.launch({headless:true,args:['--no-sandbox']});const results=[];
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});const results=[];let lastPage;
 const ready=async page=>{await page.locator('html[data-ready=true]').waitFor({timeout:20000});};
-const check=(name)=>results.push({name,result:'PASS'});
+const check=(name)=>{results.push({name,result:'PASS'});console.log('LAKE_QA_PASS '+name);};
 try{
  const context=await browser.newContext({viewport:{width:390,height:844},locale:'pl-PL'});const page=await context.newPage();
  await page.goto(preview.url+'/pages/lowiska.html');await ready(page);
@@ -23,11 +23,17 @@ try{
  // Browser closes; a persisted scheduled batch completes the profile.
  for(let n=0;n<5;n++)await preview.dispatchScheduled();
  assert.equal(preview.DB.sqlite.prepare('SELECT status FROM research_jobs WHERE lake_id=? ORDER BY rowid DESC LIMIT 1').get(lakeId).status,'complete');assert.equal(preview.DB.sqlite.prepare('SELECT COUNT(*) n FROM trips').get().n,originalTrips);check('A: multi-source profile completes without a trip or open browser');
- const p=await context.newPage();await p.goto(preview.url+'/pages/lowiska.html?lakeId='+lakeId);await ready(p);assert.match(await p.locator('#lake-detail').innerText(),/18/);assert.equal(await p.locator('#lake-detail details').count()>=5,true);await p.screenshot({path:dir+'/profile-390-pl-dark.png',fullPage:true});
+ const p=await context.newPage();lastPage=p;await p.goto(preview.url+'/pages/lowiska.html?lakeId='+lakeId);await ready(p);assert.match(await p.locator('#lake-detail').innerText(),/18/);assert.equal(await p.locator('#lake-detail details').count()>=5,true);await p.screenshot({path:dir+'/profile-390-pl-dark.png',fullPage:true});
  const before=credits;await p.locator('.profile-sources [type=submit]').click();await p.waitForTimeout(250);await preview.dispatchScheduled();assert.equal(credits,before);check('A: unchanged sources use cache without new provider credits');
+ await p.locator('.profile-sources').getByRole('button',{name:'+ Dodaj kolejny link',exact:true}).click();await p.locator('.profile-sources [name=sources]').nth(2).fill('https://fishery.example.org/conflict');
+ await p.locator('.profile-sources').getByRole('button',{name:'+ Dodaj kolejny link',exact:true}).click();await p.locator('.profile-sources [name=sources]').nth(3).fill('https://fishery.example.org/missing');
+ await p.locator('.profile-sources [type=submit]').click();await p.waitForTimeout(200);for(let n=0;n<3;n++)await preview.dispatchScheduled();await p.reload();await ready(p);
+ assert.match(await p.locator('#lake-detail').innerText(),/Częściowo ukończono/);assert.match(await p.locator('#lake-detail').innerText(),/Sprzeczne źródła/);assert.equal(preview.DB.sqlite.prepare('SELECT COUNT(*) n FROM research_pages WHERE lake_id=?').get(lakeId).n,3);check('A: incremental URL, unavailable source and opposing rules are visible without replacing prior evidence');
+ await p.getByRole('link',{name:'Otwórz regulamin',exact:true}).click();await ready(p);assert.match(await p.locator('main').innerText(),/Fixture Outdoor Lake/);assert.match(await p.locator('main').innerText(),/Leadcore/);await p.goto(preview.url+'/pages/lowiska.html?lakeId='+lakeId);await ready(p);check('A: explicit fishery regulations never fall back to the selected trip lake');
+ const afterProfile=credits;
  await p.getByRole('link',{name:'Utwórz wyjazd z tego łowiska',exact:true}).click();await ready(p);await p.locator('#create-trip').click();await p.locator('#trip-name').fill('Fixture Expedition');await p.locator('#trip-lake').selectOption(lakeId);
  for(const box of await p.locator('#trip-edit [name=participants]').all())await box.uncheck();await p.locator('#trip-edit [name=participants][value=patryk]').check();await p.locator('#trip-edit [name=participants][value=maciek]').check();await p.locator('#trip-edit [type=submit]').click();await p.waitForTimeout(350);
- const trip=preview.DB.sqlite.prepare('SELECT id,lake_profile_version_id FROM trips WHERE name=?').get('Fixture Expedition');assert.ok(trip?.lake_profile_version_id);assert.equal(credits,before);check('B: new trip binds immutable existing profile without repeating research');
+ const trip=preview.DB.sqlite.prepare('SELECT id,lake_profile_version_id FROM trips WHERE name=?').get('Fixture Expedition');assert.ok(trip?.lake_profile_version_id);assert.equal(credits,afterProfile);check('B: new trip binds immutable existing profile without repeating research');
  await p.goto(preview.url+'/?trip='+trip.id);await ready(p);await p.evaluate(id=>Dream.rememberTrip(id),trip.id);await p.reload();await ready(p);assert.match(await p.locator('#dream-crew-photo').getAttribute('src'),/patryk-maciek\.avif/);check('B: selected trip participants choose the supplied duo image');
  await p.evaluate(async id=>Dream.api('/api/trips/'+id,{method:'PUT',body:JSON.stringify({participantIds:['patryk','maciek','paddy']})}),trip.id);await p.reload();await ready(p);assert.match(await p.locator('#dream-crew-photo').getAttribute('src'),/patryk-maciek-paddy\.avif/);check('B: adding Paddy switches to supplied trio image');
  const routes=await p.evaluate(()=>DreamShell.entries.map(([path])=>path==='/'?'/':'/pages/'+path+'.html'));
@@ -42,5 +48,5 @@ try{
  await p.goto(preview.url+'/');await ready(p);await waitForOfflineReady(p);await context.setOffline(true);await p.reload();await ready(p);assert.ok(await p.locator('#dream-trip-select').isVisible());await context.setOffline(false);check('PWA: shared shell and selected trip survive offline reload');
  assert.deepEqual(preview.DB.sqlite.prepare('PRAGMA foreign_key_check').all(),[]);check('D1: original rows retained, immutable trip profile, no FK violations');
  await context.close();
-}catch(error){results.push({name:'Browser regression',result:'FAIL',error:error.stack});process.exitCode=1;console.error(error);}
+}catch(error){if(lastPage)await lastPage.screenshot({path:dir+'/failure.png',fullPage:true}).catch(()=>{});results.push({name:'Browser regression',result:'FAIL',error:error.stack});process.exitCode=1;console.error(error);}
 finally{await writeFile(dir+'/report.json',JSON.stringify({results,fixtureCredits:credits,realProviderCalls:0,productionWrites:0},null,2));console.log(JSON.stringify(results,null,2));await browser.close();await preview.close();globalThis.fetch=originalFetch;}
