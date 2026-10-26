@@ -37,7 +37,11 @@ jobs:
           npm install --no-save --package-lock=false playwright@1.63.0
           npx playwright install chromium
       - name: Targeted operator regression only
-        run: node --test tests/schema32-readiness.test.mjs tests/schema32-transition.test.mjs tests/schema32-release-gates.test.mjs
+        run: |
+          node --check scripts/schema32-rehearse.mjs
+          node --check scripts/schema32-preview-recover.mjs
+          node --check scripts/schema32-retained-evidence.mjs
+          node --test tests/schema32-readiness.test.mjs tests/schema32-transition.test.mjs tests/schema32-release-gates.test.mjs
       - name: Real isolated full-fallback-recovery transitions and preserved sessions
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

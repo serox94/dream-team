@@ -18,7 +18,7 @@ export async function fetchReadiness(baseUrl,{variant,headers={},timeoutMs=4000,
  const opts={method:'GET',redirect:'manual',credentials:'omit',cache:'no-store',headers:{...headers,'cache-control':'no-cache'},signal:AbortSignal.any(signals)};
  const login=await fetcher(new URL('/login',baseUrl),opts);
  const result={status:login.status,build:safeSha(login.headers.get('x-dreamteam-build')),invalidBuild:Boolean(login.headers.get('x-dreamteam-build'))&&!safeSha(login.headers.get('x-dreamteam-build')),ray:safeRay(login.headers.get('cf-ray')),responseVersion:safeId(login.headers.get('x-dreamteam-version')),featureStatus:null,featureVariant:'unknown'};
- await login.body?.cancel();
+ if(login.status!==200){const reader=login.body?.getReader();let text='';if(reader)try{while(text.length<8192){const part=await reader.read();if(part.done)break;text+=new TextDecoder().decode(part.value).slice(0,8192-text.length);}}finally{await reader.cancel().catch(()=>{});}result.cfError=(text.match(/(?:error code:|error)\s*[:#]?\s*(\d{4,5})/i)||[])[1]||null;}else await login.body?.cancel();
  if(login.status===200){
   const feature=await fetcher(new URL('/api/lake-candidates',baseUrl),opts);result.featureStatus=feature.status;
   // Only the boolean discriminator is retained. Never log response bodies.
@@ -40,14 +40,15 @@ export async function waitForVersionReady({expected,previousVersionId,staleBuild
   try{
    const remainingForApi=maxMs-(now()-start);if(remainingForApi<=0)break;const apiSignal=AbortSignal.any([AbortSignal.timeout(remainingForApi),...(signal?[signal]:[])]);
    const state=await bounded(readControlPlane(apiSignal),apiSignal),versions=state.versions;
-   a.controlPlaneSource=state.source||'deployment';a.controlPlaneVersion=versions?.length===1?safeId(versions[0].version_id):null;
-   if(versions?.length!==1||versions[0].percentage!==100){a.reason='UNEXPECTED_TRAFFIC_SPLIT';terminal=true;}
+   a.controlPlaneSource=state.source||'deployment';a.workersDevEnabled=typeof state.routing?.enabled==='boolean'?state.routing.enabled:null;a.versionUrlsEnabled=typeof state.routing?.previews_enabled==='boolean'?state.routing.previews_enabled:null;a.controlPlaneVersion=versions?.length===1?safeId(versions[0].version_id):null;
+   if(state.routing?.enabled===false){a.reason='WORKERS_DEV_ROUTE_DISABLED';terminal=true;}
+   else if(versions?.length!==1||versions[0].percentage!==100){a.reason='UNEXPECTED_TRAFFIC_SPLIT';terminal=true;}
    else if(versions[0].version_id!==expected.id){if(versions[0].version_id===previousVersionId)a.reason='CONTROL_PLANE_PENDING';else{a.reason='UNEXPECTED_ACTIVE_VERSION';terminal=true;}}
    else if(state.identity.id!==expected.id||state.identity.build!==expected.build||state.identity.variant!==expected.variant){a.reason='VERSION_CONFIGURATION_MISMATCH';terminal=true;}
    else{
     const remaining=maxMs-(now()-start);if(remaining<=0)break;
     const p=await probe(AbortSignal.any([AbortSignal.timeout(remaining),...(signal?[signal]:[])]));
-    Object.assign(a,{status:p.status,receivedBuild:p.build,invalidBuild:p.invalidBuild||false,ray:p.ray,responseVersion:p.responseVersion,featureStatus:p.featureStatus,featureVariant:p.featureVariant,featureKind:p.featureKind,featureRay:p.featureRay,featureBuild:p.featureBuild});
+    Object.assign(a,{status:p.status,cfError:p.cfError||null,receivedBuild:p.build,invalidBuild:p.invalidBuild||false,ray:p.ray,responseVersion:p.responseVersion,featureStatus:p.featureStatus,featureVariant:p.featureVariant,featureKind:p.featureKind,featureRay:p.featureRay,featureBuild:p.featureBuild});
     if(p.responseVersion&&p.responseVersion!==expected.id){a.reason='RESPONSE_VERSION_MISMATCH';terminal=true;}
     else if(p.status===503&&p.build===expected.build){a.reason='APPLICATION_SCHEMA_OR_MAINTENANCE';terminal=true;}
     else if(p.status===404&&!p.build)a.reason='ROUTING_UNCONFIRMED';
