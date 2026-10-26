@@ -35,10 +35,22 @@
     await loadScript('app-plus.js');
     await loadScript('field-mode.js');
     if(document.getElementById('trip-score-charts'))await loadScript('dashboard-chart.js');
+    // Lake evidence is stored independently of legacy trip documents.
+    // Load it only on the rules page and never overwrite saved trip data.
+    const rulesPage=/\/pages\/regulamin(?:\.html)?$/.test(location.pathname);
+    const requestedLakeId=rulesPage?new URLSearchParams(location.search).get('lakeId'):null;
+    const selectedLake=requestedLakeId?model.lakes.find(l=>l.id===requestedLakeId):null;
+    let lakeResearch=null,lakeResearchError=null;
+    if(rulesPage){
+      try{
+        const id=selectedLake?.id||trip.lakeId;
+        if(id)lakeResearch=await Dream.api(`/api/lakes/${encodeURIComponent(id)}/profile`);
+      }catch(error){lakeResearchError=error.message;}
+    }
     await loadScript('trip-renderer-v2.js');
     const documents=await Dream.api(`/api/documents?tripId=${encodeURIComponent(trip.id)}`).then(d=>d.documents);
     window.DREAM_DOCUMENTS=documents;
-    await window.DreamTripRenderer.render({model,trip,documents});
+    await window.DreamTripRenderer.render({model,trip,documents,lakeResearch,lakeResearchError,selectedLake});
     window.initDreamPlus();
     if(document.getElementById('weather-current-temp')){if(!document.getElementById('pro2'))await loadScript('fixes.js');}
     if(document.getElementById('trip-manager')||document.getElementById('settings-management'))await loadScript('trip-manager.js');
