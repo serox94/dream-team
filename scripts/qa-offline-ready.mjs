@@ -10,7 +10,7 @@ export async function waitForOfflineReady(page,{timeout=60000,interval=100}={}){
    if(!(await caches.keys()).includes(cacheName))return {complete:false,missing:required.length,controlled:Boolean(navigator.serviceWorker.controller)};
    const cache=await caches.open(cacheName),complete=Boolean(await cache.match('/__ryby_shell_complete'));
    const present=await Promise.all(required.map(async path=>Boolean(await cache.match(path))));
-   return {complete,missing:present.filter(value=>!value).length,controlled:Boolean(navigator.serviceWorker.controller),resources:present.length};
+   return {complete,missing:present.filter(value=>!value).length,missingPaths:required.filter((path,index)=>!present[index]).slice(0,15),controlled:Boolean(navigator.serviceWorker.controller),resources:present.length};
   },{cacheName,required});
   if(state.complete&&state.controlled&&state.missing===0)return state;
   if(Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,interval));

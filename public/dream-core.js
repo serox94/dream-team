@@ -20,7 +20,7 @@
   }
   const authorizedFetch=(path,options,signal)=>fetch(path,{cache:'no-store',credentials:'same-origin',...options,headers:{'content-type':'application/json','accept-language':window.DreamLanguage?.get()||document.documentElement.lang||'pl',...options.headers},signal});
   const readCacheKey='ryby_read_cache_v1',authMarkerKey='ryby_last_authorized_v1',maxAge=7*24*60*60*1000;
-  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings|content-translations|water-measurements|weather|lakes\/[a-zA-Z0-9_-]+\/profile)(?:\?|$)/;
+  const offlinePaths=/^\/api\/(bootstrap|catches|spots|checklist|checklist-categories|documents|notes|settings|content-translations|water-measurements|weather|lakes\/[a-zA-Z0-9_-]+\/(?:profile|manager))(?:\?|$)/;
   const offlineEntries=new Map(),queueKey='dreamteam.offline.queue.v1',accountKey='dreamteam.account.v1';
   const accountId=()=>window.DREAM_MODEL?.currentUser?.id||localStorage.getItem(accountKey)||null;
   let synchronizing=false,syncRetryTimer=null,syncRetryDelay=1000;
@@ -254,42 +254,7 @@
     if(!box){box=document.createElement('div');box.id='app-notice';box.setAttribute('role','status');document.querySelector('main')?.prepend(box);}
     box.className='weather-note '+(error?'status-danger':'status-info');box.textContent=window.DreamI18n?.t(message)||message;box.hidden=!message;
   }
-  function renderHeader(){
-    const model=window.DREAM_MODEL,trip=window.DREAM_TRIP;
-    const page=location.pathname.split('/').pop().replace(/\.html$/,'')||'index';
-    document.body.dataset.page=page==='index'?'dashboard':page;
-    const menu=document.getElementById('main-nav');
-    if(menu&&!menu.querySelector('[data-knowledge-link]')){
-      const before=[...menu.querySelectorAll('a')].find(a=>/porady\.html/.test(a.getAttribute('href')));
-      for(const [path,label] of [['encyklopedia.html','Encyklopedia'],['sonar.html','Deeper / Sonar'],['ustawienia.html','Ustawienia']]){
-        const link=document.createElement('a');link.href=`/pages/${path}`;link.textContent=label;link.dataset.knowledgeLink='true';
-        menu.insertBefore(link,before||null);
-      }
-    }
-    if(menu&&!menu.querySelector('[data-language-shortcut]')){const link=document.createElement('a');link.href='/pages/ustawienia.html#account-language-row';link.textContent='PL / EN';link.dataset.languageShortcut='';menu.prepend(link);}
-    document.querySelector('.header-top h1').textContent='DreamTeam';
-  document.querySelector('.subtitle').textContent=trip.lakeProfile?.name||trip.lake;
-    document.getElementById('dream-trip-select')?.remove();
-    const select=document.createElement('select');select.id='dream-trip-select';select.className='dream-trip-select';select.setAttribute('aria-label','Wybierz wyjazd');
-    for(const archived of [false,true]){
-      const group=document.createElement('optgroup');group.label=archived?'Archiwum':'Wyjazdy';
-      for(const t of model.trips.filter(t=>(t.status==='archived')===archived)){
-        const o=document.createElement('option');o.value=t.id;o.dataset.userContent='';
-        o.textContent=`${t.isActive?'★ ':''}${t.name} · ${t.start?Dream.dateInput(t.start,t.lakeProfile?.facts?.timeZone||'Europe/Paris').slice(0,10):t.year+' · '+(window.DreamI18n?.t('bez terminu')||'bez terminu')}${archived?' · '+(window.DreamI18n?.t('archiwum')||'archiwum'):''}`;
-        o.selected=t.id===trip.id;group.append(o);
-      }
-      if(group.children.length)select.append(group);
-    }
-    select.addEventListener('change',()=>{Dream.rememberTrip(select.value);location.reload();});
-    document.querySelector('.header-top > div:first-child').append(select);
-    document.querySelector('.trip-box').innerHTML=`<div><strong>Wyjazd:</strong> ${Dream.esc(Dream.format(trip.start))}</div><div><strong>Powrót:</strong> ${Dream.esc(Dream.format(trip.end))}</div><div id="countdown"></div><small>${Dream.esc(Dream.zone())} · ${trip.status==='archived'?'Archiwum':trip.isActive?'★ Aktywny wyjazd':'Podgląd wyjazdu'}</small>`;
-    if(!document.querySelector('.bottom-nav')){
-      const nav=document.createElement('nav');nav.className='bottom-nav';nav.setAttribute('aria-label','Szybka nawigacja');
-      nav.innerHTML=`<a href="/" data-page="dashboard"><span class="nav-icon" aria-hidden="true">⌂</span>Start</a><a href="/pages/checklisty.html" data-page="checklisty"><span class="nav-icon" aria-hidden="true">✓</span>Lista</a><a class="nav-add-catch" href="/pages/polowy.html#catch-form" data-page="polowy"><span class="nav-icon" aria-hidden="true">＋</span>Połów</a><a href="/pages/pogoda.html" data-page="pogoda"><span class="nav-icon" aria-hidden="true">☀</span>Pogoda</a><button type="button" id="bottom-more" aria-controls="main-nav" aria-expanded="false"><span class="nav-icon" aria-hidden="true">☰</span>Więcej</button>`;
-      document.body.append(nav);
-    }
-    document.querySelectorAll('.bottom-nav a').forEach(a=>{const active=a.dataset.page===document.body.dataset.page;a.classList.toggle('active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
-  }
+  function renderHeader(){ window.DreamShell.render(); }
   async function refreshModel(){
     const model=await api('/api/bootstrap');
     window.DREAM_MODEL=model;window.DREAM_TRIP=model.trips.find(t=>t.id===window.DREAM_VIEWED_TRIP_ID)||window.DREAM_TRIP;

@@ -1,3 +1,4 @@
+import {profileSources,prepareLakeProfile,drainLakeProfiles,lakeManagerProfile} from './lake-manager.js';
 import {processTranslations} from './automatic-translations.js';
 import {waterMeasurements} from './water-measurements.js';
 import {googlePhotosUrl} from './validation.js';
@@ -11,7 +12,7 @@ import { weatherForTrip } from './weather.js';
 import {handleTripAdvice} from './trip-advice.js';
 import {handleDeeperMedia} from './deeper-media.js';
 import {handleDeeperAI} from './deeper-ai.js';
-import {checklistTemplates,applyChecklistTemplates} from './checklist-templates.js';
+import {checklistTemplates,applyChecklistTemplates,checklistTemplateStatements} from './checklist-templates.js';
 import {authConfigured,session,login,logout,loginAssets,individualAccounts,accountUsername,accountList,changeSharedPassword} from './auth.js';
 import {tavilyUsage} from './research-provider-status.js';
 import {handleLakeResearch,handleLakeCandidates,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
@@ -46,15 +47,15 @@ async function bootstrap(env) {
   if(individualAccounts(env)){const accounts=await accountList(env);for(const a of anglers)a.login=accounts.find(u=>u.anglerId===a.id&&u.active&&!u.protected)?.username||null;anglers=anglers.filter(a=>!accounts.some(u=>u.protected&&u.anglerId===a.id));}
   const rawLakes = await all(env,'SELECT id,name,country,latitude,longitude,image_url imageUrl,facts_json factsJson,source_url sourceUrl FROM lakes ORDER BY name');
   const lakes = rawLakes.map(({factsJson,...l})=>({...l,facts:parseFacts(factsJson)}));
-  const rawTrips = await all(env,`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at start,end_at end,peg,google_photos_url googlePhotosUrl,latitude,longitude,lake_image lakeImage,facts_json factsJson,is_active isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`);
+  const rawTrips = await all(env,`SELECT id,year,name,lake,lake_id lakeId,country,status,start_at start,end_at end,peg,google_photos_url googlePhotosUrl,latitude,longitude,lake_image lakeImage,facts_json factsJson,lake_snapshot_json lakeSnapshotJson,is_active isActive FROM trips ORDER BY is_active DESC,COALESCE(start_at,'9999') DESC`);
   const participants = await all(env,'SELECT trip_id tripId,angler_id anglerId FROM trip_participants');
   const anglerCounts=await all(env,'SELECT angler_id anglerId,COUNT(*) fishCount FROM catches WHERE deleted_at IS NULL GROUP BY angler_id');
   for(const angler of anglers){angler.active=Boolean(angler.active);angler.tripCount=participants.filter(p=>p.anglerId===angler.id).length;angler.fishCount=anglerCounts.find(c=>c.anglerId===angler.id)?.fishCount||0;}
   const stats = await all(env,`SELECT trip_id tripId,COUNT(*) fishCount,SUM(weight_kg) totalWeightKg,MAX(weight_kg) biggestFishKg FROM catches WHERE deleted_at IS NULL GROUP BY trip_id`);
   const leaders = await all(env,`SELECT c.trip_id tripId,c.weight_kg weightKg,a.name anglerName FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.deleted_at IS NULL ORDER BY c.weight_kg DESC,c.caught_at,c.id`);
   const topSpots = await all(env,`SELECT c.trip_id tripId,COALESCE(s.name,c.spot) spot,COUNT(*) cnt FROM catches c LEFT JOIN spots s ON s.id=c.spot_id AND s.trip_id=c.trip_id WHERE c.deleted_at IS NULL AND TRIM(COALESCE(s.name,c.spot,'')) NOT IN ('','Brak') GROUP BY c.trip_id,COALESCE(s.name,c.spot) ORDER BY cnt DESC,spot`);
-  const trips = rawTrips.map(({factsJson,...t})=>({...t,isActive:Boolean(t.isActive),facts:parseFacts(factsJson),
-    lakeProfile:lakes.find(l=>l.id===t.lakeId)||null,
+  const trips = rawTrips.map(({factsJson,lakeSnapshotJson,...t})=>({...t,isActive:Boolean(t.isActive),facts:parseFacts(factsJson),
+    lakeProfile:lakeSnapshotJson?parseFacts(lakeSnapshotJson):lakes.find(l=>l.id===t.lakeId)||null,
     participants:anglers.filter(a=>participants.some(p=>p.tripId===t.id&&p.anglerId===a.id)),
     stats:{fishCount:0,totalWeightKg:0,biggestFishKg:0,...stats.find(s=>s.tripId===t.id),biggestFishAngler:leaders.find(s=>s.tripId===t.id)?.anglerName||null,bestSpot:topSpots.find(s=>s.tripId===t.id)?.spot||null}
   }));
@@ -107,22 +108,18 @@ async function saveTrip(request,env,id,ctx) {
     await tripExists(env,x.copyChecklistFrom);
     statements.push(stmt(env,`INSERT INTO checklist_items(trip_id,category,label,assigned_to,packed,quantity,notes,sort_order) SELECT ?,category,label,assigned_to,0,quantity,notes,sort_order FROM checklist_items WHERE trip_id=? AND deleted_at IS NULL`,id,x.copyChecklistFrom));
   }
+  if(x.templateIds?.length){if(Object.keys(current).length)fail('Szablony wybierz przy tworzeniu wyjazdu.');statements.push(...await checklistTemplateStatements(env,id,x.templateIds));}
+  if(!Object.keys(current).length){const version=await one(env,'SELECT id FROM lake_profile_versions WHERE lake_id=? ORDER BY created_at DESC,rowid DESC LIMIT 1',lakeId);statements.push(stmt(env,'UPDATE trips SET lake_snapshot_json=?,lake_profile_version_id=? WHERE id=?',JSON.stringify({id:lakeId,name:lake.name,country:lake.country,latitude:lake.latitude,longitude:lake.longitude,imageUrl:lake.image_url,sourceUrl:lake.source_url,facts:parseFacts(lake.facts_json)}),version?.id||null,id));}
   await env.DB.batch(statements);
-  if(!Object.keys(current).length&&provider(env)&&x.researchNow!==true){
-    const setting=await one(env,"SELECT value FROM app_settings WHERE key='research_auto'");
-    const recent=await one(env,"SELECT completed_at FROM lake_research_runs WHERE lake_id=? AND status='completed' ORDER BY completed_at DESC LIMIT 1",lakeId);
-    const regulation=await one(env,"SELECT url FROM lake_sources WHERE lake_id=? AND source_type='regulation' ORDER BY checked_at DESC LIMIT 1",lakeId);
-    const source=regulation?.url||lake.source_url;
-    if(source&&setting?.value!=='off'&&(!recent||Date.now()-Date.parse(recent.completed_at)>30*86400000)){
-      ctx?.waitUntil(handleLakeResearch(new Request('https://internal/api/research',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url:source,title:lake.name,sourceType:regulation?'regulation':'official'})}),env,lakeId,'research').catch(error=>console.warn('New trip research deferred:',error.message)));
-    }
-  }
   return json({ok:true,id},Object.keys(current).length?200:201);
 }
 async function saveLake(request,env,id,ctx) {
   const x=await body(request),c=id?await one(env,'SELECT * FROM lakes WHERE id=?',id):{};
   if(!c) fail('Nie znaleziono łowiska.',404);
+  const submittedSources=has(x,'sources')?profileSources(x.sources):null;
+  if(submittedSources&&!submittedSources.length)fail('Wybierz właściwe łowisko lub dodaj źródło.');
   const name=text(pick(x,'name',c.name),'Nazwa łowiska',150,true),country=text(pick(x,'country',c.country),'Kraj',100);
+  if(submittedSources&&(!country||country.length<2))fail('Podaj nazwę i kraj łowiska.');
   if(!id){const duplicate=await one(env,"SELECT id FROM lakes WHERE lower(replace(replace(name,'Jezioro ',''),'Łowisko ',''))=lower(replace(replace(?,'Jezioro ',''),'Łowisko ','')) AND lower(COALESCE(country,''))=lower(COALESCE(?,'')) LIMIT 1",name,country);if(duplicate)fail('To łowisko już istnieje. Wybierz jego profil z listy.',409);}
   const lat=number(pick(x,'latitude',c.latitude),'Szerokość GPS',-90,90),lon=number(pick(x,'longitude',c.longitude),'Długość GPS',-180,180);
   if((lat===null)!==(lon===null)) fail('Podaj obie współrzędne GPS albo pozostaw obie puste.');
@@ -131,11 +128,12 @@ async function saveLake(request,env,id,ctx) {
   if(id) await run(env,`UPDATE lakes SET name=?,country=?,latitude=?,longitude=?,image_url=?,facts_json=?,source_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,name,country,lat,lon,image,JSON.stringify(f),source,id);
   else {id=crypto.randomUUID();await run(env,`INSERT INTO lakes(id,name,country,latitude,longitude,image_url,facts_json,source_url) VALUES(?,?,?,?,?,?,?,?)`,id,name,country,lat,lon,image,JSON.stringify(f),source);}
   // Confirmed URL save starts a bounded evidence pass; UI can resume its persisted job.
-  if(source&&source!==c.source_url&&x.researchConfirmed===true){
+  let profileError=null;if(submittedSources?.length)try{await prepareLakeProfile(env,id,submittedSources,ctx);}catch(error){profileError=error instanceof InputError?error.message:'Profil zapisano. Uruchom przygotowanie ponownie.';}
+  if(!submittedSources&&source&&source!==c.source_url&&x.researchConfirmed===true){
     const setting=await one(env,"SELECT value FROM app_settings WHERE key='research_auto'");
     if(setting?.value!=='off')ctx?.waitUntil(handleLakeResearch(new Request('https://internal/api/research',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url:source})}),env,id,'research').catch(()=>{}));
   }
-  return json({ok:true,id},c.id?200:201);
+  return json({ok:true,id,...(profileError?{profileError}: {})},c.id?200:201);
 }
 // Delete a lake only when it is not used by any trip (including archived trips).
 // Its source/research records are lake-owned; never cascade into trip history.
@@ -153,6 +151,7 @@ async function deleteLake(env,id) {
       stmt(env,'DELETE FROM lake_facts WHERE lake_id=?',id),
       stmt(env,'DELETE FROM lake_research_runs WHERE lake_id=?',id),
       stmt(env,'DELETE FROM lake_sources WHERE lake_id=?',id),
+      stmt(env,'DELETE FROM lake_profile_versions WHERE lake_id=?',id),
       stmt(env,'DELETE FROM lakes WHERE id=? AND NOT EXISTS(SELECT 1 FROM trips WHERE lake_id=?)',id,id)
     ]);
   }catch(error){
@@ -370,7 +369,7 @@ async function removeOrRestore(request,env,kind,id,restore){
 }
 async function exportData(env){
   const data={format:'dream-team-backup-v1',exportedAt:new Date().toISOString(),tables:{}};
-  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','research_pages','research_observations','research_jobs','research_locations','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','content_translations','content_sources','translation_jobs','translation_cache','water_measurements','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
+  for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','research_pages','research_observations','research_jobs','research_locations','lake_profile_versions','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','content_translations','content_sources','translation_jobs','translation_cache','water_measurements','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
   return json(data,200,{'content-disposition':`attachment; filename="dream-team-backup-${new Date().toISOString().slice(0,10)}.json"`});
 }
 async function privateFetch(request,env,ctx,active){
@@ -413,6 +412,10 @@ async function privateFetch(request,env,ctx,active){
       }
       if(path==='/api/lake-candidates'&&method==='POST')return await handleLakeCandidates(request,env);
       if(path==='/api/settings'&&['GET','PATCH'].includes(method))return await settings(request,env);
+      const progressMatch=path.match(/^\/api\/lakes\/([^/]+)\/profile-progress$/);
+      if(progressMatch&&method==='GET')return json({ok:true,job:await one(env,'SELECT id,status,started_at,completed_at,message FROM research_jobs WHERE lake_id=? ORDER BY started_at DESC,rowid DESC LIMIT 1',decodeURIComponent(progressMatch[1]))});
+      const managerMatch=path.match(/^\/api\/lakes\/([^/]+)\/(manager|prepare-profile)$/);
+      if(managerMatch){const lakeId=decodeURIComponent(managerMatch[1]);if(method==='GET'&&managerMatch[2]==='manager')return json(await lakeManagerProfile(env,lakeId,new URL(request.url).searchParams.get('tripId')));if(method==='POST'&&managerMatch[2]==='prepare-profile'){const x=await body(request);return json({ok:true,job:await prepareLakeProfile(env,lakeId,x.sources,ctx)},202);}fail('Nieprawidłowa metoda.',405);}
       let researchMatch=path.match(/^\/api\/lakes\/([^/]+)\/(profile|candidates|research|facts|sources|gps-propose|gps-approve)$/);
       if(researchMatch)return await handleLakeResearch(request,env,decodeURIComponent(researchMatch[1]),researchMatch[2]);
       researchMatch=path.match(/^\/api\/trips\/([^/]+)\/suggestions$/);
@@ -481,7 +484,7 @@ async function handleRequest(request,env,ctx){
       const asset=await env.ASSETS.fetch(new Request(new URL(assetPath,url),request));
       const result=protectedResponse(asset);
       result.headers.set('x-dreamteam-build',env.APP_BUILD||'local');result.headers.set('x-dreamteam-auth-mode',individualAccounts(env)?'individual':'legacy');if(env.APP_RELEASE_ID)result.headers.set('x-dreamteam-release',env.APP_RELEASE_ID);
-      if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+      if(path==='/login'||path==='/login.html')result.headers.set('content-security-policy',"default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
       return result;
     }
     if(!authConfigured(env))return json({ok:false,error:'Logowanie nie jest jeszcze skonfigurowane.'},503);
@@ -511,5 +514,5 @@ async function handleRequest(request,env,ctx){
 }
 export default {
   async fetch(request,env,ctx){return localizeApiResponse(await handleRequest(request,env,ctx),request);},
-  async scheduled(_event,env,ctx){try{await ensureSchema(env);}catch{console.warn('Scheduled work blocked by schema/maintenance guard.');return;}ctx.waitUntil(scheduledResearch(env));}
+  async scheduled(_event,env,ctx){try{await ensureSchema(env);}catch{console.warn('Scheduled work blocked by schema/maintenance guard.');return;}ctx.waitUntil(_event.cron==='*/5 * * * *'?drainLakeProfiles(env):scheduledResearch(env).then(()=>drainLakeProfiles(env)));}
 };

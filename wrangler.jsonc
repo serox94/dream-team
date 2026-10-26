@@ -5,7 +5,7 @@
   "secrets": { "required": ["TAVILY_API_KEY"] },
   "compatibility_date": "2026-09-03",
   "vars": { "AI_FREE_ONLY": "false", "INDIVIDUAL_ACCOUNTS": "true", "APP_ENV": "production", "APP_BUILD": "release-manifest-required" },
-  "triggers": { "crons": ["0 6 * * *"] },
+  "triggers": { "crons": ["0 6 * * *", "*/5 * * * *"] },
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",

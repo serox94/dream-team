@@ -17,7 +17,7 @@ const ruleGear={cradle:'Kołyska / mata do odhaczania',landing_net:'Duży podbie
 
 export function safeSourceUrl(value){
   let url;try{url=new URL(value);}catch{fail('Podaj pełny adres HTTPS źródła.');}
-  if(url.protocol!=='https:'||url.username||url.password||url.port||url.href.length>2048||!url.hostname.includes('.')||/^(localhost|.*\.local|.*\.internal)$/i.test(url.hostname)||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(url.hostname)||url.hostname.includes(':'))fail('Podaj publiczny adres HTTPS źródła.');
+  if(url.protocol!=='https:'||url.username||url.password||url.port||url.href.length>2048||!url.hostname.includes('.')||/^(localhost|.*\.local|.*\.internal|.*\.localhost|.*\.home\.arpa|.*\.onion)$/i.test(url.hostname)||/^(?:\d{1,3}\.){3}\d{1,3}$/.test(url.hostname)||url.hostname.includes(':'))fail('Podaj publiczny adres HTTPS źródła.');
   url.hash='';return url.href;
 }
 const fieldName=value=>{if(!/^[a-z][a-z_]{1,40}$/.test(value||''))fail('Nieprawidłowe pole faktu.');return value;};
@@ -58,7 +58,7 @@ export function suggestions(facts){
 export function provider(env){
   if(!env.TAVILY_API_KEY)return null;
   const call=async(path,payload)=>{
-    if(env.RESEARCH_PREVIEW==='true'||env.RESEARCH_FREE_ONLY==='true'){const usage=await tavilyUsage(env);if(!usage.freeOnlyConfirmed||usage.available<2)fail('Nie potwierdzono dostępnego bezpłatnego limitu Tavily. Wywołanie zatrzymane.',429);}
+    {const usage=await tavilyUsage(env);if(!usage.freeOnlyConfirmed||usage.available<2)fail('Nie potwierdzono dostępnego bezpłatnego limitu Tavily. Wywołanie zatrzymane.',429);}
     const response=await fetch('https://api.tavily.com/'+path,{method:'POST',headers:{authorization:'Bearer '+env.TAVILY_API_KEY,'content-type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(14000)});
     if(response.status===429||response.status===402)fail(limitMessage,429);
     if(!response.ok)throw new Error('Dostawca wyszukiwania źródeł jest chwilowo niedostępny.');
@@ -131,12 +131,13 @@ export async function handleLakeCandidates(request,env){
   const web=provider(env);
   if(!web)return reply({ok:true,candidates:[],providerConfigured:false,message:'AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Możesz utworzyć wyjazd i uzupełnić źródło później.'});
   const key=(name+'|'+country).toLocaleLowerCase('pl').normalize('NFKC'),month=new Date().toISOString().slice(0,7),since=new Date(Date.now()-10*60*1000).toISOString(),id=crypto.randomUUID();
+  const cacheKey='research.candidates.'+key,cached=await one(env.DB,'SELECT value FROM app_settings WHERE key=?',cacheKey);if(cached){try{const c=JSON.parse(cached.value);if(Date.now()-Date.parse(c.checkedAt)<14*86400000)return reply({ok:true,candidates:c.candidates,providerConfigured:true,reused:true});}catch{}}
   const reserved=await run(env.DB,`INSERT INTO lake_candidate_searches(id,query_key,status,credits_used) SELECT ?,?,'reserved',1 WHERE
     (SELECT COALESCE(SUM(credits_used),0) FROM lake_candidate_searches WHERE substr(started_at,1,7)=?) < 100
     AND (SELECT COALESCE(SUM(credits_used),0) FROM lake_candidate_searches WHERE substr(started_at,1,7)=?) + (SELECT COALESCE(SUM(credits_used),0) FROM lake_research_runs WHERE substr(started_at,1,7)=?) < 900
     AND NOT EXISTS(SELECT 1 FROM lake_candidate_searches WHERE query_key=? AND datetime(started_at)>=datetime(?))`,id,key,month,month,month,key,since);
   if(!reserved.meta.changes)fail(limitMessage,429);
-  try{const rows=await all(env.DB,"SELECT key,value FROM app_settings WHERE key IN ('research_languages','research_official_first')"),values=Object.fromEntries(rows.map(r=>[r.key,r.value]));const candidates=await web.candidates(name,country,{languages:values.research_languages,official:values.research_official_first});await run(env.DB,"UPDATE lake_candidate_searches SET status='completed',completed_at=CURRENT_TIMESTAMP WHERE id=?",id);return reply({ok:true,candidates,providerConfigured:true});}
+  try{const rows=await all(env.DB,"SELECT key,value FROM app_settings WHERE key IN ('research_languages','research_official_first')"),values=Object.fromEntries(rows.map(r=>[r.key,r.value]));const candidates=await web.candidates(name,country,{languages:values.research_languages,official:values.research_official_first});await run(env.DB,"UPDATE lake_candidate_searches SET status='completed',completed_at=CURRENT_TIMESTAMP WHERE id=?",id);await run(env.DB,'INSERT OR REPLACE INTO app_settings(key,value) VALUES(?,?)',cacheKey,JSON.stringify({checkedAt:new Date().toISOString(),candidates}));return reply({ok:true,candidates,providerConfigured:true});}
   catch(error){await run(env.DB,"UPDATE lake_candidate_searches SET status='failed',completed_at=CURRENT_TIMESTAMP WHERE id=?",id);throw error;}
 }
 export async function handleLakeResearch(request,env,lakeId,action){

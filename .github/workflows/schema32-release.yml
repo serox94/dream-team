@@ -1,0 +1,61 @@
+name: Approved integrated schema32 release
+on:
+  workflow_dispatch:
+    inputs:
+      candidate:
+        description: Exact reviewed candidate SHA (tree must equal main)
+        required: true
+      verified_manager_run:
+        description: Successful Integrated Lake Manager run on that exact SHA
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
+jobs:
+  official-release:
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+      RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+      RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+      DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+      REQUIRE_PRODUCTION_IDLE: 'true'
+      CONFIRMED_RELEASE: ${{ inputs.candidate }}
+      VERIFIED_MANAGER_RUN: ${{ inputs.verified_manager_run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Build and install browser before any maintenance barrier
+        run: |
+          node scripts/build.mjs
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install chromium
+      - name: Fresh production schema31 and D1 headroom gate
+        run: node scripts/lake-manager-preflight.mjs
+      - name: Fresh recovery point, actual D1/R2 restore, schema32 drill and both private canaries
+        run: node scripts/schema32-release.mjs prepare
+      - name: One activation with real production browser checks and compatible recovery
+        run: node scripts/schema32-release.mjs promote
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: schema32-release-safe-evidence
+          path: |
+            schema32-status/
+            rc-status/
+          retention-days: 14

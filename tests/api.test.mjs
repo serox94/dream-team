@@ -30,7 +30,7 @@ test('all migrations, bootstrap, participants, original PB and legacy content su
  const s=setup(),b=(await s.req('bootstrap')).data;
  assert.equal(b.trips.length,4);assert.equal(b.lakes.length,3);assert.ok(b.trips.every(t=>t.participants.length===2));assert.ok(b.anglers.every(a=>a.pbKg===13));
  assert.equal(b.lakes.find(l=>l.id==='plaine2').facts.contentPack,'plaine2');
- assert.equal((await s.req('health')).data.schemaVersion,'31');s.DB.close();
+ assert.equal((await s.req('health')).data.schemaVersion,'32');s.DB.close();
 });
 test('create/edit/clear a catch; trip isolation; soft delete and restore; PB recalculates',async()=>{
  const s=setup(),r=await s.req('catches','POST',catchData);assert.equal(r.status,201);const id=r.data.id;
@@ -139,14 +139,14 @@ test('category migration, rename, order and safe move retain packed rows',async(
 });
 test('settings persist allowed preferences without accepting secrets',async()=>{
  const s=setup();try{
-  const original=await s.req('settings');assert.equal(original.data.schemaVersion,31);
+  const original=await s.req('settings');assert.equal(original.data.schemaVersion,32);
   assert.equal((await s.req('settings','PATCH',{research_auto:'off',research_languages:'PL,EN,FR,DE,NL',trip_time_zone:'Europe/Warsaw'})).status,200);
   const current=(await s.req('settings')).data.settings;assert.equal(current.research_auto,'off');assert.equal(current.research_languages,'PL,EN,FR,DE,NL');
   assert.equal((await s.req('settings','PATCH',{api_key:'unsafe'})).status,400);
   assert.equal((await s.req('settings','PATCH',{research_languages:'PL,XX'})).status,400);
  }finally{s.DB.close();}
 });
-test('new-trip candidate search needs a provider, keeps lake creation separate and enforces cooldown',async()=>{
+test('candidate search verifies free allowance, keeps lake creation separate and reuses cached candidates',async()=>{
  const s=setup(),before=s.DB.sqlite.prepare('SELECT COUNT(*) n FROM lakes').get().n;
  try{
   const pending=await s.req('lake-candidates','POST',{name:'Kamień',country:'Polska'});
@@ -156,12 +156,12 @@ test('new-trip candidate search needs a provider, keeps lake creation separate a
   const originalFetch=globalThis.fetch;let calls=0;
   try{
    s.env.TAVILY_API_KEY='fixture-only';
-   globalThis.fetch=async(_url,options)=>{calls++;assert.equal(options.headers.authorization,'Bearer fixture-only');return Response.json({results:[{title:'Kamień A',url:'https://example.org/lake-a',content:'region: Mazowieckie'},{title:'Kamień B',url:'https://example.org/lake-b',content:'region: Dolnośląskie'}]});};
+   globalThis.fetch=async(_url,options)=>{if(_url.endsWith('/usage'))return Response.json({account:{current_plan:'Researcher',plan_limit:1000,plan_usage:2,paygo_usage:0,paygo_limit:0},key:{limit:100,usage:2}});calls++;assert.equal(options.headers.authorization,'Bearer fixture-only');return Response.json({results:[{title:'Kamień A',url:'https://example.org/lake-a',content:'region: Mazowieckie'},{title:'Kamień B',url:'https://example.org/lake-b',content:'region: Dolnośląskie'}]});};
    const found=await s.req('lake-candidates','POST',{name:'Kamień',country:'Polska'});
    assert.equal(found.status,200);assert.equal(found.data.candidates.length,2);assert.equal(calls,1);
    assert.equal(s.DB.sqlite.prepare('SELECT COUNT(*) n FROM lakes').get().n,before,'candidate search cannot silently create a lake');
-   assert.equal((await s.req('lake-candidates','POST',{name:'Kamień',country:'Polska'})).status,429);
-   assert.equal(calls,1,'cooldown stops another billable provider request');
+   const cached=await s.req('lake-candidates','POST',{name:'Kamień',country:'Polska'});assert.equal(cached.status,200);assert.equal(cached.data.reused,true);
+   assert.equal(calls,1,'cache stops another billable provider request');
   }finally{globalThis.fetch=originalFetch;}
  }finally{s.DB.close();}
 });

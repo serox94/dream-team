@@ -195,6 +195,7 @@ async function getSpotNameById(spotId) {
 }
 
 function updateCountdown() {
+  if(window.DreamShell){window.DreamShell.updateCountdown();return;}
   const countdownEl = $("countdown");
   if (!countdownEl) return;
   const english=window.DreamI18n?.lang==='en';

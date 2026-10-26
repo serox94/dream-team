@@ -1,0 +1,255 @@
+{
+  "run": 40399303677,
+  "head": "a0ab47952d2a5b9e8e08b0ddb6be6965e021c935",
+  "applicationCommit": "a1c58a91d741da1975baa9003d927e8915e19445",
+  "report": {
+    "result": "BLOCKED",
+    "tests": [
+      {
+        "name": "full scheduled handler runs against preserved schema32 without a provider call",
+        "result": "PASS"
+      },
+      {
+        "name": "three pre-existing full-version sessions retain identity on actual fallback activation",
+        "result": "PASS"
+      },
+      {
+        "name": "previous released PWA warms its original cache before the upgrade",
+        "result": "PASS"
+      },
+      {
+        "name": "injected failure restores the real schema32 fallback once, never schema31",
+        "result": "PASS"
+      },
+      {
+        "name": "repeated isolated rehearsal completes full activation with original sessions",
+        "result": "PASS"
+      }
+    ],
+    "productionWrites": 0,
+    "productionD1Queries": 0,
+    "migrations": 0,
+    "maintenanceChanges": 0,
+    "providerCalls": 0,
+    "rowsRead": 908,
+    "routingComparison": {
+      "sameUpstream": true,
+      "observations": [
+        {
+          "flagEnabled": false,
+          "gatewayMarker": "PASS",
+          "status": 404,
+          "build": null,
+          "invalidBuild": false,
+          "ray": "a50c57b44cd695c3-MEM",
+          "responseVersion": null,
+          "featureStatus": null,
+          "featureVariant": "unknown",
+          "cfError": null
+        },
+        {
+          "flagEnabled": true,
+          "gatewayMarker": "PASS",
+          "status": 200,
+          "build": "a1c58a91d741da1975baa9003d927e8915e19445",
+          "invalidBuild": false,
+          "ray": "a50c57c959d93207-MEM",
+          "responseVersion": null,
+          "featureStatus": 503,
+          "featureVariant": "schema32-fallback",
+          "featureKind": "JSON",
+          "featureRay": "a50c57cb38fc6186-MEM",
+          "featureBuild": null
+        }
+      ],
+      "publicVersionUnchanged": true,
+      "flagRootCauseConfirmed": true
+    },
+    "recoveryDrill": {
+      "result": "BLOCKED",
+      "fullActivationAttempts": 1,
+      "schema": 32,
+      "readiness": {
+        "result": "PASS",
+        "expected": {
+          "id": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+          "build": "a1c58a91d741da1975baa9003d927e8915e19445",
+          "variant": "full"
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "expectedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "expectedVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "expectedVariant": "full",
+            "status": null,
+            "receivedBuild": null,
+            "ray": null,
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "workersDevEnabled": true,
+            "versionUrlsEnabled": true,
+            "controlPlaneVersion": "69019453-d3ba-4b8f-9cce-f0fe3c843813",
+            "reason": "CONTROL_PLANE_PENDING"
+          },
+          {
+            "attempt": 2,
+            "expectedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "expectedVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "expectedVariant": "full",
+            "status": null,
+            "receivedBuild": null,
+            "ray": null,
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "workersDevEnabled": true,
+            "versionUrlsEnabled": true,
+            "controlPlaneVersion": "69019453-d3ba-4b8f-9cce-f0fe3c843813",
+            "reason": "CONTROL_PLANE_PENDING"
+          },
+          {
+            "attempt": 3,
+            "expectedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "expectedVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "ray": "a50c58458edb3207-MEM",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "workersDevEnabled": true,
+            "versionUrlsEnabled": true,
+            "controlPlaneVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "cfError": null,
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a50c58472fb60def-MEM",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          },
+          {
+            "attempt": 4,
+            "expectedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "expectedVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "ray": "a50c58576fc795c3-MEM",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "workersDevEnabled": true,
+            "versionUrlsEnabled": true,
+            "controlPlaneVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "cfError": null,
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a50c58584deaa6b4-MEM",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          }
+        ],
+        "elapsedMs": 6092,
+        "transition": "RECOVERED_AFTER_OBSERVED_TRANSIENT",
+        "propagationConfirmed": false
+      },
+      "error": "INJECTED_POST_ACTIVATION_FAILURE",
+      "recovery": "schema32-fallback",
+      "maintenance": "OFF"
+    },
+    "fullActivation": {
+      "result": "PASS",
+      "fullActivationAttempts": 1,
+      "schema": 32,
+      "readiness": {
+        "result": "PASS",
+        "expected": {
+          "id": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+          "build": "a1c58a91d741da1975baa9003d927e8915e19445",
+          "variant": "full"
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "expectedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "expectedVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "ray": "a50c58a67a1b0deb-MEM",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "workersDevEnabled": true,
+            "versionUrlsEnabled": true,
+            "controlPlaneVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "cfError": null,
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a50c58a808bb0def-MEM",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          },
+          {
+            "attempt": 2,
+            "expectedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "expectedVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "expectedVariant": "full",
+            "status": 200,
+            "receivedBuild": "a1c58a91d741da1975baa9003d927e8915e19445",
+            "ray": "a50c58af0a482b43-MEM",
+            "responseVersion": null,
+            "controlPlaneSource": "deployment",
+            "workersDevEnabled": true,
+            "versionUrlsEnabled": true,
+            "controlPlaneVersion": "7fbc50d1-7041-4dc1-ac5d-d106f68e41b1",
+            "cfError": null,
+            "invalidBuild": false,
+            "featureStatus": 401,
+            "featureVariant": "full",
+            "featureKind": "JSON",
+            "featureRay": "a50c58afeea126b1-MEM",
+            "featureBuild": null,
+            "reason": "IDENTITY_READY"
+          }
+        ],
+        "elapsedMs": 2121,
+        "transition": "READY_WITHOUT_TRANSIENT",
+        "propagationConfirmed": false
+      },
+      "verification": "PASS",
+      "maintenance": "OFF"
+    },
+    "stage": "PWA: complete upgraded shell",
+    "upgradeAssets": {
+      "result": "PASS",
+      "attempts": [
+        {
+          "attempt": 1,
+          "missing": []
+        },
+        {
+          "attempt": 2,
+          "missing": []
+        }
+      ],
+      "elapsedMs": 2723
+    },
+    "error": "ISOLATED_SCHEMA32_REHEARSAL_FAILED",
+    "errorType": "Error",
+    "locations": [
+      "    at waitForOfflineReady (file:///home/runner/work/dream-team/dream-team/scripts/qa-offline-ready.mjs:18:8)",
+      "    at async file:///home/runner/work/dream-team/dream-team/scripts/schema32-rehearse.mjs:49:225"
+    ],
+    "offlineShell": {
+      "complete": false,
+      "missing": 113,
+      "controlled": true
+    },
+    "previewRestored": "PASS"
+  }
+}

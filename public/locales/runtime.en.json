@@ -887,5 +887,16 @@
   "GPS zmienił się. Odśwież dane przed zatwierdzeniem.": "GPS has changed. Reload the data before approval.",
   "GPS_CHANGED_RELOAD_BEFORE_APPROVAL": "GPS has changed. Reload the data before approval.",
   "Nowe hasło nie może być puste.": "The new password cannot be empty.",
-  "Wspólne hasło zespołu jest zarządzane przez właściciela.": "The team password is managed by the owner."
+  "Wspólne hasło zespołu jest zarządzane przez właściciela.": "The team password is managed by the owner.",
+  "Podaj nazwę i kraj łowiska.": "Enter the fishery name and country.",
+  "Dodaj najwyżej 12 linków źródłowych.": "Add at most 12 source URLs.",
+  "Wybierz właściwe łowisko lub dodaj źródło.": "Select the correct fishery or add a source.",
+  "Analiza już trwa. Dodaj kolejne źródło po jej zakończeniu.": "Research is running. Add another source after it finishes.",
+  "Źródło dotyczy innego jeziora.": "This source concerns a different lake.",
+  "Źródło dotyczy innego jeziora. Wybierz właściwe łowisko.": "This source concerns another lake. Select the correct fishery.",
+  "Nieprawidłowe łowisko wyjazdu.": "The fishery does not match the trip.",
+  "Trwa już 10 analiz. Poczekaj na ukończenie partii.": "Ten research jobs are already running. Wait for a batch to finish.",
+  "Szablony wybierz przy tworzeniu wyjazdu.": "Select templates when creating a trip.",
+  "Niepewny wynik dostawcy. Najpierw rozlicz poprzednie wywołanie.": "Uncertain provider outcome. Reconcile the previous call first.",
+  "Profil zapisano. Uruchom przygotowanie ponownie.": "Profile saved. Start preparation again."
 }

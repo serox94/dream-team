@@ -30,7 +30,9 @@ try{
         const readyMs=await page.evaluate(()=>Math.round(performance.now()));
         await page.waitForFunction(()=>document.getElementById('dashboard-weather-now')?.textContent.includes('15°C'));
         await page.waitForFunction(()=>typeof window.renderDreamChart==='function');
-        assert.match(await page.locator('.hero-side-card img').getAttribute('src'),/patryk-maciek\.jpeg$/);
+        assert.match(await page.locator('#dream-crew-photo').getAttribute('src'),/patryk-maciek\.avif$/);
+        assert.equal(await page.locator('#dream-crew-caption').innerText(),'Patryk + Maciek');
+        await page.waitForFunction(()=>{const img=document.getElementById('dream-crew-photo');return img?.complete&&img.naturalWidth>0;},{timeout:10000});
         assert.equal(await page.locator('.score-chart').count(),2);
         assert.equal(await page.locator('.score-row').count(),4);
         assert.match(await page.locator('#trip-score-total').innerText(),/2 ryb.*23,0 kg/);
@@ -205,18 +207,10 @@ try{
       }
       if(width===390&&route==='/pages/wyjazdy.html'){
         await page.locator('#create-trip').click();
-        await page.locator('#wizard-lake-name').fill('Kamień');
-        await page.locator('#wizard-country').fill('Polska');
-        await page.locator('#wizard-start').fill('2027-06-12');
-        await page.locator('#wizard-end').fill('2027-06-19');
-        await page.locator('#trip-wizard').screenshot({path:`${screenshotDir}/new-lake-wizard-390.png`});
-        await page.locator('#wizard-search').click();
-        await page.locator('#wizard-candidates').getByText(/OCZEKUJE NA TAVILY_API_KEY/).waitFor();
-        await page.locator('#trip-wizard-form button[type="submit"]').click();
-        await page.locator('#wizard-result').waitFor();
-        assert.match(await page.locator('#wizard-result').innerText(),/Wyszukiwanie źródeł: \d+\/38 pól znalezionych/,'D: visible coverage');
-        assert.match(await page.locator('#wizard-result').innerText(),/Regulamin.*brak danych/s,'D: missing facts shown');
-        await page.locator('#wizard-result').screenshot({path:`${screenshotDir}/new-lake-result-390.png`});
+        await page.locator('#trip-name').fill('Przegląd formularza wyjazdu');
+        assert.ok(await page.locator('#trip-lake option').count()>0,'saved fisheries are reusable');
+        assert.equal(await page.locator('#trip-edit a[href="/pages/lowiska.html"]').count(),1,'separate persistent fishery manager');
+        await page.locator('#trip-editor-panel').screenshot({path:`${screenshotDir}/saved-lake-trip-390.png`});
       }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)||width===1280&&['/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)){
         const label=route==='/'?'dashboard':route.split('/').pop().replace('.html','');
@@ -226,7 +220,7 @@ try{
       await page.close();
     }
     const login=await context.newPage(),loginResponse=await login.goto(loginPreview.url+'/login');
-    assert.equal(loginResponse.status(),200);
+    assert.equal(loginResponse.status(),200);await login.waitForFunction(()=>[...document.querySelectorAll('.login-logo img')].every(img=>img.complete&&img.naturalWidth>0));
     const loginDimensions=await login.evaluate(()=>({viewport:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
     assert.ok(loginDimensions.scroll<=loginDimensions.viewport+1,`${width} login: horizontal overflow`);
     const manifestResponse=await login.request.get(loginPreview.url+'/manifest.webmanifest');
