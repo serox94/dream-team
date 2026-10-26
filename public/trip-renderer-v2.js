@@ -53,6 +53,34 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     return `<section class="panel-card source-panel"><div class="section-head"><h3>🔎 Źródła i weryfikacja</h3><span class="section-chip">dane łowiska</span></div><div class="quick-links">${[...seen.entries()].map(([url,label]) => `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`).join('')}</div></section>`;
   }
 
+  // The crew photo belongs to the selected trip, not to the logged-in account.
+  // Never show the photo of three anglers for a different participant list.
+  function renderCrewBanner(trip){
+    const photo=document.getElementById('dream-crew-photo');
+    if(!photo)return;
+    const caption=document.getElementById('dream-crew-caption');
+    const subtitle=document.getElementById('dream-crew-subtitle');
+    const english=(window.DreamLanguage?.get?.()||document.documentElement.lang)==='en';
+    const participants=(trip.participants||[]).map(p=>String(p.name||'').toLocaleLowerCase('pl').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').split(/[^a-z]+/g));
+    const contains=name=>participants.some(tokens=>tokens.includes(name));
+    const hasDuo=contains('patryk')&&contains('maciek');
+    const hasTrio=hasDuo&&contains('paddy');
+    const source=hasTrio?'/assets/img/patryk-maciek-paddy.avif':hasDuo?'/assets/img/patryk-maciek.avif':'/assets/img/lowisko.jpg';
+    const title=hasTrio?'Patryk + Maciek + Paddy':hasDuo?'Patryk + Maciek':english?'DreamTeam trip':'Wyjazd DreamTeam';
+    const description=hasTrio?(english?'Patryk, Maciek and Paddy by the water':'Patryk, Maciek i Paddy nad wodą'):hasDuo?(english?'Patryk and Maciek by the water':'Patryk i Maciek nad wodą'):(english?'Fishing lake':'Widok łowiska');
+    photo.onerror=()=>{
+      // A missing photo must not show a different crew or leave a broken icon.
+      photo.onerror=null;
+      photo.src='/assets/img/lowisko.jpg';
+      photo.alt=english?'Fishing lake':'Widok łowiska';
+      if(subtitle)subtitle.textContent=english?'Crew photo unavailable':'Zdjęcie załogi niedostępne';
+    };
+    if(photo.getAttribute('src')!==source)photo.src=source;
+    photo.alt=description;
+    if(caption)caption.textContent=title;
+    if(subtitle)subtitle.textContent=english?'DreamTeam on the water':'DreamTeam nad wodą';
+  }
+
   function renderDashboard(trip) {
     const p=profileOf(trip), hero=document.querySelector('.dashboard-hero');
     if(!hero)return;
@@ -64,6 +92,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     set('dashboard-peg',trip.peg||'do ustalenia');
     set('dashboard-dates',trip.start?`${date(trip.start)} – ${date(trip.end)}`:'do ustalenia');
     set('dashboard-crew',trip.participants.map(a=>a.name).join(' · ')||'do ustalenia');
+    renderCrewBanner(trip);
     const stats=document.querySelector('main .dashboard-secondary-stats');
     if(stats&&!document.getElementById('dream-team-alltime-value'))stats.insertAdjacentHTML('beforeend','<article class="stat-card status-success"><span class="label">👑 Rekord z zapisanych połowów — wszystkie wyjazdy</span><strong id="dream-team-alltime-value">—</strong></article>');
     const target=document.getElementById('angler-stats');
