@@ -159,12 +159,14 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     const fish = by(/ochron|ryb|carp|mata|worek/i);
     const boat = by(/łód|ponton|bezpieczeń/i);
     const stay = rules.filter(d => !tackle.includes(d) && !fish.includes(d) && !boat.includes(d));
+    const savedRules=lakeResearch?.research?.facts?.some(f=>['rods','distance','leadcore','hooks','rigs','bait_boats','boats','lifejacket','net','mat','sling','disinfectant','fishcare','bait','safety','camp'].includes(f.field)&&f.scope!=='site');
+    const showLegacy=rules.length>0||!savedRules;
 
     const renderGroup = (title, chip, group, fallback) => panel(title, chip, `<div class="weather-interpretation">${group.map(docNotes).join('') || note(fallback, 'info')}</div>`);
 
     m.innerHTML = `<section class="hero-card"><h2>📜 Regulamin łowiska</h2><p>Najważniejsze zasady dla ${esc(p.name||trip.lake)}. Kolory pomagają od razu odróżnić zakaz, obowiązek i rzeczy dozwolone.</p></section>
       ${researchRules(lakeResearch,lakeResearchError)}
-      <section class="stats-grid">
+      ${showLegacy?`<section class="stats-grid">
         ${stat('🎣 Wędki', f.rods, 'info')}
         ${stat('🤖 Łódka zanętowa', f.baitBoat, /dozwol/i.test(f.baitBoat || '') ? 'success' : 'warn')}
         ${stat('🛥️ Łódź / ponton', f.boat, /dozwol/i.test(f.boat || '') ? 'success' : 'warn')}
@@ -178,6 +180,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
         ${renderGroup('🚤 Łódź i bezpieczeństwo', 'WODA', boat, f.boat || 'Brak danych.')}
         ${renderGroup('🏕️ Pobyt i zachowanie', 'PORZĄDEK', stay, 'Przed wyjazdem ponownie sprawdź aktualny regulamin operatora.')}
       </section>
+      `:''}
       ${sources(relatedDocs,p)}`;
   }
 
