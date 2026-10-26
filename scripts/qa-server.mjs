@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import worker from '../src/worker.js';
 import {database,initializeTestAccounts} from '../tests/db.mjs';
 const publicDir=path.resolve(fileURLToPath(new URL('../public/',import.meta.url))); 
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.avif':'image/avif','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json'};
 export async function serve({port=0,seed=false,weatherFetch,testSession=true}={}){
  const DB=database();
  const mediaObjects=new Map();
