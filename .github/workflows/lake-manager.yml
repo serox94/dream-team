@@ -55,6 +55,7 @@ jobs:
         run: |
           node scripts/schema32-retained-evidence.mjs --schema32-only
           node scripts/schema32-provider-cache.mjs
+          node scripts/schema32-extraction-probe.mjs
       - name: One cached or bounded free-provider integration on retained preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
