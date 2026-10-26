@@ -147,7 +147,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
   function researchRules(profile,error){
     const tr=(pl,en)=>window.DreamLanguage?.get?.()==='en'||document.documentElement.lang==='en'?en:pl;
     if(error)return panel(tr('Research łowiska','Lake research'),'INFO',note(tr('Nie udało się pobrać zapisanych zasad: ','Could not load saved rules: ')+error,'warn'));
-    const allowed=new Set(['rods','distance','leadcore','hooks','rigs','bait_boats','boats','lifejacket','net','mat','sling','disinfectant','fishcare','bait','safety','camp']);
+    const allowed=new Set(['rods','distance','leadcore','hooks','rigs','bait_boats','boats','lifejacket','net','mat','sling','disinfectant','fishcare','bait','safety','camp','other_rules']);
     const facts=(profile?.research?.facts||[]).filter(f=>allowed.has(f.field)&&f.scope!=='site');
     const pages=profile?.research?.pages||[];
     if(!facts.length){
@@ -159,22 +159,23 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
       REQUIRED:[tr('OBOWIĄZKOWE','REQUIRED'),'warn'],
       CONDITIONAL:[tr('WARUNKOWE','CONDITIONAL'),'warn'],
       PERMITTED:[tr('DOZWOLONE','PERMITTED'),'success'],
-      UNKNOWN:[tr('NIEUSTALONE','UNCONFIRMED'),'info']
+      UNKNOWN:[tr('NIEPOTWIERDZONE','UNCONFIRMED'),'info']
     };
     const groups=[
       [tr('Wędki, dystans i zestawy','Rods, distance and rigs'),['rods','distance','leadcore','hooks','rigs']],
       [tr('Łodzie, łódki i bezpieczeństwo','Boats and safety'),['bait_boats','boats','lifejacket','safety']],
       [tr('Ochrona ryb','Fish care'),['net','mat','sling','disinfectant','fishcare']],
       [tr('Przynęty i nęcenie','Bait and feeding'),['bait']],
-      [tr('Pobyt i obozowanie','Camping'),['camp']]
+      [tr('Pobyt i obozowanie','Camping'),['camp']],
+      [tr('Pozostałe zasady','Other rules'),['other_rules']]
     ];
     const detail=f=>{
       const [label,colour]=types[f.rule]||types.UNKNOWN;
       const source=typeof f.url==='string'&&/^https:\/\/[^\s]+$/i.test(f.url)?`<a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">${tr('Otwórz źródło','Open source')}</a>`:'';
       const number=f.normalized!=null?` — ${esc(f.normalized)}${f.field==='distance'?' m':''}`:'';
-      return `<article class="research-fact"><strong>${esc(tr(f.labelPl||f.field,f.labelEn||f.field))}${number}</strong> <span class="research-rule status-${colour}">${label}</span>${f.conditional&&f.base!=='UNKNOWN'?` <small>${tr('Warunki i wyjątki w oryginale','See conditions and exceptions in original')}</small>`:''}${f.provided?` <small>${tr('Sprzęt zapewnia łowisko — sprawdź zasady własnego wyposażenia','Provided by fishery — check rules for your own equipment')}</small>`:''}<p class="preserve-lines">${esc(f.evidence||'')}</p><small>${tr('Sprawdzono','Checked')}: ${esc(f.checkedAt||'—')} · ${tr('Rok obowiązywania','Effective year')}: ${esc(f.effectiveYear||tr('niepotwierdzony','unverified'))} · ${source}</small></article>`;
+      return `<article class="research-fact"><strong>${esc(tr(f.labelPl||f.field,f.labelEn||f.field))}${number}</strong> <span class="research-rule status-${colour}">${label}</span>${f.conditional&&f.base!=='UNKNOWN'?` <small>${tr('Warunki i wyjątki w oryginale','See conditions and exceptions in original')}</small>`:''}${f.provided?` <small>${tr('Sprzęt zapewnia łowisko — sprawdź zasady własnego wyposażenia','Provided by fishery — check rules for your own equipment')}</small>`:''}<p class="preserve-lines" data-user-content>${esc(f.evidence||'')}</p><small>${tr('Sprawdzono','Checked')}: ${esc(f.checkedAt||'—')} · ${tr('Rok obowiązywania','Effective year')}: ${esc(f.effectiveYear||tr('niepotwierdzony','unverified'))} · ${source}</small></article>`;
     };
-    return `<section class="panel-card research-regulation" data-lake-research-rules><h3>${tr('Zasady ze sprawdzonych źródeł','Rules from checked sources')}</h3><p>${facts.length} ${tr('zapisanych informacji o zasadach','saved regulation facts')} · ${pages.length} ${tr('źródeł','sources')}. ${tr('To treść źródłowa, nie automatycznie zatwierdzony regulamin na datę wyjazdu. Warunki i wyjątki sprawdzaj w oryginale.','This is source evidence, not a confirmed regulation for the trip dates. Verify conditions and exceptions in the original.')}</p>${groups.map(([title,keys],i)=>{const group=facts.filter(x=>keys.includes(x.field));return group.length?`<details ${i===0?'open':''}><summary>${esc(title)} (${group.length})</summary><div class="research-facts">${group.map(detail).join('')}</div></details>`:'';}).join('')}</section>`;
+    return `<section class="panel-card research-regulation" data-lake-research-rules><h3>${tr('Zasady ze sprawdzonych źródeł','Rules from checked sources')}</h3><p>${facts.length} ${tr('zapisanych informacji o zasadach','saved regulation facts')} · ${pages.length} ${tr('źródeł','sources')}. ${tr('To treść źródłowa, nie automatycznie zatwierdzony regulamin na datę wyjazdu. Warunki i wyjątki sprawdzaj w oryginale.','This is source evidence, not a confirmed regulation for the trip dates. Verify conditions and exceptions in the original.')}</p>${profile?.research?.conflicts?.some(c=>allowed.has(c.field))?`<p class="weather-note status-warn" role="alert">${tr('Sprzeczne źródła — nie wybieraj korzystniejszej wersji. Sprawdź oba oryginały i potwierdź zasadę u właściciela.','Conflicting sources — do not choose the more convenient rule. Check both originals and confirm with the owner.')}</p>`:''}${groups.map(([title,keys],i)=>{const group=facts.filter(x=>keys.includes(x.field));return group.length?`<details ${i===0?'open':''}><summary>${esc(title)} (${group.length})</summary><div class="research-facts">${group.map(detail).join('')}</div></details>`:'';}).join('')}</section>`;
   }
 
   function renderRules(trip, docs, lakeResearch, selectedLake, lakeResearchError) {
@@ -188,7 +189,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     const fish = by(/ochron|ryb|carp|mata|worek/i);
     const boat = by(/łód|ponton|bezpieczeń/i);
     const stay = rules.filter(d => !tackle.includes(d) && !fish.includes(d) && !boat.includes(d));
-    const savedRules=lakeResearch?.research?.facts?.some(f=>['rods','distance','leadcore','hooks','rigs','bait_boats','boats','lifejacket','net','mat','sling','disinfectant','fishcare','bait','safety','camp'].includes(f.field)&&f.scope!=='site');
+    const savedRules=lakeResearch?.research?.facts?.some(f=>['rods','distance','leadcore','hooks','rigs','bait_boats','boats','lifejacket','net','mat','sling','disinfectant','fishcare','bait','safety','camp','other_rules'].includes(f.field)&&f.scope!=='site');
     const showLegacy=rules.length>0||!savedRules;
 
     const renderGroup = (title, chip, group, fallback) => panel(title, chip, `<div class="weather-interpretation">${group.map(docNotes).join('') || note(fallback, 'info')}</div>`);

@@ -67,12 +67,13 @@ export async function applyChecklistTemplates(request,env,tripId){
 export async function checklistTemplateStatements(env,tripId,ids,categories){
  if(!Array.isArray(ids)||!ids.length||ids.length>10||ids.some(id=>typeof id!=='string'))fail('Wybierz od 1 do 10 szablonów.');
  if(categories&&!Array.isArray(categories))fail('Nieprawidłowe kategorie.');
+ const activeCategories=new Set((await all(env,'SELECT name FROM checklist_categories WHERE active=1')).map(x=>x.name));
  const chosen=[...new Set(ids)],statements=[];
  for(const id of chosen){
   const template=await one(env,'SELECT id FROM checklist_templates WHERE id=?',id);if(!template)fail('Nie znaleziono wybranego szablonu.',404);
   for(const item of await listItems(env,id)){
    if(categories&&!categories.includes(item.category))continue;
-   if(!await one(env,'SELECT id FROM checklist_categories WHERE name=? AND active=1',item.category))continue;
+   if(!activeCategories.has(item.category))continue;
    statements.push(env.DB.prepare(`INSERT INTO checklist_items(trip_id,category,label,assigned_to,packed,quantity,notes,sort_order)
      SELECT ?,?,?,?,0,?,?,? WHERE NOT EXISTS(SELECT 1 FROM checklist_items WHERE trip_id=? AND deleted_at IS NULL AND trim(category)=trim(?) COLLATE NOCASE AND trim(label)=trim(?) COLLATE NOCASE)`).bind(tripId,item.category,item.label,item.assignedTo,item.quantity,item.notes,item.sortOrder,tripId,item.category,item.label));
   }
