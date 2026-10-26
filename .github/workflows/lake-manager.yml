@@ -42,6 +42,7 @@ jobs:
           node --check scripts/schema32-preview-recover.mjs
           node --check scripts/schema32-retained-evidence.mjs
           node --test tests/schema32-readiness.test.mjs tests/schema32-transition.test.mjs tests/schema32-release-gates.test.mjs
+          node --test tests/research-source-quality.test.mjs tests/research-engine.test.mjs tests/lake-manager.test.mjs tests/regulamin-research-ui.test.mjs tests/research-locales.test.mjs tests/research-provider.test.mjs
       - name: Real isolated full-fallback-recovery transitions and preserved sessions
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -55,7 +56,21 @@ jobs:
         run: |
           node scripts/schema32-retained-evidence.mjs --schema32-only
           node scripts/schema32-provider-cache.mjs
-          node scripts/schema32-extraction-probe.mjs
+
+      - name: Update only preview code on the existing schema32 database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: |
+          node scripts/lake-manager-preview.mjs
+          node scripts/schema32-accept-extraction.mjs
+      - name: Recheck affected real preview integration using existing evidence
+        env:
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/qa-lake-manager-live.mjs
       - name: One cached or bounded free-provider integration on retained preview
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -1,3 +1,4 @@
+import {missingRuleLists} from './research-source-quality.js';
 import {InputError} from './validation.js';
 import {tavilyUsage} from './research-provider-status.js';
 import {parseResearch,discoverUrls,sourceScope,gpsCandidates,concepts,PARSER_VERSION} from './research-facts.js';
@@ -66,13 +67,13 @@ export async function queueResearch(env,lakeId,url,options={}){
  if(old&&['uncertain','blocked'].includes(old.status))fail('RESEARCH_RETRY_REQUIRES_RECONCILED_USAGE',409);
  const id=crypto.randomUUID();await run(db,"INSERT OR IGNORE INTO research_jobs(id,lake_id,source_url,status,queue_json,confirmed_sources_json) VALUES(?,?,?,'pending',?,?)",id,lakeId,url,JSON.stringify(options.sources||[url]),JSON.stringify(options.sources||[]));return await one(db,'SELECT * FROM research_jobs WHERE id=?',id)||await one(db,"SELECT * FROM research_jobs WHERE lake_id=? AND status IN ('pending','processing')",lakeId);
 }
-async function extract(env,job,urls,includeImages=false){
+async function extract(env,job,urls,includeImages=false,advanced=false){
  const usage=await tavilyUsage(env,{timeoutMs:5000});if(!usage.freeOnlyConfirmed||usage.available<3)fail('TAVILY_FREE_BUDGET_UNVERIFIED',429);
  // Reserve worst-case rounded basic-extract cost before network IO. Keep reservations after unknown failures.
- const cost=Math.ceil(urls.length/5),month=new Date().toISOString().slice(0,7);
+ const cost=Math.ceil(urls.length/5)*(advanced?2:1),month=new Date().toISOString().slice(0,7);
  const r=await run(env.DB,`UPDATE research_jobs SET credits_reserved=credits_reserved+? WHERE id=? AND credits_reserved+?<=4 AND (SELECT COALESCE(SUM(credits_reserved),0) FROM research_jobs WHERE substr(started_at,1,7)=?)+?<=100`,cost,job.id,cost,month,cost);
  if(r.meta.changes!==1)fail('RESEARCH_LOCAL_BUDGET_EXHAUSTED',429);
- let response;try{response=await fetch('https://api.tavily.com/extract',{method:'POST',headers:{authorization:'Bearer '+env.TAVILY_API_KEY,'content-type':'application/json'},body:JSON.stringify({urls,extract_depth:'basic',format:'markdown',timeout:15,include_usage:true,...(includeImages?{include_images:true}:{})}),signal:AbortSignal.timeout(18000)});}catch{fail('TAVILY_OUTCOME_UNCERTAIN_NO_AUTOMATIC_RETRY',504);}
+ let response;try{response=await fetch('https://api.tavily.com/extract',{method:'POST',headers:{authorization:'Bearer '+env.TAVILY_API_KEY,'content-type':'application/json'},body:JSON.stringify({urls,extract_depth:advanced?'advanced':'basic',format:'markdown',timeout:advanced?25:15,include_usage:true,...(includeImages?{include_images:true}:{})}),signal:AbortSignal.timeout(advanced?30000:18000)});}catch{fail('TAVILY_OUTCOME_UNCERTAIN_NO_AUTOMATIC_RETRY',504);}
  if(!response.ok)fail('TAVILY_HTTP_ERROR',[402,429].includes(response.status)?429:502);
  const data=await response.json(),actual=data.usage?.credits;
  if(!Number.isFinite(actual)||actual<0||actual>cost)fail('TAVILY_USAGE_UNCERTAIN_NO_AUTOMATIC_RETRY',502);
@@ -110,6 +111,8 @@ export async function stepResearch(env,lakeId,url){
   for(const u of batch){if(scoped(u)==='reject')continue;const cached=await one(db,'SELECT * FROM research_pages WHERE lake_id=? AND url=?',lakeId,u);if(cached&&fresh(cached))pages.push(cached);else uncached.push(u);}
   const failed=[];
   if(uncached.length){const data=await extract(env,job,uncached);for(const u of uncached){const result=(data.results||[]).find(r=>r.url===u&&r.raw_content);if(!result){failed.push(u);continue;}pages.push({url:u,content:String(result.raw_content).slice(0,160000),checked_at:new Date().toISOString(),scope:scoped(u)});}}
+  const incomplete=pages.filter(p=>missingRuleLists(p.content,p.url));
+  if(incomplete.length){const upgraded=await extract(env,job,incomplete.map(p=>p.url),false,true);for(const p of incomplete){const improved=(upgraded.results||[]).find(r=>r.url===p.url&&r.raw_content);if(improved&&!missingRuleLists(improved.raw_content,p.url)){p.content=String(improved.raw_content).slice(0,160000);p.checked_at=new Date().toISOString();}else failed.push(p.url);}}
   for(const p of pages){
    await run(db,'INSERT INTO research_pages(lake_id,url,content,checked_at,scope) VALUES(?,?,?,?,?) ON CONFLICT(lake_id,url) DO UPDATE SET content=excluded.content,checked_at=excluded.checked_at,scope=excluded.scope',lakeId,p.url,p.content,p.checked_at,p.scope);
    await storeEvidence(db,lakeId,p);

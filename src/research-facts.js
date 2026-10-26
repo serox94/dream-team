@@ -1,4 +1,4 @@
-export const PARSER_VERSION='2026-10-26-v9';
+export const PARSER_VERSION='2026-10-26-v10';
 // Conservative, evidence-preserving rules. No model calls and no historical rewrites.
 export const concepts={
  address:['Adres','Address',/address|adres|adresse|anschrift/iu],phone:['Telefon','Telephone',/telephone|telefon|phone|tel[:.]/iu],email:['E-mail','Email',/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/iu],access:['Dojazd','Access',/access|entrance|gate|reception|dojazd|brama|recepcj|zufahrt|ingang|receptie/iu],grocery:['Sklepy spożywcze','Grocery stores',/supermarket|grocery|supermarch|spożywcz|supermarkt/iu],tackle:['Sklepy wędkarskie','Tackle shops',/tackle shop|fishing shop|hengelsport|sklep.{0,12}wędkarsk|angelgeschäft/iu],fuel:['Stacje paliw','Fuel stations',/petrol station|gas station|fuel station|stacj.{0,12}paliw|tankstelle|tankstation/iu],pharmacy:['Apteki','Pharmacies',/pharmac|aptek|apotheke|apotheek/iu],medical:['Pomoc medyczna','Medical services',/hospital|medical cent|emergency department|szpital|przychodni|krankenhaus|ziekenhuis/iu],map:['Mapy źródłowe','Source maps',/lake map|swim map|mapa.{0,12}(?:łowisk|stanowisk)|plattegrond|carte.{0,10}(?:lac|postes)/iu],bathymetry:['Mapa głębokości','Depth map',/bathymetr|depth map|contour map|mapa.{0,10}(?:głęboko|batymetry)|dieptekaart/iu],
@@ -16,7 +16,7 @@ const allowed=/allowed|permitted|may (?:be|use)|can (?:be|use)|toegestaan|erlaub
 export function classifyRule(text){
  const optional=/not (?:required|mandatory|compulsory)|niet verplicht|nicht erforderlich|nie (?:jest )?wymagan|non obligatoire/iu.test(text);
  const max=/no more than|not (?:(?:allowed (?:to fish )?)|fish )?(?:further|more) than|maximum|maximaal|maksymaln/iu.test(text);
- const base=optional?'PERMITTED':max?'PERMITTED':prohibited.test(text)?'PROHIBITED':mandatory.test(text)?'REQUIRED':allowed.test(text)?'PERMITTED':'UNKNOWN';
+ const base=optional?'PERMITTED':max?'PERMITTED':prohibited.test(text)?'PROHIBITED':mandatory.test(text)?'REQUIRED':allowed.test(text)||/\bonly\b/iu.test(text)?'PERMITTED':'UNKNOWN';
  const affirmative=text.replace(/not (?:allowed|permitted)|niet toegestaan|nicht erlaubt|nie (?:jest )?dozwolon\w*/giu,'');
  const mixed=prohibited.test(text)&&allowed.test(affirmative);
  const conditional=/\b(?:if|unless|except|only|when|provided that)\b|alleen|tenzij|nur|wenn|sauf|uniquement|seulement|tylko|jeżeli|pod warunkiem/iu.test(text)||max;
@@ -46,10 +46,11 @@ export function parseResearch(content,{url,language=null,checkedAt=new Date().to
   for(const evidence of sentences){if(evidence.length<20||evidence.length>1200||/^home\s|cookie|privacy policy|all rights reserved/i.test(evidence))continue;
    const factsBefore=out.length;
    for(const [field,[pl,en,rx]] of Object.entries(concepts)){
-    if(!rx.test(evidence))continue;if(field==='boats'&&concepts.bait_boats[2].test(evidence)&&!/(?:electric motor|petrol|rental|life jacket|manned)/i.test(evidence))continue;
+    if(!rx.test(evidence))continue;if(field==='boats'&&concepts.bait_boats[2].test(evidence)&&!/(?:electric motor|petrol|rental|life jacket|manned|\bno boats?\b)/i.test(evidence))continue;
     if(scope==='site'&&!['contact','address','phone','email','access','parking','toilets','showers','shop','grocery','tackle','fuel','pharmacy','medical','water','map'].includes(field))continue;
     const relevant=evidence.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ż])/u).filter(sentence=>rx.test(sentence)).join(' ');
     let c=classifyRule(relevant||evidence),normalized=null;
+    if(/\bno boats?\s*[-–—:;,]\s*bait boats?\s+only/iu.test(evidence)){if(field==='bait_boats')c={...c,rule:'CONDITIONAL',base:'PERMITTED',conditional:true};if(field==='boats')c={...c,rule:'PROHIBITED',base:'PROHIBITED',conditional:false};}
     if(field==='rods'){const m=evidence.match(/\b(\d+|three|drie|drei|trois|trzy)\s+(?:rods?|hengels?|ruten|cannes|wędki)/iu);if(m)normalized=Number.isFinite(+m[1])?+m[1]:3;}
     if(field==='depth'){const m=evidence.match(/(?:depth|deep|diepte|tiefe|profondeur|głęboko).{0,45}?(\d+(?:[.,]\d+)?)\s*(?:met(?:re|er)s?|m)\b/iu)||evidence.match(/(\d+(?:[.,]\d+)?)\s*m(?:et(?:re|er)s?)?\s*(?:deep|depth|tief|diep)/iu);if(!m)continue;normalized=Number(m[1].replace(',','.'));}
     if(field==='distance'){const m=evidence.match(/(\d+)\s*(?:met(?:re|er)s?|m)\b/iu);if(m)normalized=+m[1];}
@@ -58,9 +59,10 @@ export function parseResearch(content,{url,language=null,checkedAt=new Date().to
     // facts only when the sentence contains a concrete value or assertion.
     const ruleField=['rods','bait_boats','boats','leadcore','hooks','rigs','net','mat','sling','disinfectant','lifejacket','distance','bait','fishcare','safety','camp'].includes(field);
     const informative=/\b(?:is|are|has|have|available|provided|supplied|offers?|equipped|open|allowed|prohibited|forbidden|must|required|compulsory|only|up to|maximum|minimum)\b|toegestaan|verboden|verplicht|beschikbaar|aanwezig|erlaubt|verboten|pflicht|vorhanden|autorisé|interdit|obligatoire|disponible|dozwolon|zabronion|obowiązk|dostępn|wynajem|\d/iu.test(relevant);
-    if(!informative)continue;
+
     const providedText=(relevant||evidence)+(/(?:these|they) are (?:supplied|provided)/iu.test(evidence)?' '+evidence:'');
     const provided=!/not (?:provided|supplied|available)|nie zapewni/iu.test(providedText)&&(/\b(?:we|fishery|lake|owner)\s+provide\b|(?:provided|supplied)(?! that)|ter beschikking|bereitgestellt|zapewnia/iu.test(providedText)||/available.{0,60}(?:free|gratis|bezpłat)|free of charge/iu.test(providedText));
+    if(!informative&&!provided&&c.base==='UNKNOWN')continue;
     if(ruleField&&c.rule==='UNKNOWN'&&!provided)continue;
     if(field==='rods'&&c.base==='UNKNOWN'&&normalized==null)continue;
     const ownership=/\bown\b|eigen|propre|własn/iu.test(evidence)?'own':'unspecified';

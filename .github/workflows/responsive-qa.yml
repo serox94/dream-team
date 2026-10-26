@@ -30,31 +30,31 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/qa-restore-scope.mjs
       - uses: actions/setup-node@v4
-        if: steps.scope.outputs.restore_only != 'true'
+        if: steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true'
         with:
           node-version: 24
           cache: npm
       - run: npm ci
-        if: steps.scope.outputs.restore_only != 'true'
+        if: steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true'
       - name: Bundle local Chart.js asset
-        if: steps.scope.outputs.restore_only != 'true'
+        if: steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true'
         run: node scripts/build.mjs
       - name: Install disposable browser test tooling
-        if: steps.scope.outputs.restore_only != 'true'
+        if: steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true'
         run: |
           npm install --no-save playwright@1.63.0
           npx playwright install chromium
       - name: Check 15 screens, knowledge tools and offline at five viewport widths
-        if: steps.scope.outputs.restore_only != 'true' && inputs.targeted_only != true
+        if: steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true' && inputs.targeted_only != true
         run: node scripts/responsive-qa.mjs
       - name: Targeted Astra browser regression on disposable SQLite
-        if: steps.scope.outputs.restore_only != 'true'
+        if: steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true'
         run: node scripts/qa-astra-browser.mjs
       - name: PRO2 Chromium weather, water and offline regression
-        if: steps.scope.outputs.restore_only != 'true'
+        if: steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true'
         run: node scripts/qa-pro2.mjs && node scripts/qa-pro2-features.mjs
       - name: Keep screenshots of fixture data for visual review
-        if: always() && steps.scope.outputs.restore_only != 'true'
+        if: always() && steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ryby-responsive-fixture
