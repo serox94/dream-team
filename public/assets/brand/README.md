@@ -11,6 +11,6 @@ These four vector assets were **traced from the supplied raster brand board** wi
 
 Brand colours sampled from the supplied board: forest green `#0F2E1F`, cream `#F4F2E9`; alternate dark wordmark `#1E1E1E`.
 
-**Do not merge/deploy until** the user has provided or confirmed both crew photos (Patryk+Maciek, and Patryk+Maciek+Paddy) and the integrated UI changes are tested. Existing `public/icons/ryby-*.png` and the site header remain untouched on production.
+Both replacement crew photos have now been supplied and committed as optimized AVIF assets under `public/assets/img/`. The dashboard renderer switches between the duo and trio images according to the selected trip's participants. **Do not merge/deploy until** integrated UI checks pass and the broader planned header/navigation changes are reviewed. Existing `public/icons/ryby-*.png` and the site header remain untouched on production.
 
 Before enabling as the PWA icon, generate tested PNG sizes for Android/iOS, update the manifest, favicon and apple-touch-icon consistently, and check installed-app refresh behaviour. Keep the design consistent with the source collage. If original transparent PNG/SVG from designer becomes available, prefer those for best fidelity.
