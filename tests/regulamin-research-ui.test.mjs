@@ -11,6 +11,7 @@ const lake='https://www.fishingadventure.nl/en/informatie/reglement-fishing-adve
 function scenario(language='pl',url='/pages/regulamin.html'){
  const dom=new JSDOM('<!DOCTYPE html><html lang="'+language+'"><body><main class="container page-content"></main></body></html>',{url:'https://dream.test'+url,runScripts:'outside-only'});
  dom.window.DreamLanguage={get:()=>language};
+ dom.window.Dream={safeUrl:u=>typeof u==='string'&&u.startsWith('https://')?u:null};
  dom.window.eval(renderer);
  const trip={id:'historical-adventure-2025',lake:'Old Trip Lake',lakeId:'old-lake',year:2025,stats:{},facts:{rulesText:'Legacy content'},lakeProfile:{id:'old-lake',name:'Old Trip Lake',facts:{}}};
  const fact=(field,pl,en,evidence,rule,base=rule,extra={})=>({field,labelPl:pl,labelEn:en,evidence,rule,base,scope:'lake',url:lake,checkedAt:'2026-10-22',effectiveYear:null,conditional:rule==='CONDITIONAL',...extra});
@@ -46,6 +47,7 @@ for(const language of ['pl','en'])test('rules page shows saved Adventure researc
   assert.match(html,language==='pl'?/nie automatycznie zatwierdzony regulamin/:/not a confirmed regulation/);
   assert.ok(!html.includes('Legacy content'),'unrelated archived trip must not contaminate selected lake');
   assert.ok(!html.includes('Old Trip Lake'));
+  assert.ok(!html.includes('Brak szczegółowych zasad'), 'saved evidence should replace empty legacy placeholders');
  }finally{dom.window.close();}
 });
 
