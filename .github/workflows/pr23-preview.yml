@@ -5,6 +5,7 @@ on:
     branches: [fix/france-regulations-lake-catalog-20261027]
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: dream-team-research-preview
   cancel-in-progress: false
@@ -14,6 +15,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -24,6 +27,10 @@ jobs:
           node scripts/build.mjs
           npm install --no-save --package-lock=false playwright@1.63.0
           npx playwright install chromium
+      - name: Retain completed exact-application 24-cell matrix and screenshots
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/pr23-retained-matrix.mjs
       - name: Targeted PR23 regression on disposable data
         run: |
           node --test tests/app-shell.test.mjs tests/regulamin-research-ui.test.mjs tests/lake-management-ui.test.mjs tests/code32-release.test.mjs
