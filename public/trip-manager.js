@@ -46,8 +46,8 @@
       ${area('lake-rules','Dodatkowe zasady łowiska',f.rulesText)}
       ${area('lake-logistics','Dojazd i zaplecze',f.logisticsText)}
       ${area('lake-advice','Porady i obserwacje',f.adviceText)}
-      ${field('lake-source','Oficjalna strona / źródło','url',lake?.sourceUrl,'maxlength="2048"')}
-      <div class="form-actions"><button type="submit">Zapisz łowisko</button><button type="button" id="lake-new" class="secondary-btn">Nowe łowisko</button>${lake?`<button type="button" id="lake-delete" class="danger-btn" ${linked.length?'disabled':''}>${T('Usuń łowisko','Delete lake')}</button>`:''}</div>${linked.length?`<p class="weather-note">${T('Usuwanie niedostępne: łowisko jest przypisane do','Deletion unavailable: this lake is assigned to')} ${linked.length} ${T('wyjazdów (również archiwalnych). Historia pozostaje bezpieczna.','trips (including archived). Trip history is protected.')}</p>`:''}</form>`;
+      <p>${T('Kolejne linki do regulaminów, map i researchu dodajesz w panelu „Uzupełnij lub odśwież profil” powyżej.','Add further URLs for regulations, maps and research in “Add sources or refresh profile” above.')}</p>
+      <div class="form-actions"><button type="submit">Zapisz łowisko</button><button type="button" id="lake-new" class="secondary-btn">${T('Dodaj łowisko z wieloma źródłami','Add fishery with multiple sources')}</button>${lake?`<button type="button" id="lake-delete" class="danger-btn" ${linked.length?'disabled':''}>${T('Usuń łowisko','Delete lake')}</button>`:''}</div>${linked.length?`<p class="weather-note">${T('Usuwanie niedostępne: łowisko jest przypisane do','Deletion unavailable: this lake is assigned to')} ${linked.length} ${T('wyjazdów (również archiwalnych). Historia pozostaje bezpieczna.','trips (including archived). Trip history is protected.')}</p>`:''}</form>`;
   }
   function wireTrip(trip=null){
     document.getElementById('trip-editor').innerHTML=tripEditor(trip);
@@ -63,8 +63,10 @@
     });
   }
   function wireLake(lake=null){
-    document.getElementById('lake-editor').innerHTML=lakeEditor(lake);
-    document.getElementById('lake-new').onclick=()=>wireLake();
+    const editor=document.getElementById('lake-editor');if(!editor)return;
+    editor.innerHTML=lake?lakeEditor(lake):'<p>'+T('Wybierz łowisko z listy powyżej.','Choose a fishery above.')+'</p>';
+    if(!lake)return;
+    document.getElementById('lake-new').onclick=()=>{const details=document.getElementById('new-lake-panel');if(details){details.open=true;details.scrollIntoView({block:'start'});}};
     const removeButton=document.getElementById('lake-delete');
     if(removeButton)removeButton.onclick=async()=>{
       if(!lake||removeButton.disabled)return;
@@ -75,8 +77,8 @@
       catch(error){Dream.notice(error.message,true);removeButton.disabled=false;}
     };
     bind(document.getElementById('lake-edit'),async x=>{
-      const saved=await Dream.api('/api/lakes'+(x.id?'/'+encodeURIComponent(x.id):''),{method:x.id?'PUT':'POST',body:JSON.stringify({name:x['lake-name'],country:empty(x['lake-country']),latitude:x['lake-lat']===''?null:Number(x['lake-lat']),longitude:x['lake-lon']===''?null:Number(x['lake-lon']),imageUrl:empty(x['lake-image']),researchConfirmed:true,sourceUrl:empty(x['lake-source']),facts:{timeZone:x['lake-zone'],address:x['lake-address'],waterSize:x['lake-size'],depth:x['lake-depth'],mapImage:empty(x['lake-map']),rulesText:x['lake-rules'],logisticsText:x['lake-logistics'],adviceText:x['lake-advice']}})});
-      await refresh();await lakeProfile(saved.id);
+      const saved=await Dream.api('/api/lakes/'+encodeURIComponent(x.id),{method:'PUT',body:JSON.stringify({name:x['lake-name'],country:empty(x['lake-country']),latitude:x['lake-lat']===''?null:Number(x['lake-lat']),longitude:x['lake-lon']===''?null:Number(x['lake-lon']),imageUrl:empty(x['lake-image']),facts:{timeZone:x['lake-zone'],address:x['lake-address'],waterSize:x['lake-size'],depth:x['lake-depth'],mapImage:empty(x['lake-map']),rulesText:x['lake-rules'],logisticsText:x['lake-logistics'],adviceText:x['lake-advice']}})});
+      await refresh();if(window.DreamLakeManager?.show)await window.DreamLakeManager.show(saved.id);
     });
   }
   function tripWizard(){
@@ -158,12 +160,10 @@
   function render(){
     const m=window.DREAM_MODEL;
     if(isSettings){
-      root.innerHTML=`<section class="panel-card" id="lake-catalog"><h2>${T('Katalog łowisk','Lake catalogue')}</h2><p>${T('Wspólne profile łowisk i źródła dla wszystkich lat.','Shared lake profiles, sources and research across all years.')}</p><div class="form-actions">${m.lakes.map(l=>`<button type="button" data-lake="${E(l.id)}" data-user-content class="secondary-btn">${E(l.name)}</button>`).join('')}</div><div id="lake-profile"></div><details class="management-details" id="lake-editor-panel"><summary>Dodaj lub edytuj łowisko</summary><div id="lake-editor"></div></details></section>
+      root.innerHTML=`<section class="panel-card" id="lake-catalog"><h2>${T('Łowiska i research','Fisheries and research')}</h2><p>${T('Łowiska, edycja profili i wszystkie linki do researchu są teraz w jednym miejscu: Wyjazdy i archiwum → Łowiska.','Fisheries, profile editing and all research URLs now live together under Trips and archive → Fisheries.')}</p><a class="secondary-btn" href="/pages/wyjazdy.html#fisheries-area">${T('Zarządzaj łowiskami i źródłami','Manage fisheries and sources')}</a></section>
       <section class="panel-card"><h2>${T('Dodaj uczestnika','Add participant')}</h2><p>${T('Profile i PB istniejących wędkarzy edytujesz powyżej.','Edit existing angler profiles and personal bests above.')}</p><form id="angler-edit" class="form-grid"><div class="form-row">${field('angler-name','Nowy uczestnik','text','','required maxlength="60"')}${field('angler-pb','PB sprzed zapisów w aplikacji (kg)','number',0,'required min="0" max="150" step="0.01"')}</div>${m.currentUser?field('angler-login',T('Login (opcjonalnie, domyślnie imię)','Login (optional, defaults to name)'),'text','','maxlength="32"'):''}<button type="submit">Dodaj uczestnika</button></form></section>
       <details class="panel-card management-details"><summary>Przywracanie wpisów</summary><p>${T('Usunięte wpisy z wyjazdu','Deleted entries from trip')} <span data-user-content>${E(window.DREAM_TRIP.name)}</span>.</p><div id="trash-list"></div></details>
       <section class="panel-card"><h2>Dostęp na tym urządzeniu</h2><p>Pozostajesz zalogowany, dopóki nie wylogujesz się lub nie usuniesz danych przeglądarki.</p><button type="button" id="ryby-logout" class="secondary-btn">Wyloguj</button></section>`;
-      wireLake();
-      root.querySelectorAll('[data-lake]').forEach(b=>b.onclick=()=>{wireLake(m.lakes.find(l=>l.id===b.dataset.lake));void lakeProfile(b.dataset.lake);document.getElementById('lake-profile').scrollIntoView({behavior:'smooth',block:'start'});});
       root.querySelector('#ryby-logout').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{await Dream.logout();}catch(e){Dream.notice(e.message,true);}finally{button.disabled=false;}};
       bind(document.getElementById('angler-edit'),async x=>{await Dream.api('/api/anglers',{method:'POST',body:JSON.stringify({name:x['angler-name'],baselinePbKg:Number(x['angler-pb']),username:x['angler-login']||undefined})});await refresh();document.dispatchEvent(new Event('dream:participants-changed'));});
       void trash();document.dispatchEvent(new Event('dream:settings-management-rendered'));return;
@@ -179,12 +179,14 @@
       <details class="panel-card management-details" id="trip-editor-panel"><summary>Utwórz lub edytuj wyjazd</summary><section id="trip-editor"></section></details><section class="panel-card" id="trip-lake-details" hidden><div id="lake-profile"></div></section>`;
     wireTrip();
     root.querySelector('#create-trip').onclick=tripWizard;
-    if(new URLSearchParams(location.search).get('lakeId'))root.querySelector('#trip-editor-panel').open=true;
+    if(new URLSearchParams(location.search).get('createTrip')==='1')root.querySelector('#trip-editor-panel').open=true;
+    if(document.getElementById('lake-editor')){const wanted=new URLSearchParams(location.search).get('lakeId')||window.DREAM_TRIP?.lakeId;wireLake(m.lakes.find(l=>l.id===wanted)||m.lakes[0]||null);}
     root.querySelectorAll('[data-advice]').forEach(b=>b.onclick=()=>showTripAdvice(b.dataset.advice));
     root.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{Dream.rememberTrip(b.dataset.open);location.href='/';});
-    root.querySelectorAll('[data-view-lake]').forEach(b=>b.onclick=()=>{location.href='/pages/lowiska.html?lakeId='+encodeURIComponent(b.dataset.viewLake);});
+    root.querySelectorAll('[data-view-lake]').forEach(b=>b.onclick=()=>{location.href='/pages/wyjazdy.html?lakeId='+encodeURIComponent(b.dataset.viewLake)+'#fisheries-area';});
     root.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{wireTrip(m.trips.find(t=>t.id===b.dataset.edit));root.querySelector('#trip-editor-panel').open=true;document.getElementById('trip-editor').scrollIntoView({behavior:'smooth',block:'start'});});
     root.querySelectorAll('[data-activate]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await Dream.api('/api/trips/'+encodeURIComponent(b.dataset.activate)+'/activate',{method:'POST',body:'{}'});await refresh();Dream.notice('Zmieniono aktywny wyjazd.');}catch(e){Dream.notice(e.message,true);b.disabled=false;}});
   }
+  document.addEventListener('dream:lake-selected',event=>{if(!isSettings){const lake=window.DREAM_MODEL?.lakes?.find(l=>l.id===event.detail?.lakeId);if(lake)wireLake(lake);}});
   render();
 })();
