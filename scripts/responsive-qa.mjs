@@ -7,7 +7,7 @@ import {waitForOfflineReady} from './qa-offline-ready.mjs';
 import {weatherFixture} from './qa-weather.mjs';
 
 const widths=[360,390,412,768,1280];
-const routes=['/','/pages/wyjazdy.html','/pages/lowiska.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'];
+const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'];
 const preview=await serve({seed:true,weatherFetch:async()=>Response.json(weatherFixture())});
 const loginPreview=await serve({testSession:false});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
@@ -46,7 +46,7 @@ try{
         assert.fail(`${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)} ${JSON.stringify(offenders)}`);
       }
       assert.deepEqual(errors,[],`${width} ${route}: console/network`);
-      if(route==='/pages/lowiska.html'){
+      if(route==='/pages/wyjazdy.html'){
         assert.equal(await page.locator('#lake-list button[aria-pressed="true"]').count(),1,'selected lake is clearly highlighted');
         assert.equal(await page.locator('#new-lake-panel').getAttribute('open'),null,'the add form is not the landing page');
         assert.match(await page.locator('#lake-detail h2').innerText(),/Plaine|LodgingCarp/,'viewed trip lake profile appears on first visit');
@@ -218,7 +218,7 @@ try{
         await page.locator('#create-trip').click();
         await page.locator('#trip-name').fill('Przegląd formularza wyjazdu');
         assert.ok(await page.locator('#trip-lake option').count()>0,'saved fisheries are reusable');
-        assert.equal(await page.locator('#trip-edit a[href="/pages/lowiska.html"]').count(),1,'separate persistent fishery manager');
+        assert.equal(await page.locator('#trip-edit a[href="/pages/wyjazdy.html#fisheries-area"]').count(),1,'integrated fishery manager in trips');
         await page.locator('#trip-editor-panel').screenshot({path:`${screenshotDir}/saved-lake-trip-390.png`});
       }
       if(route==='/'||width===390&&['/pages/wyjazdy.html','/pages/checklisty.html','/pages/polowy.html','/pages/pogoda.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)||width===1280&&['/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'].includes(route)){
