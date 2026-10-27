@@ -26,7 +26,7 @@ jobs:
           npx playwright install chromium
       - name: Targeted PR23 regression on disposable data
         run: |
-          node --test tests/app-shell.test.mjs tests/regulamin-research-ui.test.mjs tests/lake-management-ui.test.mjs
+          node --test tests/app-shell.test.mjs tests/regulamin-research-ui.test.mjs tests/lake-management-ui.test.mjs tests/code32-release.test.mjs
           node scripts/qa-pr23.mjs
       - name: Bounded production inspection and reuse existing schema32 preview
         env:
