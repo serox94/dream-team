@@ -52,3 +52,15 @@ test('Essentials card promotes exactly 20 days before departure through end; rem
   assert.equal(w.document.querySelector('.hero-card').nextElementSibling.id,'trip-essentials-card');
  }finally{w.close();}
 });
+
+
+test('Essentials threshold uses fishery calendar time across DST and rejects invalid ranges',()=>{
+ const dom=new JSDOM('<html><body></body></html>',{runScripts:'outside-only'}),w=dom.window;
+ try{
+  w.eval(shell);
+  // Paris falls back on25October:20calendar days before7November12:00 is18October12:00 CEST.
+  const trip={start:'2026-11-07T11:00:00Z',end:'2026-11-14T11:00:00Z',lakeProfile:{facts:{timeZone:'Europe/Paris'}}};
+  for(const [at,wanted] of [['2026-10-17T10:00:00Z',false],['2026-10-18T09:59:59Z',false],['2026-10-18T10:00:00Z',true],['2026-10-19T10:00:00Z',true],['2026-11-14T11:00:00Z',true],['2026-11-14T11:00:01Z',false]])assert.equal(w.DreamShell.essentialsPriority(trip,Date.parse(at)),wanted,at);
+  for(const invalid of [{},{start:'invalid'},{...trip,end:'2026-01-01'},{...trip,status:'archived'}])assert.equal(w.DreamShell.essentialsPriority(invalid,Date.parse('2026-10-19T10:00:00Z')),false);
+ }finally{w.close();}
+});

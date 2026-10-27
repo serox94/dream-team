@@ -28,8 +28,15 @@
    if(!trip||trip.status==='archived'||!trip.start)return false;
    const start=Date.parse(trip.start),end=trip.end?Date.parse(trip.end):NaN;
    if(!Number.isFinite(start))return false;
-   const threshold=start-20*24*60*60*1000;
-   return now>=threshold&&(now<start||(Number.isFinite(end)&&now<=end));
+   // Compare calendar time in the fishery zone; 20 days can span a DST change.
+   let zone=trip.lakeProfile?.facts?.timeZone||'Europe/Paris';
+   const wall=value=>{
+     let format;try{format=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});}catch{zone='Europe/Paris';format=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});}
+     const p=Object.fromEntries(format.formatToParts(new Date(value)).map(x=>[x.type,x.value]));
+     return Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second)+((value%1000)+1000)%1000;
+   };
+   if(!Number.isFinite(now)||Number.isFinite(end)&&end<start)return false;
+   return wall(now)>=wall(start)-20*86400000&&(now<start||(Number.isFinite(end)&&now<=end));
  }
  function mountEssentials(now=Date.now()){
    const page=document.body.dataset.page;

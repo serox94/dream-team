@@ -265,7 +265,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     const profile=profileOf(trip),anotherLake=Boolean(selectedLake?.id&&selectedLake.id!==trip.lakeId);
     const pack=anotherLake?selectedLake?.facts?.contentPack:(selectedLake?.facts?.contentPack||profile.facts?.contentPack);
     const topic=path.endsWith('/pages/regulamin')?'rules':path.endsWith('/pages/dojazd')?'logistics':path.endsWith('/pages/porady')?'advice':null;
-    const extra=topic?profile.facts?.[topic+'Text']:null;
+    const extra=topic?(anotherLake?selectedLake.facts:profile.facts)?.[topic+'Text']:null;
     if(extra&&(!selectedLake||selectedLake.id===trip.lakeId))documents=[...(documents||[]),{kind:topic==='advice'?'overview':topic,title:'Zapisane informacje o łowisku',content:extra}];
     document.querySelectorAll('[data-lake-only]').forEach(el=>el.hidden=el.dataset.lakeOnly!==pack);
     // Keep the original, detailed Plaine 2 pages as the primary content even after research runs.

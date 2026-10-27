@@ -5,7 +5,7 @@ import {JSDOM} from 'jsdom';
 
 const renderer=readFileSync(new URL('../public/trip-renderer-v2.js',import.meta.url),'utf8');
 const loader=readFileSync(new URL('../public/dream-loader-v2.js',import.meta.url),'utf8');
-const manager=readFileSync(new URL('../public/trip-manager.js',import.meta.url),'utf8');
+const manager=readFileSync(new URL('../public/lake-manager.js',import.meta.url),'utf8');
 const lake='https://www.fishingadventure.nl/en/informatie/reglement-fishing-adventure-lake/';
 
 function scenario(language='pl',url='/pages/regulamin.html'){
@@ -102,11 +102,13 @@ test('original Plaine 2 regulations remain primary when research observations ex
 
 test('opening Plaine 2 via Fisheries always shows its own saved regulations, even from another trip',async()=>{
  const {dom,trip}=scenario('pl','/pages/regulamin.html?lakeId=plaine2');
+ trip.lakeProfile.facts.rulesText='UNRELATED OTHER LAKE EXTRA RULE';
  dom.window.fetch=async()=>({ok:true,text:async()=>originalPlaineRegulations});
  try{
   await dom.window.DreamTripRenderer.render({trip,documents:[{kind:'rules',title:'Another lake',content:'Other trip private regulations'}],selectedLake:{id:'plaine2',name:'La Plaine des Bois 2',facts:{contentPack:'plaine2'}},lakeResearch:frenchResearch});
   const text=dom.window.document.querySelector('main').textContent;
   assert.match(text,/Przyjazd: między 12:00 a 14:00/);
   assert.ok(!text.includes('Other trip private regulations'),'no cross-trip rules contamination');
+  assert.ok(!text.includes('UNRELATED OTHER LAKE EXTRA RULE'),'manual rules also belong to their own lake');
  }finally{dom.window.close();}
 });

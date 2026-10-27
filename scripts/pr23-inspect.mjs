@@ -1,0 +1,14 @@
+// Bounded, read-only production checkpoint; no export, migration, credential read or write.
+import {mkdir,writeFile} from 'node:fs/promises';
+import {cf,query,productionId} from './recovery-common.mjs';
+const report={result:'BLOCKED',productionWrites:0,productionExports:0,providerCalls:0,rowsRead:0};
+const check=(ok,code)=>{if(!ok)throw Error(code);};
+try{
+ const d=(await cf('/workers/scripts/dream-team/deployments')).deployments[0];check(d.versions.length===1&&d.versions[0].percentage===100,'SPLIT_PRODUCTION');const v=await cf('/workers/scripts/dream-team/versions/'+d.versions[0].version_id);const vars=Object.fromEntries(v.resources.bindings.filter(b=>b.type==='plain_text').map(b=>[b.name,b.text]));check(v.id==='81f011a2-ba96-4bdf-b199-10e89f8271e4'&&vars.APP_BUILD==='3b56d7f217b14050cad169f607b30fbf67cae522','PRODUCTION_MOVED');check(v.resources.bindings.find(b=>b.name==='DB')?.id===productionId,'DB_BINDING_CHANGED');
+ const read=async sql=>{check(sql.startsWith('SELECT '),'READ_ONLY_REQUIRED');const x=await query(productionId,sql);report.rowsRead+=x.meta?.rows_read||0;check(report.rowsRead<=2000,'READ_BUDGET');return x.results;};
+ const state=Object.fromEntries((await read("SELECT key,value FROM app_settings WHERE key IN ('schema_version','maintenance_mode')")).map(x=>[x.key,x.value]));check(state.schema_version==='32'&&state.maintenance_mode!=='on','SCHEMA32_MAINTENANCE_OFF_REQUIRED');
+ report.production={worker:v.id,build:vars.APP_BUILD,schema:32,maintenance:'OFF',counts:(await read("SELECT (SELECT COUNT(*) FROM trips) trips,(SELECT COUNT(*) FROM catches WHERE deleted_at IS NULL) catches,(SELECT COUNT(*) FROM checklist_items WHERE deleted_at IS NULL) checklistItems,(SELECT COUNT(*) FROM auth_accounts) accounts,(SELECT COUNT(*) FROM auth_sessions) sessions,(SELECT COUNT(*) FROM content_translations) translations,(SELECT COUNT(*) FROM translation_jobs WHERE status='complete') completedTranslationJobs"))[0]};
+ report.mainSchedule=await cf('/workers/scripts/dream-team/schedules');report.backupSchedule=await cf('/workers/scripts/dream-team-d1-backup/schedules');
+ const script=(await cf('/workers/scripts')).find(x=>x.id==='dream-team');const raw=await cf('/builds/workers/'+script.tag+'/builds?per_page=100');const builds=Array.isArray(raw)?raw:raw.builds;check(Array.isArray(builds),'BUILDS_UNVERIFIED');report.activeBuilds=builds.filter(x=>['queued','pending','initializing','running','building'].includes(x.status)).map(x=>({id:x.id,status:x.status}));report.result='PASS';
+}catch(e){report.error=/^[A-Z0-9_]+$/.test(e.message)?e.message:'INSPECTION_FAILED';process.exitCode=1;}
+finally{await mkdir('pr23-status',{recursive:true});await writeFile('pr23-status/production-readonly.json',JSON.stringify(report,null,2));console.log('PR23_PRODUCTION_READONLY '+JSON.stringify(report));}
