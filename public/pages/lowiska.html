@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>DreamTeam | Łowiska i archiwum</title>
+  <script>
+    // Compatibility only: old bookmarks now open the one fishery manager in Trips.
+    const destination=new URL('/pages/wyjazdy.html',location.origin);
+    const lakeId=new URLSearchParams(location.search).get('lakeId');
+    if(lakeId)destination.searchParams.set('lakeId',lakeId);
+    destination.hash='fisheries-area';
+    location.replace(destination.href);
+  </script>
   
   <link rel="stylesheet" href="../style.css" />
   <link rel="stylesheet" href="../ui-plus.css" />

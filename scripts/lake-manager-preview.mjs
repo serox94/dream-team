@@ -10,7 +10,7 @@ const deployment=async n=>(await cf('/workers/scripts/'+n+'/deployments')).deplo
 async function privatePut(bucket,key,file,dir){wrangler(['r2','object','put',bucket+'/'+key,'--remote','--file',file]);const copy=join(dir,'verify-'+key.replaceAll('/','-'));wrangler(['r2','object','get',bucket+'/'+key,'--remote','--file',copy]);await chmod(copy,0o600);check(sha(await readFile(copy))===sha(await readFile(file)),'PRIVATE_BACKUP_MISMATCH');}
 let report={result:'BLOCKED',productionWrites:0,activePreviewWrites:0,providerPaidCalls:0},phase='isolation gate';const dir=await mkdtemp(join(tmpdir(),'research-isolation-'));
 try{
- check(process.env.GITHUB_REF==='refs/heads/feat/automatic-lake-manager-20261026','WRONG_RESEARCH_BRANCH');
+ check(['refs/heads/feat/automatic-lake-manager-20261026','refs/heads/fix/france-regulations-lake-catalog-20261027'].includes(process.env.GITHUB_REF),'WRONG_RESEARCH_BRANCH');
  const productionBefore=await deployment('dream-team'),sourceBefore=await deployment(sourceWorker),pro2Before=await deployment('dream-team-pro2-preview'),pro2Id='c45a6a34-3ca4-46fb-bef5-ff17b8d9caee';
  const sourceVersion=await cf('/workers/scripts/'+sourceWorker+'/versions/'+sourceBefore);check(sourceVersion.resources.bindings.some(b=>b.name==='TAVILY_API_KEY'&&b.type==='secret_text'),'EXISTING_TAVILY_KEY_NOT_AVAILABLE');
  const base=JSON.parse(await readFile('wrangler.jsonc','utf8')),domain=await cf('/workers/subdomain');check(/^[a-z0-9-]+$/.test(domain.subdomain),'SUBDOMAIN');const publicUrl='https://'+name+'.'+domain.subdomain+'.workers.dev';
@@ -19,7 +19,7 @@ try{
  else throw Error('EXISTING_RESEARCH_DB_REQUIRED_NO_RECLONE');
  check(clone.uuid!==productionId&&clone.uuid!==pro2Id&&clone.uuid!=='5d32f54f-f953-463f-8519-745e51417986','PROTECTED_DB');
  const schema=(await q(clone.uuid,"SELECT value FROM app_settings WHERE key='schema_version'"))[0]?.value;
- check(['31','32'].includes(schema),'EXISTING_RESEARCH_SCHEMA_UNSUPPORTED');
+ check((process.env.GITHUB_REF==='refs/heads/fix/france-regulations-lake-catalog-20261027'?['32']:['31','32']).includes(schema),'EXISTING_RESEARCH_SCHEMA_UNSUPPORTED');
  if(schema==='31'){
   phase='checkpoint existing isolated preview before additive schema32 migration';
   const checkpointCfg=await configFile(dir,{name:'preview-checkpoint',compatibility_date:base.compatibility_date,d1_databases:[{binding:'DB',database_name:dbName,database_id:clone.uuid}]},'checkpoint.jsonc');

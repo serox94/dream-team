@@ -898,5 +898,12 @@
   "Trwa już 10 analiz. Poczekaj na ukończenie partii.": "Ten research jobs are already running. Wait for a batch to finish.",
   "Szablony wybierz przy tworzeniu wyjazdu.": "Select templates when creating a trip.",
   "Niepewny wynik dostawcy. Najpierw rozlicz poprzednie wywołanie.": "Uncertain provider outcome. Reconcile the previous call first.",
-  "Profil zapisano. Uruchom przygotowanie ponownie.": "Profile saved. Start preparation again."
+  "Profil zapisano. Uruchom przygotowanie ponownie.": "Profile saved. Start preparation again.",
+  "Edytuj dane wybranego łowiska": "Edit selected fishery details",
+  "Ręcznie edytujesz tutaj dane profilu. Kolejne linki do regulaminów i researchu dodajesz w sekcji „Uzupełnij lub odśwież profil” powyżej.": "Edit profile details here. Add further regulation and research URLs in “Add sources or refresh profile” above.",
+  "Łowiska": "Fisheries",
+  "Archiwum": "Archive",
+  "Sekcje wyjazdów": "Trip sections",
+  "Łowiska i ich profile": "Fisheries and their profiles",
+  "Zarządzaj łowiskami i dodawaj źródła researchu →": "Manage fisheries and add research sources →"
 }

@@ -15,7 +15,7 @@
   <link rel="icon" type="image/png" href="/icons/dreamteam-192.png" />
   <link rel="apple-touch-icon" href="/icons/dreamteam-180.png" />
 <script src="/language-preference.js"></script><link rel="stylesheet" href="/theme.css">
-<script src="/theme.js"></script><link rel="stylesheet" href="/app-shell.css"></head>
+<script src="/theme.js"></script><link rel="stylesheet" href="/app-shell.css"><link rel="stylesheet" href="/lake-manager.css"></head>
 <body>
   <header class="site-header">
     <div class="container">
@@ -55,7 +55,19 @@
     </div>
   </header>
 
-  <main class="container page-content"><section class="hero-card"><h2>Wyjazdy i archiwum</h2><p>Jedna aplikacja na kolejne lata. Każdy wyjazd ma własne połowy, spoty, checklistę i uczestników.</p></section><div id="trip-manager"></div></main>
+  <main class="container page-content">
+    <section class="hero-card"><h2>Wyjazdy i archiwum</h2><p>Jedna aplikacja na kolejne lata. Każdy wyjazd ma własne połowy, spoty, checklistę i uczestników.</p></section>
+    <nav class="trip-page-tabs" aria-label="Sekcje wyjazdów"><a href="#trip-manager">Wyjazdy</a><a href="#trip-archive">Archiwum</a><a href="#fisheries-area">Łowiska</a></nav>
+    <div id="trip-manager"></div>
+    <section id="fisheries-area" aria-label="Łowiska i ich profile">
+      <div id="lake-manager"></div>
+      <details class="panel-card management-details" id="lake-editor-panel">
+        <summary>Edytuj dane wybranego łowiska</summary>
+        <p>Ręcznie edytujesz tutaj dane profilu. Kolejne linki do regulaminów i researchu dodajesz w sekcji „Uzupełnij lub odśwież profil” powyżej.</p>
+        <div id="lake-editor"></div>
+      </details>
+    </section>
+  </main>
   <script src="/dream-loader-v2.js?v=20260930-3"></script>
 <script type="module" src="/i18n.js"></script></body>
 </html>

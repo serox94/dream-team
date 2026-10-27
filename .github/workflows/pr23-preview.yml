@@ -1,0 +1,66 @@
+name: PR23 consolidated trips preview
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/france-regulations-lake-catalog-20261027]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: dream-team-research-preview
+  cancel-in-progress: false
+jobs:
+  targeted-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Close only the previous disposable QA queue
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/pr23-qa-queue-close.mjs
+      - name: Build and install only the missing browser
+        run: |
+          node scripts/build.mjs
+          npm install --no-save --package-lock=false playwright@1.63.0
+          npx playwright install chromium
+      - name: Retain completed exact-application 24-cell matrix and screenshots
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/pr23-retained-matrix.mjs
+      - name: Targeted PR23 regression on disposable data
+        run: |
+          node --test tests/app-shell.test.mjs tests/regulamin-research-ui.test.mjs tests/lake-management-ui.test.mjs tests/code32-release.test.mjs
+          node scripts/qa-pr23.mjs
+      - name: Bounded production inspection and reuse existing schema32 preview
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_USERNAME: ${{ secrets.RYBY_LOGIN_USERNAME }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          RYBY_SESSION_SECRET: ${{ secrets.RYBY_SESSION_SECRET }}
+        run: |
+          node scripts/pr23-inspect.mjs
+          node scripts/lake-manager-preview.mjs
+      - name: Real preview edits using retained official cache, no extraction
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/qa-pr23-live.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr23-targeted-evidence
+          path: |
+            pr23-status/
+            rc-status/preview.json
+          retention-days: 14

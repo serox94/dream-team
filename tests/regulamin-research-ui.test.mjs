@@ -5,7 +5,7 @@ import {JSDOM} from 'jsdom';
 
 const renderer=readFileSync(new URL('../public/trip-renderer-v2.js',import.meta.url),'utf8');
 const loader=readFileSync(new URL('../public/dream-loader-v2.js',import.meta.url),'utf8');
-const manager=readFileSync(new URL('../public/trip-manager.js',import.meta.url),'utf8');
+const manager=readFileSync(new URL('../public/lake-manager.js',import.meta.url),'utf8');
 const lake='https://www.fishingadventure.nl/en/informatie/reglement-fishing-adventure-lake/';
 
 function scenario(language='pl',url='/pages/regulamin.html'){
@@ -69,5 +69,47 @@ test('rules page shows explicit missing-data and source-load errors rather than 
   assert.match(dom.window.document.querySelector('main').textContent,/Brak zapisanych zasad/);
   await dom.window.DreamTripRenderer.render({trip,documents:[],lakeResearchError:'NETWORK_UNAVAILABLE'});
   assert.match(dom.window.document.querySelector('main').textContent,/NETWORK_UNAVAILABLE/);
+ }finally{dom.window.close();}
+});
+
+
+const originalPlaineRegulations=readFileSync(new URL('../public/data/lakes/plaine2/regulamin.html',import.meta.url),'utf8');
+const frenchResearch={
+ lake:{id:'plaine2',name:'La Plaine des Bois 2'},
+ research:{
+  pages:[{url:'https://www.example.org/plaine2/rules'}],
+  facts:[{field:'leadcore',labelPl:'Leadcore',labelEn:'Leadcore',evidence:'Leadcore is prohibited.',rule:'PROHIBITED',base:'PROHIBITED',scope:'lake',url:'https://www.example.org/plaine2/rules',checkedAt:'2026-10-26',effectiveYear:null}]
+ }
+};
+test('original Plaine 2 regulations remain primary when research observations exist',async()=>{
+ const {dom,trip}=scenario('pl');
+ trip.lakeId='plaine2';trip.lake='La Plaine des Bois 2';
+ trip.lakeProfile={id:'plaine2',name:'La Plaine des Bois 2',facts:{contentPack:'plaine2'}};
+ dom.window.fetch=async()=>({ok:true,text:async()=>originalPlaineRegulations});
+ try{
+  await dom.window.DreamTripRenderer.render({trip,documents:[],lakeResearch:frenchResearch});
+  const main=dom.window.document.querySelector('main'),html=main.textContent;
+  assert.match(html,/Przyjazd: między 12:00 a 14:00/);
+  assert.match(html,/kaucja 200 EUR/);
+  assert.match(html,/haki bezzadziorowe/);
+  assert.match(main.querySelector('[data-maintained-rule-notice]').textContent,/Okres obowiązywania nie jest niezależnie potwierdzony/);
+  const supplement=main.querySelector('details[data-research-supplement]');
+  assert.ok(supplement,'cited research supplements curated rules without replacing them');
+  assert.equal(supplement.open,false,'new raw research stays collapsed by default');
+  assert.match(supplement.textContent,/Leadcore is prohibited/);
+  assert.ok(main.innerHTML.indexOf('Przyjazd:')<main.innerHTML.indexOf('Dodatkowy research'));
+ }finally{dom.window.close();}
+});
+
+test('opening Plaine 2 via Fisheries always shows its own saved regulations, even from another trip',async()=>{
+ const {dom,trip}=scenario('pl','/pages/regulamin.html?lakeId=plaine2');
+ trip.lakeProfile.facts.rulesText='UNRELATED OTHER LAKE EXTRA RULE';
+ dom.window.fetch=async()=>({ok:true,text:async()=>originalPlaineRegulations});
+ try{
+  await dom.window.DreamTripRenderer.render({trip,documents:[{kind:'rules',title:'Another lake',content:'Other trip private regulations'}],selectedLake:{id:'plaine2',name:'La Plaine des Bois 2',facts:{contentPack:'plaine2'}},lakeResearch:frenchResearch});
+  const text=dom.window.document.querySelector('main').textContent;
+  assert.match(text,/Przyjazd: między 12:00 a 14:00/);
+  assert.ok(!text.includes('Other trip private regulations'),'no cross-trip rules contamination');
+  assert.ok(!text.includes('UNRELATED OTHER LAKE EXTRA RULE'),'manual rules also belong to their own lake');
  }finally{dom.window.close();}
 });
