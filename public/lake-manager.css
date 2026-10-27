@@ -7,3 +7,9 @@
 #lake-detail{margin-top:16px}
 .historical-regulation-evidence > summary{cursor:pointer;min-height:44px;font-weight:700;padding:10px 0}
 .historical-regulation-evidence .research-regulation{margin-top:14px}
+
+#fisheries-area{padding-top:10px;scroll-margin-top:135px}
+#fisheries-area #lake-editor-panel{margin:20px 0;scroll-margin-top:135px}
+#fisheries-area #lake-manager .hero-card{margin-top:10px}
+#fisheries-area #lake-detail{overflow-wrap:anywhere}
+#fisheries-area #lake-editor-panel summary{min-height:44px;cursor:pointer}
