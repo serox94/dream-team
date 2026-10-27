@@ -20,7 +20,7 @@ try{
  // Explicitly suppress discovery on this QA lake; only three unmodified retained official pages are analysed.
  await q('INSERT INTO app_settings(key,value) VALUES(?,?)',['research.discovery.'+id,new Date().toISOString()]);
  browser=await chromium.launch();const ctx=await browser.newContext({viewport:{width:390,height:900},locale:'pl-PL'});contexts.push(ctx);
- await ctx.addInitScript(()=>{localStorage.setItem('dreamteam.language','pl');localStorage.setItem('dreamteam.theme','light');localStorage.setItem('dream_team_viewed_trip','next-trip');});
+ await ctx.addInitScript(()=>{if(!localStorage.getItem('dreamteam.language'))localStorage.setItem('dreamteam.language','pl');if(!localStorage.getItem('dreamteam.theme'))localStorage.setItem('dreamteam.theme','light');if(!localStorage.getItem('dream_team_viewed_trip'))localStorage.setItem('dream_team_viewed_trip','next-trip');});
  const login=await ctx.request.post(base+'/api/login',{form:{username:'Patryk',password:process.env.RYBY_LOGIN_PASSWORD},maxRedirects:0});assert.equal(login.status(),303);
  const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));const ready=()=>page.locator('html[data-ready=true]').waitFor({timeout:45000});
  await page.goto(base+'/pages/wyjazdy.html?lakeId='+id+'#fisheries-area');await ready();assert.equal(await page.locator('.profile-sources [name=sources]').count(),1);
@@ -33,7 +33,7 @@ try{
  await page.screenshot({path:'pr23-status/live/edited-profile-390-pl-light.png',fullPage:true});
  await page.goto(base+'/pages/lowiska.html?lakeId='+id);await ready();assert.ok(page.url().includes('/pages/wyjazdy.html?lakeId='+id));pass('Legacy bookmark opens the consolidated remote manager');
  for(const [lang,theme,width]of [['pl','light',390],['en','dark',1440]]){
-  await page.setViewportSize({width,height:900});await page.evaluate(({lang,theme})=>{localStorage.setItem('dreamteam.language',lang);localStorage.setItem('dreamteam.theme',theme);},{lang,theme});
+  await page.setViewportSize({width,height:900});await page.evaluate(({lang,theme})=>{localStorage.setItem('dreamteam.language',lang);DreamLanguage.persist(lang);localStorage.setItem('dreamteam.theme',theme);},{lang,theme});
   for(const route of ['/','/pages/wyjazdy.html','/pages/regulamin.html?lakeId=plaine2','/pages/pogoda.html','/pages/checklisty.html','/pages/polowy.html','/pages/ustawienia.html']){
    await page.goto(base+route);await ready();assert.equal(await page.locator('html').getAttribute('lang'),lang);assert.equal(await page.locator('html').getAttribute('data-theme'),theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.equal(await page.locator('#main-nav a[href="/pages/lowiska.html"],#main-nav a[href="/pages/teren.html"]').count(),0);
    if(route.includes('regulamin')){const {JSDOM}=await import('jsdom'),raw=await readFile('public/data/lakes/plaine2/regulamin.html','utf8');const expected=new JSDOM(raw).window.document.body.textContent.replace(/\s+/g,' ').trim();if(lang==='pl'){const actual=await page.locator('main').evaluate(el=>{const copy=el.cloneNode(true);copy.querySelectorAll('[data-research-supplement],.help-link,#content-language-status,[data-maintained-rule-notice]').forEach(n=>n.remove());return copy.textContent.replace(/\s+/g,' ').trim();});assert.equal(actual,expected);}assert.ok((await page.locator('main').innerText()).length>3000);}
