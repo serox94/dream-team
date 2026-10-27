@@ -5,3 +5,10 @@
 .main-nav a[aria-current=page]{display:flex!important}.dream-shell #countdown{display:block!important;font-weight:700;font-variant-numeric:tabular-nums}.dream-shell .trip-box small{display:block;margin-top:2px}
 @media(max-width:767px){.dream-shell{grid-template-columns:60px minmax(0,1fr) 44px;column-gap:10px!important;row-gap:7px!important}.dream-brand{width:60px;grid-row:1}.dream-shell .dream-trip{grid-column:2;grid-row:1}.dream-shell .trip-box{grid-column:1/-1;grid-row:2;background:none;border:0;padding:0!important;display:flex!important;justify-content:space-between;gap:8px;align-items:baseline}.dream-shell #dream-theme-toggle{grid-column:3}.dream-shell .subtitle{font-size:12px!important}.dream-shell .trip-box small{font-size:12px;flex:0 0 auto}.dream-shell #countdown{font-size:14px;min-width:0}.dashboard-hero #dashboard-countdown{display:block!important}}
 .help-link{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border:1px solid var(--border);border-radius:50%;font-weight:700;text-decoration:none}.guide-section{scroll-margin-top:20px}.guide-section summary{font-size:16px;line-height:1.5;padding:12px 0}.guide-section p{line-height:1.65}
+
+/* Contextual quick guide: promoted only 20 days before departure and during the trip. */
+.trip-essentials-card{margin:18px 0;scroll-margin-top:120px}
+.trip-essentials-card[data-priority="high"]{border-color:var(--border-strong);background:linear-gradient(125deg,rgba(142,190,150,.14),var(--card))}
+.trip-essentials-card .section-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.trip-essentials-card p{line-height:1.55;margin:8px 0 16px}
+.trip-essentials-card .essentials-open{display:inline-flex;align-items:center;min-height:44px;max-width:100%}
