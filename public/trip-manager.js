@@ -68,6 +68,7 @@
     const editor=document.getElementById('lake-editor');if(!editor)return;
     editor.innerHTML=lake?lakeEditor(lake):'<p>'+T('Wybierz łowisko z listy powyżej.','Choose a fishery above.')+'</p>';
     if(!lake)return;
+    editor.querySelector('form').addEventListener('input',()=>{editor.querySelector('form').dataset.dirty='true';});
     document.getElementById('lake-new').onclick=()=>{const details=document.getElementById('new-lake-panel');if(details){details.open=true;details.scrollIntoView({block:'start'});}};
     const removeButton=document.getElementById('lake-delete');
     if(removeButton)removeButton.onclick=async()=>{
@@ -144,6 +145,6 @@
     root.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{wireTrip(m.trips.find(t=>t.id===b.dataset.edit));root.querySelector('#trip-editor-panel').open=true;document.getElementById('trip-editor').scrollIntoView({behavior:'smooth',block:'start'});});
     root.querySelectorAll('[data-activate]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await Dream.api('/api/trips/'+encodeURIComponent(b.dataset.activate)+'/activate',{method:'POST',body:'{}'});await refresh();Dream.notice('Zmieniono aktywny wyjazd.');}catch(e){Dream.notice(e.message,true);b.disabled=false;}});
   }
-  document.addEventListener('dream:lake-selected',event=>{if(!isSettings){const lake=window.DREAM_MODEL?.lakes?.find(l=>l.id===event.detail?.lakeId);if(lake)wireLake(lake);}});
+  document.addEventListener('dream:lake-selected',event=>{if(!isSettings){const lake=window.DREAM_MODEL?.lakes?.find(l=>l.id===event.detail?.lakeId);if(lake){const draft=document.getElementById('lake-edit');if(draft?.elements.id.value===lake.id&&draft.dataset.dirty)return;wireLake(lake);}}});
   render();
 })();

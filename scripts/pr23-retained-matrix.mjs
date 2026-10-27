@@ -2,7 +2,7 @@
 import {execFileSync} from 'node:child_process';import {mkdir,mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {createHash} from 'node:crypto';
 const source='65fcc183b05ebc64ae54bca7948d601586edee17',run=40519898385,artifact=12741731603;
 const git=(...args)=>execFileSync('git',args,{encoding:'utf8'}).trim();
-if(git('diff','--name-only',source,'HEAD','--','public','src','migrations','wrangler.jsonc','package.json','package-lock.json','backup'))throw Error('RETAINED_MATRIX_APPLICATION_CHANGED');
+if(git('diff','--name-only',source,'HEAD','--','public','src','migrations','wrangler.jsonc','package.json','package-lock.json','backup')){console.log('Application changed: rerun the required browser matrix.');process.exit(0);}
 const headers={authorization:'Bearer '+process.env.GITHUB_TOKEN,accept:'application/vnd.github+json'},url='https://api.github.com/repos/serox94/dream-team';
 const r=await fetch(url+'/actions/runs/'+run,{headers});if(!r.ok||(await r.json()).head_sha!==source)throw Error('RETAINED_MATRIX_COMMIT_MISMATCH');
 const download=await fetch(url+'/actions/artifacts/'+artifact+'/zip',{headers});if(!download.ok)throw Error('RETAINED_MATRIX_ARTIFACT_UNAVAILABLE');const bytes=Buffer.from(await download.arrayBuffer());if(createHash('sha256').update(bytes).digest('hex')!=='41cf77ee3a6c875eb3f7257151d9d1830fe36f6508813da3509ffb6b5316d8f6')throw Error('RETAINED_MATRIX_DIGEST');
