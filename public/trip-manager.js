@@ -23,7 +23,7 @@
       <h3>${trip?'Edytuj wyjazd':'Nowy wyjazd'}</h3><div class="form-row">
       ${field('trip-name','Nazwa','text',trip?.name||'','required maxlength="150"')}
       ${field('trip-year','Rok','number',trip?.year||new Date().getFullYear(),'required min="2000" max="2200" step="1"')}</div>
-      <div><label for="trip-lake">Łowisko</label><select id="trip-lake" name="lakeId" ${trip?'disabled':''}>${options(m.lakes,lake?.id)}</select><small><a href="/pages/lowiska.html">${T('Dodaj lub przygotuj profil łowiska','Add or prepare a fishery profile')}</a>. ${T('Wyjazd używa gotowego profilu, bez ponownego researchu.','The trip reuses its saved profile without repeating research.')}</small></div>
+      <div><label for="trip-lake">Łowisko</label><select id="trip-lake" name="lakeId" ${trip?'disabled':''}>${options(m.lakes,lake?.id)}</select><small><a href="/pages/wyjazdy.html#fisheries-area">${T('Dodaj łowisko lub kolejne źródła researchu','Add a fishery or more research sources')}</a>. ${T('Wyjazd używa gotowego profilu, bez ponownego researchu.','The trip reuses its saved profile without repeating research.')}</small></div>
       <div class="form-row">${field('trip-start','Początek','datetime-local',trip?.start?Dream.dateInput(trip.start,zone):'')}${field('trip-end','Powrót','datetime-local',trip?.end?Dream.dateInput(trip.end,zone):'')}</div>
       <small id="trip-zone">Godziny łowiska: ${E(zone)}. Termin może pozostać pusty.</small>
       ${field('trip-photos',T('Link do albumu Google Photos','Google Photos album link'),'url',trip?.googlePhotosUrl||'','maxlength="2000" placeholder="https://photos.app.goo.gl/…"')}
