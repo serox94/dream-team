@@ -262,17 +262,38 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     if (path === '' || path === '/' || path.endsWith('/index')) renderDashboard(trip);
     if (path.endsWith('/pages/teren')) window.DreamField?.renderGuide(trip, documents || []);
     if (path.endsWith('/pages/mapa')) renderMap(trip);
-    const profile=profileOf(trip),pack=selectedLake?.id&&selectedLake.id!==trip.lakeId?null:profile.facts?.contentPack;
+    const profile=profileOf(trip),anotherLake=Boolean(selectedLake?.id&&selectedLake.id!==trip.lakeId);
+    const pack=anotherLake?selectedLake?.facts?.contentPack:(selectedLake?.facts?.contentPack||profile.facts?.contentPack);
     const topic=path.endsWith('/pages/regulamin')?'rules':path.endsWith('/pages/dojazd')?'logistics':path.endsWith('/pages/porady')?'advice':null;
     const extra=topic?profile.facts?.[topic+'Text']:null;
     if(extra&&(!selectedLake||selectedLake.id===trip.lakeId))documents=[...(documents||[]),{kind:topic==='advice'?'overview':topic,title:'Zapisane informacje o łowisku',content:extra}];
     document.querySelectorAll('[data-lake-only]').forEach(el=>el.hidden=el.dataset.lakeOnly!==pack);
-    if(pack==='plaine2' && !(topic==='rules'&&lakeResearch?.research?.facts?.length) && /\/pages\/(dojazd|regulamin|porady)$/.test(path)){
+    // Keep the original, detailed Plaine 2 pages as the primary content even after research runs.
+    // Research observations never replace the maintained local regulations or historical notes.
+    if(pack==='plaine2' && /\/pages\/(dojazd|regulamin|porady)$/.test(path)){
       const name=path.split('/').pop();
       const response=await fetch(`/data/lakes/plaine2/${name}.html`);
       if(!response.ok)throw new Error('Nie udało się wczytać zachowanej wiedzy o łowisku.');
       main().innerHTML=await response.text();
       if(extra)main().insertAdjacentHTML('beforeend',panel('Zapisane informacje o łowisku','PROFIL',`<p class="preserve-lines">${esc(extra)}</p>`));
+      if(topic==='rules'){
+        const ruleFields=new Set(['rods','distance','leadcore','hooks','rigs','bait_boats','boats','lifejacket','net','mat','sling','disinfectant','fishcare','bait','safety','camp','other_rules']);
+        const hasCitedRules=lakeResearch?.research?.facts?.some(f=>ruleFields.has(f.field)&&f.scope!=='site');
+        if(hasCitedRules||lakeResearchError){
+          // Extra evidence is accessible but collapsed: original trip guidance stays first.
+          const wrapper=document.createElement('details');
+          wrapper.className='panel-card historical-regulation-evidence';
+          wrapper.setAttribute('data-research-supplement','');
+          const heading=document.createElement('summary');
+          const english=window.DreamLanguage?.get?.()==='en'||document.documentElement.lang==='en';
+          heading.textContent=english?'Additional source research (check current applicability)':'Dodatkowy research źródeł (sprawdź aktualność zasad)';
+          wrapper.append(heading);
+          const evidence=document.createElement('div');
+          evidence.innerHTML=researchRules(lakeResearch,lakeResearchError);
+          wrapper.append(evidence);
+          main().append(wrapper);
+        }
+      }
       return;
     }
     if (path.endsWith('/pages/dojazd')) renderDirections(trip, documents || []);
