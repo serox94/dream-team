@@ -7,7 +7,7 @@ import {waitForOfflineReady} from './qa-offline-ready.mjs';
 import {weatherFixture} from './qa-weather.mjs';
 
 const widths=[360,390,412,768,1280];
-const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'];
+const routes=['/','/pages/wyjazdy.html','/pages/lowiska.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'];
 const preview=await serve({seed:true,weatherFetch:async()=>Response.json(weatherFixture())});
 const loginPreview=await serve({testSession:false});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
@@ -46,6 +46,15 @@ try{
         assert.fail(`${width} ${route}: horizontal overflow ${JSON.stringify(dimensions)} ${JSON.stringify(offenders)}`);
       }
       assert.deepEqual(errors,[],`${width} ${route}: console/network`);
+      if(route==='/pages/lowiska.html'){
+        assert.equal(await page.locator('#lake-list button[aria-pressed="true"]').count(),1,'selected lake is clearly highlighted');
+        assert.equal(await page.locator('#new-lake-panel').getAttribute('open'),null,'the add form is not the landing page');
+        assert.match(await page.locator('#lake-detail h2').innerText(),/Plaine|LodgingCarp/,'viewed trip lake profile appears on first visit');
+      }
+      if(route==='/pages/regulamin.html'){
+        assert.match(await page.locator('main').innerText(),/Przyjazd: między 12:00 a 14:00/,'original French regulations must stay visible');
+        assert.match(await page.locator('main').innerText(),/kaucja 200 EUR/,'the retained detailed rules must stay accessible');
+      }
       if(route==='/pages/teren.html'){
         assert.match(await page.locator('main').innerText(),/Najważniejsze nad wodą/);
         assert.ok(await page.locator('main a[href^="https://www.google.com/maps/search/"]').count());
