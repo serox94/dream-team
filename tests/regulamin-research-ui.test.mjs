@@ -92,6 +92,7 @@ test('original Plaine 2 regulations remain primary when research observations ex
   assert.match(html,/Przyjazd: między 12:00 a 14:00/);
   assert.match(html,/kaucja 200 EUR/);
   assert.match(html,/haki bezzadziorowe/);
+  assert.match(main.querySelector('[data-maintained-rule-notice]').textContent,/Okres obowiązywania nie jest niezależnie potwierdzony/);
   const supplement=main.querySelector('details[data-research-supplement]');
   assert.ok(supplement,'cited research supplements curated rules without replacing them');
   assert.equal(supplement.open,false,'new raw research stays collapsed by default');

@@ -277,6 +277,9 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
       main().innerHTML=await response.text();
       if(extra)main().insertAdjacentHTML('beforeend',panel('Zapisane informacje o łowisku','PROFIL',`<p class="preserve-lines">${esc(extra)}</p>`));
       if(topic==='rules'){
+        const notice=document.createElement('p');notice.className='weather-note status-info';notice.dataset.maintainedRuleNotice='';
+        notice.textContent=(window.DreamLanguage?.get?.()==='en'||document.documentElement.lang==='en')?'Retained detailed regulations from the trip materials. Their effective period is not independently confirmed. Check the operator’s current rules before departure; additional research below does not replace this document.':'Zachowany szczegółowy regulamin z materiałów wyjazdu. Okres obowiązywania nie jest niezależnie potwierdzony. Przed wyjazdem sprawdź aktualne zasady operatora; dodatkowy research poniżej nie zastępuje tego dokumentu.';
+        main().querySelector('.hero-card')?.after(notice);
         const ruleFields=new Set(['rods','distance','leadcore','hooks','rigs','bait_boats','boats','lifejacket','net','mat','sling','disinfectant','fishcare','bait','safety','camp','other_rules']);
         const hasCitedRules=lakeResearch?.research?.facts?.some(f=>ruleFields.has(f.field)&&f.scope!=='site');
         if(hasCitedRules||lakeResearchError){
