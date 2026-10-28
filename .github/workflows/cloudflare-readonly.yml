@@ -47,6 +47,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/check-builds-merge-readonly.mjs
+      - name: Post-merge production Worker, schema32 and baseline counts (read-only)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/pr23-inspect.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -55,5 +60,6 @@ jobs:
             readonly-status/cloudflare-inventory.json
             code32-failure-triage/summary.json
             builds-merge-status/summary.json
+            pr23-status/production-readonly.json
           retention-days: 7
           if-no-files-found: warn
