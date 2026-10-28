@@ -3,7 +3,8 @@
 // dream-team-audit-4072485184932-media / dream-team-audit-4072485184932-archive.
 // Neither production R2 nor any D1 is bound, queried or modified.
 import {mkdir,writeFile,readFile} from 'node:fs/promises';
-import {randomBytes,createHash} from 'node:crypto';
+import {randomBytes} from 'node:crypto';
+import {execFileSync} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
 
 export const MEDIA='dream-team-audit-4072485184932-media';
@@ -11,12 +12,11 @@ export const ARCHIVE='dream-team-audit-4072485184932-archive';
 export const SOURCE_WORKER='81f011a2-ba96-4bdf-b199-10e89f8271e4';
 const UUID=/^[0-9a-f]{32}$/;
 const check=(ok,code)=>{if(!ok)throw Error(code);};
-const SHA=b=>createHash('sha256').update(b).digest('hex');
 const ioName=run=>'dream-team-audit-'+run+'-io';
 const permittedCodes=new Set(['SOURCE_CHANGED','COPY_MISMATCH','NO_MANIFEST','ARCHIVE_MISMATCH','RESTORE_MISMATCH','RECOVERY_FAILED']);
 const safeValue=s=>typeof s==='string'&&/^[A-Z0-9_]{1,64}$/.test(s)?s:null;
 const safeStatus=v=>Number.isInteger(v)&&v>=100&&v<=599?v:null;
-const safeNumber=v=>Number.isSafeInteger(Number(v))&&Number(v)>=0?Number(v):null;
+const safeNumber=v=>v!==null&&v!==undefined&&Number.isSafeInteger(Number(v))&&Number(v)>=0?Number(v):null;
 
 export function allowedApi({method,path,account,name}){
  const p='/accounts/'+account;
@@ -124,7 +124,7 @@ export async function probe({run=process.env.GITHUB_RUN_ID,account=process.env.C
   assertEmptyBucket(mediaBefore);assertEmptyBucket(archiveBefore);report.initialTestBucketsEmpty=true;
   phase='PREPARE_EXACT_SOURCE';
   const source=workerSource??await readFile(new URL('./restore-io-worker.js',import.meta.url));
-  check(SHA(source)==='f79f147cf0c7f2507f54ce153a2b5936e456902435a95f6a4e775c513ee6549ec','SOURCE_WORKER_SCRIPT_CHANGED');
+  check(execFileSync('git',['hash-object','scripts/restore-io-worker.js'],{encoding:'utf8'}).trim()==='ecec154424942386c2200ccf14b93b54168d13b0','SOURCE_WORKER_SCRIPT_CHANGED');
   const key=randomBytes(32).toString('hex');
   const metadata={main_module:'main.mjs',compatibility_date:'2026-10-01',
    bindings:metadataBindings(MEDIA,ARCHIVE,key)};
