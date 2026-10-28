@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   one-time:
-    if: github.repository == 'serox94/dream-team' && github.ref == 'refs/heads/fix/code32-cloudflare-recovery-diagnostics-20261027'
+    if: false # sealed after one successful authorized PATCH in run 40731056346
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
