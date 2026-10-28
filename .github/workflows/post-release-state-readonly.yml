@@ -1,0 +1,42 @@
+name: Post-release production state (READ ONLY)
+on:
+  push:
+    branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
+    paths: [.github/workflows/post-release-state-readonly.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: d39ddf632b2279573216ac81d536a7e6f0fcc240
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Read active version schema counts and availability; no writes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {cf,query,productionId} from './scripts/recovery-common.mjs';
+          let result={mode:'READ_ONLY',productionWrites:0};
+          try {
+            let deploy=(await cf('/workers/scripts/dream-team/deployments')).deployments[0];
+            let versions=deploy.versions.map(v=>({id:v.version_id,percentage:v.percentage}));
+            let active=versions.length===1?await cf('/workers/scripts/dream-team/versions/'+versions[0].id):null;
+            let vars=Object.fromEntries((active?.resources?.bindings||[]).filter(b=>b.type==='plain_text'&&['APP_BUILD','APP_VARIANT'].includes(b.name)).map(b=>[b.name,b.text]));
+            let state=(await query(productionId,"SELECT key,value FROM app_settings WHERE key IN ('schema_version','maintenance_mode')")).results;
+            let counts=(await query(productionId,"SELECT (SELECT COUNT(*) FROM trips) trips,(SELECT COUNT(*) FROM catches WHERE deleted_at IS NULL) catches,(SELECT COUNT(*) FROM checklist_items WHERE deleted_at IS NULL) checklistItems,(SELECT COUNT(*) FROM auth_accounts) accounts,(SELECT COUNT(*) FROM auth_sessions) sessions,(SELECT COUNT(*) FROM content_translations) translations,(SELECT COUNT(*) FROM translation_jobs WHERE status='complete') completedTranslationJobs")).results[0];
+            let response=await fetch('https://dream-team.sewerynski00.workers.dev/login',{redirect:'manual',signal:AbortSignal.timeout(20000)});
+            Object.assign(result,{result:'PASS',versions,build:vars.APP_BUILD,variant:vars.APP_VARIANT,state:Object.fromEntries(state.map(x=>[x.key,x.value])),counts,loginStatus:response.status,loginBuild:response.headers.get('x-dreamteam-build'),mainSchedule:await cf('/workers/scripts/dream-team/schedules'),backupSchedule:await cf('/workers/scripts/dream-team-d1-backup/schedules')});
+          } catch(e) { result.result='BLOCKED';result.error=/^[A-Z0-9_]+$/.test(e.message)?e.message:'READ_FAILED';process.exitCode=1; }
+          console.log('POST_RELEASE_READONLY '+JSON.stringify(result));
+          NODE
