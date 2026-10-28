@@ -1,4 +1,4 @@
-name: Final code32 release readiness (read-only)
+name: Final PR26 code32 release readiness (read-only)
 on:
   push:
     branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
@@ -23,7 +23,7 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: feb3d463e47bebb094b209f16d96449624848ef5
+          ref: d39ddf632b2279573216ac81d536a7e6f0fcc240
           path: release-main
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
