@@ -11,36 +11,45 @@ const expectedWorker='81f011a2-ba96-4bdf-b199-10e89f8271e4';
 const check=(ok,code)=>{if(!ok)throw Error(code)};
 const report={result:'BLOCKED',mode:'EXACT_D1_RETIREMENT_ELIGIBILITY_READ_ONLY',phase:'PREFLIGHT',target,deleteAttempts:0,productionWrites:0,otherDeletes:0,deployments:0,backupWrites:0,deletionAuthorized:false};
 let dir;
+let getRetries=0;
+const read=async path=>{
+ for(let attempt=0;attempt<3;attempt++){
+  try{return await cf(path);}catch(e){
+   if(![500,502,503,504].includes(e.status)||attempt===2)throw e;
+   getRetries++;await new Promise(r=>setTimeout(r,500*(attempt+1)));
+  }
+ }
+};
 try{
  check(process.env.GITHUB_REPOSITORY==='serox94/dream-team'&&process.env.GITHUB_RUN_ATTEMPT==='1','ONE_SHOT_REQUIRED');
  check(target.uuid!==productionId,'PRODUCTION_ID_FORBIDDEN');
- const list=async()=>{const x=await cf('/d1/database?per_page=100');check(Array.isArray(x),'D1_LIST_INVALID');return x};
+ const list=async()=>{const x=await read('/d1/database?per_page=100');check(Array.isArray(x),'D1_LIST_INVALID');return x};
  const before=await list();check(before.length===10&&before.filter(x=>x.name===target.name&&x.uuid===target.uuid).length===1,'TARGET_OR_CAPACITY_CHANGED');
- const direct=await cf('/d1/database/'+target.uuid);check(direct.uuid===target.uuid&&direct.name===target.name,'TARGET_IDENTITY_CHANGED');
+ const direct=await read('/d1/database/'+target.uuid);check(direct.uuid===target.uuid&&direct.name===target.name,'TARGET_IDENTITY_CHANGED');
  const stable=async()=>{
-  const deployment=(await cf('/workers/scripts/dream-team/deployments')).deployments[0];
+  const deployment=(await read('/workers/scripts/dream-team/deployments')).deployments[0];
   check(deployment?.versions?.length===1&&deployment.versions[0].percentage===100&&deployment.versions[0].version_id===expectedWorker,'PRODUCTION_WORKER_CHANGED');
-  const schedules=await cf('/workers/scripts/dream-team/schedules'),backupSchedules=await cf('/workers/scripts/dream-team-d1-backup/schedules');
-  const buckets=await cf('/r2/buckets?per_page=1000');check(Array.isArray(buckets?.buckets)&&!buckets.cursor,'BUCKET_INVENTORY_INCOMPLETE');
+  const schedules=await read('/workers/scripts/dream-team/schedules'),backupSchedules=await read('/workers/scripts/dream-team-d1-backup/schedules');
+  const buckets=await read('/r2/buckets?per_page=1000');check(Array.isArray(buckets?.buckets)&&!buckets.cursor,'BUCKET_INVENTORY_INCOMPLETE');
   return {deployment,schedules,backupSchedules,buckets:buckets.buckets.map(x=>x.name).sort()};
  };
  const initial=await stable();
  report.phase='ALL_WORKER_BINDINGS_AND_HISTORY';
- const workers=await cf('/workers/scripts');check(Array.isArray(workers)&&workers.length<=100,'WORKER_INVENTORY_INCOMPLETE');
+ const workers=await read('/workers/scripts');check(Array.isArray(workers)&&workers.length<=100,'WORKER_INVENTORY_INCOMPLETE');
  let versions=0;const references=[];
  const hasTarget=bindings=>{check(Array.isArray(bindings),'BINDINGS_UNAVAILABLE');return bindings.some(b=>(b.type==='d1'&&(b.id===target.uuid||b.database_id===target.uuid||b.database_name===target.name))||(b.type==='plain_text'&&typeof b.text==='string'&&(b.text.includes(target.uuid)||b.text.includes(target.name))));};
  for(const w of workers){
   check(/^[a-zA-Z0-9_-]+$/.test(w.id||''),'WORKER_NAME_UNSUPPORTED');
-  if(hasTarget((await cf('/workers/scripts/'+w.id+'/settings')).bindings))references.push({worker:w.id,kind:'active'});
+  if(hasTarget((await read('/workers/scripts/'+w.id+'/settings')).bindings))references.push({worker:w.id,kind:'active'});
   let complete=false;
   for(let page=1;page<=30;page++){
    // No deployable filter: includes all retained historical versions, with pagination.
-   const listVersions=await cf('/workers/scripts/'+w.id+'/versions?per_page=100&page='+page);
+   const listVersions=await read('/workers/scripts/'+w.id+'/versions?per_page=100&page='+page);
    check(Array.isArray(listVersions?.items),'HISTORY_UNAVAILABLE');
    for(const item of listVersions.items){
     check(/^[a-f0-9-]{36}$/.test(item.id||''),'VERSION_ID_INVALID');
     check(++versions<=3000,'HISTORY_BUDGET_EXCEEDED');
-    const v=await cf('/workers/scripts/'+w.id+'/versions/'+item.id);
+    const v=await read('/workers/scripts/'+w.id+'/versions/'+item.id);
     if(hasTarget(v.resources?.bindings))references.push({worker:w.id,version:item.id,kind:'history'});
    }
    if(listVersions.items.length<100){complete=true;break;}
@@ -61,4 +70,4 @@ try{
  Object.assign(report,{result:'PASS',d1Count:10,snapshotRetained:true,otherDatabasesUnchanged:true,productionAndSchedulesUnchanged:true,
   workerHistoryComplete:true,workerBindingReferences:0,deletionAuthorized:false,deletionStatus:'NOT_PERFORMED'});
 }catch(e){report.failure={phase:report.phase,error:/^[A-Z0-9_]+$/.test(e.message)?e.message:'VERIFICATION_FAILED',httpStatus:e.status||undefined,cloudflareCode:e.code||undefined,stage:e.stage||undefined};process.exitCode=1;}
-finally{if(dir)await rm(dir,{recursive:true,force:true});await mkdir('retirement-readonly-status',{recursive:true});await writeFile('retirement-readonly-status/summary.json',JSON.stringify(report,null,2),{mode:0o600});console.log('RETIRE_ELIGIBILITY_READONLY '+JSON.stringify(report));}
+finally{report.controlPlaneGetRetries=getRetries;if(dir)await rm(dir,{recursive:true,force:true});await mkdir('retirement-readonly-status',{recursive:true});await writeFile('retirement-readonly-status/summary.json',JSON.stringify(report,null,2),{mode:0o600});console.log('RETIRE_ELIGIBILITY_READONLY '+JSON.stringify(report));}
