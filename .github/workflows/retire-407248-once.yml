@@ -1,0 +1,53 @@
+name: OWNER APPROVED retire EXACT failed 407248 D1 (one DELETE)
+on:
+  push:
+    branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
+    paths: [.github/workflows/retire-407248-once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
+jobs:
+  exact-retirement:
+    if: github.repository == 'serox94/dream-team' && github.ref == 'refs/heads/fix/code32-cloudflare-recovery-diagnostics-20261027' && github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          path: diagnostic
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: d39ddf632b2279573216ac81d536a7e6f0fcc240
+          path: release-main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Install pinned restore-only dependencies (no project scripts)
+        working-directory: release-main
+        run: npm ci --ignore-scripts
+      - name: Verify exact-target script gates and JavaScript syntax WITHOUT Cloudflare credentials
+        working-directory: release-main
+        run: |
+          cp ../diagnostic/scripts/retire-407248-once.mjs scripts/retire-407248-once.mjs
+          cp ../diagnostic/tests/retire-407248-once.test.mjs tests/retire-407248-once.test.mjs
+          node --check scripts/retire-407248-once.mjs
+          node --test tests/retire-407248-once.test.mjs
+      - name: Fresh identity + 7 Worker histories + exact R2 receipt + ONE D1 DELETE + 9/10 verification
+        working-directory: release-main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RETIRE_APPROVAL: DELETE:dream-team-audit-4072485184932-db:ee58d26e-26f9-4f25-bbe9-944d6fa91c56
+        run: node scripts/retire-407248-once.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: retire-one-407248-d1-verification
+          path: release-main/retire-407248-status/summary.json
+          retention-days: 14
+          if-no-files-found: warn
