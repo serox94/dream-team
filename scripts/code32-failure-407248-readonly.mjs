@@ -21,7 +21,8 @@ export function readAllowed(method,path,body,id,account){
    base+'/r2/buckets/dream-team-d1-backups/objects?per_page=100&prefix='+encodeURIComponent(PREFIX)].includes(path))return true;
   if(path===base+'/workers/scripts/dream-team/settings')return true;
   if([base+'/r2/buckets/dream-team-audit-'+RUN+'32-media/objects?per_page=100',
-      base+'/r2/buckets/dream-team-audit-'+RUN+'32-archive/objects?per_page=100'].includes(path))return true;
+      base+'/r2/buckets/dream-team-audit-'+RUN+'32-archive/objects?per_page=100',
+      base+'/r2/buckets/dream-team-media/objects?per_page=100'].includes(path))return true;
   return false;
  }
  if(method!=='POST'||path!==base+'/d1/database/'+id||!UUID.test(id||''))return false;
@@ -104,6 +105,14 @@ export async function inspect({account=process.env.CLOUDFLARE_ACCOUNT_ID,token=p
    returnedObjectFieldNames:records.length?Object.keys(records[0]).sort():[],
    completeFirstPage:!listing?.cursor&&!listing?.truncated};
  }
+ const sourcePage=await req('GET',base+'/r2/buckets/dream-team-media/objects?per_page=100');
+ const sourceItems=Array.isArray(sourcePage?.objects)?sourcePage.objects:Array.isArray(sourcePage)?sourcePage:null;
+ check(Array.isArray(sourceItems),'SOURCE_MEDIA_METADATA_UNAVAILABLE');
+ const mediaReadOnly={firstPageObjects:sourceItems.length,firstPageBytes:sourceItems.reduce((n,x)=>n+Number(x.size||0),0),
+   morePages:Boolean(sourcePage?.cursor||sourcePage?.truncated),
+   releaseObjectLimit:100,releaseSizeLimitBytes:200*1024*1024};
+ mediaReadOnly.firstPageExceedsSizeLimit=mediaReadOnly.firstPageBytes>mediaReadOnly.releaseSizeLimitBytes;
+ mediaReadOnly.objectLimitPotentiallyExceeded=sourceItems.length===100&&mediaReadOnly.morePages;
  const workers=await req('GET',base+'/workers/scripts');
  check(Array.isArray(workers),'WORKERS_UNVERIFIED');
  const total=Object.values(counts).reduce((a,b)=>a+b,0);
@@ -111,7 +120,7 @@ export async function inspect({account=process.env.CLOUDFLARE_ACCOUNT_ID,token=p
   target:{name:TARGET,uuid:target,sizeBytes:meta.file_size},d1Count:dbs.length,
   productionWorker:deployment.versions[0].version_id,productionDeploymentId:deployment.id,
   schemaVersion,tableCount:tables.length,tableRowCounts:counts,totalUserRows:total,
-  schemaObjectCount:schema.length,backupObjects:objects,bucketsCreatedByRun:buckets,bucketInventory,
+  schemaObjectCount:schema.length,backupObjects:objects,bucketsCreatedByRun:buckets,bucketInventory,productionMediaMetadataOnly:mediaReadOnly,
   privateIoWorkerStillPresent:workers.some(x=>x.id==='dream-team-audit-'+RUN+'-io'),
   findings:classifyState({tables:tables.length,rows:total,objects,buckets}),
   limits:{controlPlaneRequests:calls,targetSelectQueries:sqlReads,productionSqlQueries:0,databaseCreates:0,databaseDeletes:0,r2Writes:0,workerDeployments:0}};
