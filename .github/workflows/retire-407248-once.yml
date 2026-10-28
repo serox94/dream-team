@@ -37,7 +37,7 @@ jobs:
           cp ../diagnostic/tests/retire-407248-once.test.mjs tests/retire-407248-once.test.mjs
           node --check scripts/retire-407248-once.mjs
           node --test tests/retire-407248-once.test.mjs
-      - name: Fresh identity + 7 Worker histories + exact R2 receipt + ONE D1 DELETE + 9/10 verification
+      - name: Exact R2 receipt fields validated + 7 Worker histories + ONE D1 DELETE + post-verification
         working-directory: release-main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
