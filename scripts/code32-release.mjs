@@ -12,8 +12,8 @@ check(process.env.OWNER_CODE32_APPROVAL==='PR23:'+candidate+':'+main,'NEW_COMMIT
 check(process.env.DREAMTEAM_PRODUCTION_APPROVED==='yes','EXPLICIT_PRODUCTION_APPROVAL_REQUIRED');
 check(git('merge-base',candidate,main)===candidate,'CANDIDATE_NOT_ANCESTOR');
 const allowedOperatorFiles=new Set([
- 'scripts/d1-snapshot.mjs','scripts/code32-release.mjs',
- 'tests/d1-snapshot-large-row.test.mjs','tests/code32-release.test.mjs',
+ 'scripts/d1-snapshot.mjs','scripts/code32-release.mjs','scripts/code32-release-safety.mjs',
+ 'tests/d1-snapshot-large-row.test.mjs','tests/code32-release.test.mjs','tests/code32-release-safety.test.mjs',
  '.github/workflows/code32-release.yml','docs/release/CODE32_RELEASE.md'
 ]);
 const operatorChanges=git('diff','--name-only',candidate,main).split('\n').filter(Boolean);
