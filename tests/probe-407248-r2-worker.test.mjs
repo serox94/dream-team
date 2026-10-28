@@ -29,7 +29,7 @@ test('bindings explicitly contain only two approved test buckets, no D1',()=>{
 function simulate({failPhase=null,sourceHasData=false}={}){
  const calls=[],state={created:false,manifest:false};
  const fetcher=async(url,opts)=>{
-  const u=new URL(url),method=opts.method,path=u.pathname+u.search;
+  const u=new URL(url),method=opts.method,path=u.pathname.replace(/^\/client\/v4/,'')+u.search;
   calls.push({host:u.host,method,path});
   if(!u.host.startsWith('api.cloudflare.com')){
    if(failPhase==='READY'&&path==='/ready')return {ok:false,status:503,json:async()=>({ok:false,error:'RECOVERY_FAILED'})};
