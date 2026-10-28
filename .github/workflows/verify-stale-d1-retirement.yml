@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   verify:
-    if: github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027'
+    if: github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027' && github.event.pull_request.head.sha == 'f1c3776c841e9185f3030ed80bcc92711cd2680f'
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
