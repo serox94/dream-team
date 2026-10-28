@@ -31,16 +31,18 @@ try{
  check(Array.isArray(triggers)&&Array.isArray(hooks)&&Array.isArray(builds),'BUILD_METADATA_UNVERIFIED');
  const classified=triggers.map(t=>{
   const cmd=t.deploy_command;
+  const includes=Array.isArray(t.branch_includes)?t.branch_includes:[];const excludes=Array.isArray(t.branch_excludes)?t.branch_excludes:[];
   return {commandType:cmd==='npx wrangler versions upload'?'VERSION_UPLOAD_ONLY':
    cmd==='npm run deploy:production'?'PRODUCTION_DEPLOY_COMMAND':'UNKNOWN',
    enabled:t.enabled===true||t.enabled===false?t.enabled:null,
-   branchFilterPresent:Boolean(t.branch_filters||t.branch_filter)};
+   branchIncludesMain:includes.includes('main')||includes.includes('*'),branchExcludesMain:excludes.includes('main'),
+   branchRulesKnown:Array.isArray(t.branch_includes)&&Array.isArray(t.branch_excludes)};
  });
  check(deployment?.deployments?.[0]?.versions?.[0]?.version_id==='81f011a2-ba96-4bdf-b199-10e89f8271e4','PRODUCTION_WORKER_MOVED');
  Object.assign(report,{result:'PASS',triggerCount:triggers.length,hookCount:hooks.length,
    triggers:classified,activeBuilds:builds.filter(b=>['queued','pending','initializing','running','building'].includes(b.status)).length,
    productionWorker:deployment.deployments[0].versions[0].version_id,apiRequests:count});
- report.safeToMergeWithoutAutoDeploy=hooks.length===0&&classified.length>0&&classified.every(t=>t.commandType==='VERSION_UPLOAD_ONLY');
+ report.safeToMergeWithoutAutoDeploy=hooks.length===0&&classified.length>0&&classified.every(t=>t.commandType==='VERSION_UPLOAD_ONLY'||(t.commandType==='PRODUCTION_DEPLOY_COMMAND'&&t.branchRulesKnown&&!t.branchIncludesMain));
  if(!report.safeToMergeWithoutAutoDeploy)report.mergeGate='HOLD_FOR_CLOUDFLARE_BUILDS_REVIEW';
 }catch(e){
  report.error=/^[A-Z0-9_]+$/.test(e.message)?e.message:'SAFE_READ_FAILED';
