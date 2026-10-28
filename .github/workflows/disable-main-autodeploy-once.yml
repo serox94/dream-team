@@ -1,0 +1,38 @@
+name: Approved one-time safe Cloudflare Builds main upload-only
+on:
+  push:
+    branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
+    paths:
+      - '.github/workflows/disable-main-autodeploy-once.yml'
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
+jobs:
+  one-time:
+    if: github.repository == 'serox94/dream-team' && github.ref == 'refs/heads/fix/code32-cloudflare-recovery-diagnostics-20261027'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Only modify exact main trigger to upload-only; never deploy Workers
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF: ${{ github.ref }}
+          CLOUDFLARE_AUTODEPLOY_GUARD_APPROVED: 'yes'
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/disable-main-autodeploy-once.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: cloudflare-main-upload-only-safety-evidence
+          path: cloudflare-autodeploy-guard/summary.json
+          retention-days: 14
