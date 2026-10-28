@@ -19,7 +19,7 @@ try{
  };
  const workers=await get('/workers/scripts');check(Array.isArray(workers),'WORKERS_MISSING');
  const target=workers.find(w=>w.id==='dream-team');
- check(target?.tag&&/^[a-f0-9-]{36}$/.test(target.tag),'WORKER_TAG_INVALID');
+ check(target?.tag&&/^[a-f0-9-]{20,64}$/.test(target.tag),'WORKER_TAG_INVALID');
  const path='/builds/workers/'+target.tag;
  const [triggersRaw,hooksRaw,buildsRaw,deployment]=await Promise.all([
   get(path+'/triggers'),get(path+'/deploy_hooks'),get(path+'/builds?per_page=100'),
