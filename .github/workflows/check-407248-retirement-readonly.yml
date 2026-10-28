@@ -34,7 +34,7 @@ jobs:
           node --check scripts/check-407248-retirement-readonly.mjs
           ! grep -F "method:'DELETE'" scripts/check-407248-retirement-readonly.mjs
           ! grep -F "RETIRE_APPROVAL" scripts/check-407248-retirement-readonly.mjs
-      - name: Complete 7-Worker historical binding scan and live D1/private R2 digest comparison
+      - name: Read-only historical audit with bounded GET-only transient 5xx retries
         working-directory: repaired-main
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
