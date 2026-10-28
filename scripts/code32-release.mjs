@@ -3,7 +3,22 @@
 import {mkdir,mkdtemp,readFile,writeFile,rm,appendFile} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {execFileSync} from 'node:child_process';import {randomBytes} from 'node:crypto';
 import {cf,query,wrangler,configFile,exportSql,productionId,sha} from './recovery-common.mjs';import {inspectSql,restoreStatements,restoreSnapshot,rowsDigest,identifier} from './d1-snapshot.mjs';import {listRestR2Objects} from '../src/backup-status.js';import {fetchReadiness,versionIdentity,waitForVersionReady} from './schema32-readiness.mjs';import {promoteCode32} from './code32-transition.mjs';import {privateRestore} from './recovery-transport.mjs';
 const check=(v,c)=>{if(!v)throw Error(c);},git=(...args)=>execFileSync('git',args,{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim(),action=process.argv[2],sourceId='81f011a2-ba96-4bdf-b199-10e89f8271e4',baseUrl='https://dream-team.sewerynski00.workers.dev',candidate=process.env.CONFIRMED_RELEASE;
-check(['prepare','promote'].includes(action),'CODE32_ACTION_REQUIRED');check(process.env.OWNER_CODE32_APPROVAL==='PR23:'+process.env.CONFIRMED_RELEASE,'NEW_COMMIT_SCOPED_APPROVAL_REQUIRED');check(process.env.DREAMTEAM_PRODUCTION_APPROVED==='yes','EXPLICIT_PRODUCTION_APPROVAL_REQUIRED');check(/^[a-f0-9]{40}$/.test(candidate||''),'EXACT_CANDIDATE_REQUIRED');const main=git('rev-parse','HEAD');check(git('rev-parse',candidate+'^{tree}')===git('rev-parse','HEAD^{tree}'),'APPROVED_TREE_CHANGED');
+check(['prepare','promote'].includes(action),'CODE32_ACTION_REQUIRED');
+check(/^[a-f0-9]{40}$/.test(candidate||''),'EXACT_CANDIDATE_REQUIRED');
+const main=git('rev-parse','HEAD');
+// The PR23 application candidate stays immutable; reviewed operator-only fixes
+// on main are separately authorized by BOTH candidate and exact operator SHA.
+check(process.env.OWNER_CODE32_APPROVAL==='PR23:'+candidate+':'+main,'NEW_COMMIT_SCOPED_APPROVAL_REQUIRED');
+check(process.env.DREAMTEAM_PRODUCTION_APPROVED==='yes','EXPLICIT_PRODUCTION_APPROVAL_REQUIRED');
+check(git('merge-base',candidate,main)===candidate,'CANDIDATE_NOT_ANCESTOR');
+const allowedOperatorFiles=new Set([
+ 'scripts/d1-snapshot.mjs','scripts/code32-release.mjs',
+ 'tests/d1-snapshot-large-row.test.mjs','tests/code32-release.test.mjs',
+ '.github/workflows/code32-release.yml','docs/release/CODE32_RELEASE.md'
+]);
+const operatorChanges=git('diff','--name-only',candidate,main).split('\n').filter(Boolean);
+check(operatorChanges.length>0&&operatorChanges.every(file=>allowedOperatorFiles.has(file)),'UNREVIEWED_OPERATOR_CHANGE');
+check(!git('diff','--name-only',candidate,main,'--','src','public','migrations','backup','wrangler.jsonc'),'APPLICATION_TREE_CHANGED');
 const report={result:'BLOCKED',action,candidate,main,productionExports:0,providerCalls:0,credentialChanges:0,sessionPurges:0},dir=await mkdtemp(join(tmpdir(),'dream-schema32-'));let reads=0,ioName=null;
 const measuredQuery=async(id,sql,params=[])=>{const r=await query(id,sql,params);reads+=r.meta?.rows_read||0;check(reads<=80000,'RELEASE_SQL_READ_BUDGET');return r;};
 const q=async(sql,params=[])=>(await measuredQuery(productionId,sql,params)).results;
@@ -27,7 +42,12 @@ try{
   // disposable restore when no slot exists. Never auto-delete old test data.
   const d1Inventory=await cf('/d1/database?per_page=100');check(Array.isArray(d1Inventory),'D1_INVENTORY_UNAVAILABLE');
   check(d1Inventory.length<10,'D1_RECOVERY_SLOT_UNAVAILABLE');
-  const run=await gh('/actions/runs/'+process.env.VERIFIED_MANAGER_RUN);check(run.head_sha===candidate&&run.conclusion==='success'&&run.status==='completed'&&run.path==='.github/workflows/pr23-preview.yml','INTEGRATED_CANDIDATE_EVIDENCE');const checks=(await gh('/actions/runs?head_sha='+candidate+'&per_page=100')).workflow_runs;for(const name of ['Validate Dream Team','Responsive UI QA'])check(checks.some(r=>r.head_sha===candidate&&r.name===name&&r.conclusion==='success'),'FINAL_CHECK_REQUIRED');
+  const run=await gh('/actions/runs/'+process.env.VERIFIED_MANAGER_RUN);check(run.head_sha===candidate&&run.conclusion==='success'&&run.status==='completed'&&run.path==='.github/workflows/pr23-preview.yml','INTEGRATED_CANDIDATE_EVIDENCE');const checks=(await gh('/actions/runs?head_sha='+candidate+'&per_page=100')).workflow_runs;
+  const operatorChecks=(await gh('/actions/runs?head_sha='+main+'&per_page=100')).workflow_runs;
+  for(const name of ['Validate Dream Team','Responsive UI QA']){
+   check(checks.some(r=>r.head_sha===candidate&&r.name===name&&r.conclusion==='success'),'FINAL_CHECK_REQUIRED');
+   check(operatorChecks.some(r=>r.head_sha===main&&r.name===name&&r.conclusion==='success'),'FINAL_OPERATOR_CHECK_REQUIRED');
+  }
   const sourceRouting=await cf('/workers/scripts/dream-team/subdomain');check(sourceRouting.enabled===true,'PRODUCTION_ROUTE_DISABLED');const source=await cf('/workers/scripts/dream-team/versions/'+sourceId),settings=await cf('/workers/scripts/dream-team/settings'),sourceVars=plainVars(source),base={...JSON.parse(await readFile('wrangler.jsonc','utf8')),compatibility_date:settings.compatibility_date,compatibility_flags:settings.compatibility_flags||[]};check(sourceVars.ANGLER_PASSWORD_POLICY==='shared'&&sourceVars.INDIVIDUAL_ACCOUNTS==='true','EXISTING_LOGIN_CONFIGURATION_CHANGED');
   const cfg=await configFile(dir,{name:'recovery-point',compatibility_date:base.compatibility_date,d1_databases:[{binding:'DB',database_name:'dream-team-db',database_id:productionId}]},'checkpoint.jsonc'),sqlFile=join(dir,'production-schema32.sql'),backup=await exportSql(cfg,'dream-team-db',sqlFile),snapshot=inspectSql(backup.bytes);report.productionExports=1;reads+=snapshot.tables.reduce((n,t)=>n+t.rows.length,0);check(snapshot.tables.reduce((n,t)=>n+t.rows.length,0)<=15000,'RESTORE_SIZE_BUDGET');// Validate the complete restore plan in memory BEFORE any Cloudflare D1
   // creation. A row that is too large must fail before consuming a DB slot.
