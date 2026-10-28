@@ -13,7 +13,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   prepare:
-    if: github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027'
+    # Completed one-off backup evidence is pinned below. Future PR edits must not
+    # repeat exports, and deleting the retired target must not break unrelated CI.
+    if: github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027' && github.event.pull_request.head.sha == 'f7d9136f1d441c01fe147b6024f2ad4e922eda1c'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
