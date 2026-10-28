@@ -37,7 +37,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DIAGNOSTIC_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/cloudflare-readonly-inventory.mjs
-      - name: Inspect failed run 40724851849 resources only (read-only)
+      - name: Inspect failed run 40724851849 D1 and R2 object counts (read-only)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
