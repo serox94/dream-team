@@ -100,6 +100,8 @@ export async function inspect({account=process.env.CLOUDFLARE_ACCOUNT_ID,token=p
   check(Array.isArray(records),'R2_OBJECTS_UNVERIFIED');
   bucketInventory[kind]={present:true,objectsOnFirstPage:records.length,
    totalBytesOnFirstPage:records.reduce((n,x)=>n+Number(x.size||0),0),
+   manifestPresent:records.some(x=>x.key==='manifest.json'||x.name==='manifest.json'),
+   returnedObjectFieldNames:records.length?Object.keys(records[0]).sort():[],
    completeFirstPage:!listing?.cursor&&!listing?.truncated};
  }
  const workers=await req('GET',base+'/workers/scripts');
