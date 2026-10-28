@@ -27,6 +27,10 @@ test('retains private R2 backup and checks other 9 D1, Worker deployment and sch
  assert.match(src,/snapshotRetained:true,backupReceiptRetained:true/);
  assert.match(src,/after.length===9/);
  assert.match(src,/PRODUCTION_OR_BUCKETS_CHANGED/);
+ assert.match(src,/receipt\.validatedRows===2910/);
+ assert.match(src,/receipt\.integrity==='PASS'/);
+ assert.match(src,/receipt\.foreignKeys==='PASS'/);
+ assert.doesNotMatch(src,/receipt\.sourceRowDigests/);
  assert.match(src,/OTHER_DATABASE_CHANGED/);
  assert.match(src,/CLOUDFLARE_ACCESS|PRODUCTION_WORKER_CHANGED/);
 });
