@@ -4,8 +4,6 @@ on:
     branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
     paths:
       - '.github/workflows/cloudflare-readonly.yml'
-      - 'scripts/audit-407032-readonly.mjs'
-      - 'tests/audit-407032-readonly.test.mjs'
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -32,24 +30,24 @@ jobs:
         with:
           node-version: 24
       - name: Verify metadata-only boundaries without credentials
-        run: node --test tests/cloudflare-readonly-inventory.test.mjs tests/audit-407032-readonly.test.mjs
+        run: node --test tests/cloudflare-readonly-inventory.test.mjs tests/code32-failure-407248-readonly.test.mjs
       - name: Bounded control-plane inventory; no SQL or resource writes
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           DIAGNOSTIC_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/cloudflare-readonly-inventory.mjs
-      - name: Target exact aborted-release disposable D1 (read-only)
+      - name: Inspect failed run 40724851849 resources only (read-only)
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: node scripts/audit-407032-readonly.mjs
+        run: node scripts/code32-failure-407248-readonly.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: cloudflare-readonly-metadata
           path: |
             readonly-status/cloudflare-inventory.json
-            readonly-target-status/summary.json
+            code32-failure-triage/summary.json
           retention-days: 7
           if-no-files-found: warn
