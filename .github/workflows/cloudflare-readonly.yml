@@ -1,5 +1,11 @@
 name: Cloudflare metadata diagnostic (READ ONLY)
 on:
+  push:
+    branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
+    paths:
+      - '.github/workflows/cloudflare-readonly.yml'
+      - 'scripts/audit-407032-readonly.mjs'
+      - 'tests/audit-407032-readonly.test.mjs'
   workflow_dispatch:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
@@ -14,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   inventory:
-    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027')
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/fix/code32-cloudflare-recovery-diagnostics-20261027') || (github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
