@@ -35,19 +35,35 @@ export function targetReference(bindings) {
 export async function dependencyInventory(read) {
   const workers = await read('/workers/scripts');
   check(Array.isArray(workers), 'WORKER_LIST_FORMAT');
-  check(workers.length <= 30, 'WORKER_INVENTORY_BUDGET');
-  const report = {activeReferences:[], historicalReferences:[], historicalReadsComplete:true, workersInspected:0, versionsInspected:0, failures:[]};
+  check(workers.length <= 10, 'WORKER_INVENTORY_BUDGET');
+  const report = {activeReferences:[], historicalReferences:[], historicalReadsComplete:true, workersInspected:0, versionsInspected:0, plannedVersionReads:0, failures:[]};
+  const planned=[];
   for (const w of workers) {
     if (!RESOURCE.test(w.id || '')) {report.historicalReadsComplete=false; continue;}
     const name = w.id; report.workersInspected++;
     const settings = await read('/workers/scripts/' + name + '/settings');
     check(Array.isArray(settings?.bindings), 'WORKER_BINDINGS_FORMAT');
     if (targetReference(settings.bindings)) report.activeReferences.push(name);
+  }
+  // Finish all active checks first. Plan the exact finite history workload before
+  // reading individual version resources; no blind retry or unbounded paging.
+  for (const w of workers) {
+    if (!RESOURCE.test(w.id || '')) continue;
+    const name=w.id;
     try {
       const data = await read('/workers/scripts/' + name + '/versions?deployable=true');
       check(Array.isArray(data?.items), 'VERSION_LIST_FORMAT');
       check(data.items.length <= 100, 'VERSION_INVENTORY_BUDGET');
-      for (const item of data.items) {
+      planned.push({name,items:data.items}); report.plannedVersionReads+=data.items.length;
+    } catch(e) {
+      report.historicalReadsComplete=false;
+      report.failures.push({worker:name, error:/^[A-Z0-9_]+$/.test(e.message)?e.message:'VERSION_READ_FAILED', ...(e.status?{httpStatus:e.status}:{}), ...(Number.isInteger(e.code)?{cloudflareCode:e.code}:{})});
+    }
+  }
+  check(report.plannedVersionReads<=700,'PLANNED_HISTORY_BUDGET');
+  for(const {name,items} of planned) {
+    try {
+      for (const item of items) {
         check(UUID.test(item.id || ''), 'VERSION_ID_FORMAT');
         const version = await read('/workers/scripts/' + name + '/versions/' + item.id);
         check(Array.isArray(version?.resources?.bindings), 'VERSION_BINDINGS_FORMAT');
@@ -65,7 +81,7 @@ export async function dependencyInventory(read) {
 async function main() {
   const report={result:'BLOCKED',mode:'TEST_DATABASE_BACKUP_ONLY',target:TARGET.name,productionWrites:0,productionQueries:0,databasesCreated:0,databasesDeleted:0,workerDeployments:0,approvalChanges:0,privateBackupWrites:0,exportAttempts:0};
   const dir=await mkdtemp(join(tmpdir(),'dream-stale-backup-')); let phase='TARGET_METADATA', requests=0;
-  const read=async path=>{check(++requests<=220,'CONTROL_PLANE_READ_BUDGET'); return cf(path);};
+  const read=async path=>{check(++requests<=750,'CONTROL_PLANE_READ_BUDGET'); return cf(path);};
   const active=async()=>{const d=(await read('/workers/scripts/dream-team/deployments')).deployments?.[0];check(d?.versions?.length===1&&d.versions[0].percentage===100,'PRODUCTION_DEPLOYMENT_FORMAT');return d;};
   try {
     const key=backupKey(process.env.GITHUB_RUN_ID);

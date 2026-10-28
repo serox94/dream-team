@@ -35,3 +35,15 @@ test('unsupported history cannot be reported complete',async()=>{
   const r=await dependencyInventory(async p=>p==='/workers/scripts'?[{id:'dream-team-pro2-preview'}]:p.endsWith('/settings')?{bindings:[]}:{});
   assert.equal(r.historicalReadsComplete,false); assert.equal(r.failures[0].error,'VERSION_LIST_FORMAT');
 });
+test('every current binding is checked before any historical inventory',async()=>{
+  const calls=[];
+  const r=await dependencyInventory(async p=>{
+    calls.push(p);
+    if(p==='/workers/scripts')return [{id:'dream-team'},{id:'dream-team-pro2-preview'}];
+    if(p.endsWith('/settings'))return {bindings:[]};
+    assert.ok(calls.includes('/workers/scripts/dream-team/settings'));
+    assert.ok(calls.includes('/workers/scripts/dream-team-pro2-preview/settings'));
+    return {items:[]};
+  });
+  assert.equal(r.historicalReadsComplete,true); assert.equal(r.plannedVersionReads,0);
+});
