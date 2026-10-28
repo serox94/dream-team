@@ -1,4 +1,4 @@
-name: Production fisheries browser diagnosis (read-only)
+name: Production fisheries EN and regulations diagnosis (read-only)
 on:
   push:
     branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]

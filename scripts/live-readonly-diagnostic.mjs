@@ -8,17 +8,17 @@ try{
  browser=await chromium.launch({headless:true});
  ctx=await browser.newContext({viewport:{width:390,height:900},serviceWorkers:'block',locale:'pl-PL'});
  await ctx.route('**/*',async route=>{const m=route.request().method();if(!['GET','HEAD','OPTIONS'].includes(m)){report.writeRequestsBlocked++;return route.abort('blockedbyclient')}return route.continue()});
- const login=await ctx.request.post(base+'/api/login',{form:{username:'Patryk',password:process.env.RYBY_LOGIN_PASSWORD},maxRedirects:0});
+ const login=await ctx.request.post(base+'/api/login',{form:{username:'Maciek',password:process.env.RYBY_LOGIN_PASSWORD},maxRedirects:0});
  report.loginStatus=login.status();if(login.status()!==303)throw Error('LOGIN_FAILED');
- await ctx.addInitScript(()=>{localStorage.setItem('dreamteam.language','pl');localStorage.setItem('dreamteam.theme','light');localStorage.setItem('dream_team_viewed_trip','next-trip')});
+ await ctx.addInitScript(()=>{localStorage.setItem('dreamteam.language','en');localStorage.setItem('dreamteam.theme','light');localStorage.setItem('dream_team_viewed_trip','next-trip')});
  const page=await ctx.newPage(),errors=[],failed=[],responses=[],starts=new Map();
  page.on('pageerror',e=>errors.push(String(e.name)+': '+String(e.message).slice(0,180)));
  page.on('request',r=>starts.set(r,Date.now()));
  page.on('requestfailed',r=>{if(r.method()==='GET')failed.push({path:safePath(r.url()),error:r.failure()?.errorText||'failed'})});
  page.on('response',r=>{if(r.request().method()==='GET'&&new URL(r.url()).origin===base&&safePath(r.url()).startsWith('/api/'))responses.push({path:safePath(r.url()),status:r.status(),ms:Date.now()-(starts.get(r.request())||Date.now())})});
- for(const [width,lang] of [[390,'pl'],[1440,'en']]){
+ for(const [width,lang] of [[390,'en'],[1440,'en']]){
   await page.setViewportSize({width,height:900});await page.addInitScript(lang=>localStorage.setItem('dreamteam.language',lang),lang);
-  for(const [label,path] of [['trips_direct','/pages/wyjazdy.html#fisheries-area'],['legacy_redirect','/pages/lowiska.html'],['home','/'],['checklists','/pages/checklisty.html'],['catches','/pages/polowy.html'],['weather','/pages/pogoda.html']]){
+  for(const [label,path] of [['trips_direct','/pages/wyjazdy.html#fisheries-area'],['legacy_redirect','/pages/lowiska.html'],['home','/'],['checklists','/pages/checklisty.html'],['catches','/pages/polowy.html'],['weather','/pages/pogoda.html'],['regulations','/pages/regulamin.html']]){
    const start=Date.now(),beforeErr=errors.length,beforeFail=failed.length,beforeResp=responses.length;let status=null,navError=null;
    try{const nav=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});status=nav?.status()||null;await page.waitForTimeout(2500);if(!await page.locator('html[data-ready]').count())await page.locator('html[data-ready]').waitFor({state:'attached',timeout:30000}).catch(()=>{});}
    catch(e){navError=e.name;}
