@@ -1,0 +1,41 @@
+name: Rollback history diagnostic (READ ONLY)
+on:
+  push:
+    branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
+    paths: [.github/workflows/rollback-history-readonly.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: d39ddf632b2279573216ac81d536a7e6f0fcc240
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Read deployment history and both version identities
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {cf} from './scripts/recovery-common.mjs';
+          const report={mode:'READ_ONLY',deploymentsAttempted:0};
+          try{
+            const result=await cf('/workers/scripts/dream-team/deployments');
+            if(!Array.isArray(result.deployments))throw Error('DEPLOYMENTS_UNAVAILABLE');
+            report.deployments=result.deployments.slice(0,10).map(x=>({id:x.id,createdOn:x.created_on,source:x.source,versions:x.versions.map(v=>({id:v.version_id,percentage:v.percentage}))}));
+            report.versions=[];
+            for(const id of ['31b6b9bd-8f0b-4566-9ced-6b5bf1c26f9d','81f011a2-ba96-4bdf-b199-10e89f8271e4']){
+              const v=await cf('/workers/scripts/dream-team/versions/'+id);
+              const vars=Object.fromEntries((v.resources?.bindings||[]).filter(b=>b.type==='plain_text'&&['APP_BUILD','APP_VARIANT'].includes(b.name)).map(b=>[b.name,b.text]));
+              report.versions.push({id:v.id,build:vars.APP_BUILD,variant:vars.APP_VARIANT,bindingsAvailable:Array.isArray(v.resources?.bindings)});
+            }
+            report.result='PASS';
+          }catch(e){report.result='BLOCKED';report.error=/^[A-Z0-9_]+$/.test(e.message)?e.message:'READ_FAILED';report.httpStatus=e.status||null;process.exitCode=1}
+          console.log('ROLLBACK_HISTORY_READONLY '+JSON.stringify(report))
+          NODE
