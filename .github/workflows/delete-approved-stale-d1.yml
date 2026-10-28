@@ -13,7 +13,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   retire-one-test-database:
-    if: github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027'
+    # Exactly one DELETE was accepted at this evidence SHA. Seal the mutation job;
+    # subsequent work is a separate GET-only verification, never a second DELETE.
+    if: github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027' && github.event.pull_request.head.sha == 'e20edebf2f20920aa99bcd80a6189594f6e63966'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
