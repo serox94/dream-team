@@ -71,7 +71,7 @@ try{
  const receipt=JSON.parse(await readFile(receiptFile,'utf8'));
  check(receipt.format==='failed-release-407248-d1-snapshot-v1'&&receipt.target?.name===target.name&&receipt.target?.uuid===target.uuid,'BACKUP_RECEIPT_TARGET_MISMATCH');
  check(receipt.sqlKey===snapshotKey&&receipt.sqlSha256===snapshotHash&&receipt.tables===37&&receipt.rows===2910,'BACKUP_RECEIPT_DIGEST_MISMATCH');
- check(receipt.privateRoundtrip==='PASS'&&receipt.localRestore==='PASS'&&receipt.sourceRowDigests==='PASS'&&receipt.deletePerformed===false,'BACKUP_RECEIPT_VERIFICATION_MISSING');
+ check(receipt.privateRoundtrip==='PASS'&&receipt.localRestore==='PASS'&&receipt.integrity==='PASS'&&receipt.foreignKeys==='PASS'&&receipt.validatedRows===2910&&receipt.sqlBytes===bytes.length&&receipt.deletePerformed===false,'BACKUP_RECEIPT_VERIFICATION_MISSING');
  report.backupReceiptVerified=true;
  check(JSON.stringify(initial)===JSON.stringify(await stable()),'PRODUCTION_CONFIGURATION_CHANGED');
  const final=await list();check(final.length===10&&final.filter(x=>x.uuid===target.uuid&&x.name===target.name).length===1,'TARGET_MOVED_BEFORE_DELETE');
