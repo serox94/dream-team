@@ -12,7 +12,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   probe:
-    if: github.repository == 'serox94/dream-team' && github.ref == 'refs/heads/fix/code32-cloudflare-recovery-diagnostics-20261027'
+    # SEALED: completed one temporary Worker test in run 40727470312; no repeat.
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
