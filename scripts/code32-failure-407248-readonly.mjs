@@ -20,6 +20,8 @@ export function readAllowed(method,path,body,id,account){
    base+'/workers/scripts/dream-team/deployments',base+'/r2/buckets?per_page=1000',
    base+'/r2/buckets/dream-team-d1-backups/objects?per_page=100&prefix='+encodeURIComponent(PREFIX)].includes(path))return true;
   if(path===base+'/workers/scripts/dream-team/settings')return true;
+  if([base+'/r2/buckets/dream-team-audit-'+RUN+'32-media/objects?per_page=100',
+      base+'/r2/buckets/dream-team-audit-'+RUN+'32-archive/objects?per_page=100'].includes(path))return true;
   return false;
  }
  if(method!=='POST'||path!==base+'/d1/database/'+id||!UUID.test(id||''))return false;
@@ -89,6 +91,17 @@ export async function inspect({account=process.env.CLOUDFLARE_ACCOUNT_ID,token=p
  const b=await req('GET',base+'/r2/buckets?per_page=1000');
  check(Array.isArray(b?.buckets),'R2_BUCKETS_UNVERIFIED');
  const buckets=b.buckets.filter(x=>x.name?.startsWith('dream-team-audit-'+RUN)).map(x=>x.name);
+ const bucketInventory={};
+ for(const kind of ['media','archive']){
+  const name='dream-team-audit-'+RUN+'32-'+kind;
+  if(!buckets.includes(name)){bucketInventory[kind]={present:false};continue;}
+  const listing=await req('GET',base+'/r2/buckets/'+name+'/objects?per_page=100');
+  const records=Array.isArray(listing?.objects)?listing.objects:Array.isArray(listing)?listing:null;
+  check(Array.isArray(records),'R2_OBJECTS_UNVERIFIED');
+  bucketInventory[kind]={present:true,objectsOnFirstPage:records.length,
+   totalBytesOnFirstPage:records.reduce((n,x)=>n+Number(x.size||0),0),
+   completeFirstPage:!listing?.cursor&&!listing?.truncated};
+ }
  const workers=await req('GET',base+'/workers/scripts');
  check(Array.isArray(workers),'WORKERS_UNVERIFIED');
  const total=Object.values(counts).reduce((a,b)=>a+b,0);
@@ -96,7 +109,7 @@ export async function inspect({account=process.env.CLOUDFLARE_ACCOUNT_ID,token=p
   target:{name:TARGET,uuid:target,sizeBytes:meta.file_size},d1Count:dbs.length,
   productionWorker:deployment.versions[0].version_id,productionDeploymentId:deployment.id,
   schemaVersion,tableCount:tables.length,tableRowCounts:counts,totalUserRows:total,
-  schemaObjectCount:schema.length,backupObjects:objects,bucketsCreatedByRun:buckets,
+  schemaObjectCount:schema.length,backupObjects:objects,bucketsCreatedByRun:buckets,bucketInventory,
   privateIoWorkerStillPresent:workers.some(x=>x.id==='dream-team-audit-'+RUN+'-io'),
   findings:classifyState({tables:tables.length,rows:total,objects,buckets}),
   limits:{controlPlaneRequests:calls,targetSelectQueries:sqlReads,productionSqlQueries:0,databaseCreates:0,databaseDeletes:0,r2Writes:0,workerDeployments:0}};
