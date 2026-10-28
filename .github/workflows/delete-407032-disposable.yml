@@ -11,7 +11,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   retire-one:
-    if: github.repository == 'serox94/dream-team' && github.ref == 'refs/heads/fix/code32-cloudflare-recovery-diagnostics-20261027'
+    # SEALED after successful single DELETE in run 40717983938. Never repeat.
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
