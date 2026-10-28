@@ -15,7 +15,7 @@ const codes=new Set(['CLOUDFLARE_ACCESS','WRANGLER_OPERATION_FAILED','RESTORE_ST
 const recoveries=new Set(['SOURCE_CHANGED','COPY_MISMATCH','NO_MANIFEST','ARCHIVE_MISMATCH','RESTORE_MISMATCH','RECOVERY_FAILED','INVALID_RESPONSE','NON_JSON']);
 export function releaseErrorSummary(error,phase,operation='UNKNOWN'){
  const result={phase:label(phase),operation:label(operation),code:codes.has(error?.message)?error.message:
-   typeof error?.message==='string'&&/^[A-Z][A-Z0-9_]{0,63}$/.test(error.message)?error.message:'SCHEMA32_GATE_FAILED'};
+   'SCHEMA32_GATE_FAILED'};
  const http=status(error?.status??error?.httpStatus);if(http!==undefined)result.httpStatus=http;
  const apiCode=number(error?.code??error?.cloudflareCode);if(apiCode!==undefined)result.cloudflareCode=apiCode;
  for(const [field,value] of [['stage',error?.stage],['safeReason',error?.safeReason],['recoveryCode',error?.recoveryCode]]){
