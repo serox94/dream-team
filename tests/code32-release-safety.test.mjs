@@ -21,6 +21,7 @@ test('restore stage metadata are safe and bounded',()=>{
  const s=releaseErrorSummary(bad,'bad phase','secret-operation');
  assert.equal(s.phase,'UNKNOWN');assert.equal(s.operation,'UNKNOWN');assert.ok(!('stage' in s));
  assert.ok(!('cloudflareCode' in s));
+ assert.equal(releaseErrorSummary(Error('SECRETKEYABCDEF'), 'PREPARE', 'OP').code,'SCHEMA32_GATE_FAILED');
 });
 test('an empty media inventory requires no independent archive objects',()=>{
  assert.deepEqual(validateMediaInventory([]),{objects:0,totalBytes:0,empty:true});
