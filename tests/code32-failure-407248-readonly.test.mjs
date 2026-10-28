@@ -33,7 +33,9 @@ function mock(){
    result=[{results:sql===schema?[{name:'trips',type:'table'},{name:'app_settings',type:'table'}]:
     sql.startsWith('SELECT COUNT')?[{n:sql.includes('trips')?5:7}]:[{value:'32'}]}];
   }else if(path.includes('/r2/buckets/dream-team-d1-backups/objects'))result={objects:[{key:'private-releases/code32/40724851849-179da4d9/schema32.sql',size:100}]};
-  else if(path.endsWith('/r2/buckets?per_page=1000'))result={buckets:[]};
+  else if(path.endsWith('/r2/buckets?per_page=1000'))result={buckets:[{name:'dream-team-audit-4072485184932-media'},{name:'dream-team-audit-4072485184932-archive'}]};
+  else if(path.endsWith('/r2/buckets/dream-team-audit-4072485184932-media/objects?per_page=100'))result={objects:[{key:'sample',size:100}]};
+  else if(path.endsWith('/r2/buckets/dream-team-audit-4072485184932-archive/objects?per_page=100'))result={objects:[]};
   else if(path.endsWith('/workers/scripts'))result=[{id:'dream-team'}];
   else throw Error('Unexpected '+method+' '+path);
   return {ok:true,json:async()=>({success:true,result})};
@@ -43,7 +45,7 @@ function mock(){
 test('live flow checks UUID, production, schema counts, R2 without writes',async()=>{
  const m=mock(),r=await inspect({account,token:'fake-token',fetcher:m.fetcher});
  assert.equal(r.result,'PASS');assert.equal(r.tableCount,2);assert.equal(r.totalUserRows,12);
- assert.equal(r.schemaVersion,'32');assert.equal(r.findings.snapshotSqlInR2,true);
+ assert.equal(r.schemaVersion,'32');assert.equal(r.bucketInventory.media.objectsOnFirstPage,1);assert.equal(r.bucketInventory.archive.objectsOnFirstPage,0);assert.equal(r.findings.snapshotSqlInR2,true);
  assert.equal(r.findings.exactFailurePhase,'NOT_PROVEN_BY_METADATA');
  assert.ok(m.calls.every(c=>c.method==='GET'||(c.method==='POST'&&c.path.includes('/d1/database/'+uuid+'/query')&&sqlAllowed(c.sql))));
  assert.equal(r.limits.databaseDeletes,0);assert.equal(r.limits.productionSqlQueries,0);
