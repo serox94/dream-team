@@ -1,0 +1,48 @@
+name: Failed code32 disposable D1 retirement eligibility (READ ONLY)
+on:
+  push:
+    branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
+    paths: [.github/workflows/check-407248-retirement-readonly.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'serox94/dream-team' && github.ref == 'refs/heads/fix/code32-cloudflare-recovery-diagnostics-20261027'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: diagnostics
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: d39ddf632b2279573216ac81d536a7e6f0fcc240
+          path: repaired-main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Install dependencies and enforce GET-only/no-DELETE script
+        working-directory: repaired-main
+        run: |
+          npm ci
+          cp ../diagnostics/scripts/check-407248-retirement-readonly.mjs scripts/check-407248-retirement-readonly.mjs
+          node --check scripts/check-407248-retirement-readonly.mjs
+          ! grep -F "method:'DELETE'" scripts/check-407248-retirement-readonly.mjs
+          ! grep -F "RETIRE_APPROVAL" scripts/check-407248-retirement-readonly.mjs
+      - name: Complete 7-Worker historical binding scan and live D1/private R2 digest comparison
+        working-directory: repaired-main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/check-407248-retirement-readonly.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: failed-407248-d1-retirement-readonly-evidence
+          path: repaired-main/retirement-readonly-status/summary.json
+          retention-days: 14
