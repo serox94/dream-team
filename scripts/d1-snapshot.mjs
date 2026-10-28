@@ -4,6 +4,9 @@ import {DatabaseSync} from 'node:sqlite';
 import {createHash} from 'node:crypto';
 import {assertSandbox,query} from './recovery-common.mjs';
 const check=(ok,code)=>{if(!ok)throw Error(code);};
+// D1: SQL statements <=100 KB, string/BLOB/row <=2 MB and <=100 bind parameters.
+// Use a conservative SQL ceiling; long TEXT goes into REST query params, not SQL literals.
+const RESTORE_SQL_BYTES=75000,RESTORE_VALUE_BYTES=2000000;
 export const identifier=name=>'"'+name.replaceAll('"','""')+'"';
 const canonical=value=>value instanceof Uint8Array?Array.from(value):value;
 export const rowsDigest=rows=>createHash('sha256').update(JSON.stringify(rows.map(row=>JSON.stringify(Object.fromEntries(Object.keys(row).sort().map(key=>[key,canonical(row[key])])))).sort())).digest('hex');
@@ -27,7 +30,28 @@ export function restoreStatements(snapshot){
   const prefix='INSERT INTO '+identifier(table.name)+' ('+table.columns.map(identifier).join(',')+') VALUES ';
   let values=[],size=Buffer.byteLength(prefix),batches=0;
   const flush=()=>{if(values.length){statements.push({stage:'rows',table:table.name,sql:prefix+values.join(',')+';'});values=[];size=Buffer.byteLength(prefix);batches++;}};
-  for(const row of table.rows){const value='('+table.columns.map(c=>literal(row[c])).join(',')+')';check(Buffer.byteLength(prefix+value)<75000,'ROW_EXCEEDS_RESTORE_QUERY_LIMIT');if(size+Buffer.byteLength(value)+1>75000||values.length>=50)flush();values.push(value);size+=Buffer.byteLength(value)+1;}
+  for(const row of table.rows){
+   const value='('+table.columns.map(c=>literal(row[c])).join(',')+')';
+   if(Buffer.byteLength(prefix+value)>=RESTORE_SQL_BYTES){
+    // The export's HEX form of long TEXT is roughly 2x its real size. Keep the
+    // original string byte-for-byte as a bound value, including UTF-8 and NUL.
+    // BLOBs remain HEX literals to preserve their exact SQLite type over REST.
+    flush();const params=[];
+    const terms=table.columns.map(c=>{
+     const cell=row[c];
+     if(typeof cell!=='string')return literal(cell);
+     check(Buffer.byteLength(cell)<=RESTORE_VALUE_BYTES,'ROW_EXCEEDS_D1_VALUE_LIMIT');
+     params.push(cell);return '?';
+    });
+    const sql=prefix+'('+terms.join(',')+');';
+    check(Buffer.byteLength(sql)<RESTORE_SQL_BYTES,'OVERSIZE_NON_TEXT_RESTORE_LIMIT');
+    check(params.length<=100,'RESTORE_BOUND_PARAMETER_LIMIT');
+    check(Buffer.byteLength(JSON.stringify({sql,params}))<=RESTORE_VALUE_BYTES,'ROW_EXCEEDS_D1_VALUE_LIMIT');
+    statements.push({stage:'rows',table:table.name,sql,params});batches++;continue;
+   }
+   if(size+Buffer.byteLength(value)+1>=RESTORE_SQL_BYTES||values.length>=50)flush();
+   values.push(value);size+=Buffer.byteLength(value)+1;
+  }
   flush();check(!table.parents.includes(table.name)||batches<=1,'SELF_FK_REQUIRES_SINGLE_BATCH');
  }
  statements.push({stage:'sequences',sql:'DELETE FROM sqlite_sequence;'});
@@ -35,13 +59,13 @@ export function restoreStatements(snapshot){
  for(const object of snapshot.schema.filter(o=>o.type!=='table').sort((a,b)=>['index','view','trigger'].indexOf(a.type)-['index','view','trigger'].indexOf(b.type)))statements.push({stage:object.type,table:object.tbl_name,sql:object.sql});
  return statements;
 }
-export async function restoreSnapshot(db,snapshot,execute=query){
+export async function restoreSnapshot(db,snapshot,execute=query,plan=restoreStatements(snapshot)){
  assertSandbox(db.name,db.uuid);
  const existing=(await execute(db.uuid,"SELECT name FROM sqlite_master WHERE type='table' AND name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*'")).results;
  check(existing.length===0,'RESTORE_TARGET_NOT_EMPTY');
  // Each REST request is an implicit transaction. No foreign-key disabling, SQL splitting,
  // automatic retries, source mutations, or multi-statement trigger parsing by the importer.
- for(const item of restoreStatements(snapshot))try{await execute(db.uuid,item.sql);}catch(error){const safe=Error('RESTORE_STATEMENT_FAILED');safe.stage=item.stage;safe.table=item.table;safe.status=error.status;safe.code=error.code;throw safe;}
+ for(const item of plan)try{await execute(db.uuid,item.sql,item.params||[]);}catch(error){const safe=Error('RESTORE_STATEMENT_FAILED');safe.stage=item.stage;safe.table=item.table;safe.status=error.status;safe.code=error.code;throw safe;}
  await verifySnapshot(db,snapshot,execute);
  return {tables:snapshot.tables.length,rows:snapshot.tables.reduce((n,t)=>n+t.rows.length,0),triggers:snapshot.schema.filter(s=>s.type==='trigger').length,foreignKeys:true,sequences:true};
 }

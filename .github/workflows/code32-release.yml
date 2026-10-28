@@ -9,7 +9,7 @@ on:
         description: Successful PR23 consolidated trips preview run on that exact SHA
         required: true
       owner_approval:
-        description: New owner approval for this release, exactly PR23:<candidate SHA>; PR22 approval is invalid
+        description: Fresh approval PR23:<candidate SHA>:<operator main SHA>; previous release consents are invalid
         required: true
 permissions:
   contents: read
