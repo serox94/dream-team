@@ -1,0 +1,41 @@
+name: Verify aborted PR23 disposable D1 (READ ONLY)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/audit-407032-readonly.yml'
+      - 'scripts/audit-407032-readonly.mjs'
+      - 'tests/audit-407032-readonly.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-aborted-pr23-db-readonly
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Prove no mutation and exact target boundaries
+        run: node --test tests/audit-407032-readonly.test.mjs
+      - name: Verify D1 identity, objects and retained bindings without writes
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/audit-407032-readonly.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: aborted-pr23-d1-readonly-evidence
+          path: readonly-target-status/summary.json
+          retention-days: 7
+          if-no-files-found: warn
