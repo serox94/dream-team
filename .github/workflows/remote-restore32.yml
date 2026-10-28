@@ -1,4 +1,4 @@
-name: Isolated schema32 remote restore rehearsal
+name: Isolated schema32 remote restore rehearsal (bounded build wait)
 on:
   push:
     branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]

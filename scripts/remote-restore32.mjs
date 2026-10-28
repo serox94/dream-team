@@ -26,8 +26,17 @@ try {
  const settings=Object.fromEntries(state.map(x=>[x.key,x.value]));
  check(settings.schema_version==='32'&&settings.maintenance_mode!=='on','PRODUCTION_SCHEMA_OR_MAINTENANCE');
  const worker=(await cf('/workers/scripts')).find(x=>x.id==='dream-team');check(worker?.tag,'WORKER_TAG_MISSING');
- const raw=await cf('/builds/workers/'+worker.tag+'/builds?per_page=100');const builds=Array.isArray(raw)?raw:raw.builds;
- check(Array.isArray(builds)&&!builds.some(x=>['queued','pending','initializing','running','building'].includes(x.status)),'BUILDS_NOT_IDLE');
+ let builds=[];
+ for(let attempt=0;attempt<12;attempt++){
+  const raw=await cf('/builds/workers/'+worker.tag+'/builds?per_page=100');builds=Array.isArray(raw)?raw:raw.builds;
+  check(Array.isArray(builds),'BUILDS_UNVERIFIED');
+  report.activeBuildStatuses=builds.filter(x=>['queued','pending','initializing','running','building'].includes(x.status)).map(x=>({id:x.id,status:x.status}));
+  if(!report.activeBuildStatuses.length)break;
+  await new Promise(resolve=>setTimeout(resolve,5000));
+ }
+ check(!report.activeBuildStatuses.length,'BUILDS_NOT_IDLE');
+ const afterBuild=(await cf('/workers/scripts/dream-team/deployments')).deployments[0];
+ check(afterBuild.versions.length===1&&afterBuild.versions[0].percentage===100&&afterBuild.versions[0].version_id===deploy.versions[0].version_id,'PRODUCTION_VERSION_MOVED');
  phase='READ_PRIVATE_SNAPSHOT';dir=await mkdtemp(join(tmpdir(),'restore32-'));const file=join(dir,'snapshot.sql');
  wrangler(['r2','object','get','dream-team-d1-backups/private-releases/code32/40703214121-179da4d9/schema32.sql','--remote','--file',file]);
  const bytes=await readFile(file);check(sha(bytes)==='51fb813a11c3973cfeb356e14d47f88586d12798a3928e7a62ce98558836953b','SNAPSHOT_HASH_MISMATCH');
