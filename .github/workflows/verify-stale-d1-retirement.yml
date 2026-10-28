@@ -1,0 +1,42 @@
+name: Verify retired test D1 (GET ONLY)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/verify-stale-d1-retirement.yml'
+      - 'scripts/verify-stale-d1-retirement.mjs'
+      - 'tests/verify-stale-d1-retirement.test.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-retirement-readonly-verification
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027' && github.event.pull_request.head.sha == 'f1c3776c841e9185f3030ed80bcc92711cd2680f'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - name: Test actual resource verification and GET-only wrapper
+        run: node --test tests/verify-stale-d1-retirement.test.mjs
+      - run: npm ci --ignore-scripts
+      - name: Verify absence, retained backup and unchanged production without mutations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/verify-stale-d1-retirement.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: retired-test-d1-final-readonly-verification
+          path: retirement-verify-status/summary.json
+          retention-days: 14
+          if-no-files-found: warn

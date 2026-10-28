@@ -1,0 +1,45 @@
+name: Pinned stale D1 backup preparation (NO DELETE)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/stale-d1-backup.yml'
+      - 'scripts/prepare-stale-d1-backup.mjs'
+      - 'tests/prepare-stale-d1-backup.test.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-pinned-stale-backup
+  cancel-in-progress: false
+jobs:
+  prepare:
+    # Completed one-off backup evidence is pinned below. Future PR edits must not
+    # repeat exports, and deleting the retired target must not break unrelated CI.
+    if: github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027' && github.event.pull_request.head.sha == 'f7d9136f1d441c01fe147b6024f2ad4e922eda1c'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - name: Targeted guard and local restore tests, without credentials
+        run: node --test tests/prepare-stale-d1-backup.test.mjs
+      - name: Install pinned existing Wrangler dependency
+        run: npm ci --ignore-scripts
+      - name: Export only the pinned old test DB; private R2 roundtrip and local restore
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/prepare-stale-d1-backup.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: pinned-stale-d1-backup-safe-evidence
+          path: stale-backup-status/summary.json
+          retention-days: 14
+          if-no-files-found: warn

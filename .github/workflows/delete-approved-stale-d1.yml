@@ -1,0 +1,46 @@
+name: Owner-approved retirement of ONE old test D1
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - '.github/workflows/delete-approved-stale-d1.yml'
+      - 'scripts/delete-approved-stale-d1.mjs'
+      - 'tests/delete-approved-stale-d1.test.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
+jobs:
+  retire-one-test-database:
+    # Exactly one DELETE was accepted at this evidence SHA. Seal the mutation job;
+    # subsequent work is a separate GET-only verification, never a second DELETE.
+    if: github.event.pull_request.number == 24 && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'fix/code32-cloudflare-recovery-diagnostics-20261027' && github.event.pull_request.head.sha == 'e20edebf2f20920aa99bcd80a6189594f6e63966'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - name: Test exact-target guards without credentials
+        run: node --test tests/delete-approved-stale-d1.test.mjs
+      - name: Install existing pinned Wrangler dependency
+        run: npm ci --ignore-scripts
+      - name: Verify backup and source rows; one approved DELETE; verify preservation
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          STALE_D1_DELETE_APPROVAL: DELETE:dream-team-audit-39575383767-db:1176032b-5dc6-4835-b11b-2622f9955a22:BACKUP:40696672859
+        run: node scripts/delete-approved-stale-d1.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: approved-one-test-d1-retirement-safe-evidence
+          path: approved-delete-status/summary.json
+          retention-days: 14
+          if-no-files-found: warn
