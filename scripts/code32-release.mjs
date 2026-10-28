@@ -44,10 +44,12 @@ try{
   check(d1Inventory.length<10,'D1_RECOVERY_SLOT_UNAVAILABLE');
   const run=await gh('/actions/runs/'+process.env.VERIFIED_MANAGER_RUN);check(run.head_sha===candidate&&run.conclusion==='success'&&run.status==='completed'&&run.path==='.github/workflows/pr23-preview.yml','INTEGRATED_CANDIDATE_EVIDENCE');const checks=(await gh('/actions/runs?head_sha='+candidate+'&per_page=100')).workflow_runs;
   const operatorChecks=(await gh('/actions/runs?head_sha='+main+'&per_page=100')).workflow_runs;
-  for(const name of ['Validate Dream Team','Responsive UI QA']){
+  // Full UI QA is retained from the original PR23 candidate: all application
+  // paths are byte-for-byte unchanged (enforced by the operator diff gate).
+  // A scripts/docs-only main commit does not trigger Responsive UI QA.
+  for(const name of ['Validate Dream Team','Responsive UI QA'])
    check(checks.some(r=>r.head_sha===candidate&&r.name===name&&r.conclusion==='success'),'FINAL_CHECK_REQUIRED');
-   check(operatorChecks.some(r=>r.head_sha===main&&r.name===name&&r.conclusion==='success'),'FINAL_OPERATOR_CHECK_REQUIRED');
-  }
+  check(operatorChecks.some(r=>r.head_sha===main&&r.name==='Validate Dream Team'&&r.conclusion==='success'),'FINAL_OPERATOR_CHECK_REQUIRED');
   const sourceRouting=await cf('/workers/scripts/dream-team/subdomain');check(sourceRouting.enabled===true,'PRODUCTION_ROUTE_DISABLED');const source=await cf('/workers/scripts/dream-team/versions/'+sourceId),settings=await cf('/workers/scripts/dream-team/settings'),sourceVars=plainVars(source),base={...JSON.parse(await readFile('wrangler.jsonc','utf8')),compatibility_date:settings.compatibility_date,compatibility_flags:settings.compatibility_flags||[]};check(sourceVars.ANGLER_PASSWORD_POLICY==='shared'&&sourceVars.INDIVIDUAL_ACCOUNTS==='true','EXISTING_LOGIN_CONFIGURATION_CHANGED');
   const cfg=await configFile(dir,{name:'recovery-point',compatibility_date:base.compatibility_date,d1_databases:[{binding:'DB',database_name:'dream-team-db',database_id:productionId}]},'checkpoint.jsonc'),sqlFile=join(dir,'production-schema32.sql'),backup=await exportSql(cfg,'dream-team-db',sqlFile),snapshot=inspectSql(backup.bytes);report.productionExports=1;reads+=snapshot.tables.reduce((n,t)=>n+t.rows.length,0);check(snapshot.tables.reduce((n,t)=>n+t.rows.length,0)<=15000,'RESTORE_SIZE_BUDGET');// Validate the complete restore plan in memory BEFORE any Cloudflare D1
   // creation. A row that is too large must fail before consuming a DB slot.
