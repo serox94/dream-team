@@ -4,6 +4,7 @@ on:
     branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
     paths:
       - '.github/workflows/probe-407248-r2-worker.yml'
+      - 'tests/probe-407248-r2-worker.test.mjs'
 permissions:
   contents: read
 concurrency:
