@@ -42,6 +42,11 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/code32-failure-407248-readonly.mjs
+      - name: Verify Cloudflare Builds cannot auto-deploy operator-only main merge (read-only)
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/check-builds-merge-readonly.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
@@ -49,5 +54,6 @@ jobs:
           path: |
             readonly-status/cloudflare-inventory.json
             code32-failure-triage/summary.json
+            builds-merge-status/summary.json
           retention-days: 7
           if-no-files-found: warn
