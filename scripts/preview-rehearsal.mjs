@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {cf,query,wrangler,sha,exportSql,configFile,productionId} from './recovery-common.mjs';
 import {inspectSql,verifySnapshot,restoreSnapshot,rowsDigest,identifier} from './d1-snapshot.mjs';
 import {listRestR2Objects} from '../src/backup-status.js';
-const original={name:'dream-team-preview-db',uuid:'5d32f54f-f953-463f-8519-745e51417986'},media='dream-team-preview-media',bucket='dream-team-d1-backups';
+const original={name:'dream-team-preview-db',uuid:'5d32f54f-f953-463f-8519-745e51417986'},media='dream-team-preview-media',bucket='dream-team-preview-recovery-'+process.env.GITHUB_RUN_ID;
 const check=(x,code)=>{if(!x)throw Error(code)};
 const report={result:'BLOCKED',stage:'PRECHECK',source:original.uuid,remoteTemp:null,mediaObjects:0};
 let dir;
@@ -18,6 +18,7 @@ try{
  const dep=(await cf('/workers/scripts/dream-team-preview/deployments')).deployments[0],pv=dep.versions;check(pv.length===1&&pv[0].version_id==='72459455-bcfa-4ed1-b6fa-bea300cb7cba'&&pv[0].percentage===100,'PREVIEW_MOVED');
  const live=await cf('/workers/scripts/dream-team-preview/versions/'+pv[0].version_id);check(live.resources.bindings.some(x=>x.type==='d1'&&x.id===original.uuid)&&live.resources.bindings.some(x=>x.type==='r2_bucket'&&x.bucket_name===media),'PREVIEW_BINDINGS');
  const prod=(await cf('/workers/scripts/dream-team/deployments')).deployments[0];check(prod.versions.length===1&&prod.versions[0].version_id==='31b6b9bd-8f0b-4566-9ced-6b5bf1c26f9d','PRODUCTION_MOVED');
+ report.stage='CREATE_PRIVATE_BACKUP_BUCKET';wrangler(['r2','bucket','create',bucket]);report.backupBucket=bucket;
  const [managed,custom]=await Promise.all([cf('/r2/buckets/'+bucket+'/domains/managed'),cf('/r2/buckets/'+bucket+'/domains/custom')]);check(managed.enabled===false&&Array.isArray(custom.domains)&&custom.domains.every(x=>x.enabled===false),'BACKUP_NOT_PRIVATE');
  const objs=await list();check(objs.length===25,'MEDIA_COUNT_CHANGED');let bytes=objs.reduce((s,x)=>s+Number(x.size||0),0);check(bytes<=100*1024*1024,'MEDIA_BUDGET');report.mediaObjects=objs.length;report.mediaBytes=bytes;
  dir=await mkdtemp(join(tmpdir(),'preview-rehearse-'));let cfg=await configFile(dir,{name:'preview-export',compatibility_date:'2026-09-03',d1_databases:[{binding:'DB',database_name:original.name,database_id:original.uuid}]},'source.jsonc');
