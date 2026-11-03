@@ -20,6 +20,7 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --ignore-scripts
+      - run: node scripts/build.mjs
       - run: node --check scripts/preview-auth-drill.mjs
       - name: Test login, isolated Worker switch, session and rollback
         env:
