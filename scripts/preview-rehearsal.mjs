@@ -13,7 +13,7 @@ const put=async(key,file)=>wrangler(['r2','object','put',bucket+'/'+key,'--remot
 const list=()=>listRestR2Objects('https://api.cloudflare.com/client/v4/accounts/'+process.env.CLOUDFLARE_ACCOUNT_ID+'/r2/buckets/'+media+'/objects?per_page=100',{authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN});
 const normalize=xs=>JSON.stringify(xs.map(x=>({key:x.key,size:x.size,etag:x.etag})).sort((a,b)=>a.key.localeCompare(b.key)));
 try{
- check(process.env.GITHUB_REPOSITORY==='serox94/dream-team'&&/^\\d+$/.test(process.env.GITHUB_RUN_ID||''),'WRONG_CONTEXT');
+ check(process.env.GITHUB_REPOSITORY==='serox94/dream-team'&&/^[0-9]+$/.test(process.env.GITHUB_RUN_ID||''),'WRONG_CONTEXT');
  const inv=await cf('/d1/database?per_page=100');check(inv.length===9&&inv.some(d=>d.uuid===original.uuid&&d.name===original.name)&&original.uuid!==productionId,'D1_CAPACITY_OR_ID');
  const dep=(await cf('/workers/scripts/dream-team-preview/deployments')).deployments[0],pv=dep.versions;check(pv.length===1&&pv[0].version_id==='72459455-bcfa-4ed1-b6fa-bea300cb7cba'&&pv[0].percentage===100,'PREVIEW_MOVED');
  const live=await cf('/workers/scripts/dream-team-preview/versions/'+pv[0].version_id);check(live.resources.bindings.some(x=>x.type==='d1'&&x.id===original.uuid)&&live.resources.bindings.some(x=>x.type==='r2_bucket'&&x.bucket_name===media),'PREVIEW_BINDINGS');
