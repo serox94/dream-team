@@ -14,6 +14,9 @@ check(git('merge-base',candidate,main)===candidate,'CANDIDATE_NOT_ANCESTOR');
 const allowedOperatorFiles=new Set([
  'scripts/d1-snapshot.mjs','scripts/code32-release.mjs','scripts/code32-release-safety.mjs','scripts/recovery-transport.mjs',
  'tests/d1-snapshot-large-row.test.mjs','tests/code32-release.test.mjs','tests/code32-release-safety.test.mjs','tests/restore-transport.test.mjs',
+ // Reviewed diagnostics only: no application, migration, configuration or production-data changes.
+ 'scripts/code32-transition.mjs','scripts/qa-lake-manager-live.mjs',
+ 'tests/code32-transition-diagnostics.test.mjs','tests/code32-operator-allowlist.test.mjs',
  '.github/workflows/code32-release.yml','docs/release/CODE32_RELEASE.md'
 ]);
 const operatorChanges=git('diff','--name-only',candidate,main).split('\n').filter(Boolean);
