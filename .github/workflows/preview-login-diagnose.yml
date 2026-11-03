@@ -1,0 +1,23 @@
+name: Diagnose isolated canary login
+on:
+  push:
+    branches: [ops/preview-infra-recovery-20261103]
+    paths: [.github/workflows/preview-login-diagnose.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe only isolated Worker with deliberately invalid credentials
+        run: |
+          node - <<'NODE'
+          (async()=>{
+            const base='https://dream-team-audit-41720081279-canary.sewerynski00.workers.dev';
+            const r=await fetch(base+'/api/login',{method:'POST',redirect:'manual',
+              headers:{'content-type':'application/x-www-form-urlencoded'},
+              body:new URLSearchParams({username:'diagnostic-nonexistent',password:'invalid-diagnostic'})});
+            const t=await r.text();const location=r.headers.get('location');
+            console.log('CANARY_LOGIN_PROBE '+JSON.stringify({status:r.status,redirectToCredentials:!!location&&location.includes('error=credentials'),hasCookie:!!r.headers.get('set-cookie'),serverError:t.includes('Błąd serwera'),maintenance:t.includes('Przerwa serwisowa'),notConfigured:t.includes('nie jest jeszcze skonfigurowane')}));
+          })().catch(()=>{console.log('CANARY_LOGIN_PROBE network_error');process.exitCode=1});
+          NODE
