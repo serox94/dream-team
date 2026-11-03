@@ -1,0 +1,35 @@
+name: Isolated preview recovery rehearsal
+on:
+  push:
+    branches: [ops/preview-infra-recovery-20261103]
+    paths: [.github/workflows/preview-rehearsal.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-preview-rehearsal
+  cancel-in-progress: false
+jobs:
+  rehearsal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: node --check scripts/preview-rehearsal.mjs
+      - name: Backup preview and rehearse migrations on an isolated new D1
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/preview-rehearsal.mjs
+      - name: Upload sanitized evidence only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: preview-rehearsal-status
+          path: preview-rehearsal-status/summary.json
+          if-no-files-found: ignore
