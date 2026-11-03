@@ -1,0 +1,57 @@
+name: Retire exact audit D1 once
+on:
+  push:
+    branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
+    paths: [.github/workflows/retire-402414-once.yml]
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: dream-team-one-time-retire-402414
+  cancel-in-progress: false
+jobs:
+  retire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Disable this workflow before any Cloudflare mutation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          path="repos/$GITHUB_REPOSITORY/actions/workflows/retire-402414-once.yml"
+          gh api -X PUT "$path/disable"
+          test "$(gh api "$path" --jq .state)" = disabled_manually
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 41bee4395ba2ebb70d0c5322dd39561b5be8bb5c
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - name: Ensure backup bucket is not public
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module -e '
+          import {cf} from "./scripts/recovery-common.mjs";
+          const root="/r2/buckets/dream-team-d1-backups/domains/";
+          const [managed,custom]=await Promise.all([cf(root+"managed"),cf(root+"custom")]);
+          if(managed.enabled!==false || !Array.isArray(custom.domains) || custom.domains.some(x=>x.enabled!==false)) throw Error("BACKUP_BUCKET_PRIVACY_UNVERIFIED");
+          console.log("R2_PUBLIC_DOMAINS_DISABLED");
+          '
+      - name: Pinned target only; backup, restore, verify, then at most one delete
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RETIRE_APPROVAL: DELETE:dream-team-audit-40241458807931-db:fd253e14-747b-415d-8e4e-f39ffc4119b5:AFTER_VERIFIED_BACKUP
+        run: node scripts/retire-402414-once.mjs
+      - name: Upload non-secret evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: retire-402414-safe-evidence
+          path: retire-402414-status/summary.json
+          if-no-files-found: ignore
