@@ -1,0 +1,65 @@
+name: Verify audit D1 retirement read-only
+on:
+  push:
+    branches: [fix/code32-cloudflare-recovery-diagnostics-20261027]
+    paths: [.github/workflows/verify-402414-readonly.yml]
+permissions:
+  contents: read
+  actions: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Disable this workflow first
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          path="repos/$GITHUB_REPOSITORY/actions/workflows/verify-402414-readonly.yml"
+          gh api -X PUT "$path/disable"
+          test "$(gh api "$path" --jq .state)" = disabled_manually
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 41bee4395ba2ebb70d0c5322dd39561b5be8bb5c
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - name: Read Cloudflare state and retained backup only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'NODE'
+          import {cf,query,wrangler,sha} from './scripts/recovery-common.mjs';
+          import {readFile,rm} from 'node:fs/promises';
+          import {inspectSql} from './scripts/d1-snapshot.mjs';
+          const target='fd253e14-747b-415d-8e4e-f39ffc4119b5';
+          const backup='private-releases/one-time-retire/40241458807931/41709473857/schema.sql';
+          const expected='87e90ad08d3b80eb7e0fec116c200e182a77646c232d554a6352bb9e18c55c71';
+          async function read(path){
+            for(let n=0;n<8;n++){
+              try{return await cf(path)}catch(e){if(n===7)throw e;await new Promise(r=>setTimeout(r,30000));}
+            }
+          }
+          const report={operation:'READ_ONLY'};
+          try{
+            const list=await read('/d1/database?per_page=100');
+            report.d1=list.map(x=>({name:x.name,uuid:x.uuid}));report.count=list.length;
+            report.targetAbsent=!list.some(x=>x.uuid===target||x.name==='dream-team-audit-40241458807931-db');
+            const d=(await read('/workers/scripts/dream-team/deployments')).deployments?.[0];
+            report.activeVersions=d?.versions;
+            const db='b64c7a2c-8694-41c6-b54a-857b88bf2c96';
+            const schema=await query(db,"SELECT value FROM app_settings WHERE key='schema_version'");
+            const maint=await query(db,"SELECT value FROM app_settings WHERE key='maintenance_mode'");
+            const integrity=await query(db,'PRAGMA quick_check');
+            report.production={schema:schema.results[0]?.value,maintenance:maint.results[0]?.value??null,quickCheck:integrity.results[0]?.quick_check};
+            wrangler(['r2','object','get','dream-team-d1-backups/'+backup,'--remote','--file','verified-retire-backup.sql']);
+            const bytes=await readFile('verified-retire-backup.sql');const snapshot=inspectSql(bytes);
+            report.backup={sha256:sha(bytes),hashMatches:sha(bytes)===expected,tables:snapshot.tables.length,rows:snapshot.tables.reduce((n,t)=>n+t.rows.length,0),restore:'PASS'};
+            await rm('verified-retire-backup.sql');
+          }catch(e){report.error={name:e.name,status:e.status,code:e.code};process.exitCode=1;}
+          console.log('RETIRE_READONLY_PROOF '+JSON.stringify(report));
+          NODE
