@@ -1,0 +1,34 @@
+// Isolated Worker and byte-level R2 recovery test; does not target existing Workers.
+import {mkdtemp,readFile,writeFile,mkdir,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';import {join} from 'node:path';import {randomBytes} from 'node:crypto';
+import {cf,wrangler,sha,configFile,query,productionId} from './recovery-common.mjs';
+const id='41718988537',db='232d19f4-d4e7-403f-bda0-04b2e312cf4d',backup='dream-team-preview-recovery-'+id;
+const name='dream-team-audit-'+process.env.GITHUB_RUN_ID+'-canary',media='dream-team-audit-'+process.env.GITHUB_RUN_ID+'-media',prefix='private-releases/preview-rehearsal/'+id+'/';
+const report={result:'BLOCKED',stage:'PRECHECK',worker:name,media,db,rollbackAttempts:0};let dir,versionA=null,versionB=null,switched=false;
+const check=(v,c)=>{if(!v)throw Error(c)};
+const active=async()=>(await cf('/workers/scripts/'+name+'/deployments')).deployments[0].versions[0].version_id;
+const deploy=async version=>cf('/workers/scripts/'+name+'/deployments','POST',{strategy:'percentage',versions:[{version_id:version,percentage:100}],annotations:{'workers/message':'Isolated rehearsal only'}});
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+try{
+ check(process.env.GITHUB_REPOSITORY==='serox94/dream-team'&&/^[0-9]+$/.test(process.env.GITHUB_RUN_ID||'')&&process.env.RYBY_LOGIN_PASSWORD,'WRONG_CONTEXT_OR_SECRET');
+ check(db!==productionId&&db!=='5d32f54f-f953-463f-8519-745e51417986','PROTECTED_DB');
+ const d=await cf('/d1/database/'+db);check(d.name==='dream-team-audit-41718988537-db','WRONG_ISOLATED_DB');
+ check((await query(db,"SELECT value FROM app_settings WHERE key='schema_version'")).results[0]?.value==='32','ISOLATED_SCHEMA');
+ const p=(await cf('/workers/scripts/dream-team/deployments')).deployments[0];check(p.versions[0].version_id==='31b6b9bd-8f0b-4566-9ced-6b5bf1c26f9d','PRODUCTION_MOVED');
+ dir=await mkdtemp(join(tmpdir(),'preview-worker-drill-'));const mf=join(dir,'manifest.json');wrangler(['r2','object','get',backup+'/'+prefix+'media-manifest.json','--remote','--file',mf]);const manifest=JSON.parse(await readFile(mf));check(manifest.objects?.length===25,'MANIFEST_COUNT');
+ report.stage='RESTORE_R2';wrangler(['r2','bucket','create',media]);for(const [i,o] of manifest.objects.entries()){const f=join(dir,'object-'+i),copy=join(dir,'verify-'+i);wrangler(['r2','object','get',backup+'/'+o.backupKey,'--remote','--file',f]);check(sha(await readFile(f))===o.sha256,'BACKUP_HASH_MISMATCH');wrangler(['r2','object','put',media+'/'+o.key,'--remote','--file',f]);wrangler(['r2','object','get',media+'/'+o.key,'--remote','--file',copy]);check(sha(await readFile(copy))===o.sha256,'RESTORE_HASH_MISMATCH')}report.mediaRestore='25/25 PASS';
+ const config={name,main:process.cwd()+'/src/worker.js',compatibility_date:'2026-09-03',assets:{directory:process.cwd()+'/public',binding:'ASSETS',run_worker_first:true,html_handling:'none'},d1_databases:[{binding:'DB',database_name:d.name,database_id:db}],r2_buckets:[{binding:'MEDIA',bucket_name:media}],vars:{APP_ENV:'preview',APP_BUILD:'rehearsal-a',INDIVIDUAL_ACCOUNTS:'true',ANGLER_PASSWORD_POLICY:'shared',TRANSLATION_ENABLED:'false',AI_FREE_ONLY:'true',RESEARCH_FREE_ONLY:'true'}};
+ let cfg=await configFile(dir,config,'canary.jsonc');report.stage='DEPLOY_ISOLATED_A';wrangler(['deploy','--config',cfg]);
+ for(const [k,value] of [['RYBY_LOGIN_USERNAME','ryby'],['RYBY_LOGIN_PASSWORD',process.env.RYBY_LOGIN_PASSWORD],['RYBY_SESSION_SECRET',randomBytes(32).toString('hex')]])wrangler(['secret','put',k,'--config',cfg],value);
+ versionA=await active();report.versionA=versionA;const base='https://'+name+'.sewerynski00.workers.dev';
+ let first;for(let i=0;i<18;i++){try{first=await fetch(base+'/login',{redirect:'manual'});if(first.status===200)break}catch{}await sleep(2000)}check(first?.status===200,'CANARY_A_NOT_READY');
+ report.stage='LOGIN';const login=await fetch(base+'/api/login',{method:'POST',redirect:'manual',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({username:'Patryk',password:process.env.RYBY_LOGIN_PASSWORD})});check(login.status===303,'CANARY_LOGIN_FAILED');const cookie=login.headers.get('set-cookie')?.split(';')[0];check(cookie,'CANARY_COOKIE_MISSING');
+ const before=await fetch(base+'/api/bootstrap',{headers:{cookie}});check(before.status===200,'CANARY_BOOTSTRAP_FAILED');report.login='PASS';
+ report.stage='UPLOAD_ISOLATED_B';config.vars.APP_BUILD='rehearsal-b';cfg=await configFile(dir,config,'canary-b.jsonc');wrangler(['versions','upload','--config',cfg]);const versions=(await cf('/workers/scripts/'+name+'/versions?per_page=10')).items;versionB=versions[0]?.id;check(versionB&&versionB!==versionA&&await active()===versionA,'VERSION_B_OR_ACTIVE_CHANGED');report.versionB=versionB;
+ const bv=await cf('/workers/scripts/'+name+'/versions/'+versionB);check(bv.resources.bindings.some(x=>x.type==='d1'&&x.id===db)&&bv.resources.bindings.some(x=>x.type==='r2_bucket'&&x.bucket_name===media),'B_BINDINGS');
+ report.stage='SWITCH_B';await deploy(versionB);switched=true;check(await active()===versionB,'B_ACTIVE_MISMATCH');let ready;for(let i=0;i<15;i++){try{ready=await fetch(base+'/api/bootstrap',{headers:{cookie}});if(ready.status===200&&ready.headers.get('x-dreamteam-build')==='rehearsal-b')break}catch{}await sleep(2000)}check(ready?.status===200&&ready.headers.get('x-dreamteam-build')==='rehearsal-b','B_NOT_READY');report.sameSessionOnB='PASS';
+ // Deliberately simulate the controller receiving a failed readiness gate.
+ report.stage='CONTROLLED_FAILURE_ROLLBACK';report.rollbackAttempts++;await deploy(versionA);switched=false;check(await active()===versionA,'ROLLBACK_ACTIVE_MISMATCH');let recovered;for(let i=0;i<15;i++){try{recovered=await fetch(base+'/api/bootstrap',{headers:{cookie}});if(recovered.status===200&&recovered.headers.get('x-dreamteam-build')==='rehearsal-a')break}catch{}await sleep(2000)}check(recovered?.status===200&&recovered.headers.get('x-dreamteam-build')==='rehearsal-a','ROLLBACK_NOT_READY');report.rollback='PASS';report.sameSessionAfterRollback='PASS';
+ check((await cf('/workers/scripts/dream-team/deployments')).deployments[0].versions[0].version_id==='31b6b9bd-8f0b-4566-9ced-6b5bf1c26f9d','PRODUCTION_MOVED');report.result='PASS';report.stage='COMPLETE';
+}catch(e){report.failure={stage:report.stage,code:/^[A-Z0-9_]+$/.test(e.message)?e.message:'OPERATION_FAILED',http:e.status??null,cloudflareCode:e.code??null};if(switched&&versionA&&report.rollbackAttempts===0){try{report.rollbackAttempts++;await deploy(versionA);report.emergencyRollback=(await active()===versionA)?'PASS':'UNVERIFIED'}catch{report.emergencyRollback='FAILED'}}process.exitCode=1}
+finally{if(dir)await rm(dir,{recursive:true,force:true});await mkdir('preview-worker-status',{recursive:true});await writeFile('preview-worker-status/summary.json',JSON.stringify(report,null,2),{mode:0o600});console.log('PREVIEW_WORKER_DRILL '+JSON.stringify(report))}
