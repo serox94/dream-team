@@ -34,3 +34,5 @@ jobs:
           name: preview-auth-status
           path: preview-auth-status/summary.json
           if-no-files-found: ignore
+
+# Retry using versioned canary secret upload and endpoint-specific readiness.
