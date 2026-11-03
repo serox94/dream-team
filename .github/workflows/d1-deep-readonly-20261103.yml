@@ -1,0 +1,24 @@
+name: Deep D1 Cloudflare inventory (one-time read-only)
+on:
+  push:
+    branches: [fix/code32-readiness-rollback-diagnostics-20261028]
+    paths:
+      - .github/workflows/d1-deep-readonly-20261103.yml
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Inspect all D1 databases, all retained Worker versions and R2 backups
+        run: node scripts/audit-d1-deep-readonly-20261103.mjs
