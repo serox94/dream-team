@@ -47,3 +47,5 @@ jobs:
           echo "Failed workflow: ${FAILED_NAME}" >> "$GITHUB_STEP_SUMMARY"
           echo "Run: ${FAILED_URL}" >> "$GITHUB_STEP_SUMMARY"
           exit 1
+
+# Verify aggregate metrics with the existing read-only token.
