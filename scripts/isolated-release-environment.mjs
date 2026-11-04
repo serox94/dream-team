@@ -5,6 +5,7 @@ const check=(v,c)=>{if(!v)throw Error(c)};
 export function safeProviderFailure(error){
  return {error:/^[A-Z0-9_]+$/.test(error?.message||'')?error.message:'OPERATION_FAILED',
   ...(Number.isInteger(error?.status)?{httpStatus:error.status}:{}),
+  ...(Number.isInteger(error?.retryAfterSeconds)?{retryAfterSeconds:error.retryAfterSeconds}:{}),
   ...(Number.isSafeInteger(error?.code)?{cloudflareCode:error.code}:{}),
   ...(/^[A-Z0-9_]{1,64}$/.test(error?.operation||'')?{operation:error.operation}:{})};
 }

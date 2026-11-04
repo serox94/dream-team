@@ -10,6 +10,7 @@ on:
       - 'scripts/d1-snapshot.mjs'
       - 'scripts/isolated-release-environment.mjs'
       - 'scripts/recovery-common.mjs'
+      - 'scripts/cloudflare-request-policy.mjs'
       - 'scripts/cleanup-isolated-release.mjs'
       - 'scripts/infra-monitor-alert.mjs'
       - 'scripts/verify-issue-alerts.mjs'

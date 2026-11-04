@@ -54,6 +54,7 @@ export async function release(plan, adapter) {
     report.error = safeCode(e); report.failedStage = report.stage;
     if(Number.isInteger(e.status))report.httpStatus=e.status;
     if(Number.isInteger(e.code))report.cloudflareCode=e.code;
+    if(Number.isInteger(e.retryAfterSeconds))report.retryAfterSeconds=e.retryAfterSeconds;
     if (report.activated || migrated) {
       try {
         report.stage = 'RECOVERY_INSPECT';
