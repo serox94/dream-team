@@ -24,5 +24,5 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  let report;
  if(!/^\d+$/.test(run||'')||!/^\d+$/.test(attempt||'')||process.env.GITHUB_REPOSITORY!=='serox94/dream-team')report={result:'FAIL',error:'INVALID_ALERT_TEST_CONTEXT'};
  else report=await verifyIssueAlerts({repository:process.env.GITHUB_REPOSITORY,workflow:`Isolated alert verification ${run}-${attempt}`,url:`https://github.com/serox94/dream-team/actions/runs/${run}`},{token:process.env.GITHUB_TOKEN,fetcher:fetch});
- await mkdir('isolated-alert-status',{recursive:true});await writeFile('isolated-alert-status/summary.json',JSON.stringify(report,null,2));console.log('DREAMTEAM_ALERT_VERIFICATION '+JSON.stringify(report));if(report.result!=='PASS')process.exitCode=1;
+ await mkdir('isolated-alert-status',{recursive:true});await writeFile('isolated-alert-status/summary.json',JSON.stringify(report,null,2));console.log('DREAMTEAM_ALERT_VERIFICATION '+JSON.stringify(report));console.log(`::${report.result==='PASS'?'notice':'error'} title=Issue alert diagnostic::${JSON.stringify(report)}`);if(report.result!=='PASS')process.exitCode=1;
 }

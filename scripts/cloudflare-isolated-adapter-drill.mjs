@@ -96,4 +96,6 @@ finally{
  if(lease)try{report.cleanup.push({kind:'D1',...await lease.cleanup()})}catch(e){report.cleanup.push({kind:'D1',...safeProviderFailure(e)});process.exitCode=1;report.result='FAIL'}
  if(dir)await rm(dir,{recursive:true,force:true});await mkdir('isolated-adapter-status',{recursive:true});
  await writeFile('isolated-adapter-status/summary.json',JSON.stringify(report,null,2));console.log('ISOLATED_ADAPTER '+JSON.stringify(report));
+ const diagnostic={stage:report.stage,...(report.error?{error:report.error}:{}),...(report.httpStatus?{httpStatus:report.httpStatus}:{}),...(report.cloudflareCode?{cloudflareCode:report.cloudflareCode}:{}),...(report.operation?{operation:report.operation}:{}),scenarios:report.scenarios.map(({scenario,release})=>({scenario,result:release.result,error:release.error,stage:release.failedStage,httpStatus:release.httpStatus,cloudflareCode:release.cloudflareCode,recovery:release.recovery,recoveryError:release.recoveryError}))};
+ console.log(`::${report.result==='PASS'?'notice':'error'} title=Isolated release diagnostic::${JSON.stringify(diagnostic)}`);
 }
