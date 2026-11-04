@@ -1,0 +1,33 @@
+name: Actual preview language switch
+on:
+  push:
+    branches: [ops/preview-infra-recovery-20261103]
+    paths: [.github/workflows/actual-preview-language.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-preview-rehearsal
+  cancel-in-progress: false
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: npm install --no-save --package-lock=false playwright@1.63.0 && npx playwright install chromium
+      - name: Verify language switch and trip sections
+        env:
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/actual-preview-language.mjs
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: preview-language-status
+          path: preview-language-status/summary.json
+          if-no-files-found: ignore
