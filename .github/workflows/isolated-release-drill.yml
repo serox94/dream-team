@@ -8,19 +8,17 @@ on:
       - 'scripts/cloudflare-isolated-adapter*.mjs'
       - 'scripts/universal-release.mjs'
       - 'scripts/d1-snapshot.mjs'
+      - 'scripts/isolated-release-environment.mjs'
+      - 'scripts/recovery-common.mjs'
 permissions:
   contents: read
 concurrency:
-  group: dream-team-isolated-release-${{ github.run_id }}
+  group: dream-team-isolated-release-single-d1
   cancel-in-progress: false
 jobs:
   drill:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        scenario: [success, activation-timeout, migration-timeout, readiness-failure]
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -34,10 +32,9 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          DRILL_SCENARIO: ${{ matrix.scenario }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: isolated-release-${{ matrix.scenario }}
+          name: isolated-release-single-d1
           path: isolated-adapter-status/
           retention-days: 14

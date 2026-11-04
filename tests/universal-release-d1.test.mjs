@@ -4,23 +4,27 @@ import test from 'node:test';import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';import {readFileSync} from 'node:fs';
 import {database as seed} from './db.mjs';
 import {cloudflareReleaseAdapter} from '../scripts/cloudflare-isolated-adapter.mjs';
+import {createIsolatedReleaseEnvironment} from '../scripts/isolated-release-environment.mjs';
 import {release} from '../scripts/universal-release.mjs';
 const ids=['a','b','c','d','e','f','0'].map(c=>`${c.repeat(8)}-${c.repeat(4)}-${c.repeat(4)}-${c.repeat(4)}-${c.repeat(12)}`);
 const [source,target,fallback,probeTarget,probeFallback,dbId,restoreId]=ids;
 const candidate='a'.repeat(40),operator='b'.repeat(40),sourceBuild='c'.repeat(40),fallbackBuild='d'.repeat(40);
 const worker='dream-team-audit-123-recovery-probe',probe='dream-team-audit-1239-recovery-probe';
 const plan={candidate,operator,approval:`RELEASE:${candidate}:${operator}`,sourceSchema:31,targetSchema:32,targetVersion:target};
-async function fixture(t,{badBindings=false,codeOnly=false}={}){
+async function fixture(t,{badBindings=false,codeOnly=false,shared=false}={}){
  const original=seed({through:codeOnly?'0032':'0031'}),restored=new DatabaseSync(':memory:');t.after(()=>{original.close();restored.close()});
  original.sqlite.prepare("INSERT OR REPLACE INTO app_settings(key,value) VALUES('schema_version',?)").run(codeOnly?'32':'31');original.sqlite.exec("INSERT OR REPLACE INTO app_settings(key,value) VALUES('maintenance_mode','off')");
  const dbs={[dbId]:original.sqlite,[restoreId]:restored};
- const versions={[source]:[dbId,sourceBuild,codeOnly?32:31],[target]:[dbId,candidate,32],[fallback]:[dbId,fallbackBuild,32],[probeTarget]:[restoreId,candidate,32],[probeFallback]:[restoreId,fallbackBuild,32]};
+ const versions={[source]:[dbId,sourceBuild,codeOnly?32:31],[target]:[dbId,candidate,32],[fallback]:[dbId,fallbackBuild,32],[probeTarget]:[shared?dbId:restoreId,candidate,32],[probeFallback]:[shared?dbId:restoreId,fallbackBuild,32]};
  const active={[worker]:source,[probe]:probeFallback};let writes=0;
  const execute=async(id,sql,params=[])=>{
   if(/^SELECT|^PRAGMA/.test(sql))return {results:dbs[id].prepare(sql).all(...params)};
   writes++;if(params.length)dbs[id].prepare(sql).run(...params);else dbs[id].exec(sql);return {results:[]};
  };
  const request=async(path,method='GET',body)=>{
+  if(path.startsWith('/d1/database?'))return [];
+  if(path==='/d1/database')return {uuid:dbId,name:'dream-team-audit-123-db'};
+  if(path.endsWith('/query'))return [await execute(path.split('/')[3],body.sql,body.params)];
   if(path.startsWith('/d1/database/')){const uuid=path.split('/').pop();return {uuid,name:`dream-team-audit-123-${uuid===dbId?'db':'restored'}`}}
   const [,name,op,id]=path.match(/^\/workers\/scripts\/([^/]+)\/(deployments|versions)(?:\/([^/]+))?$/)||[];
   assert.ok(name,'unexpected API path');
@@ -34,7 +38,8 @@ async function fixture(t,{badBindings=false,codeOnly=false}={}){
   const blocked=u.pathname==='/api/bootstrap'&&settings.maintenance_mode==='on';
   return new Response('',{status:blocked||Number(settings.schema_version)!==schema?503:200,headers:{'x-build':build}});
  };
- const adapter=await cloudflareReleaseAdapter({worker,runId:'123',baseUrl:`https://${worker}.example.workers.dev`,database:{uuid:dbId,name:'dream-team-audit-123-db'},restored:{uuid:restoreId,name:'dream-team-audit-123-restored'},candidateVersion:target,fallbackVersion:fallback,sourceBuild,fallbackBuild,migration:{name:'0032_lake_manager.sql',sql:readFileSync(new URL('../migrations/0032_lake_manager.sql',import.meta.url),'utf8')},rehearsal:{worker:probe,runId:'1239',baseUrl:`https://${probe}.example.workers.dev`,candidateVersion:probeTarget,fallbackVersion:probeFallback},execute,request,fetcher,wait:async()=>{}});
+ const sandboxLease=shared?await createIsolatedReleaseEnvironment({runId:'123',request}):undefined;
+ const adapter=await cloudflareReleaseAdapter({worker,runId:'123',baseUrl:`https://${worker}.example.workers.dev`,database:{uuid:dbId,name:'dream-team-audit-123-db'},restored:shared?sandboxLease.database:{uuid:restoreId,name:'dream-team-audit-123-restored'},candidateVersion:target,fallbackVersion:fallback,sourceBuild,fallbackBuild,migration:{name:'0032_lake_manager.sql',sql:readFileSync(new URL('../migrations/0032_lake_manager.sql',import.meta.url),'utf8')},rehearsal:{worker:probe,runId:'1239',baseUrl:`https://${probe}.example.workers.dev`,candidateVersion:probeTarget,fallbackVersion:probeFallback},execute,request,fetcher,sandboxLease,wait:async()=>{}});
  return {adapter,original,restored,active,get writes(){return writes}};
 }
 for(const failure of ['none','activation','migration','verify'])test(`real schema31 snapshot, restore, migration32 and recovery: ${failure}`,async t=>{
@@ -67,4 +72,10 @@ test('code-only release restores a consistent checkpoint without applying migrat
 test('migration failure before any schema mutation recovers original version',async t=>{
  const f=await fixture(t);f.adapter.migrate=async()=>{throw Error('MIGRATION_TIMEOUT')};
  const r=await release(plan,f.adapter);assert.equal(r.recovery,'PASS');assert.equal(f.active[worker],source);assert.equal((await f.adapter.current()).schema,31);assert.equal((await f.adapter.current()).maintenance,false);
+});
+
+test('single owned D1 is restored, rehearsed, reset and released without a second database',async t=>{
+ const f=await fixture(t,{shared:true});const r=await release(plan,f.adapter);assert.equal(r.result,'PASS',JSON.stringify(r));
+ assert.equal((await f.adapter.current()).schema,32);assert.equal((await f.adapter.current()).maintenance,false);
+ assert.equal(f.original.sqlite.prepare('SELECT count(*) n FROM trips').get().n,4);
 });

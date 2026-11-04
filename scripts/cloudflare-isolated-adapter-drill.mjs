@@ -2,22 +2,26 @@
 import {mkdtemp,writeFile,rm,mkdir,readFile,readdir} from 'node:fs/promises';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {cf,wrangler,configFile,query} from './recovery-common.mjs';
-import {cloudflareReleaseAdapter} from './cloudflare-isolated-adapter.mjs';
+import {captureSnapshot} from './d1-snapshot.mjs';
+import {createIsolatedReleaseEnvironment,safeProviderFailure} from './isolated-release-environment.mjs';
+import {isolatedCloudflareAdapter,cloudflareReleaseAdapter} from './cloudflare-isolated-adapter.mjs';
 import {release} from './universal-release.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
-const scenario=process.env.DRILL_SCENARIO||'success';
 const scenarios=['success','activation-timeout','migration-timeout','readiness-failure'];
-const runId=process.env.GITHUB_RUN_ID+'0'+scenarios.indexOf(scenario),rehearsalId=runId+'9';
+const runId=process.env.GITHUB_RUN_ID+'0'+process.env.GITHUB_RUN_ATTEMPT,rehearsalId=runId+'9';
 const worker=`dream-team-audit-${runId}-recovery-probe`,probe=`dream-team-audit-${rehearsalId}-recovery-probe`;
-const report={result:'FAIL',stage:'PRECHECK',scenario};let dir;const created=[];
+const report={result:'FAIL',stage:'PRECHECK',scenarios:[]};let dir,lease;const created=[];
 try{
- check(process.env.GITHUB_REPOSITORY==='serox94/dream-team'&&process.env.GITHUB_RUN_ATTEMPT==='1'&&/^\d+$/.test(process.env.GITHUB_RUN_ID||'')&&scenarios.includes(scenario),'CONTEXT');
+ check(process.env.GITHUB_REPOSITORY==='serox94/dream-team'&&/^[0-9]+$/.test(process.env.GITHUB_RUN_ATTEMPT||'')&&/^\d+$/.test(process.env.GITHUB_RUN_ID||''),'CONTEXT');
  check(/^[a-f0-9]{40}$/.test(process.env.GITHUB_SHA||''),'INVALID_SHA');
  dir=await mkdtemp(join(tmpdir(),'adapter-drill-'));
+ report.stage='ACCOUNT_READ';
  const subdomain=(await cf('/workers/subdomain')).subdomain;check(/^[a-z0-9-]+$/.test(subdomain||''),'INVALID_SUBDOMAIN');
  for(const name of [worker,probe])check(!(await cf('/workers/scripts')).some(x=>x.id===name),'WORKER_EXISTS');
- const makeDb=async suffix=>{const name=`dream-team-audit-${runId}-${suffix}`;const db=await cf('/d1/database','POST',{name});created.push({path:'/d1/database/'+db.uuid});return {name,uuid:db.uuid}};
- const database=await makeDb('db'),restored=await makeDb('restored');
+ report.stage='ALLOCATE_SINGLE_D1';
+ lease=await createIsolatedReleaseEnvironment({runId});
+ const database=lease.database,restored=database;
+ report.d1={databasesBefore:lease.databasesBefore,allocated:1};
  const entry=join(dir,'worker.mjs');
  await writeFile(entry,`export default {async fetch(req,env){
  const rows=(await env.DB.prepare("SELECT key,value FROM app_settings WHERE key IN ('schema_version','maintenance_mode')").all()).results;
@@ -37,6 +41,7 @@ try{
  const cfgFor=async(name,db,build,schema)=>configFile(dir,{...baseConfig,name,vars:{APP_BUILD:build,APP_SCHEMA:String(schema)},d1_databases:[{binding:'DB',database_name:db.name,database_id:db.uuid}]},name+'.jsonc');
  const sourceBuild='1'.repeat(40),fallbackBuild='2'.repeat(40),candidate=process.env.GITHUB_SHA;
  const initialConfig=await cfgFor(worker,database,sourceBuild,31);
+ report.stage='SEED_SYNTHETIC_DATA';
  wrangler(['d1','execute',database.name,'--remote','--config',initialConfig,'--file',initial]);
  const upload=async(name,db,build,schema,first=false)=>{
   const cfg=await cfgFor(name,db,build,schema);
@@ -45,7 +50,8 @@ try{
   const versions=(await cf('/workers/scripts/'+name+'/versions?per_page=5')).items;
   check(versions?.[0]?.id,'VERSION_MISSING');return versions[0].id;
  };
- await upload(worker,database,sourceBuild,31,true);
+ report.stage='UPLOAD_DISPOSABLE_WORKERS';
+ const sourceVersion=await upload(worker,database,sourceBuild,31,true);
  const candidateVersion=await upload(worker,database,candidate,32),fallbackVersion=await upload(worker,database,fallbackBuild,32);
  const rehearsalFallback=await upload(probe,restored,fallbackBuild,32,true),rehearsalCandidate=await upload(probe,restored,candidate,32);
  const baseUrl=`https://${worker}.${subdomain}.workers.dev`,probeUrl=`https://${probe}.${subdomain}.workers.dev`;
@@ -53,27 +59,35 @@ try{
  await cf('/workers/scripts/'+worker+'/subdomain','POST',{enabled:true});
  await cf('/workers/scripts/'+probe+'/subdomain','POST',{enabled:true});
  const migration={name:'0032_lake_manager.sql',sql:await readFile('migrations/0032_lake_manager.sql','utf8')};
- const adapter=await cloudflareReleaseAdapter({worker,runId,baseUrl,database,restored,candidateVersion,fallbackVersion,sourceBuild,fallbackBuild,migration,
+ const sourceControl=isolatedCloudflareAdapter({worker,runId,baseUrl});
+ const seedSnapshot=await captureSnapshot(database,lease.execute);
+ for(const scenario of scenarios){
+  await sourceControl.activate(sourceVersion);
+  await lease.restore(seedSnapshot);
+ const adapter=await cloudflareReleaseAdapter({worker,runId,baseUrl,database,restored,candidateVersion,fallbackVersion,sourceBuild,fallbackBuild,migration,sandboxLease:lease,execute:lease.execute,
  rehearsal:{worker:probe,runId:rehearsalId,baseUrl:probeUrl,candidateVersion:rehearsalCandidate,fallbackVersion:rehearsalFallback}});
  const before=await adapter.current();const rowsBefore=(await query(database.uuid,'SELECT count(*) n FROM trips')).results[0].n;
  // Inject errors only AFTER the real operation, exercising ambiguous provider responses.
  if(scenario==='activation-timeout'){const original=adapter.activate;adapter.activate=async id=>{await original(id);if(id===candidateVersion)throw Error('ACTIVATION_TIMEOUT')}}
  if(scenario==='migration-timeout'){const original=adapter.migrate;adapter.migrate=async(...args)=>{await original(...args);throw Error('MIGRATION_TIMEOUT')}}
  if(scenario==='readiness-failure'){const original=adapter.verify;adapter.verify=async plan=>{await original(plan);throw Error('INJECTED_READINESS_FAILURE')}}
- report.stage='RELEASE';
- report.release=await release({candidate,operator:candidate,approval:`RELEASE:${candidate}:${candidate}`,sourceSchema:31,targetSchema:32,targetVersion:candidateVersion},adapter);
+ report.stage='RELEASE_'+scenario.toUpperCase().replaceAll('-','_');
+ const outcome=await release({candidate,operator:candidate,approval:`RELEASE:${candidate}:${candidate}`,sourceSchema:31,targetSchema:32,targetVersion:candidateVersion},adapter);
+ report.scenarios.push({scenario,release:outcome});
  const after=await adapter.current();
  check(after.schema===32&&!after.maintenance,'FINAL_SCHEMA_OR_BARRIER');
  check(after.activeVersion===(scenario==='success'?candidateVersion:fallbackVersion),'FINAL_WORKER');
  check((await query(database.uuid,'SELECT count(*) n FROM trips')).results[0].n===rowsBefore,'DATA_LOSS');
  check((await query(database.uuid,'PRAGMA foreign_key_check')).results.length===0,'FOREIGN_KEYS');
- check(scenario==='success'?report.release.result==='PASS':report.release.result==='BLOCKED'&&report.release.recovery==='PASS','UNEXPECTED_RELEASE_RESULT');
- report.source=before.activeVersion;report.final=after.activeVersion;report.result='PASS';report.stage='COMPLETE';
-}catch(e){report.error=/^[A-Z0-9_]+$/.test(e.message)?e.message:'OPERATION_FAILED';process.exitCode=1}
+ check(scenario==='success'?outcome.result==='PASS':outcome.result==='BLOCKED'&&outcome.recovery==='PASS','UNEXPECTED_RELEASE_RESULT');
+ }
+ report.result='PASS';report.stage='COMPLETE';
+}catch(e){Object.assign(report,safeProviderFailure(e));process.exitCode=1}
 finally{
- // Only resources created by this run are deleted, and only after all assertions pass.
- if(report.result==='PASS')for(const resource of created.reverse())try{await cf(resource.path,'DELETE')}catch{report.cleanup='FAILED';process.exitCode=1;report.result='FAIL'}
- else report.cleanup='RETAINED';
+ // Cleanup runs after failures too; ownership is established by this run's create receipt.
+ report.cleanup=[];
+ for(const resource of created.reverse())try{await cf(resource.path,'DELETE');report.cleanup.push({kind:'WORKER',result:'PASS'})}catch(e){report.cleanup.push({kind:'WORKER',...safeProviderFailure(e)});process.exitCode=1;report.result='FAIL'}
+ if(lease)try{report.cleanup.push({kind:'D1',...await lease.cleanup()})}catch(e){report.cleanup.push({kind:'D1',...safeProviderFailure(e)});process.exitCode=1;report.result='FAIL'}
  if(dir)await rm(dir,{recursive:true,force:true});await mkdir('isolated-adapter-status',{recursive:true});
- await writeFile(`isolated-adapter-status/${scenario}.json`,JSON.stringify(report,null,2));console.log('ISOLATED_ADAPTER '+JSON.stringify(report));
+ await writeFile('isolated-adapter-status/summary.json',JSON.stringify(report,null,2));console.log('ISOLATED_ADAPTER '+JSON.stringify(report));
 }

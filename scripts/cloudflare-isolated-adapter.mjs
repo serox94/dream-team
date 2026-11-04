@@ -36,17 +36,17 @@ export function isolatedCloudflareAdapter({worker,runId,baseUrl,request=cf,fetch
 // It never accepts production/preview names or a caller-supplied boolean proof.
 export async function cloudflareReleaseAdapter({worker,runId,baseUrl,database,restored,rehearsal,
  candidateVersion,fallbackVersion,sourceBuild,fallbackBuild,migration,
- request=cf,fetcher=fetch,wait=sleep,execute,media}){
+ request=cf,fetcher=fetch,wait=sleep,execute,media,sandboxLease}){
  const {assertSandbox,query}=await import('./recovery-common.mjs');
  const {captureSnapshot,restoreSnapshot,verifySnapshot,rowsDigest}=await import('./d1-snapshot.mjs');
  const control=isolatedCloudflareAdapter({worker,runId,baseUrl,request,fetcher,wait});
  for(const db of [database,restored]){
   assertSandbox(db.name,db.uuid);
-  assert(uuid.test(db.uuid)&&db.name===`dream-team-audit-${runId}-${db===database?'db':'restored'}`,'NON_ISOLATED_DATABASE');
+  assert(uuid.test(db.uuid)&&db.name===`dream-team-audit-${runId}-${db===database||sandboxLease?'db':'restored'}`,'NON_ISOLATED_DATABASE');
   const actual=await request('/d1/database/'+db.uuid);
   assert(actual.uuid===db.uuid&&actual.name===db.name,'DATABASE_IDENTITY_MISMATCH');
  }
- assert(database.uuid!==restored.uuid,'RESTORE_SOURCE_COLLISION');
+ if(database.uuid===restored.uuid){assert(sandboxLease?.database.uuid===database.uuid,'RESTORE_SOURCE_COLLISION');await sandboxLease.assertOwned()}else assert(!sandboxLease,'INVALID_SANDBOX_LEASE');
  const sql=execute||query;
  const read=async(db,statement,params=[])=>(await sql(db.uuid,statement,params)).results;
  const state=async(db=database)=>{
@@ -104,7 +104,7 @@ export async function cloudflareReleaseAdapter({worker,runId,baseUrl,database,re
   async backupAndRestore(){
    assert((await state()).maintenance,'WRITE_BARRIER_REQUIRED');
    baseline=await captureSnapshot(database,sql);
-   await restoreSnapshot(restored,baseline,sql);
+   if(sandboxLease)await sandboxLease.restore(baseline);else await restoreSnapshot(restored,baseline,sql);
    let mediaRestored=true;
    if(media){
     assert(media.url===`https://dream-team-audit-${runId}-io.${new URL(baseUrl).hostname.split('.').slice(1).join('.')}`,'NON_ISOLATED_MEDIA_GATEWAY');
@@ -127,11 +127,13 @@ export async function cloudflareReleaseAdapter({worker,runId,baseUrl,database,re
    const probe=isolatedCloudflareAdapter({...rehearsal,runId:rehearsal.runId,request,fetcher,wait});
    await bindings(rehearsal.candidateVersion,restored,plan.candidate,plan.targetSchema,probe);
    await bindings(rehearsal.fallbackVersion,restored,fallbackBuild,plan.targetSchema,probe);
+   try{
    await migrate(restored,plan);
    await probe.activate(rehearsal.candidateVersion);
    await health(probe,rehearsal.candidateVersion,plan.candidate,restored,plan.targetSchema);
    await probe.activate(rehearsal.fallbackVersion);
    await health(probe,rehearsal.fallbackVersion,fallbackBuild,restored,plan.targetSchema);
+   }finally{if(sandboxLease)await sandboxLease.restore(baseline)}
    return {candidate:true,fallback:true,recovery:true,migration:true};
   },
   async migrate(plan){
