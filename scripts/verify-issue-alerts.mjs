@@ -23,7 +23,7 @@ export async function verifyIssueAlerts(context,options){
 export async function cleanupFailedIssueTests({repository,branch,currentRun,token,fetcher=fetch}){
  const report={result:'FAIL',closed:[]};
  try{
-  if(repository!=='serox94/dream-team'||branch!=='ops/universal-release-monitor-20261104')throw Error('INVALID_ALERT_TEST_CONTEXT');
+  if(repository!=='serox94/dream-team'||!['main','ops/universal-release-monitor-20261104'].includes(branch))throw Error('INVALID_ALERT_TEST_CONTEXT');
   const api='https://api.github.com/repos/'+repository;
   const request=async(path,method='GET',body)=>{
    const r=await fetcher(api+path,{method,headers:{authorization:'Bearer '+token,accept:'application/vnd.github+json','content-type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});
