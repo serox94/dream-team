@@ -11,3 +11,13 @@ The monitoring workflow retains the scheduled backup freshness and HTTP availabi
 Production and Preview runtime code and data are not changed by this branch.
 
 The proposed monitor also queries Cloudflare runtime request/error aggregates for `dream-team` over 24 hours without changing the Worker or collecting user logs. It reports a high error rate when at least five errors make up at least five percent of requests. A real read-only run [41858802553](https://github.com/serox94/dream-team/actions/runs/41858802553) passed. These additions remain in this draft PR and are not active on the main schedule until merged. Workflow failure alert delivery has not been demonstrated.
+
+## Isolated Cloudflare adapter — 2026-11-04
+
+The new `cloudflare-isolated-adapter.mjs` accepts only a disposable Worker whose name matches the current numeric run identifier. It rejects production, Preview, mismatched identifiers, split traffic and invalid version identifiers. It has no capability to target production.
+
+Direct Cloudflare control-plane drill: created disposable Worker `dream-team-audit-20261104162501-recovery-probe`; source version `6ddb8790-e36a-4b8a-a17b-668d612e33ee`; uploaded and activated target `105f3b03-0e61-4c14-a739-d7a12fac0630`; injected a post-activation failure; reactivated and confirmed the source UUID; deleted only the disposable Worker. Result: PASS for control-plane activation and recovery. This did not exercise public HTTP readiness or D1 migration through the universal controller.
+
+The schema-change prototype now requires a confirmed write barrier before taking a recovery checkpoint. Local isolated adapter/controller tests passed 15/15. The real HTTP adapter test was queued as [41865293100](https://github.com/serox94/dream-team/actions/runs/41865293100); GitHub Actions reported degraded performance. The one-shot workflow file was removed from the proposed PR, but the already queued run may still execute from its original immutable commit.
+
+The generic controller remains a prototype with no production adapter. There is no evidence of a complete release including real D1 migration, backup restore, and fallback through the controller, or of live workflow-failure alert delivery. Do not merge or deploy this draft.
