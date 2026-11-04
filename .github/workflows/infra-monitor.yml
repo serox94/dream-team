@@ -3,7 +3,7 @@ on:
   schedule:
     - cron: '30 6 * * *'
   push:
-    branches: [ops/infra-monitor-20261103]
+    branches: [ops/infra-monitor-20261103, ops/universal-release-monitor-20261104]
     paths: [.github/workflows/infra-monitor.yml]
   workflow_dispatch:
   workflow_run:
