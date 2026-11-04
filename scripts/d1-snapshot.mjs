@@ -2,7 +2,7 @@
 // Restore schema before rows, parents before children, and triggers after rows.
 import {DatabaseSync} from 'node:sqlite';
 import {createHash} from 'node:crypto';
-import {assertSandbox,query} from './recovery-common.mjs';
+import {assertSandbox,query,productionId} from './recovery-common.mjs';
 const check=(ok,code)=>{if(!ok)throw Error(code);};
 // D1: SQL statements <=100 KB, string/BLOB/row <=2 MB and <=100 bind parameters.
 // Use a conservative SQL ceiling; long TEXT goes into REST query params, not SQL literals.
@@ -82,8 +82,8 @@ export async function verifySnapshot(db,snapshot,execute=query){
 }
 
 // Caller must hold a verified write barrier while capturing and verifying this view.
-export async function captureSnapshot(db,execute=query){
- assertSandbox(db.name,db.uuid);
+export async function captureSnapshot(db,execute=query,{productionRead=false}={}){
+ if(productionRead)check(db.name==='dream-team-db'&&db.uuid===productionId,'INVALID_PRODUCTION_READ_TARGET');else assertSandbox(db.name,db.uuid);
  const read=async sql=>(await execute(db.uuid,sql)).results;
  const schema=await read("SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*' AND sql IS NOT NULL ORDER BY type,name");
  const remaining=new Map();

@@ -5,7 +5,7 @@ const check=(v,c)=>{if(!v)throw Error(c)};
 export function safeProviderFailure(error){
  return {error:/^[A-Z0-9_]+$/.test(error?.message||'')?error.message:'OPERATION_FAILED',
   ...(Number.isInteger(error?.status)?{httpStatus:error.status}:{}),
-  ...(Number.isInteger(error?.code)||/^[A-Z0-9_]+$/.test(String(error?.code||''))?{cloudflareCode:error.code}:{}),
+  ...(Number.isSafeInteger(error?.code)?{cloudflareCode:error.code}:{}),
   ...(/^[A-Z0-9_]{1,64}$/.test(error?.operation||'')?{operation:error.operation}:{})};
 }
 export async function createIsolatedReleaseEnvironment({runId,request=cf,capacity=10}){
@@ -23,7 +23,7 @@ export async function createIsolatedReleaseEnvironment({runId,request=cf,capacit
  let created;
  try{created=await request('/d1/database','POST',{name})}catch(e){e.operation='D1_CREATE';throw e}
  check(created?.name===name&&/^[a-f0-9-]{36}$/i.test(created.uuid||''),'SANDBOX_IDENTITY_MISMATCH');
- const database={name,uuid:created.uuid};let disposed=false;
+ const database=Object.freeze({name,uuid:created.uuid});let disposed=false;
  const assertOwned=async()=>{
   check(!disposed,'SANDBOX_DISPOSED');
   const actual=await request('/d1/database/'+database.uuid);
@@ -57,4 +57,29 @@ export async function createIsolatedReleaseEnvironment({runId,request=cf,capacit
    return {result:'PASS'};
   }
  };
+}
+
+// Independent cleanup step consumes the successful-create receipt, never a scan.
+export async function cleanupIsolatedReceipt(receipt,{run,attempt,request=cf}){
+ check(/^\d+$/.test(run||'')&&/^\d+$/.test(attempt||''),'INVALID_CLEANUP_CONTEXT');
+ const runId=run+'0'+attempt;
+ check(receipt?.version===1&&receipt.runId===runId&&receipt.database?.name===`dream-team-audit-${runId}-db`&&/^[a-f0-9-]{36}$/i.test(receipt.database.uuid||''),'INVALID_OWNERSHIP_RECEIPT');
+ const allowed=new Set([`dream-team-audit-${runId}-recovery-probe`,`dream-team-audit-${runId}9-recovery-probe`]);
+ check(Array.isArray(receipt.workers)&&new Set(receipt.workers).size===receipt.workers.length&&receipt.workers.every(name=>allowed.has(name)),'INVALID_OWNERSHIP_RECEIPT');
+ const results=[];
+ for(const name of [...receipt.workers].reverse())try{
+  try{await request('/workers/scripts/'+name+'/settings')}catch(e){if(e.status===404){results.push({kind:'WORKER',result:'ALREADY_CLEANED'});continue}throw e}
+  await request('/workers/scripts/'+name,'DELETE');
+  try{await request('/workers/scripts/'+name+'/settings');throw Error('SANDBOX_DELETE_NOT_VERIFIED')}catch(e){if(e.status!==404)throw e}
+  results.push({kind:'WORKER',result:'PASS'});
+ }catch(e){results.push({kind:'WORKER',...safeProviderFailure(e)})}
+ try{
+  let db;try{db=await request('/d1/database/'+receipt.database.uuid)}catch(e){if(e.status!==404)throw e}
+  if(db){
+   check(db.name===receipt.database.name&&db.uuid===receipt.database.uuid,'SANDBOX_IDENTITY_MISMATCH');await request('/d1/database/'+db.uuid,'DELETE');
+   try{await request('/d1/database/'+db.uuid);throw Error('SANDBOX_DELETE_NOT_VERIFIED')}catch(e){if(e.status!==404)throw e}
+  }
+  results.push({kind:'D1',result:db?'PASS':'ALREADY_CLEANED'});
+ }catch(e){results.push({kind:'D1',...safeProviderFailure(e)})}
+ return {result:results.every(r=>['PASS','ALREADY_CLEANED'].includes(r.result))?'PASS':'FAIL',resources:results};
 }

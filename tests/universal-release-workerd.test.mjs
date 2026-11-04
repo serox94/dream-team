@@ -4,6 +4,7 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {readFileSync,readdirSync} from 'node:fs';
+import {createIsolatedReleaseEnvironment} from '../scripts/isolated-release-environment.mjs';
 import {captureSnapshot,restoreSnapshot,verifySnapshot} from '../scripts/d1-snapshot.mjs';
 test('workerd D1: restore schema31, apply actual migration32, preserve business rows and registry',async()=>{
  const logs=await mkdtemp(join(tmpdir(),'dreamteam-d1-test-'));
@@ -29,5 +30,24 @@ test('workerd D1: restore schema31, apply actual migration32, preserve business 
   assert.equal((await restored.prepare('SELECT count(*) n FROM trips').first()).n,4);
   assert.deepEqual((await restored.prepare('PRAGMA foreign_key_check').all()).results,[]);
   assert.equal((await source.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first()).value,'31');
+  // Exercise the one-slot reset against workerd D1, including guards/triggers/FKs.
+  const ownedId='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';dbs[ownedId]=source;
+  let deleted=false;
+  const lease=await createIsolatedReleaseEnvironment({runId:'123',request:async(path,method='GET',body)=>{
+   if(path.includes('?'))return Array.from({length:9},(_,i)=>({name:'historical-'+i}));
+   if(path==='/d1/database')return {name:'dream-team-audit-123-db',uuid:ownedId};
+   if(path.endsWith('/query'))return [await execute(ownedId,body.sql,body.params)];
+   if(method==='DELETE'){deleted=true;return {}};
+   if(deleted)throw Object.assign(Error('CLOUDFLARE_ACCESS'),{status:404});
+   return {name:'dream-team-audit-123-db',uuid:ownedId};
+  }});
+  const checkpoint=await captureSnapshot(lease.database,lease.execute);
+  await lease.restore(checkpoint);
+  await apply(source,readFileSync('migrations/0032_lake_manager.sql','utf8'));
+  await lease.restore(checkpoint);
+  await verifySnapshot(lease.database,checkpoint,lease.execute);
+  assert.equal((await source.prepare("SELECT value FROM app_settings WHERE key='schema_version'").first()).value,'31');
+  assert.equal((await lease.cleanup()).result,'PASS');
+
  }finally{await m.dispose();await rm(logs,{recursive:true,force:true})}
 });

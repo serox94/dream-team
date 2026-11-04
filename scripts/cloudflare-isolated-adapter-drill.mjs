@@ -1,5 +1,5 @@
 // Explicitly dispatched disposable D1/Worker drill; no production resources are accepted.
-import {mkdtemp,writeFile,rm,mkdir,readFile,readdir} from 'node:fs/promises';
+import {mkdtemp,writeFile,rm,mkdir,readFile,readdir,rename} from 'node:fs/promises';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {cf,wrangler,configFile,query} from './recovery-common.mjs';
 import {captureSnapshot} from './d1-snapshot.mjs';
@@ -11,6 +11,11 @@ const scenarios=['success','activation-timeout','migration-timeout','readiness-f
 const runId=process.env.GITHUB_RUN_ID+'0'+process.env.GITHUB_RUN_ATTEMPT,rehearsalId=runId+'9';
 const worker=`dream-team-audit-${runId}-recovery-probe`,probe=`dream-team-audit-${rehearsalId}-recovery-probe`;
 const report={result:'FAIL',stage:'PRECHECK',scenarios:[]};let dir,lease;const created=[];
+const saveOwnership=async()=>{
+ await mkdir('isolated-adapter-status',{recursive:true});
+ await writeFile('isolated-adapter-status/ownership.tmp',JSON.stringify({version:1,runId,database:lease.database,workers:created.map(r=>r.path.split('/').pop())}),{mode:0o600});
+ await rename('isolated-adapter-status/ownership.tmp','isolated-adapter-status/ownership.json');
+};
 try{
  check(process.env.GITHUB_REPOSITORY==='serox94/dream-team'&&/^[0-9]+$/.test(process.env.GITHUB_RUN_ATTEMPT||'')&&/^\d+$/.test(process.env.GITHUB_RUN_ID||''),'CONTEXT');
  check(/^[a-f0-9]{40}$/.test(process.env.GITHUB_SHA||''),'INVALID_SHA');
@@ -20,6 +25,7 @@ try{
  for(const name of [worker,probe])check(!(await cf('/workers/scripts')).some(x=>x.id===name),'WORKER_EXISTS');
  report.stage='ALLOCATE_SINGLE_D1';
  lease=await createIsolatedReleaseEnvironment({runId});
+ await saveOwnership();
  const database=lease.database,restored=database;
  report.d1={databasesBefore:lease.databasesBefore,allocated:1};
  const entry=join(dir,'worker.mjs');
@@ -45,7 +51,7 @@ try{
  wrangler(['d1','execute',database.name,'--remote','--config',initialConfig,'--file',initial]);
  const upload=async(name,db,build,schema,first=false)=>{
   const cfg=await cfgFor(name,db,build,schema);
-  if(first)created.push({path:'/workers/scripts/'+name});
+  if(first){created.push({path:'/workers/scripts/'+name});await saveOwnership()}
   wrangler(first?['deploy','--config',cfg]:['versions','upload','--config',cfg]);
   const versions=(await cf('/workers/scripts/'+name+'/versions?per_page=5')).items;
   check(versions?.[0]?.id,'VERSION_MISSING');return versions[0].id;

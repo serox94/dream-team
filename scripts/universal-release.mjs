@@ -19,7 +19,7 @@ export async function release(plan, adapter) {
     assert(uuid.test(previous.activeVersion || '') && previous.schema === plan.sourceSchema && previous.maintenance === false, 'SOURCE_STATE_CHANGED');
     assert(previous.activeVersion !== plan.targetVersion, 'TARGET_ALREADY_ACTIVE');
     const changing = plan.targetSchema !== plan.sourceSchema;
-    if (changing) assert(previous.fallbackSchema === plan.targetSchema && uuid.test(previous.fallbackVersion || ''), 'NO_COMPATIBLE_FALLBACK');
+    if (changing) assert(previous.fallbackSchema === plan.targetSchema && uuid.test(previous.fallbackVersion || '') && previous.fallbackVersion !== plan.targetVersion, 'NO_COMPATIBLE_FALLBACK');
     {
       report.stage = 'WRITE_BARRIER'; barrierAttempted = true;
       const result = await adapter.quiesce(previous, plan);

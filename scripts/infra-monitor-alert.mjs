@@ -10,7 +10,7 @@ export async function syncAlert(context,{token,fetcher=fetch}={}){
  if(!token)throw Error('ALERT_TOKEN_MISSING');
  const request=async(path,method='GET',body)=>{
   const r=await fetcher(api+path,{method,headers:{authorization:'Bearer '+token,accept:'application/vnd.github+json','content-type':'application/json','X-GitHub-Api-Version':'2022-11-28'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});
-  if(!r.ok)throw Error('ALERT_DELIVERY_FAILED');return r.status===204?null:r.json();
+  if(!r.ok){const e=Error('ALERT_DELIVERY_FAILED');e.status=r.status;throw e}return r.status===204?null:r.json();
  };
  let found;
  for(let page=1;page<=10;page++){
