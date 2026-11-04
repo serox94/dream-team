@@ -21,6 +21,6 @@ try{
  report.transition=result;check(result.recovery==='PASS'&&result.recoveryAttempts===1&&result.error==='INJECTED_FAILURE'&&await active(name)===source,'ROLLBACK_FAILED');check(await active('dream-team')===prod,'PRODUCTION_CHANGED');report.status='PASS';report.stage='COMPLETE';
 }catch(e){report.error=/^[A-Z0-9_]+$/.test(e.message)?e.message:'OPERATION_FAILED';process.exitCode=1}
 finally{
- if(created){try{let x=await cf('/workers/scripts/'+name,'DELETE');report.cleanup='PASS'}catch{report.cleanup='FAILED';process.exitCode=1;report.status='FAIL'}}
+ if(created&&report.status==='PASS'){try{await cf('/workers/scripts/'+name,'DELETE');report.cleanup='PASS'}catch{report.cleanup='FAILED';process.exitCode=1;report.status='FAIL'}}else if(created){report.cleanup='RETAINED_FOR_DIAGNOSIS'}
  if(dir)await rm(dir,{recursive:true,force:true});await mkdir('release-guard-live-status',{recursive:true});await writeFile('release-guard-live-status/summary.json',JSON.stringify(report,null,2));console.log('RELEASE_GUARD_LIVE '+JSON.stringify(report));
 }
