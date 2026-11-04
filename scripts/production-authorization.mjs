@@ -1,7 +1,7 @@
 import {digest} from './release-config-policy.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
 export async function protectedEnvironment({github,environment='production',runId,operator,plan,planDigest,context=process.env,requireApproval=true}){
- check(context.GITHUB_REPOSITORY==='serox94/dream-team'&&context.GITHUB_EVENT_NAME==='workflow_dispatch'&&context.GITHUB_REF==='refs/heads/main'&&context.GITHUB_SHA===operator&&context.GITHUB_RUN_ID===String(runId),'PROTECTED_OPERATOR_CONTEXT_REQUIRED');
+ check(context.GITHUB_REPOSITORY==='serox94/dream-team'&&context.GITHUB_EVENT_NAME==='workflow_dispatch'&&context.GITHUB_REF==='refs/heads/main'&&context.GITHUB_SHA===operator&&context.GITHUB_RUN_ID===String(runId)&&context.GITHUB_RUN_ATTEMPT==='1','PROTECTED_OPERATOR_CONTEXT_REQUIRED');
  check(context.GITHUB_WORKFLOW_REF===`serox94/dream-team/.github/workflows/approved-production-release.yml@refs/heads/main`&&context.GITHUB_WORKFLOW_SHA===operator,'UNTRUSTED_PRODUCTION_WORKFLOW');
  check(/^[a-f0-9]{64}$/.test(planDigest||'')&&digest(plan)===planDigest,'PLAN_DIGEST_MISMATCH');
  const env=await github('/environments/'+encodeURIComponent(environment));

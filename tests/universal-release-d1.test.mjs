@@ -11,7 +11,7 @@ const [source,target,fallback,probeTarget,probeFallback,dbId,restoreId]=ids;
 const candidate='a'.repeat(40),operator='b'.repeat(40),sourceBuild='c'.repeat(40),fallbackBuild='d'.repeat(40);
 const worker='dream-team-audit-123-recovery-probe',probe='dream-team-audit-1239-recovery-probe';
 const plan={candidate,operator,approval:`RELEASE:${candidate}:${operator}`,sourceSchema:31,targetSchema:32,targetVersion:target};
-async function fixture(t,{badBindings=false,codeOnly=false,shared=false}={}){
+async function fixture(t,{badBindings=false,codeOnly=false,shared=false,destructive=false}={}){
  const original=seed({through:codeOnly?'0032':'0031'}),restored=new DatabaseSync(':memory:');t.after(()=>{original.close();restored.close()});
  original.sqlite.prepare("INSERT OR REPLACE INTO app_settings(key,value) VALUES('schema_version',?)").run(codeOnly?'32':'31');original.sqlite.exec("INSERT OR REPLACE INTO app_settings(key,value) VALUES('maintenance_mode','off')");
  const dbs={[dbId]:original.sqlite,[restoreId]:restored};
@@ -39,7 +39,7 @@ async function fixture(t,{badBindings=false,codeOnly=false,shared=false}={}){
   return new Response('',{status:blocked||Number(settings.schema_version)!==schema?503:200,headers:{'x-build':build}});
  };
  const sandboxLease=shared?await createIsolatedReleaseEnvironment({runId:'123',request}):undefined;
- const adapter=await cloudflareReleaseAdapter({worker,runId:'123',baseUrl:`https://${worker}.example.workers.dev`,database:{uuid:dbId,name:'dream-team-audit-123-db'},restored:shared?sandboxLease.database:{uuid:restoreId,name:'dream-team-audit-123-restored'},candidateVersion:target,fallbackVersion:fallback,sourceBuild,fallbackBuild,migration:{name:'0032_lake_manager.sql',sql:readFileSync(new URL('../migrations/0032_lake_manager.sql',import.meta.url),'utf8')},rehearsal:{worker:probe,runId:'1239',baseUrl:`https://${probe}.example.workers.dev`,candidateVersion:probeTarget,fallbackVersion:probeFallback},execute,request,fetcher,sandboxLease,wait:async()=>{}});
+ const adapter=await cloudflareReleaseAdapter({worker,runId:'123',baseUrl:`https://${worker}.example.workers.dev`,database:{uuid:dbId,name:'dream-team-audit-123-db'},restored:shared?sandboxLease.database:{uuid:restoreId,name:'dream-team-audit-123-restored'},candidateVersion:target,fallbackVersion:fallback,sourceBuild,fallbackBuild,migration:{name:'0032_lake_manager.sql',sql:readFileSync(new URL('../migrations/0032_lake_manager.sql',import.meta.url),'utf8')+(destructive?"\nUPDATE anglers SET name='tampered';":'')},rehearsal:{worker:probe,runId:'1239',baseUrl:`https://${probe}.example.workers.dev`,candidateVersion:probeTarget,fallbackVersion:probeFallback},execute,request,fetcher,sandboxLease,wait:async()=>{}});
  return {adapter,original,restored,active,get writes(){return writes}};
 }
 for(const failure of ['none','activation','migration','verify'])test(`real schema31 snapshot, restore, migration32 and recovery: ${failure}`,async t=>{
@@ -78,4 +78,15 @@ test('single owned D1 is restored, rehearsed, reset and released without a secon
  const f=await fixture(t,{shared:true});const r=await release(plan,f.adapter);assert.equal(r.result,'PASS',JSON.stringify(r));
  assert.equal((await f.adapter.current()).schema,32);assert.equal((await f.adapter.current()).maintenance,false);
  assert.equal(f.original.sqlite.prepare('SELECT count(*) n FROM trips').get().n,4);
+});
+
+// Retain the former production-factory business-row preservation regression in
+// the shared real adapter without bypassing the new production safety gates.
+test('destructive migration is rejected during rehearsal before source migration',async t=>{
+ const f=await fixture(t,{destructive:true});const original=f.original.sqlite.prepare('SELECT * FROM anglers').all();
+ const r=await release(plan,f.adapter);assert.equal(r.error,'MIGRATION_CHANGED_EXISTING_ROWS',JSON.stringify(r));assert.equal((await f.adapter.current()).schema,31);assert.equal(f.active[worker],source);assert.deepEqual(f.original.sqlite.prepare('SELECT * FROM anglers').all(),original);
+});
+test('code-only recovery verification failure retains actual D1 maintenance barrier',async t=>{
+ const f=await fixture(t,{codeOnly:true});f.adapter.verify=async()=>{throw Error('READINESS_FAILED')};f.adapter.verifyRecovery=async()=>{throw Error('RECOVERY_CHECK_FAILED')};
+ const r=await release({...plan,sourceSchema:32},f.adapter);assert.equal(r.recovery,'BLOCKED');assert.equal(r.barrier,'RETAINED');assert.equal((await f.adapter.current()).maintenance,true);
 });
