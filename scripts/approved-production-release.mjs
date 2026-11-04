@@ -1,4 +1,5 @@
 // Manual authorization entry point. Intentionally cannot deploy the current app.
+import {appendFile} from 'node:fs/promises';
 import {protectedEnvironment} from './production-authorization.mjs';import {digest} from './release-config-policy.mjs';import {requireProductionWriteFence} from './d1-write-fence.mjs';import {productionId} from './recovery-common.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
 try{
@@ -12,6 +13,7 @@ try{
  check(process.env.OPERATOR_CONFIRMATION==='PRODUCTION:'+planDigest,'OPERATOR_CONFIRMATION_REQUIRED');
  const github=async path=>{const r=await fetch('https://api.github.com/repos/serox94/dream-team'+path,{headers:{authorization:'Bearer '+process.env.GITHUB_TOKEN,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(15000)});check(r.ok,'GITHUB_AUTHORIZATION_UNAVAILABLE');return r.json()};
  await protectedEnvironment({github,operator:plan.operator,runId:process.env.GITHUB_RUN_ID,plan,planDigest,requireApproval:process.argv[2]!=='preflight'});
+ if(process.env.GITHUB_STEP_SUMMARY)await appendFile(process.env.GITHUB_STEP_SUMMARY,'## Exact production plan awaiting owner approval\n\n'+[['Plan SHA256',planDigest],['Candidate SHA',plan.candidate],['Operator SHA',plan.operator],['Source version',plan.sourceVersion],['Target version',plan.targetVersion],['Fallback version',plan.fallbackVersion],['D1 schema',plan.sourceSchema+' → '+plan.targetSchema],['Migration SHA256',plan.migrationDigest],['Target artifact SHA256',plan.artifactDigests.target],['Fallback artifact SHA256',plan.artifactDigests.fallback],['Configuration and exceptions SHA256',digest({configuration:plan.configuration,differences:plan.configurationDifferences})]].map(([k,v])=>'- '+k+': `'+v+'`').join('\n')+'\n\nProduction remains blocked until all writers are fenced.\n');
  console.log('::notice title=Approved plan::'+JSON.stringify({planDigest,candidate:plan.candidate,operator:plan.operator,sourceVersion:plan.sourceVersion,targetVersion:plan.targetVersion,fallbackVersion:plan.fallbackVersion,sourceSchema:plan.sourceSchema,targetSchema:plan.targetSchema,migrationDigest:plan.migrationDigest}));
  if(process.argv[2]!=='preflight')requireProductionWriteFence();
 }catch(e){console.log('::error title=Production gate::'+(/^[A-Z_]+$/.test(e.message)?e.message:'INVALID_RELEASE_PLAN'));process.exitCode=1}

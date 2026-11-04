@@ -78,3 +78,34 @@ are not cloud evidence.
 Secret names/types are compared without logging secret values. Production
 additionally fails with SECRET_CONFIGURATION_UNVERIFIABLE for secret_text
 bindings because Cloudflare does not expose immutable value identity here.
+
+### Confirmed cloud results: 6000cff / 41913753543
+
+[Actual isolated run](https://github.com/serox94/dream-team/actions/runs/41913753543)
+and every job step: **PASS**.
+
+- Builds read: 766 rows across pages, 0 active; no 400/12013.
+- Enforced D1 fence: committed-before row included, delayed foreground and
+  waitUntil background DML rejected. Cross-isolate proof handoff succeeded.
+  This certifies the fixture's D1 behavior, not production R2/background drain.
+- Release success: PASS. Activation timeout, ambiguous migration timeout, and
+  readiness failure: controller BLOCKED as expected, verified recovery PASS.
+- Actual sealed upload + GitHub Sigstore attestation + Cloudflare concrete
+  version check: target PASS, fallback PASS; wrong version UUID rejected.
+  These are disposable fixture receipts, not production artifact evidence.
+- Always-run cleanup of owned D1/release Workers and artifact Worker: PASS.
+- Issue [#40](https://github.com/serox94/dream-team/issues/40): create/update/
+  resolve/readback PASS; previous-test cleanup touched no old Issues.
+
+At 9f76759: local npm test **390/390 PASS**; GitHub
+[Validate](https://github.com/serox94/dream-team/actions/runs/41914639447) and
+[Responsive QA](https://github.com/serox94/dream-team/actions/runs/41914639518)
+both PASS. This later commit adds approval replay prevention, receipt mutation
+checking, deterministic manifest sorting and retained integration regressions;
+it is distinguished from the exact cloud-tested SHA above.
+
+Machine-readable observations and explicit remaining production blockers:
+[pr28-blocking-fixes-20261104.json](../verification/pr28-blocking-fixes-20261104.json).
+The manual workflow additionally presents the exact immutable plan in the run
+summary before the protected owner-approval stage. No production dispatch or
+GitHub protection-setting modification was performed.
