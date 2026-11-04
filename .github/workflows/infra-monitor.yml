@@ -2,9 +2,6 @@ name: Infrastructure backup and availability check
 on:
   schedule:
     - cron: '30 6 * * *'
-  push:
-    branches: [ops/infra-monitor-20261103, ops/universal-release-monitor-20261104]
-    paths: [.github/workflows/infra-monitor.yml]
   workflow_dispatch:
   workflow_run:
     workflows:
@@ -48,4 +45,3 @@ jobs:
           echo "Run: ${FAILED_URL}" >> "$GITHUB_STEP_SUMMARY"
           exit 1
 
-# Verify aggregate metrics with the existing read-only token.
