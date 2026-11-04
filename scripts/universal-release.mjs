@@ -8,7 +8,7 @@ const safeCode = e => /^[A-Z0-9_]+$/.test(e?.message || '') ? e.message : 'ADAPT
 
 export async function release(plan, adapter) {
   const report = { result: 'BLOCKED', stage: 'APPROVAL', activated: false, recovery: 'NOT_REQUIRED' };
-  let previous, migrated = false;
+  let previous, migrated = false, barrier = false, barrierAttempted = false;
   try {
     assert(sha.test(plan.candidate || '') && sha.test(plan.operator || ''), 'INVALID_SHA');
     assert(uuid.test(plan.targetVersion || ''), 'INVALID_TARGET');
@@ -26,6 +26,11 @@ export async function release(plan, adapter) {
     report.stage = 'ISOLATED_TESTS';
     const proof = await adapter.testIsolated(previous, plan, checkpoint);
     assert(proof?.candidate === true && proof?.fallback === true && proof?.recovery === true && (!changing || proof?.migration === true), 'ISOLATED_TESTS_FAILED');
+    if (changing) {
+      report.stage = 'WRITE_BARRIER'; barrierAttempted = true;
+      const result = await adapter.quiesce(previous, plan);
+      assert(result?.blocked === true, 'WRITE_BARRIER_NOT_VERIFIED'); barrier = true;
+    }
     report.stage = 'RECHECK';
     const now = await adapter.current();
     assert(now.activeVersion === previous.activeVersion && now.schema === previous.schema && now.maintenance === false, 'SOURCE_STATE_CHANGED');
@@ -43,6 +48,7 @@ export async function release(plan, adapter) {
     await adapter.ready(plan.targetVersion, plan.candidate);
     report.stage = 'VERIFY';
     await adapter.verify(plan);
+    if (barrier) { report.stage = 'REOPEN'; await adapter.unquiesce(); barrier = false; }
     report.result = 'PASS'; report.stage = 'COMPLETE';
   } catch (e) {
     report.error = safeCode(e);
@@ -62,5 +68,11 @@ export async function release(plan, adapter) {
       } catch (re) { report.recovery = 'BLOCKED'; report.recoveryError = safeCode(re); }
     }
   }
+  if (barrier) {
+    if (!migrated || report.recovery === 'PASS') {
+      try { await adapter.unquiesce(); report.barrier = 'REOPENED'; }
+      catch { report.barrier = 'BLOCKED'; report.result = 'BLOCKED'; }
+    } else report.barrier = 'RETAINED';
+  } else if (barrierAttempted && report.result !== 'PASS' && !report.activated && report.stage === 'WRITE_BARRIER') report.barrier = 'UNKNOWN';
   return report;
 }
