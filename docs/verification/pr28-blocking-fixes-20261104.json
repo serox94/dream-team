@@ -1,0 +1,93 @@
+{
+  "repository": "serox94/dream-team",
+  "pr": 28,
+  "cloudCommit": "6000cff14fa3910663626c2b2ac73d8b1e733bf9",
+  "cloudRun": "https://github.com/serox94/dream-team/actions/runs/41913753543",
+  "job": "https://github.com/serox94/dream-team/actions/runs/41913753543/job/126867847016",
+  "observedPublicAnnotations": [
+    {
+      "result": "PASS",
+      "target": true,
+      "fallback": true,
+      "wrongVersionRejected": true,
+      "d1Allocated": 0
+    },
+    {
+      "stage": "COMPLETE",
+      "scenarios": [
+        {
+          "scenario": "success",
+          "result": "PASS",
+          "recovery": "NOT_REQUIRED"
+        },
+        {
+          "scenario": "activation-timeout",
+          "result": "BLOCKED",
+          "error": "ACTIVATION_TIMEOUT",
+          "stage": "ACTIVATION",
+          "recovery": "PASS"
+        },
+        {
+          "scenario": "migration-timeout",
+          "result": "BLOCKED",
+          "error": "MIGRATION_TIMEOUT",
+          "stage": "MIGRATION",
+          "recovery": "PASS"
+        },
+        {
+          "scenario": "readiness-failure",
+          "result": "BLOCKED",
+          "error": "INJECTED_READINESS_FAILURE",
+          "stage": "VERIFY",
+          "recovery": "PASS"
+        }
+      ]
+    },
+    {
+      "result": "PASS",
+      "committedBeforeIncluded": true,
+      "lateForegroundRejected": true,
+      "lateBackgroundRejected": true,
+      "productionAllWriters": "BLOCKED_UNPROVEN"
+    },
+    {
+      "fenced": true,
+      "committed": false
+    },
+    {
+      "result": "PASS",
+      "count": 766,
+      "active": 0
+    }
+  ],
+  "allCloudSteps": "PASS",
+  "cleanup": {
+    "ownedD1AndReleaseWorkers": "PASS",
+    "ownedArtifactWorker": "PASS"
+  },
+  "issues": {
+    "url": "https://github.com/serox94/dream-team/issues/40",
+    "result": "PASS",
+    "steps": [
+      "CREATED",
+      "UPDATED",
+      "RESOLVED"
+    ]
+  },
+  "localTests": {
+    "commit": "9f767598a48bf664ee1049c71a00cee31d07fe1e",
+    "command": "npm test",
+    "pass": 390,
+    "fail": 0
+  },
+  "validation": "https://github.com/serox94/dream-team/actions/runs/41914639447",
+  "responsiveQA": "https://github.com/serox94/dream-team/actions/runs/41914639518",
+  "productionDeployed": false,
+  "productionReady": false,
+  "productionBlockers": [
+    "ALL_WRITERS_FENCE_NOT_PROVEN",
+    "SECRET_CONFIGURATION_UNVERIFIABLE",
+    "NO_ENABLED_PRODUCTION_ARTIFACT_PRODUCER",
+    "PROTECTED_ENVIRONMENT_APPROVAL_NOT_EXERCISED"
+  ]
+}
