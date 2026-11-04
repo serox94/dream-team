@@ -31,7 +31,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/infra-monitor.mjs
   failed-operation:
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    if: github.event_name == 'workflow_run' && contains(fromJSON('["failure","timed_out","cancelled"]'), github.event.workflow_run.conclusion)
     runs-on: ubuntu-latest
     steps:
       - name: Surface failed release or backup operation
