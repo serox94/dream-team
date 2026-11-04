@@ -20,17 +20,17 @@ export async function release(plan, adapter) {
     assert(previous.activeVersion !== plan.targetVersion, 'TARGET_ALREADY_ACTIVE');
     const changing = plan.targetSchema !== plan.sourceSchema;
     if (changing) assert(previous.fallbackSchema === plan.targetSchema && uuid.test(previous.fallbackVersion || ''), 'NO_COMPATIBLE_FALLBACK');
+    if (changing) {
+      report.stage = 'WRITE_BARRIER'; barrierAttempted = true;
+      const result = await adapter.quiesce(previous, plan);
+      assert(result?.blocked === true, 'WRITE_BARRIER_NOT_VERIFIED'); barrier = true;
+    }
     report.stage = 'CHECKPOINT';
     const checkpoint = await adapter.backupAndRestore(previous, plan);
     assert(checkpoint?.databaseRestored === true && checkpoint?.mediaRestored === true && checkpoint?.integrity === true && checkpoint?.fresh === true, 'CHECKPOINT_UNVERIFIED');
     report.stage = 'ISOLATED_TESTS';
     const proof = await adapter.testIsolated(previous, plan, checkpoint);
     assert(proof?.candidate === true && proof?.fallback === true && proof?.recovery === true && (!changing || proof?.migration === true), 'ISOLATED_TESTS_FAILED');
-    if (changing) {
-      report.stage = 'WRITE_BARRIER'; barrierAttempted = true;
-      const result = await adapter.quiesce(previous, plan);
-      assert(result?.blocked === true, 'WRITE_BARRIER_NOT_VERIFIED'); barrier = true;
-    }
     report.stage = 'RECHECK';
     const now = await adapter.current();
     assert(now.activeVersion === previous.activeVersion && now.schema === previous.schema && now.maintenance === false, 'SOURCE_STATE_CHANGED');
