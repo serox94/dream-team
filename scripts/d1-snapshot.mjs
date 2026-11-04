@@ -80,3 +80,23 @@ export async function verifySnapshot(db,snapshot,execute=query){
  // D1 supports quick_check, not SQLite's full integrity_check (which is used locally).
  check((await read('verify-quick-check','PRAGMA quick_check')).results[0].quick_check==='ok','RESTORED_INTEGRITY');
 }
+
+// Caller must hold a verified write barrier while capturing and verifying this view.
+export async function captureSnapshot(db,execute=query){
+ assertSandbox(db.name,db.uuid);
+ const read=async sql=>(await execute(db.uuid,sql)).results;
+ const schema=await read("SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*' AND sql IS NOT NULL ORDER BY type,name");
+ const remaining=new Map();
+ for(const row of schema.filter(r=>r.type==='table'))remaining.set(row.name,{
+  name:row.name,sql:row.sql,
+  columns:(await read('PRAGMA table_xinfo('+identifier(row.name)+')')).filter(c=>c.hidden===0).map(c=>c.name),
+  parents:[...new Set((await read('PRAGMA foreign_key_list('+identifier(row.name)+')')).map(f=>f.table))],
+  rows:await read('SELECT * FROM '+identifier(row.name))
+ });
+ const tables=[];
+ while(remaining.size){const ready=[...remaining.values()].filter(t=>t.parents.every(p=>p===t.name||tables.some(o=>o.name===p)));check(ready.length>0,'UNSUPPORTED_FK_CYCLE');for(const t of ready){tables.push(t);remaining.delete(t.name);}}
+ const hasSequences=(await read("SELECT name FROM sqlite_master WHERE name='sqlite_sequence'")).length>0;
+ const snapshot={schema,tables,sequences:hasSequences?await read("SELECT name,seq FROM sqlite_sequence WHERE name NOT GLOB '_cf_*' ORDER BY name"):[]};
+ await verifySnapshot(db,snapshot,execute);
+ return snapshot;
+}

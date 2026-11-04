@@ -1,20 +1,79 @@
-import {mkdtemp,writeFile,rm,mkdir} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';
-import {cf,wrangler,configFile} from './recovery-common.mjs';import {isolatedCloudflareAdapter} from './cloudflare-isolated-adapter.mjs';
-const runId=process.env.GITHUB_RUN_ID,worker='dream-team-audit-'+runId+'-recovery-probe',baseUrl='https://'+worker+'.sewerynski00.workers.dev';
-const report={result:'FAIL',stage:'PRECHECK',worker};let dir,created=false;
+// Explicitly dispatched disposable D1/Worker drill; no production resources are accepted.
+import {mkdtemp,writeFile,rm,mkdir,readFile,readdir} from 'node:fs/promises';
+import {tmpdir} from 'node:os';import {join} from 'node:path';
+import {cf,wrangler,configFile,query} from './recovery-common.mjs';
+import {cloudflareReleaseAdapter} from './cloudflare-isolated-adapter.mjs';
+import {release} from './universal-release.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
+const scenario=process.env.DRILL_SCENARIO||'success';
+const scenarios=['success','activation-timeout','migration-timeout','readiness-failure'];
+const runId=process.env.GITHUB_RUN_ID+'0'+scenarios.indexOf(scenario),rehearsalId=runId+'9';
+const worker=`dream-team-audit-${runId}-recovery-probe`,probe=`dream-team-audit-${rehearsalId}-recovery-probe`;
+const report={result:'FAIL',stage:'PRECHECK',scenario};let dir;const created=[];
 try{
- check(process.env.GITHUB_REPOSITORY==='serox94/dream-team'&&process.env.GITHUB_RUN_ATTEMPT==='1'&&/^[0-9]+$/.test(runId||''),'CONTEXT');
- check(!(await cf('/workers/scripts')).some(x=>x.id===worker),'WORKER_EXISTS');
- dir=await mkdtemp(join(tmpdir(),'adapter-drill-'));const entry=join(dir,'worker.mjs');
- await writeFile(entry,"export default {fetch(req,env){return new Response(env.APP_BUILD,{headers:{'x-build':env.APP_BUILD}})}};");
- let config={name:worker,main:entry,compatibility_date:'2026-09-03',vars:{APP_BUILD:'source'}};
- let cfg=await configFile(dir,config,'a.jsonc');report.stage='CREATE';created=true;wrangler(['deploy','--config',cfg]);
- const adapter=isolatedCloudflareAdapter({worker,runId,baseUrl});let source=await adapter.active();await adapter.ready(source,'source');
- config.vars.APP_BUILD='target';cfg=await configFile(dir,config,'b.jsonc');wrangler(['versions','upload','--config',cfg]);let target=(await cf('/workers/scripts/'+worker+'/versions?per_page=5')).items[0].id;
- check(source!==target&&await adapter.active()===source,'SOURCE_CHANGED');report.source=source;report.target=target;
- report.stage='ACTIVATE';await adapter.activate(target);await adapter.ready(target,'target');
- report.stage='CONTROLLED_FAILURE';report.injectedFailure='POST_ACTIVATION';check(await adapter.active()===target,'TARGET_NOT_ACTIVE');
- report.stage='RECOVER';await adapter.activate(source);await adapter.ready(source,'source');report.recovery='PASS';report.result='PASS';report.stage='COMPLETE';
+ check(process.env.GITHUB_REPOSITORY==='serox94/dream-team'&&process.env.GITHUB_RUN_ATTEMPT==='1'&&/^\d+$/.test(process.env.GITHUB_RUN_ID||'')&&scenarios.includes(scenario),'CONTEXT');
+ check(/^[a-f0-9]{40}$/.test(process.env.GITHUB_SHA||''),'INVALID_SHA');
+ dir=await mkdtemp(join(tmpdir(),'adapter-drill-'));
+ const subdomain=(await cf('/workers/subdomain')).subdomain;check(/^[a-z0-9-]+$/.test(subdomain||''),'INVALID_SUBDOMAIN');
+ for(const name of [worker,probe])check(!(await cf('/workers/scripts')).some(x=>x.id===name),'WORKER_EXISTS');
+ const makeDb=async suffix=>{const name=`dream-team-audit-${runId}-${suffix}`;const db=await cf('/d1/database','POST',{name});created.push({path:'/d1/database/'+db.uuid});return {name,uuid:db.uuid}};
+ const database=await makeDb('db'),restored=await makeDb('restored');
+ const entry=join(dir,'worker.mjs');
+ await writeFile(entry,`export default {async fetch(req,env){
+ const rows=(await env.DB.prepare("SELECT key,value FROM app_settings WHERE key IN ('schema_version','maintenance_mode')").all()).results;
+ const s=Object.fromEntries(rows.map(r=>[r.key,r.value]));
+ if(new URL(req.url).pathname==='/api/bootstrap'&&s.maintenance_mode==='on')return new Response('maintenance',{status:503});
+ if(s.schema_version!==env.APP_SCHEMA)return new Response('schema mismatch',{status:503});
+ const trips=await env.DB.prepare('SELECT count(*) n FROM trips').first();
+ return Response.json({schema:s.schema_version,trips:trips.n},{headers:{'x-build':env.APP_BUILD}});
+ }};`);
+ const initial=join(dir,'initial.sql');
+ const files=(await readdir('migrations')).filter(f=>f.endsWith('.sql')&&f<'0032').sort();
+ let seed=(await Promise.all(files.map(f=>readFile('migrations/'+f,'utf8')))).join('\n');
+ seed+="\nCREATE TABLE d1_migrations(id INTEGER PRIMARY KEY,name TEXT UNIQUE);\n"+files.map(f=>`INSERT INTO d1_migrations(name) VALUES('${f}');`).join('\n');
+ seed+="\nINSERT OR REPLACE INTO app_settings(key,value) VALUES('schema_version','31'),('maintenance_mode','off');";
+ await writeFile(initial,seed);
+ const baseConfig={main:entry,compatibility_date:'2026-09-03',workers_dev:true};
+ const cfgFor=async(name,db,build,schema)=>configFile(dir,{...baseConfig,name,vars:{APP_BUILD:build,APP_SCHEMA:String(schema)},d1_databases:[{binding:'DB',database_name:db.name,database_id:db.uuid}]},name+'.jsonc');
+ const sourceBuild='1'.repeat(40),fallbackBuild='2'.repeat(40),candidate=process.env.GITHUB_SHA;
+ const initialConfig=await cfgFor(worker,database,sourceBuild,31);
+ wrangler(['d1','execute',database.name,'--remote','--config',initialConfig,'--file',initial]);
+ const upload=async(name,db,build,schema,first=false)=>{
+  const cfg=await cfgFor(name,db,build,schema);
+  if(first)created.push({path:'/workers/scripts/'+name});
+  wrangler(first?['deploy','--config',cfg]:['versions','upload','--config',cfg]);
+  const versions=(await cf('/workers/scripts/'+name+'/versions?per_page=5')).items;
+  check(versions?.[0]?.id,'VERSION_MISSING');return versions[0].id;
+ };
+ await upload(worker,database,sourceBuild,31,true);
+ const candidateVersion=await upload(worker,database,candidate,32),fallbackVersion=await upload(worker,database,fallbackBuild,32);
+ const rehearsalFallback=await upload(probe,restored,fallbackBuild,32,true),rehearsalCandidate=await upload(probe,restored,candidate,32);
+ const baseUrl=`https://${worker}.${subdomain}.workers.dev`,probeUrl=`https://${probe}.${subdomain}.workers.dev`;
+ // Explicit HTTP activation is required for version upload / workers.dev routing.
+ await cf('/workers/scripts/'+worker+'/subdomain','POST',{enabled:true});
+ await cf('/workers/scripts/'+probe+'/subdomain','POST',{enabled:true});
+ const migration={name:'0032_lake_manager.sql',sql:await readFile('migrations/0032_lake_manager.sql','utf8')};
+ const adapter=await cloudflareReleaseAdapter({worker,runId,baseUrl,database,restored,candidateVersion,fallbackVersion,sourceBuild,fallbackBuild,migration,
+ rehearsal:{worker:probe,runId:rehearsalId,baseUrl:probeUrl,candidateVersion:rehearsalCandidate,fallbackVersion:rehearsalFallback}});
+ const before=await adapter.current();const rowsBefore=(await query(database.uuid,'SELECT count(*) n FROM trips')).results[0].n;
+ // Inject errors only AFTER the real operation, exercising ambiguous provider responses.
+ if(scenario==='activation-timeout'){const original=adapter.activate;adapter.activate=async id=>{await original(id);if(id===candidateVersion)throw Error('ACTIVATION_TIMEOUT')}}
+ if(scenario==='migration-timeout'){const original=adapter.migrate;adapter.migrate=async(...args)=>{await original(...args);throw Error('MIGRATION_TIMEOUT')}}
+ if(scenario==='readiness-failure'){const original=adapter.verify;adapter.verify=async plan=>{await original(plan);throw Error('INJECTED_READINESS_FAILURE')}}
+ report.stage='RELEASE';
+ report.release=await release({candidate,operator:candidate,approval:`RELEASE:${candidate}:${candidate}`,sourceSchema:31,targetSchema:32,targetVersion:candidateVersion},adapter);
+ const after=await adapter.current();
+ check(after.schema===32&&!after.maintenance,'FINAL_SCHEMA_OR_BARRIER');
+ check(after.activeVersion===(scenario==='success'?candidateVersion:fallbackVersion),'FINAL_WORKER');
+ check((await query(database.uuid,'SELECT count(*) n FROM trips')).results[0].n===rowsBefore,'DATA_LOSS');
+ check((await query(database.uuid,'PRAGMA foreign_key_check')).results.length===0,'FOREIGN_KEYS');
+ check(scenario==='success'?report.release.result==='PASS':report.release.result==='BLOCKED'&&report.release.recovery==='PASS','UNEXPECTED_RELEASE_RESULT');
+ report.source=before.activeVersion;report.final=after.activeVersion;report.result='PASS';report.stage='COMPLETE';
 }catch(e){report.error=/^[A-Z0-9_]+$/.test(e.message)?e.message:'OPERATION_FAILED';process.exitCode=1}
-finally{if(created&&report.result==='PASS')try{await cf('/workers/scripts/'+worker,'DELETE');report.cleanup='PASS'}catch{report.cleanup='FAILED';report.result='FAIL';process.exitCode=1} else if(created)report.cleanup='RETAINED';if(dir)await rm(dir,{recursive:true,force:true});await mkdir('isolated-adapter-status',{recursive:true});await writeFile('isolated-adapter-status/summary.json',JSON.stringify(report,null,2));console.log('ISOLATED_ADAPTER '+JSON.stringify(report))}
+finally{
+ // Only resources created by this run are deleted, and only after all assertions pass.
+ if(report.result==='PASS')for(const resource of created.reverse())try{await cf(resource.path,'DELETE')}catch{report.cleanup='FAILED';process.exitCode=1;report.result='FAIL'}
+ else report.cleanup='RETAINED';
+ if(dir)await rm(dir,{recursive:true,force:true});await mkdir('isolated-adapter-status',{recursive:true});
+ await writeFile(`isolated-adapter-status/${scenario}.json`,JSON.stringify(report,null,2));console.log('ISOLATED_ADAPTER '+JSON.stringify(report));
+}
