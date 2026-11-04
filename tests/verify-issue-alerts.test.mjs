@@ -1,11 +1,12 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {verifyIssueAlerts} from '../scripts/verify-issue-alerts.mjs';
 const context={repository:'serox94/dream-team',workflow:'Isolated alert verification 123-1',url:'https://github.com/serox94/dream-team/actions/runs/123'};
-function provider({deny=false}={}){let issue;return {token:'fixture',fetcher:async(url,options)=>{
+function provider({deny=false,staleList=false,requests=[]}={}){let issue;return {token:'fixture',fetcher:async(url,options)=>{
+ requests.push({method:options.method||'GET',path:new URL(url).pathname});
  if(deny)return Response.json({},{status:403});
  if(options.method==='POST'){issue={number:1,state:'open',user:{type:'Bot',login:'github-actions'},...JSON.parse(options.body)};return Response.json(issue,{status:201})}
  if(options.method==='PATCH'){Object.assign(issue,JSON.parse(options.body));return Response.json(issue)}
  if(new URL(url).pathname.endsWith('/issues/1'))return Response.json(issue);
- const state=new URL(url).searchParams.get('state');return Response.json(issue&&issue.state===state?[issue]:[]);
+ const state=new URL(url).searchParams.get('state');return Response.json(!staleList&&issue&&issue.state===state?[issue]:[]);
 }}}
 test('alert verification exercises create, update, close and closed-issue readback',async()=>{const r=await verifyIssueAlerts(context,provider());assert.equal(r.result,'PASS');assert.deepEqual(r.steps,['CREATED','UPDATED','RESOLVED']);assert.equal(r.issue,1)});
 test('Issues permission denial is a failed test with safe HTTP diagnostics',async()=>{const r=await verifyIssueAlerts(context,provider({deny:true}));assert.equal(r.result,'FAIL');assert.equal(r.httpStatus,403);assert.equal(r.error,'ALERT_DELIVERY_FAILED')});
@@ -22,3 +23,5 @@ for(const branch of ['ops/universal-release-monitor-20261104','main'])test(`clea
  }});
  assert.equal(report.result,'PASS');assert.deepEqual(report.closed,[29]);assert.equal(patches.length,1);
 });
+
+test('a POST receipt prevents duplicate alerts when the list stays stale',async()=>{const requests=[];const r=await verifyIssueAlerts(context,provider({staleList:true,requests}));assert.equal(r.result,'PASS');assert.equal(requests.filter(r=>r.method==='POST').length,1);assert.deepEqual(r.steps,['CREATED','UPDATED','RESOLVED'])});

@@ -4,14 +4,14 @@ import {syncAlert,actionsBot} from './infra-monitor-alert.mjs';
 import {safeProviderFailure} from './isolated-release-environment.mjs';
 export async function verifyIssueAlerts(context,options){
  const report={result:'FAIL',steps:[]};let cleanup=false,issueNumber;
- options={...options,onIssue:number=>{issueNumber=number}};
+ options={...options,receipt:{},onIssue:number=>{issueNumber=number}};
  try{
   const created=await syncAlert({...context,failed:true},options);cleanup=true;report.steps.push(created);
   if(created!=='CREATED')throw Error('ALERT_TEST_NOT_ISOLATED');
   report.steps.push(await syncAlert({...context,failed:true},options));
   report.steps.push(await syncAlert({...context,failed:false},options));
   if(report.steps.join(',')!=='CREATED,UPDATED,RESOLVED')throw Error('ALERT_LIFECYCLE_FAILED');
-  const r=await options.fetcher(`https://api.github.com/repos/${context.repository}/issues/${issueNumber}`,{headers:{authorization:'Bearer '+options.token,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(15000)});
+  const r=await options.fetcher(`https://api.github.com/repos/${context.repository}/issues/${issueNumber}`,{cache:'no-store',headers:{'cache-control':'no-cache',authorization:'Bearer '+options.token,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(15000)});
   if(!r.ok)throw Object.assign(Error('ALERT_READBACK_FAILED'),{status:r.status});
   const closed=await r.json();
   if(!closed||closed.number!==issueNumber||closed.state!=='closed'||closed.title!==`[DreamTeam operations] ${context.workflow}`||!closed.body?.includes(context.url))throw Error('ALERT_READBACK_FAILED');
@@ -43,7 +43,13 @@ export async function cleanupFailedIssueTests({repository,branch,currentRun,toke
   for(const {issue,runId} of candidates){
    if(!runs.has(runId))runs.set(runId,await request('/actions/runs/'+runId));
    const run=runs.get(runId);
-   if(run.path!=='.github/workflows/isolated-release-drill.yml'||run.head_branch!==branch||run.head_repository?.full_name!==repository||run.status!=='completed'||!['failure','timed_out','cancelled'].includes(run.conclusion))continue;
+   if(run.path!=='.github/workflows/isolated-release-drill.yml'||run.head_branch!==branch||run.head_repository?.full_name!==repository)continue;
+   let failed=run.status==='completed'&&['failure','timed_out','cancelled'].includes(run.conclusion);
+   if(!failed&&run.status==='in_progress'){
+    const jobs=(await request('/actions/runs/'+runId+'/jobs?per_page=100')).jobs;
+    failed=Array.isArray(jobs)&&jobs.some(j=>j.name==='alert-verification'&&j.status==='completed'&&['failure','timed_out','cancelled'].includes(j.conclusion));
+   }
+   if(!failed)continue;
    await request('/issues/'+issue.number,'PATCH',{state:'closed',state_reason:'not_planned'});
    if((await request('/issues/'+issue.number)).state!=='closed')throw Error('ALERT_CLEANUP_FAILED');
    report.closed.push(issue.number);

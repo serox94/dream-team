@@ -15,11 +15,11 @@ on:
       - 'scripts/verify-issue-alerts.mjs'
 permissions:
   contents: read
-concurrency:
-  group: dream-team-isolated-release-single-d1
-  cancel-in-progress: false
 jobs:
   drill:
+    concurrency:
+      group: dream-team-isolated-release-single-d1
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -55,6 +55,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      actions: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
