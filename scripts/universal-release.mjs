@@ -1,3 +1,4 @@
+// PROTOTYPE ONLY: no production adapter exists; do not use this for a real release.
 // Orchestration primitives; caller must supply a trusted, target-specific adapter.
 // This module never constructs production credentials or chooses a Worker.
 const assert = (condition, code) => { if (!condition) throw new Error(code); };
