@@ -17,7 +17,7 @@
 ## Open limitations
 
 - The existing production operator is still tied to PR #23 and historical IDs. The new `release-guards.mjs` contains tested guard primitives, not an integrated general-purpose release system. The old rollback diagnostics were reviewed on this branch but are not merged. A general release/rollback workflow must be completed and rehearsed before relying on it.
-- The generic transition guard also performed a real activation and one rollback after an injected failure on a fresh disposable Worker: [guard drill](https://github.com/serox94/dream-team/actions/runs/41838994626); the temporary Worker was deleted. The isolated Worker rollback and D1 Time Travel recovery were demonstrated separately. They are not proof of production rollback after a migration.
+- The generic transition guard also performed a real activation and one rollback after an injected failure on a fresh disposable Worker: [guard drill](https://github.com/serox94/dream-team/actions/runs/41839237731); the temporary Worker was deleted. The isolated Worker rollback and D1 Time Travel recovery were demonstrated separately. They are not proof of production rollback after a migration.
 - Alert delivery, automatic detection of failed production backup/deployment/migration/rollback, and Worker error detection are not fully verified.
 - The old research-preview cron remains enabled pending confirmation that disabling it will not disrupt its current proxy workflow.
 - Existing historical D1 databases, R2 buckets and Workers require separate per-resource authorization before deletion.
