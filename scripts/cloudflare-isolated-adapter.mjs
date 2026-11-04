@@ -1,5 +1,10 @@
 // Cloudflare control-plane adapter for disposable CI Workers only.
 // The isolated entry point never accepts production; the production factory is opt-in and library-only.
+import {protectedEnvironment} from './production-authorization.mjs';
+import {verifyWorkerArtifact} from './worker-artifact-provenance.mjs';
+import {configuration,verifyConfiguration,digest} from './release-config-policy.mjs';
+import {requireProductionWriteFence} from './d1-write-fence.mjs';
+import {requireIdleWorker} from './cloudflare-builds.mjs';
 import {cf} from './recovery-common.mjs';
 const uuid=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -70,7 +75,7 @@ async function scopedReleaseAdapter({worker,runId,baseUrl,database,restored,rehe
   assert(items.some(b=>b.type==='plain_text'&&b.name==='APP_SCHEMA'&&b.text===String(schema))||productionScope?.allowLegacySource(id,schema,items),'VERSION_SCHEMA_MISMATCH');
   // A media-bearing release must use the existing, verified R2 recovery gateway.
   const buckets=items.filter(b=>b.type==='r2_bucket');
-  if(productionScope)productionScope.checkBindings(items,db,build);
+  if(productionScope)await productionScope.checkBindings(items,db,build,version);
   else if(buckets.length){assert(media&&buckets.length===1&&buckets[0].name==='MEDIA'&&buckets[0].bucket_name===(db.uuid===restored.uuid?media.restored:media.source),'UNVERIFIED_MEDIA_BINDING');}
   assert(!items.some(b=>!(productionScope?['d1','plain_text','r2_bucket','secret_text','ai','assets']:['d1','plain_text','r2_bucket']).includes(b.type)),'UNSUPPORTED_RELEASE_BINDING');
   return version;
@@ -120,7 +125,6 @@ async function scopedReleaseAdapter({worker,runId,baseUrl,database,restored,rehe
    await setBarrier(true);
    const r=await fetcher(new URL('/api/bootstrap',baseUrl),{redirect:'manual',signal:AbortSignal.timeout(10000)});
    await r.body?.cancel();assert(r.status===503,'HTTP_WRITE_BARRIER_NOT_VERIFIED');
-   if(productionScope)await wait(5000);
    return {blocked:true};
   },
   async unquiesce(){
@@ -136,7 +140,7 @@ async function scopedReleaseAdapter({worker,runId,baseUrl,database,restored,rehe
    productionScope?.authorizeMutation();
    baseline=await captureSnapshot(database,sql,{productionRead:!!productionScope});
    let durable;
-   if(productionScope){await wait(1000);await verifySnapshot(database,baseline,sql);durable=await productionScope.persistCheckpoint(baseline)}
+   if(productionScope){await verifySnapshot(database,baseline,sql);durable=await productionScope.persistCheckpoint(baseline)}
    if(sandboxLease)await sandboxLease.restore(baseline);else await restoreSnapshot(restored,baseline,sql);
    let mediaRestored=true;
    if(media){
@@ -202,7 +206,7 @@ async function scopedReleaseAdapter({worker,runId,baseUrl,database,restored,rehe
  };
 }
 
-// Library-only production capability. No CLI, schedule or workflow invokes this factory.
+// Production capability: all mutations require independent protected approval and proofs.
 // A future operator must prepare one owned recovery DB and isolated versions first.
 export async function productionCloudflareAdapter(options={}){
  const {productionId,sha,wrangler}=await import('./recovery-common.mjs');
@@ -211,12 +215,13 @@ export async function productionCloudflareAdapter(options={}){
  const {plan,sourceVersion,sourceBuild,fallbackVersion,fallbackBuild,recovery,media,
   expectedAccountId,productionApproval,enabled=false,evidenceRunId,currentRunId,
   request=cf,fetcher=fetch,wait=sleep,githubRequest,execute,checkpointWriter}=options;
- const frozen=Object.freeze({...plan}),migration=options.migration&&Object.freeze({...options.migration});
+ const frozen=Object.freeze(structuredClone(plan||{})),migration=options.migration&&Object.freeze({...options.migration});
  const migrationDigest=frozen.sourceSchema===frozen.targetSchema?'none':sha(Buffer.from(migration?.sql||''));
  const authorize=()=>{
   assert(enabled===true&&/^[a-f0-9]{32}$/.test(expectedAccountId||'')&&process.env.CLOUDFLARE_ACCOUNT_ID===expectedAccountId,'PRODUCTION_CAPABILITY_DISABLED');
   assert(/^[a-f0-9]{40}$/.test(frozen.candidate||'')&&/^[a-f0-9]{40}$/.test(frozen.operator||'')&&uuid.test(frozen.targetVersion||'')&&uuid.test(sourceVersion||'')&&/^[a-f0-9]{40}$/.test(sourceBuild||'')&&/^[a-f0-9]{40}$/.test(fallbackBuild||'')&&uuid.test(fallbackVersion||'')&&fallbackVersion!==frozen.targetVersion,'INVALID_PRODUCTION_PLAN');
-  assert(frozen.approval===`RELEASE:${frozen.candidate}:${frozen.operator}`&&productionApproval===`PRODUCTION:${frozen.candidate}:${frozen.operator}:${sourceVersion}:${frozen.targetVersion}:${productionId}:${frozen.sourceSchema}:${frozen.targetSchema}:${migrationDigest}`,'PRODUCTION_APPROVAL_MISMATCH');
+  assert(frozen.approval===`RELEASE:${frozen.candidate}:${frozen.operator}`&&digest(frozen)===options.planDigest&&productionApproval===`PRODUCTION:${options.planDigest}`,'PRODUCTION_APPROVAL_MISMATCH');
+  assert(frozen.sourceVersion===sourceVersion&&frozen.fallbackVersion===fallbackVersion&&frozen.sourceBuild===sourceBuild&&frozen.fallbackBuild===fallbackBuild&&frozen.databaseId===productionId&&frozen.migrationDigest===migrationDigest,'UNBOUND_PRODUCTION_PLAN');
  };
  authorize(); // No provider calls, allocations or writes before this gate.
  assert(recovery?.lease&&recovery.lease.database.uuid!==productionId&&/^\d+$/.test(recovery.runId||'')&&/^\d+$/.test(evidenceRunId||'')&&/^\d+$/.test(currentRunId||''),'PRODUCTION_RECOVERY_REQUIRED');
@@ -240,40 +245,42 @@ export async function productionCloudflareAdapter(options={}){
  });
  const operations=async()=>{
   const workers=await request('/workers/scripts'),live=workers.find(w=>w.id===worker);assert(live?.tag,'WORKER_IDENTITY_UNAVAILABLE');
-  const builds=await request('/builds/builds?worker_tag='+live.tag+'&per_page=100');
-  assert(Array.isArray(builds.builds)&&builds.builds.length<100&&!builds.builds.some(b=>['queued','pending','initializing','running','building'].includes(b.status)),'BUILDS_ACTIVE');
+  await requireIdleWorker(live.tag,request);
   const raw=await request('/builds/workers/'+live.tag+'/triggers'),triggers=Array.isArray(raw)?raw:raw.triggers;
   assert(Array.isArray(triggers)&&triggers.every(t=>t.deploy_command==='npx wrangler versions upload'),'UNCONTROLLED_BUILD_TRIGGER');
-  const hooks=await request('/builds/workers/'+live.tag+'/deploy_hooks');assert((Array.isArray(hooks)?hooks:hooks.deploy_hooks)?.length===0,'DEPLOY_HOOK_PRESENT');
+  const hooks=await request('/builds/workers/'+worker+'/deploy_hooks');assert((Array.isArray(hooks)?hooks:hooks.deploy_hooks)?.length===0,'DEPLOY_HOOK_PRESENT');
   for(const status of ['queued','in_progress']){
    const runs=(await gh('/actions/runs?status='+status+'&per_page=100')).workflow_runs;
    assert(Array.isArray(runs)&&runs.length<100,'PRODUCTION_QUEUE_UNAVAILABLE');
    assert(!runs.some(r=>String(r.id)!==currentRunId&&/\/(?:.*release|.*production.*|.*promot.*|deploy-private)\.yml$/.test(r.path||'')),'OTHER_PRODUCTION_OPERATION');
   }
  };
- let sourceBindings,sourceAuth,verifiedLegacySchema,preflightPassed=false;
- const signature=(items,isRehearsal)=>items.filter(b=>b.type!=='plain_text').map(b=>({
-  name:b.name,type:b.type,...(b.type==='d1'?{id:database.uuid}:{}),
-  ...(b.type==='r2_bucket'?{bucket:isRehearsal?(b.name==='MEDIA'?'dream-team-media':b.name==='BACKUP_STATUS'?'dream-team-d1-backups':b.bucket_name):b.bucket_name}:{})
- })).sort((a,b)=>a.name.localeCompare(b.name));
+ let verifiedLegacySchema,preflightPassed=false;
  const scope={databaseId:productionId,sourceVersion,control,rehearsalControl,authorize,
-  finishPreflight(){preflightPassed=true},
+  finishPreflight(){requireProductionWriteFence();preflightPassed=true},
   authorizeMutation(){authorize();assert(preflightPassed,'PRODUCTION_PREFLIGHT_REQUIRED')},
   allowLegacySource(id,schema,items){return id===sourceVersion&&verifiedLegacySchema===schema&&!items.some(b=>b.name==='APP_SCHEMA')},
-  checkBindings(items,db){
+  async checkBindings(items,db,build,version){
    const rehearsal=db.uuid===restored.uuid;
    const buckets=items.filter(b=>b.type==='r2_bucket');
    assert(buckets.length===2&&buckets.some(b=>b.name==='MEDIA'&&b.bucket_name===(rehearsal?media.restored:'dream-team-media'))&&buckets.some(b=>b.name==='BACKUP_STATUS'&&b.bucket_name===(rehearsal?media.archive:'dream-team-d1-backups')),'PRODUCTION_R2_BINDINGS');
    const vars=Object.fromEntries(items.filter(b=>b.type==='plain_text').map(b=>[b.name,b.text]));
    assert(vars.APP_ENV===(rehearsal?'preview':'production')&&vars.INDIVIDUAL_ACCOUNTS==='true','PRODUCTION_RUNTIME_CONFIGURATION');
-   const auth=Object.fromEntries(['INDIVIDUAL_ACCOUNTS','ANGLER_PASSWORD_POLICY','AUTH_LEGACY_ALIAS'].map(key=>[key,vars[key]??null]));
-   if(!sourceAuth)sourceAuth=auth;else assert(JSON.stringify(auth)===JSON.stringify(sourceAuth),'AUTH_CONFIGURATION_CHANGED');
-   const current=signature(items,rehearsal);
-   if(!sourceBindings){sourceBindings=current;assert(sourceBindings.some(b=>b.type==='assets'&&b.name==='ASSETS')&&sourceBindings.some(b=>b.type==='ai'&&b.name==='AI'),'PRODUCTION_RUNTIME_BINDINGS')}
-   else assert(JSON.stringify(current)===JSON.stringify(sourceBindings),'PRODUCTION_BINDINGS_CHANGED');
+   const role=rehearsal?(version.id===recovery.candidateVersion?'rehearsalTarget':'rehearsalFallback'):version.id===sourceVersion?'source':version.id===frozen.targetVersion?'target':'fallback';
+   const approved=frozen.configuration?.source;
+   assert(approved,'APPROVED_CONFIGURATION_REQUIRED');
+   verifyConfiguration(configuration(version),approved,frozen.configurationDifferences?.[role]||[]);
+   if(role==='target'||role==='fallback'){
+    const evidence=options.artifacts?.[role];assert(evidence,'ARTIFACT_PROVENANCE_REQUIRED');
+    const proof=await verifyWorkerArtifact({receiptPath:evidence.receiptPath,artifactDirectory:evidence.artifactDirectory,worker,versionId:version.id,sourceSha:role==='target'?frozen.candidate:fallbackBuild,operator:frozen.operator,version});
+    assert(proof.artifactSha256===frozen.artifactDigests?.[role],'APPROVED_ARTIFACT_DIGEST_MISMATCH');
+   }
   },
   async preflight(actual){
-   authorize();for(const key of ['candidate','operator','approval','sourceSchema','targetSchema','targetVersion'])assert(actual[key]===frozen[key],'PRODUCTION_PLAN_CHANGED');
+   preflightPassed=false;authorize();
+   await protectedEnvironment({github:gh,runId:currentRunId,operator:frozen.operator,plan:frozen,planDigest:options.planDigest,context:options.authorizationContext||process.env});
+   assert(digest(actual)===options.planDigest,'PRODUCTION_PLAN_CHANGED');
+   for(const key of ['candidate','operator','approval','sourceSchema','targetSchema','targetVersion'])assert(actual[key]===frozen[key],'PRODUCTION_PLAN_CHANGED');
    assert(await control.active()===sourceVersion,'SOURCE_STATE_CHANGED');
    const main=await gh('/git/ref/heads/main'),operatorRun=await gh('/actions/runs/'+currentRunId);
    assert(main.object?.sha===frozen.operator&&operatorRun.head_sha===frozen.operator&&operatorRun.head_branch==='main'&&operatorRun.event==='workflow_dispatch'&&operatorRun.head_repository?.full_name==='serox94/dream-team','OPERATOR_CONTEXT_MISMATCH');
@@ -329,6 +336,7 @@ export async function productionCloudflareAdapter(options={}){
    }finally{await sql(restored.uuid,"UPDATE app_settings SET value='on' WHERE key='maintenance_mode'")}
   }
  };
+ await protectedEnvironment({github:gh,runId:currentRunId,operator:frozen.operator,plan:frozen,planDigest:options.planDigest,context:options.authorizationContext||process.env});
  const adapter=await scopedReleaseAdapter({worker,runId,baseUrl,database,restored,
   candidateVersion:frozen.targetVersion,fallbackVersion,sourceBuild,fallbackBuild,migration,
   rehearsal:{...recovery,runId:recovery.workerRunId},request,fetcher,wait,execute:sql,media,productionScope:scope});

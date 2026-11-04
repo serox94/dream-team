@@ -12,3 +12,14 @@ test('does not activate without a verified database restore',async()=>{let f=fix
 test('refuses to activate if source changed after isolation tests',async()=>{let f=fixture();f.adapter.current=async()=>({activeVersion:c,schema:32,maintenance:false});let r=await release(plan,f.adapter);assert.equal(r.error,'SOURCE_STATE_CHANGED');assert.deepEqual(f.calls,[])});
 test('does not touch unknown active worker during recovery',async()=>{let f=fixture({fail:true});let count=0,orig=f.adapter.current;f.adapter.current=async()=>++count===1?orig():({activeVersion:c,schema:32});let r=await release(plan,f.adapter);assert.equal(r.recovery,'BLOCKED');assert.equal(r.recoveryError,'UNKNOWN_ACTIVE_WORKER');assert.deepEqual(f.calls,[b])});
 test('never migrates without a confirmed write barrier',async()=>{let f=fixture();f.adapter.quiesce=async()=>({blocked:false});let r=await release({...plan,targetSchema:33},f.adapter);assert.equal(r.error,'WRITE_BARRIER_NOT_VERIFIED');assert.deepEqual(f.calls,[]);assert.equal(r.barrier,'UNKNOWN')});
+
+for(const schemaChange of [false,true])for(const failure of ['inspect','activate','verify','barrier'])test(`failed recovery never reopens writes: schemaChange=${schemaChange}, ${failure}`,async()=>{
+ const f=fixture({fail:true});let reopen=0;f.adapter.unquiesce=async()=>{reopen++};
+ const originalCurrent=f.adapter.current;let reads=0;
+ if(failure==='inspect')f.adapter.current=async()=>{if(++reads> (schemaChange?2:1))throw Error('INSPECTION_FAILED');return originalCurrent()};
+ if(failure==='activate'){const original=f.adapter.activate;f.adapter.activate=async id=>{if(id!==b)throw Error('FALLBACK_ACTIVATION_FAILED');return original(id)}}
+ if(failure==='verify')f.adapter.verifyRecovery=async()=>{throw Error('RECOVERY_VERIFY_FAILED')};
+ if(failure==='barrier'){const original=f.adapter.verifyRecovery;f.adapter.verifyRecovery=async(...args)=>{await original(...args);f.adapter.current=async()=>({...await originalCurrent(),maintenance:false})}};
+ const report=await release({...plan,...(schemaChange?{targetSchema:33}:{})},f.adapter);
+ assert.equal(report.recovery,'BLOCKED');assert.equal(report.barrier,'RETAINED');assert.equal(reopen,0);assert.notEqual(report.barrier,'REOPENED');
+});

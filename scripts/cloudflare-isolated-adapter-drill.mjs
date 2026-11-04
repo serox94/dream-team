@@ -2,9 +2,11 @@
 import {mkdtemp,writeFile,rm,mkdir,readFile,readdir,rename} from 'node:fs/promises';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {cf,wrangler,configFile,query} from './recovery-common.mjs';
+import {acquireD1Fence} from './d1-write-fence.mjs';
 import {captureSnapshot} from './d1-snapshot.mjs';
 import {createIsolatedReleaseEnvironment,safeProviderFailure} from './isolated-release-environment.mjs';
 import {isolatedCloudflareAdapter,cloudflareReleaseAdapter} from './cloudflare-isolated-adapter.mjs';
+import {workerBuilds} from './cloudflare-builds.mjs';
 import {release} from './universal-release.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
 const scenarios=['success','activation-timeout','migration-timeout','readiness-failure'];
@@ -23,20 +25,17 @@ try{
  report.stage='ACCOUNT_READ';
  const subdomain=(await cf('/workers/subdomain')).subdomain;check(/^[a-z0-9-]+$/.test(subdomain||''),'INVALID_SUBDOMAIN');
  for(const name of [worker,probe])check(!(await cf('/workers/scripts')).some(x=>x.id===name),'WORKER_EXISTS');
+ report.stage='READ_WORKER_BUILDS';
+ const live=(await cf('/workers/scripts')).find(w=>w.id==='dream-team');check(live?.tag,'WORKER_IDENTITY_UNAVAILABLE');
+ const builds=await workerBuilds(live.tag,cf);report.buildsRead={result:'PASS',count:builds.length,active:builds.filter(b=>b.status!=='stopped').length};
+ console.log('::notice title=Worker Builds read::'+JSON.stringify(report.buildsRead));
  report.stage='ALLOCATE_SINGLE_D1';
  lease=await createIsolatedReleaseEnvironment({runId});
  await saveOwnership();
  const database=lease.database,restored=database;
  report.d1={databasesBefore:lease.databasesBefore,allocated:1};
  const entry=join(dir,'worker.mjs');
- await writeFile(entry,`export default {async fetch(req,env){
- const rows=(await env.DB.prepare("SELECT key,value FROM app_settings WHERE key IN ('schema_version','maintenance_mode')").all()).results;
- const s=Object.fromEntries(rows.map(r=>[r.key,r.value]));
- if(new URL(req.url).pathname==='/api/bootstrap'&&s.maintenance_mode==='on')return new Response('maintenance',{status:503});
- if(s.schema_version!==env.APP_SCHEMA)return new Response('schema mismatch',{status:503});
- const trips=await env.DB.prepare('SELECT count(*) n FROM trips').first();
- return Response.json({schema:s.schema_version,trips:trips.n},{headers:{'x-build':env.APP_BUILD}});
- }};`);
+ await writeFile(entry,await readFile('scripts/isolated-release-probe-worker.mjs'));
  const initial=join(dir,'initial.sql');
  const files=(await readdir('migrations')).filter(f=>f.endsWith('.sql')&&f<'0032').sort();
  let seed=(await Promise.all(files.map(f=>readFile('migrations/'+f,'utf8')))).join('\n');
@@ -65,6 +64,25 @@ try{
  await cf('/workers/scripts/'+worker+'/subdomain','POST',{enabled:true});
  await cf('/workers/scripts/'+probe+'/subdomain','POST',{enabled:true});
  const migration={name:'0032_lake_manager.sql',sql:await readFile('migrations/0032_lake_manager.sql','utf8')};
+ report.stage='DELAYED_WRITE_FENCE';
+ await lease.execute(database.uuid,"CREATE TABLE audit_writes(id TEXT PRIMARY KEY,status TEXT); INSERT INTO audit_writes VALUES('before','committed');");
+ const foreground=fetch(baseUrl+'/audit/delay?id=fg',{signal:AbortSignal.timeout(90000)}).then(r=>r.json()).catch(()=>({fenced:false,error:'FOREGROUND_FAILED'}));
+ const background=await fetch(baseUrl+'/audit/delay?id=bg',{signal:AbortSignal.timeout(15000)});check(background.status===202,'BACKGROUND_NOT_ADMITTED');await background.body?.cancel();
+ let admitted=false;
+ for(let i=0;i<10;i++){const rows=(await lease.execute(database.uuid,"SELECT id FROM audit_writes WHERE status='admitted'")).results;if(rows.length===2){admitted=true;break}await new Promise(r=>setTimeout(r,250))}
+ check(admitted,'DELAYED_WRITES_NOT_ADMITTED');
+ const fence=await acquireD1Fence(database,lease.execute);
+ await lease.execute(database.uuid,'CREATE VIEW audit_gate_fg AS SELECT 1; CREATE VIEW audit_gate_bg AS SELECT 1;');
+ const fg=await foreground;check(fg.fenced===true&&fg.committed===false,'DELAYED_FOREGROUND_WRITE_ESCAPED');
+ let bg;
+ for(let i=0;i<10;i++){const r=await fetch(baseUrl+'/audit/result?id=bg',{signal:AbortSignal.timeout(5000)});if(r.ok){bg=await r.json();break}await r.body?.cancel();await new Promise(r=>setTimeout(r,500))}
+ check(bg?.fenced===true&&bg.committed===false,'DELAYED_BACKGROUND_WRITE_ESCAPED');
+ await fence.verify();const fencedSnapshot=await captureSnapshot(database,lease.execute);
+ const proof=fencedSnapshot.tables.find(t=>t.name==='audit_writes').rows;
+ check(proof.some(r=>r.id==='before'&&r.status==='committed')&&proof.filter(r=>r.status==='admitted').length===2,'SNAPSHOT_OMITTED_COMMITTED_WRITE');
+ report.writeFence={result:'PASS',committedBeforeIncluded:true,lateForegroundRejected:true,lateBackgroundRejected:true,productionAllWriters:'BLOCKED_UNPROVEN'};
+ console.log('::notice title=Delayed write fence::'+JSON.stringify(report.writeFence));
+ await fence.release();await lease.execute(database.uuid,'DROP VIEW audit_gate_fg; DROP VIEW audit_gate_bg; DROP TABLE audit_writes;');
  const sourceControl=isolatedCloudflareAdapter({worker,runId,baseUrl});
  const seedSnapshot=await captureSnapshot(database,lease.execute);
  for(const scenario of scenarios){

@@ -11,6 +11,9 @@ on:
       - 'scripts/isolated-release-environment.mjs'
       - 'scripts/recovery-common.mjs'
       - 'scripts/cloudflare-request-policy.mjs'
+      - 'scripts/cloudflare-builds.mjs'
+      - 'scripts/d1-write-fence.mjs'
+      - 'scripts/isolated-release-probe-worker.mjs'
       - 'scripts/cleanup-isolated-release.mjs'
       - 'scripts/infra-monitor-alert.mjs'
       - 'scripts/verify-issue-alerts.mjs'
@@ -22,6 +25,10 @@ jobs:
       group: dream-team-isolated-release-single-d1
       cancel-in-progress: false
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -44,6 +51,33 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Prepare sealed Worker artifact receipts (zero D1)
+        run: node scripts/isolated-artifact-probe.mjs prepare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Attest exact upload receipts
+        uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661
+        with:
+          subject-path: 'isolated-artifact-status/*.json'
+      - name: Verify signed bytes against concrete target and fallback versions
+        run: node scripts/isolated-artifact-probe.mjs verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Cleanup owned artifact Worker
+        if: always()
+        run: node scripts/isolated-artifact-probe.mjs cleanup
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: isolated-artifact-provenance
+          path: isolated-artifact-status/
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()
         with:

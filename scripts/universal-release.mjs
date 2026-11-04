@@ -73,7 +73,7 @@ export async function release(plan, adapter) {
     }
   }
   if (barrier) {
-    if (!migrated || report.recovery === 'PASS') {
+    if (report.recovery === 'PASS' || (!report.activated && !migrated && report.recovery === 'NOT_REQUIRED')) {
       try {
         const state = await adapter.current();
         if (report.recovery !== 'PASS') assert(state.activeVersion === previous.activeVersion && state.schema === previous.schema, 'SOURCE_STATE_CHANGED');
