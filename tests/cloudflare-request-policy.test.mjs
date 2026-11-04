@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {cloudflareClient,isReadOnlyCloudflareRequest} from '../scripts/cloudflare-request-policy.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import {cloudflareClient,isReadOnlyCloudflareRequest,readBatchBody} from '../scripts/cloudflare-request-policy.mjs';
 const path='/d1/database/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/query';
 const success=()=>Response.json({success:true,result:'ok'});
 const limited=()=>Response.json({success:false,errors:[{code:7429}]},{status:429,headers:{'retry-after':'2'}});
@@ -10,3 +10,6 @@ test('never retries ambiguous transport errors on writes',async()=>{let calls=0;
 test('read classifier rejects mixed SQL and mutating PRAGMAs',()=>{assert.equal(isReadOnlyCloudflareRequest(path,'POST',{sql:'SELECT 1; DELETE FROM a'}),false);assert.equal(isReadOnlyCloudflareRequest(path,'POST',{sql:'PRAGMA foreign_keys=OFF'}),false);assert.equal(isReadOnlyCloudflareRequest(path,'POST',{sql:'PRAGMA foreign_key_check'}),true)});
 
 test('a server cooldown above the retry budget fails closed without an early request',async()=>{const large=()=>Response.json({success:false,errors:[{code:7429}]},{status:429,headers:{'retry-after':'600'}});const f=fixture([large,success]);await assert.rejects(f.client(path,'POST',{sql:'SELECT 1'}),e=>e.status===429&&e.retryAfterSeconds===600);await assert.rejects(f.client(path,'POST',{sql:'SELECT 1'}),/CLOUDFLARE_COOLDOWN/);assert.equal(f.calls.length,1)});
+
+test('read batches are validated and a changed SQL payload loses retry eligibility',()=>{const body=readBatchBody(['SELECT 1','PRAGMA foreign_key_check']);assert.equal(isReadOnlyCloudflareRequest(path,'POST',body),true);assert.deepEqual(Object.keys(JSON.parse(JSON.stringify(body))),['sql']);body.sql='SELECT 1; DELETE FROM a';assert.equal(isReadOnlyCloudflareRequest(path,'POST',body),false);assert.throws(()=>readBatchBody(['DELETE FROM a']),/INVALID_READ_BATCH/)});
+test('a write batch is never replayed after throttling',async()=>{const f=fixture([limited,success]);await assert.rejects(f.client(path,'POST',{sql:'CREATE TABLE a(id); INSERT INTO a VALUES(1);'}),e=>e.status===429);assert.equal(f.calls.length,1)});
