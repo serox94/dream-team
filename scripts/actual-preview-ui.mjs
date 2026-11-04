@@ -15,7 +15,7 @@ try{
    for(const [name,path] of [['Start','/'],['Wyjazdy','/pages/wyjazdy.html'],['Archiwum','/pages/wyjazdy.html#trip-archive'],['Łowiska','/pages/wyjazdy.html#fisheries-area'],['Połowy','/pages/polowy.html'],['Checklista','/pages/checklisty.html'],['Pogoda','/pages/pogoda.html']]){
     let t={user,lang,width,screen:name,path,result:'FAIL'};report.cases.push(t);
     try{
-     let start=Date.now(),r=await page.goto(base+path,{waitUntil:'domcontentloaded',timeout:45000});
+     let start=Date.now(),r=await page.goto(base+path.replace('#','?qa='+encodeURIComponent(name)+'#'),{waitUntil:'domcontentloaded',timeout:45000});
      await page.locator('html[data-ready=true]').waitFor({timeout:60000});
      let x=await page.evaluate(()=>({lang:document.documentElement.lang,overflow:document.documentElement.scrollWidth>innerWidth+1,user:window.DREAM_MODEL?.currentUser?.username||null,tripLinks:[...document.querySelectorAll('.trip-page-tabs a')].map(a=>a.getAttribute('href')),fisheryPresent:!!document.querySelector('#fisheries-area')}));
      t.status=r?.status()||null;t.ms=Date.now()-start;t.language=x.lang;t.userCorrect=x.user===user;t.overflow=x.overflow;t.jsErrors=errs.slice();
