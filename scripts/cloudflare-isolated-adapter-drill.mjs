@@ -76,6 +76,8 @@ try{
  const fg=await foreground;check(fg.fenced===true&&fg.committed===false,'DELAYED_FOREGROUND_WRITE_ESCAPED');
  let bg;
  for(let i=0;i<10;i++){const r=await fetch(baseUrl+'/audit/result?id=bg',{signal:AbortSignal.timeout(5000)});if(r.ok){bg=await r.json();break}await r.body?.cancel();await new Promise(r=>setTimeout(r,500))}
+ report.backgroundProof=bg?{fenced:bg.fenced===true,committed:bg.committed===true,error:/^[A-Z_]+$/.test(bg.error||'')?bg.error:undefined}:{error:'BACKGROUND_PROOF_UNAVAILABLE'};
+ console.log('::notice title=Background write proof::'+JSON.stringify(report.backgroundProof));
  check(bg?.fenced===true&&bg.committed===false,'DELAYED_BACKGROUND_WRITE_ESCAPED');
  await fence.verify();const fencedSnapshot=await captureSnapshot(database,lease.execute);
  const proof=fencedSnapshot.tables.find(t=>t.name==='audit_writes').rows;

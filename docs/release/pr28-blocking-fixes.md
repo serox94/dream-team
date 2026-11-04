@@ -62,3 +62,19 @@ are never adopted or removed. Artifact proof uses an additional owned Worker,
 **zero** extra D1 databases, and separate always-run ownership-checked cleanup.
 Real cloud results and exact run links must accompany review; local tests alone
 are not cloud evidence.
+
+### Observed run fce5f4b / 41913357348
+
+- Correct Builds API: PASS, 766 builds read, 0 active.
+- Delayed foreground D1 write: passed; background result lookup failed, so the
+  combined fence test reported FAIL and no release scenarios ran. In-memory
+  result handoff cannot cross Worker isolates. The follow-up uses Cache API for
+  test evidence only and still rejects unavailable evidence rather than PASS.
+- Always-run D1 and Worker cleanup: PASS.
+- GitHub Issues create/update/close/readback verification: PASS.
+- Artifact steps were skipped after the failed D1 step; no artifact cloud PASS
+  is claimed for this run.
+
+Secret names/types are compared without logging secret values. Production
+additionally fails with SECRET_CONFIGURATION_UNVERIFIABLE for secret_text
+bindings because Cloudflare does not expose immutable value identity here.

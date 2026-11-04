@@ -1,8 +1,7 @@
 // Disposable fixture only. Never used as DreamTeam application code.
-const results=new Map();
 export default {async fetch(req,env,ctx){
  const url=new URL(req.url),id=url.searchParams.get('id');
- if(url.pathname==='/audit/result')return results.has(id)?Response.json(results.get(id)):new Response('pending',{status:404});
+ if(url.pathname==='/audit/result')return await caches.default.match(req)||new Response('pending',{status:404});
  if(url.pathname==='/audit/delay'){
   if(!/^(fg|bg)$/.test(id||''))return new Response('bad id',{status:400});
   await env.DB.prepare("INSERT INTO audit_writes(id,status) VALUES(?,'admitted')").bind(id).run();
@@ -16,7 +15,11 @@ export default {async fetch(req,env,ctx){
    }
    return {fenced:false,error:'TEST_GATE_TIMEOUT'};
   };
-  if(id==='bg'){ctx.waitUntil(finish().then(value=>results.set(id,value)).catch(()=>results.set(id,{fenced:false,error:'BACKGROUND_FAILED'})));return Response.json({admitted:true},{status:202})}
+  if(id==='bg'){
+   const key=new Request(new URL('/audit/result?id=bg',req.url));
+   ctx.waitUntil(finish().catch(()=>({fenced:false,error:'BACKGROUND_FAILED'})).then(value=>caches.default.put(key,Response.json(value,{headers:{'cache-control':'public,max-age=60'}}))));
+   return Response.json({admitted:true},{status:202});
+  }
   return Response.json(await finish());
  }
  const rows=(await env.DB.prepare("SELECT key,value FROM app_settings WHERE key IN ('schema_version','maintenance_mode')").all()).results;

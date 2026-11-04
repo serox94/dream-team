@@ -2,7 +2,7 @@
 // The isolated entry point never accepts production; the production factory is opt-in and library-only.
 import {protectedEnvironment} from './production-authorization.mjs';
 import {verifyWorkerArtifact} from './worker-artifact-provenance.mjs';
-import {configuration,verifyConfiguration,digest} from './release-config-policy.mjs';
+import {configuration,verifyConfiguration,digest,requireComparableSecrets} from './release-config-policy.mjs';
 import {requireProductionWriteFence} from './d1-write-fence.mjs';
 import {requireIdleWorker} from './cloudflare-builds.mjs';
 import {cf} from './recovery-common.mjs';
@@ -267,6 +267,7 @@ export async function productionCloudflareAdapter(options={}){
    const vars=Object.fromEntries(items.filter(b=>b.type==='plain_text').map(b=>[b.name,b.text]));
    assert(vars.APP_ENV===(rehearsal?'preview':'production')&&vars.INDIVIDUAL_ACCOUNTS==='true','PRODUCTION_RUNTIME_CONFIGURATION');
    const role=rehearsal?(version.id===recovery.candidateVersion?'rehearsalTarget':'rehearsalFallback'):version.id===sourceVersion?'source':version.id===frozen.targetVersion?'target':'fallback';
+   requireComparableSecrets(version);
    const approved=frozen.configuration?.source;
    assert(approved,'APPROVED_CONFIGURATION_REQUIRED');
    verifyConfiguration(configuration(version),approved,frozen.configurationDifferences?.[role]||[]);

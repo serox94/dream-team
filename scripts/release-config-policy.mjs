@@ -32,3 +32,8 @@ export function verifyConfiguration(actual,expected,approvedDifferences=[]){
  check(canonical(actual)===canonical(wanted),'UNAPPROVED_CONFIGURATION_DRIFT');
  return {result:'PASS',digest:digest(actual)};
 }
+// Version metadata exposes secret names, not immutable secret-value identities.
+// Matching names must never be presented as proof that secret values match.
+export function requireComparableSecrets(version){
+ check(!version?.resources?.bindings?.some(b=>b.type==='secret_text'),'SECRET_CONFIGURATION_UNVERIFIABLE');
+}
