@@ -5,7 +5,8 @@ export function alertDetails({repository,workflow,url,failed}){
  if(typeof workflow!=='string'||!workflow.length||workflow.length>150||/[\r\n]/.test(workflow))throw Error('INVALID_ALERT_WORKFLOW');
  return {title:`[DreamTeam operations] ${workflow}`,body:`${failed?'Operation failed; investigation required.':'Operation recovered.'}\n\nWorkflow run: ${url}\n\nThis alert contains no application data. Check the run summary for diagnostic codes.`};
 }
-export async function syncAlert(context,{token,fetcher=fetch}={}){
+export const actionsBot=user=>user?.type==='Bot'&&['github-actions','github-actions[bot]'].includes(user.login);
+export async function syncAlert(context,{token,fetcher=fetch,onIssue}={}){
  const details=alertDetails(context),api='https://api.github.com/repos/'+context.repository;
  if(!token)throw Error('ALERT_TOKEN_MISSING');
  const request=async(path,method='GET',body)=>{
@@ -14,13 +15,13 @@ export async function syncAlert(context,{token,fetcher=fetch}={}){
  };
  let found;
  for(let page=1;page<=10;page++){
-  const issues=await request(`/issues?state=open&creator=github-actions%5Bbot%5D&per_page=100&page=${page}`);
+  const issues=await request(`/issues?state=open&per_page=100&page=${page}`);
   if(!Array.isArray(issues))throw Error('ALERT_RESPONSE_INVALID');
-  found=issues.find(i=>!i.pull_request&&i.title===details.title);if(found||issues.length<100)break;
+  found=issues.find(i=>!i.pull_request&&actionsBot(i.user)&&i.title===details.title);if(found||issues.length<100)break;
   if(page===10)throw Error('ALERT_LOOKUP_LIMIT');
  }
- if(found){await request('/issues/'+found.number,'PATCH',{body:details.body,...(!context.failed?{state:'closed',state_reason:'completed'}:{})});return context.failed?'UPDATED':'RESOLVED'}
- if(context.failed){await request('/issues','POST',details);return 'CREATED'}
+ if(found){onIssue?.(found.number);await request('/issues/'+found.number,'PATCH',{body:details.body,...(!context.failed?{state:'closed',state_reason:'completed'}:{})});return context.failed?'UPDATED':'RESOLVED'}
+ if(context.failed){const created=await request('/issues','POST',details);if(!Number.isSafeInteger(created?.number))throw Error('ALERT_RESPONSE_INVALID');onIssue?.(created.number);return 'CREATED'}
  return 'NO_OPEN_ALERT';
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
