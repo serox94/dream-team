@@ -1,0 +1,69 @@
+name: Prepare verified PR 28 for review
+on:
+  push:
+    branches: [ops/universal-release-monitor-20261104]
+    paths: ['.github/workflows/prepare-pr28-review.yml']
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+jobs:
+  update-existing-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Update only PR 28 after immutable evidence and validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'NODE'
+          const check=(v,c)=>{if(!v)throw Error(c)};
+          const repo='serox94/dream-team',branch='ops/universal-release-monitor-20261104',sha=process.env.GITHUB_SHA;
+          const tested='888218c66acac62fe5d16e68d2661e59cf548757';
+          check(process.env.GITHUB_REPOSITORY===repo&&process.env.GITHUB_REF==='refs/heads/'+branch,'CONTEXT');
+          const api=async(path,method='GET',body,graphql=false)=>{
+            const url=graphql?'https://api.github.com/graphql':'https://api.github.com/repos/'+repo+path;
+            const r=await fetch(url,{method,headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json','content-type':'application/json'},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(15000)});
+            check(r.ok,'PR_METADATA_ACCESS');return r.json();
+          };
+          try{
+            let pr=await api('/pulls/28');
+            check(pr.state==='open'&&pr.head.ref===branch&&pr.head.sha===sha&&pr.head.repo.full_name===repo&&pr.base.ref==='main','PR_HEAD_CHANGED');
+            const comparison=await api('/compare/'+tested+'...'+sha);
+            const allowed=new Set(['docs/release/UNIVERSAL_RELEASE_STATUS.md','tests/cloudflare-request-policy.test.mjs','.github/workflows/prepare-pr28-review.yml','.github/workflows/cancel-superseded-audit.yml']);
+            check(Array.isArray(comparison.files)&&comparison.files.length<300&&comparison.files.every(f=>allowed.has(f.filename)),'CLOUD_TESTED_CODE_CHANGED');
+            const run=await api('/actions/runs/41888354094'),jobs=(await api('/actions/runs/41888354094/jobs?per_page=100')).jobs;
+            check(run.head_sha===tested&&run.status==='completed'&&run.conclusion==='success'&&['drill','alert-verification'].every(name=>jobs.some(j=>j.name===name&&j.conclusion==='success')),'CLOUD_EVIDENCE_MISMATCH');
+            let valid=false;
+            for(let i=0;i<36;i++){
+              const runs=(await api('/actions/runs?head_sha='+sha+'&per_page=100')).workflow_runs;
+              valid=runs.some(r=>r.path==='.github/workflows/validate.yml'&&r.head_sha===sha&&r.status==='completed'&&r.conclusion==='success');
+              if(valid)break;await new Promise(r=>setTimeout(r,10000));
+            }
+            check(valid,'CURRENT_VALIDATION_REQUIRED');
+            pr=await api('/pulls/28');check(pr.head.sha===sha,'PR_HEAD_CHANGED');
+            const body=[
+              'Completes the existing universal release controller with a concrete, explicitly authorized Cloudflare production adapter for future releases. It verifies immutable versions/bindings, source schema and migration registry, private checkpoints, isolated candidate/fallback behavior and schema-compatible recovery. The production capability is disabled by default and has no deployment workflow.',
+              '',
+              'The isolated test uses one owned temporary D1 database for four sequential scenarios, preserving historical databases. API calls are paced below the shared budget; only verified reads may retry HTTP 429. Retained failure evidence confirmed HTTP 429 / Cloudflare 7429 for POST_D1. Owned cleanup runs on failure and interruption.',
+              '',
+              'Validation:',
+              '- Cloudflare release, injected activation/migration/verification failures and recovery, plus owned cleanup: PASS — https://github.com/serox94/dream-team/actions/runs/41888354094',
+              '- Real GitHub Issue create → update → close → readback: PASS, Issue #38; orphaned test alerts cleaned.',
+              '- Local tests: 370/370 PASS; Worker dry-run build PASS. Current Validate DreamTeam was checked before this update.',
+              '- Retained provider-code evidence: https://github.com/serox94/dream-team/actions/runs/41885865689',
+              '',
+              'No production deployment, production migration, historical database deletion or production-adapter activation was performed. Production-adapter tests use injected transports; the live drill targets disposable D1/Workers and does not claim a new live R2 trial. Full scope and evidence: docs/release/UNIVERSAL_RELEASE_STATUS.md.'
+            ].join('\n');
+            await api('/pulls/28','PATCH',{title:'Universal release/rollback adapter, isolated D1 recovery and durable alerts',body});
+            if(pr.draft){
+              const ready=await api('', 'POST',{query:'mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { isDraft } } }',variables:{id:pr.node_id}},true);
+              check(!ready.errors?.length&&ready.data?.markPullRequestReadyForReview?.pullRequest?.isDraft===false,'READY_FOR_REVIEW_FAILED');
+            }
+            const final=await api('/pulls/28');check(final.head.sha===sha&&final.draft===false,'PR_REVIEW_STATE_MISMATCH');
+            console.log('::notice title=PR 28 review::Updated existing PR description; ready for review; no merge or deployment');
+          }catch(e){console.log('::error title=PR 28 review::'+(/^[A-Z_]+$/.test(e.message)?e.message:'PR_REVIEW_UPDATE_FAILED'));process.exitCode=1}
+          NODE
