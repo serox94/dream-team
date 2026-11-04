@@ -61,6 +61,7 @@ jobs:
             await api('/pulls/28','PATCH',{title:'Universal release/rollback adapter, isolated D1 recovery and durable alerts',body});
             if(pr.draft){
               const ready=await api('', 'POST',{query:'mutation($id: ID!) { markPullRequestReadyForReview(input: {pullRequestId: $id}) { pullRequest { isDraft } } }',variables:{id:pr.node_id}},true);
+              if(ready.errors?.length)console.log('::notice title=PR ready capability::'+JSON.stringify({types:ready.errors.map(e=>/^[A-Z_]+$/.test(e.type||e.extensions?.code||'')?(e.type||e.extensions.code):'UNKNOWN'),reasons:ready.errors.map(e=>e.message==='Resource not accessible by integration'?'INTEGRATION_PERMISSION_DENIED':/Could not resolve to a node/.test(e.message||'')?'NODE_NOT_ACCESSIBLE':/not.*draft|already.*ready/i.test(e.message||'')?'NOT_DRAFT':/scope|permission|access/i.test(e.message||'')?'ACCESS_REJECTED':'GRAPHQL_ERROR')}));
               check(!ready.errors?.length&&ready.data?.markPullRequestReadyForReview?.pullRequest?.isDraft===false,'READY_FOR_REVIEW_FAILED');
             }
             const final=await api('/pulls/28');check(final.head.sha===sha&&final.draft===false,'PR_REVIEW_STATE_MISMATCH');
