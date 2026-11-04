@@ -4,7 +4,7 @@ on:
     branches: [ops/universal-release-monitor-20261104]
     paths: ['.github/workflows/prepare-pr28-review.yml']
 permissions:
-  contents: read
+  contents: write
   actions: read
   pull-requests: write
 jobs:
