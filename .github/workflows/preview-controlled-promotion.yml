@@ -1,8 +1,7 @@
 name: Controlled actual preview migration
 on:
-  push:
-    branches: [ops/preview-infra-recovery-20261103]
-    paths: [.github/workflows/preview-controlled-promotion.yml]
+  workflow_dispatch:
+# One-shot promotion completed; guards reject attempts against the migrated database.
 permissions:
   contents: read
 concurrency:
