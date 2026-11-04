@@ -31,3 +31,5 @@ jobs:
           name: preview-language-status
           path: preview-language-status/summary.json
           if-no-files-found: ignore
+
+# Target the account setting rather than the login-only control.
