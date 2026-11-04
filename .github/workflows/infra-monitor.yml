@@ -6,10 +6,19 @@ on:
     branches: [ops/infra-monitor-20261103]
     paths: [.github/workflows/infra-monitor.yml]
   workflow_dispatch:
+  workflow_run:
+    workflows:
+      - Approved schema32 code-only release
+      - Approved integrated schema32 release
+      - Approved schema31 production operation
+      - Schema31 fallback to full (new approval required)
+      - Deploy and verify D1 backup
+    types: [completed]
 permissions:
   contents: read
 jobs:
   check:
+    if: github.event_name != 'workflow_run'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -24,3 +33,17 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node scripts/infra-monitor.mjs
+  failed-operation:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Surface failed release or backup operation
+        env:
+          FAILED_NAME: ${{ github.event.workflow_run.name }}
+          FAILED_URL: ${{ github.event.workflow_run.html_url }}
+          FAILED_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          echo "::error::A DreamTeam release, migration, recovery or backup workflow failed. See run ${FAILED_ID}."
+          echo "Failed workflow: ${FAILED_NAME}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Run: ${FAILED_URL}" >> "$GITHUB_STEP_SUMMARY"
+          exit 1
