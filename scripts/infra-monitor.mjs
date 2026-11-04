@@ -12,6 +12,14 @@ try{
  report.backup='FRESH';report.backupAgeHours=Math.round(ageHours*10)/10;
  const r=await fetch('https://dream-team.sewerynski00.workers.dev/login',{redirect:'manual',signal:AbortSignal.timeout(15000)});
  report.siteStatus=r.status;if(r.status!==200)throw Error('LOGIN_PAGE_UNAVAILABLE');report.site='UP';
+ const end=new Date(),start=new Date(end.getTime()-24*60*60*1000);
+ const gql='query ($accountTag: string!, $start: Time!, $end: Time!) { viewer { accounts(filter: {accountTag: $accountTag}) { workersInvocationsAdaptive(limit: 1, filter: {scriptName: "dream-team", datetime_geq: $start, datetime_leq: $end}) { sum { requests errors } } } } }';
+ const gr=await fetch('https://api.cloudflare.com/client/v4/graphql',{method:'POST',headers:{authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN,'content-type':'application/json'},body:JSON.stringify({query:gql,variables:{accountTag:process.env.CLOUDFLARE_ACCOUNT_ID,start:start.toISOString(),end:end.toISOString()}}),signal:AbortSignal.timeout(15000)});
+ const g=await gr.json();if(!gr.ok||g.errors?.length)throw Error('WORKER_METRICS_UNAVAILABLE');
+ const groups=g.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive;if(!Array.isArray(groups))throw Error('WORKER_METRICS_UNAVAILABLE');
+ const totals=groups.reduce((sum,row)=>({requests:sum.requests+(row.sum?.requests||0),errors:sum.errors+(row.sum?.errors||0)}),{requests:0,errors:0});
+ report.workerRequests24h=totals.requests;report.workerErrors24h=totals.errors;
+ if(totals.errors>=5&&totals.errors/Math.max(1,totals.requests)>=0.05)throw Error('WORKER_ERROR_RATE_HIGH');
  const d=(await cf('/workers/scripts/dream-team/deployments')).deployments[0];if(d.versions?.length!==1||d.versions[0].percentage!==100)throw Error('WORKER_TRAFFIC_SPLIT');report.activeWorker=d.versions[0].version_id;
  report.status='PASS';
 }catch(e){report.error=/^[A-Z0-9_]+$/.test(e.message)?e.message:'MONITOR_ERROR';process.exitCode=1}
