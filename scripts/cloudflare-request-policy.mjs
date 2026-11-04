@@ -1,9 +1,15 @@
 // Cloudflare documents 1200 API requests / 5 minutes cumulatively per user/token.
 // Keep half that budget for other clients. Retry only reads, never ambiguous writes.
+const readBatch=Symbol('verified-read-batch');
+export function readBatchBody(statements){
+ if(!Array.isArray(statements)||!statements.length||!statements.every(sql=>isReadOnlyCloudflareRequest('/d1/database/a/query','POST',{sql})))throw Error('INVALID_READ_BATCH');
+ const queries=Object.freeze([...statements]);return {sql:queries.join(';\n'),[readBatch]:queries};
+}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 export function isReadOnlyCloudflareRequest(path,method,body){
  if(['GET','HEAD'].includes(method))return true;
  if(method!=='POST'||!/^\/d1\/database\/[a-f0-9-]+\/query$/i.test(path)||typeof body?.sql!=='string')return false;
+ if(body[readBatch])return body.sql===body[readBatch].join(';\n')&&body[readBatch].every(sql=>isReadOnlyCloudflareRequest(path,method,{sql}));
  const sql=body.sql.trim().replace(/;$/,'').trim();
  if(sql.includes(';'))return false;
  return /^SELECT\b/i.test(sql)||/^PRAGMA\s+(foreign_key_check|quick_check|table_xinfo|foreign_key_list)(?:\s*\([^;]*\))?$/i.test(sql);

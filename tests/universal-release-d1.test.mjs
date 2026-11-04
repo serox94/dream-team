@@ -24,7 +24,7 @@ async function fixture(t,{badBindings=false,codeOnly=false,shared=false}={}){
  const request=async(path,method='GET',body)=>{
   if(path.startsWith('/d1/database?'))return [];
   if(path==='/d1/database')return {uuid:dbId,name:'dream-team-audit-123-db'};
-  if(path.endsWith('/query'))return [await execute(path.split('/')[3],body.sql,body.params)];
+  if(path.endsWith('/query')){const parts=body.sql.split(';').map(s=>s.trim()).filter(Boolean);if(parts.every(s=>/^SELECT|^PRAGMA/.test(s)))return Promise.all(parts.map(s=>execute(path.split('/')[3],s,body.params)));return [await execute(path.split('/')[3],body.sql,body.params)];}
   if(path.startsWith('/d1/database/')){const uuid=path.split('/').pop();return {uuid,name:`dream-team-audit-123-${uuid===dbId?'db':'restored'}`}}
   const [,name,op,id]=path.match(/^\/workers\/scripts\/([^/]+)\/(deployments|versions)(?:\/([^/]+))?$/)||[];
   assert.ok(name,'unexpected API path');

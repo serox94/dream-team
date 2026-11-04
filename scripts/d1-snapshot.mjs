@@ -59,26 +59,46 @@ export function restoreStatements(snapshot){
  for(const object of snapshot.schema.filter(o=>o.type!=='table').sort((a,b)=>['index','view','trigger'].indexOf(a.type)-['index','view','trigger'].indexOf(b.type)))statements.push({stage:object.type,table:object.tbl_name,sql:object.sql});
  return statements;
 }
+async function readQueries(db,execute,queries){
+ if(!execute.readBatch){const rows=[];for(const sql of queries)rows.push((await execute(db.uuid,sql)).results);return rows}
+ const rows=[];
+ for(let offset=0;offset<queries.length;offset+=16){
+  const chunk=queries.slice(offset,offset+16),results=await execute.readBatch(db.uuid,chunk);
+  check(Array.isArray(results)&&results.length===chunk.length&&results.every(r=>r.success!==false&&Array.isArray(r.results)),'READ_BATCH_FAILED');
+  rows.push(...results.map(r=>r.results));
+ }
+ return rows;
+}
 export async function restoreSnapshot(db,snapshot,execute=query,plan=restoreStatements(snapshot)){
  assertSandbox(db.name,db.uuid);
  const existing=(await execute(db.uuid,"SELECT name FROM sqlite_master WHERE type='table' AND name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*'")).results;
  check(existing.length===0,'RESTORE_TARGET_NOT_EMPTY');
  // Each REST request is an implicit transaction. No foreign-key disabling, SQL splitting,
  // automatic retries, source mutations, or multi-statement trigger parsing by the importer.
- for(const item of plan)try{await execute(db.uuid,item.sql,item.params||[]);}catch(error){const safe=Error('RESTORE_STATEMENT_FAILED');safe.stage=item.stage;safe.table=item.table;safe.status=error.status;safe.code=error.code;throw safe;}
+ const apply=async items=>{try{
+  if(execute.batch&&items.length>1)await execute.batch(db.uuid,items.map(item=>item.sql));
+  else for(const item of items)await execute(db.uuid,item.sql,item.params||[]);
+ }catch(error){const safe=Error('RESTORE_STATEMENT_FAILED');safe.stage=items.length===1?items[0].stage:'BATCH';safe.table=items.length===1?items[0].table:undefined;safe.status=error.status;safe.code=error.code;throw safe;}};
+ let pending=[],bytes=0;
+ for(const item of plan){
+  if(!execute.batch||item.params?.length){if(pending.length){await apply(pending);pending=[];bytes=0}await apply([item]);continue}
+  const size=Buffer.byteLength(item.sql)+2;
+  if(pending.length&&(pending.length>=20||bytes+size>60000)){await apply(pending);pending=[];bytes=0}
+  pending.push(item);bytes+=size;
+ }
+ if(pending.length)await apply(pending);
  await verifySnapshot(db,snapshot,execute);
  return {tables:snapshot.tables.length,rows:snapshot.tables.reduce((n,t)=>n+t.rows.length,0),triggers:snapshot.schema.filter(s=>s.type==='trigger').length,foreignKeys:true,sequences:true};
 }
 export async function verifySnapshot(db,snapshot,execute=query){
- const read=async(stage,sql,table)=>{try{return await execute(db.uuid,sql);}catch(error){error.stage=stage;error.table=table;throw error;}};
- const schema=(await read('verify-schema',"SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*' AND sql IS NOT NULL ORDER BY type,name")).results;
- check(rowsDigest(schema)===rowsDigest(snapshot.schema),'RESTORED_SCHEMA_MISMATCH');
- for(const table of snapshot.tables){const rows=(await read('verify-rows','SELECT * FROM '+identifier(table.name),table.name)).results;check(rowsDigest(rows)===rowsDigest(table.rows),'RESTORED_ROWS_MISMATCH');}
- const sequences=(await read('verify-sequences',"SELECT name,seq FROM sqlite_sequence WHERE name NOT GLOB '_cf_*' ORDER BY name")).results;
- check(rowsDigest(sequences)===rowsDigest(snapshot.sequences),'RESTORED_SEQUENCE_MISMATCH');
- check((await read('verify-FK','PRAGMA foreign_key_check')).results.length===0,'RESTORED_FOREIGN_KEYS');
- // D1 supports quick_check, not SQLite's full integrity_check (which is used locally).
- check((await read('verify-quick-check','PRAGMA quick_check')).results[0].quick_check==='ok','RESTORED_INTEGRITY');
+ const queries=["SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*' AND sql IS NOT NULL ORDER BY type,name",
+  ...snapshot.tables.map(t=>'SELECT * FROM '+identifier(t.name)),"SELECT name,seq FROM sqlite_sequence WHERE name NOT GLOB '_cf_*' ORDER BY name",'PRAGMA foreign_key_check','PRAGMA quick_check'];
+ const results=await readQueries(db,execute,queries);let index=0;
+ check(rowsDigest(results[index++])===rowsDigest(snapshot.schema),'RESTORED_SCHEMA_MISMATCH');
+ for(const table of snapshot.tables)check(rowsDigest(results[index++])===rowsDigest(table.rows),'RESTORED_ROWS_MISMATCH');
+ check(rowsDigest(results[index++])===rowsDigest(snapshot.sequences),'RESTORED_SEQUENCE_MISMATCH');
+ check(results[index++].length===0,'RESTORED_FOREIGN_KEYS');
+ check(results[index][0].quick_check==='ok','RESTORED_INTEGRITY');
 }
 
 // Caller must hold a verified write barrier while capturing and verifying this view.
@@ -86,13 +106,12 @@ export async function captureSnapshot(db,execute=query,{productionRead=false}={}
  if(productionRead)check(db.name==='dream-team-db'&&db.uuid===productionId,'INVALID_PRODUCTION_READ_TARGET');else assertSandbox(db.name,db.uuid);
  const read=async sql=>(await execute(db.uuid,sql)).results;
  const schema=await read("SELECT type,name,tbl_name,sql FROM sqlite_master WHERE name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*' AND sql IS NOT NULL ORDER BY type,name");
- const remaining=new Map();
- for(const row of schema.filter(r=>r.type==='table'))remaining.set(row.name,{
-  name:row.name,sql:row.sql,
-  columns:(await read('PRAGMA table_xinfo('+identifier(row.name)+')')).filter(c=>c.hidden===0).map(c=>c.name),
-  parents:[...new Set((await read('PRAGMA foreign_key_list('+identifier(row.name)+')')).map(f=>f.table))],
-  rows:await read('SELECT * FROM '+identifier(row.name))
- });
+ const remaining=new Map(),definitions=schema.filter(r=>r.type==='table');
+ const data=await readQueries(db,execute,definitions.flatMap(row=>['PRAGMA table_xinfo('+identifier(row.name)+')','PRAGMA foreign_key_list('+identifier(row.name)+')','SELECT * FROM '+identifier(row.name)]));
+ for(let index=0;index<definitions.length;index++){
+  const row=definitions[index],[columns,parents,rows]=data.slice(index*3,index*3+3);
+  remaining.set(row.name,{name:row.name,sql:row.sql,columns:columns.filter(c=>c.hidden===0).map(c=>c.name),parents:[...new Set(parents.map(f=>f.table))],rows});
+ }
  const tables=[];
  while(remaining.size){const ready=[...remaining.values()].filter(t=>t.parents.every(p=>p===t.name||tables.some(o=>o.name===p)));check(ready.length>0,'UNSUPPORTED_FK_CYCLE');for(const t of ready){tables.push(t);remaining.delete(t.name);}}
  const hasSequences=(await read("SELECT name FROM sqlite_master WHERE name='sqlite_sequence'")).length>0;

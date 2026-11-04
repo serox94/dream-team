@@ -1,4 +1,5 @@
 // Own exactly one newly-created audit database. Never adopt or delete an existing DB.
+import {readBatchBody} from './cloudflare-request-policy.mjs';
 import {cf} from './recovery-common.mjs';
 import {identifier,restoreSnapshot} from './d1-snapshot.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
@@ -34,20 +35,34 @@ export async function createIsolatedReleaseEnvironment({runId,request=cf,capacit
   check(id===database.uuid&&!disposed,'NOT_OWNED_SANDBOX');
   return (await request('/d1/database/'+id+'/query','POST',{sql,params}))[0];
  };
+ execute.readBatch=async(id,statements)=>{
+  check(id===database.uuid&&!disposed,'NOT_OWNED_SANDBOX');
+  return request('/d1/database/'+id+'/query','POST',readBatchBody(statements));
+ };
+ execute.batch=async(id,statements)=>{
+  check(id===database.uuid&&!disposed&&statements.length>0,'NOT_OWNED_SANDBOX');
+  for(let offset=0;offset<statements.length;){
+   let chunk=[],bytes=0;
+   while(offset<statements.length&&chunk.length<20){const sql=statements[offset].trim().replace(/;$/,'');const size=Buffer.byteLength(sql)+2;if(chunk.length&&bytes+size>75000)break;check(size<=75000,'RESTORE_SQL_BATCH_LIMIT');chunk.push(sql);bytes+=size;offset++}
+   const result=await request('/d1/database/'+id+'/query','POST',{sql:chunk.join(';\n')+';'});
+   check(Array.isArray(result)&&result.every(r=>r.success!==false),'WRITE_BATCH_FAILED');
+  }
+ };
  return {database,databasesBefore:existing.length,execute,assertOwned,
   async restore(snapshot){
    await assertOwned();
    // This reset is confined to the DB successfully created above in this process.
    const schema=(await execute(database.uuid,"SELECT type,name FROM sqlite_master WHERE name NOT GLOB '_cf_*' AND name NOT GLOB 'sqlite_*' AND sql IS NOT NULL")).results;
-   for(const type of ['trigger','view','index'])for(const row of schema.filter(r=>r.type===type))await execute(database.uuid,`DROP ${type.toUpperCase()} ${identifier(row.name)}`);
+   const drops=['trigger','view','index'].flatMap(type=>schema.filter(r=>r.type===type).map(row=>`DROP ${type.toUpperCase()} ${identifier(row.name)}`));if(drops.length)await execute.batch(database.uuid,drops);
    const remaining=new Set(schema.filter(r=>r.type==='table').map(r=>r.name));
    // Use the current FK graph, including tables added by a failed migration.
    const parents=new Map();
-   for(const table of remaining)parents.set(table,new Set((await execute(database.uuid,'PRAGMA foreign_key_list('+identifier(table)+')')).results.map(r=>r.table).filter(p=>p!==table)));
+   const names=[...remaining],keys=[];for(let offset=0;offset<names.length;offset+=16)keys.push(...await execute.readBatch(database.uuid,names.slice(offset,offset+16).map(table=>'PRAGMA foreign_key_list('+identifier(table)+')')));
+   for(let i=0;i<names.length;i++)parents.set(names[i],new Set(keys[i].results.map(r=>r.table).filter(p=>p!==names[i])));
    while(remaining.size){
     const children=[...remaining].filter(name=>![...remaining].some(other=>other!==name&&parents.get(other).has(name)));
     check(children.length>0,'SANDBOX_FK_CYCLE');
-    for(const table of children){await execute(database.uuid,'DROP TABLE '+identifier(table));remaining.delete(table)}
+    await execute.batch(database.uuid,children.map(table=>'DROP TABLE '+identifier(table)));for(const table of children)remaining.delete(table);
    }
    await restoreSnapshot(database,snapshot,execute);
   },

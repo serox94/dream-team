@@ -36,7 +36,7 @@ test('workerd D1: restore schema31, apply actual migration32, preserve business 
   const lease=await createIsolatedReleaseEnvironment({runId:'123',request:async(path,method='GET',body)=>{
    if(path.includes('?'))return Array.from({length:9},(_,i)=>({name:'historical-'+i}));
    if(path==='/d1/database')return {name:'dream-team-audit-123-db',uuid:ownedId};
-   if(path.endsWith('/query'))return [await execute(ownedId,body.sql,body.params)];
+   if(path.endsWith('/query')){const statements=unstable_splitSqlQuery(body.sql);return source.batch(statements.map(sql=>source.prepare(sql).bind(...(body.params||[]))))}
    if(method==='DELETE'){deleted=true;return {}};
    if(deleted)throw Object.assign(Error('CLOUDFLARE_ACCESS'),{status:404});
    return {name:'dream-team-audit-123-db',uuid:ownedId};
