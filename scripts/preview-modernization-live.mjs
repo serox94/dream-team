@@ -1,0 +1,34 @@
+import {chromium} from 'playwright';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
+const base='https://dream-team-preview.sewerynski00.workers.dev', run=process.env.GITHUB_RUN_ID, result={environment:'live-preview',run,tests:[],screenshots:[],errors:[]}; await mkdir('/tmp/dream-live',{recursive:true});
+const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+const record=async(name,fn)=>{try{let detail=await fn();result.tests.push({name,status:'PASS',...(detail?{detail}: {})});}catch(e){result.tests.push({name,status:'FAIL',error:String(e.message).slice(0,240)});}};
+const contexts=[];
+async function login(user,width,language){let c=await browser.newContext({viewport:{width,height:900},locale:language==='pl'?'pl-PL':'en-GB',isMobile:width===390,hasTouch:width===390});contexts.push(c);await c.addInitScript(lang=>localStorage.setItem('dreamteam.language',lang),language);let r=await c.request.post(base+'/api/login',{form:{username:user,password:process.env.RYBY_LOGIN_PASSWORD},maxRedirects:0});if(![200,302,303].includes(r.status())||!(await c.cookies()).length)throw new Error('login HTTP '+r.status());return c}
+async function screenshot(page,name){let file='/tmp/dream-live/'+name+'.b64';await writeFile(file,(await page.screenshot({fullPage:false})).toString('base64'));let key='private-releases/modernization/'+run+'/screenshots/'+name+'.b64';execFileSync('npx',['wrangler','r2','object','put','dream-team-preview-recovery-41718988537/'+key,'--remote','--file',file],{stdio:'ignore'});result.screenshots.push(name)}
+const state={};
+try{
+for(const user of ['Patryk','Maciek'])await record('login '+user,async()=>{let c=await login(user,390,user==='Patryk'?'pl':'en');state[user]=c;let r=await c.request.get(base+'/api/bootstrap');if(!r.ok())throw Error('bootstrap HTTP '+r.status());});
+if(!state.Patryk)throw Error('Patryk login unavailable');
+for(const width of [390,1440])for(const language of ['pl','en']){
+let c=width===390?state[language==='pl'?'Patryk':'Maciek']:await login(language==='pl'?'Patryk':'Maciek',width,language);if(!c){result.tests.push({name:'screens '+width+' '+language,status:'BLOCKED'});continue}
+let p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message.slice(0,100)));
+for(const [name,path] of [['home','/'],['catches','/pages/polowy.html'],['checklist','/pages/checklisty.html'],['weather','/pages/pogoda.html'],['maps','/pages/mapa.html'],['sonar','/pages/sonar.html'],['encyclopedia','/pages/encyklopedia.html'],['trips','/pages/wyjazdy.html'],['travel','/pages/dojazd.html'],['advice','/pages/porady.html']]){
+await record(width+' '+language+' '+name,async()=>{let response=await p.goto(base+path,{waitUntil:'domcontentloaded',timeout:30000});if(!response||!response.ok())throw Error('HTTP '+response?.status());await p.waitForFunction(()=>document.documentElement.dataset.ready==='true',{timeout:25000});let overflow=await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);if(overflow)throw Error('horizontal overflow');if(name==='home'){let a=p.locator('.essentials-open');if(!await a.count())throw Error('essentials missing');await a.click();await p.waitForFunction(()=>document.documentElement.dataset.ready==='true',{timeout:20000});if(!p.url().includes('teren'))throw Error('essentials destination');await p.goto(base+'/');await p.waitForFunction(()=>document.documentElement.dataset.ready==='true',{timeout:20000})}
+if(name==='catches'&&(!await p.locator('#catch-form').count()||await p.locator('#catch-form #spot,#catch-form #note').count()))throw Error('catch form');
+if(name==='checklist'&&(!await p.locator('#check-owner,#check-search').count()||!await p.locator('#check-toolbar').count()))throw Error('checklist controls');
+if(name==='maps'&&(await p.locator('#spot-form input:not([type=hidden]),#spot-form textarea').count())!==5)throw Error('spot fields != 5');
+if(['sonar','encyclopedia'].includes(name)){let q=p.locator('#knowledge-search');if(!await q.count())throw Error('search missing');await q.fill(name==='sonar'?'sensitivity':'temperature');await p.waitForTimeout(300);if(!await p.locator('.knowledge-entry > details[open]').count())throw Error('no search results');}
+if(['trips','travel','advice','maps'].includes(name)&&await p.locator('.shared-lake-evidence').count())throw Error('raw research report visible');
+if(width===390&&language==='pl'&&['home','catches','checklist','weather'].includes(name))await screenshot(p,width+'-'+name);
+if(width===1440&&language==='pl'&&['home','weather'].includes(name))await screenshot(p,width+'-'+name);
+return {status:response.status()}});
+}
+await record(width+' '+language+' JavaScript',async()=>{if(errors.length)throw Error(errors.slice(0,3).join(' | '));});
+await p.close();
+}
+await record('2028 trip and lake without research',async()=>{const c=state.Patryk;let bootstrap=await (await c.request.get(base+'/api/bootstrap')).json();let ids=bootstrap.anglers.filter(x=>x.active).slice(0,2).map(x=>x.id);if(!ids.length)throw Error('no active anglers');let headers={origin:base};let a=await c.request.post(base+'/api/lakes',{headers,data:{name:'QA Modernization '+run,country:'Polska',sources:[]}});if(!a.ok())throw Error('create lake HTTP '+a.status());let lake=(await a.json()).id;let t=await c.request.post(base+'/api/trips',{headers,data:{lakeId:lake,year:2028,name:'QA Modernization 2028 '+run,participantIds:ids,status:'planning'}});if(!t.ok())throw Error('create trip HTTP '+t.status());state.trip=(await t.json()).id;let u=await c.request.put(base+'/api/lakes/'+lake,{headers,data:{name:'QA Modernization '+run,country:'Polska',facts:{}}});if(!u.ok())throw Error('update lake HTTP '+u.status());let b=await(await c.request.get(base+'/api/bootstrap')).json();if(!b.trips.some(x=>x.id===state.trip)||!bootstrap.trips.every(x=>b.trips.some(y=>y.id===x.id)))throw Error('trip/archive list mismatch');return {testTrip:state.trip,existingTripsBefore:bootstrap.trips.length,after:b.trips.length}});
+await record('offline cached navigation',async()=>{const c=state.Patryk,p=await c.newPage();await p.goto(base+'/',{waitUntil:'networkidle'});await p.waitForTimeout(2000);await c.setOffline(true);try{let r=await p.goto(base+'/',{waitUntil:'domcontentloaded',timeout:15000});if(!r?.ok())throw Error('offline response '+r?.status())}finally{await c.setOffline(false);await p.close()}});
+} catch(e){result.errors.push(String(e.message).slice(0,250))}finally{for(const c of contexts){try{await c.request.post(base+'/api/logout',{headers:{origin:base}})}catch{}await c.close()}await browser.close()}
+result.status=result.errors.length||result.tests.some(t=>t.status!=='PASS')?'FAIL':'PASS';console.log(JSON.stringify(result,null,2));await writeFile('/tmp/dream-live-result.json',JSON.stringify(result,null,2));process.exitCode=result.status==='PASS'?0:1;
