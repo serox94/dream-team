@@ -1,0 +1,26 @@
+name: Round two checklist navigation visibility
+on:
+  push:
+    branches: [feat/preview-carp-trip-modernization-20261105]
+    paths: [.github/workflows/preview-round-two-nav-visibility-once.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false playwright@1.63.0
+      - run: npx playwright install chromium
+      - name: Verify visible checklist buttons
+        run: node scripts/preview-round-two-nav-visibility-once.mjs
+        env:
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
