@@ -1,0 +1,38 @@
+name: Round two Preview live acceptance
+on:
+  push:
+    branches: [feat/preview-carp-trip-modernization-20261105]
+    paths: [.github/workflows/preview-round-two-live-once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-preview-rehearsal
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false playwright@1.63.0
+      - run: npx playwright install --with-deps chromium
+      - run: node --check scripts/preview-round-two-live-once.mjs
+      - name: Verify live Preview
+        run: node scripts/preview-round-two-live-once.mjs
+        env:
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: round-two-live-safe-results
+          path: /tmp/round2-live-results.json
+          if-no-files-found: ignore
