@@ -108,6 +108,7 @@
             data = out.spots.map(oldSpot);
           } else if (this.table === 'checklist_items') {
             const out = await api(`/api/checklist?tripId=${encodeURIComponent(trip.id)}`);
+            if(!Array.isArray(out.items))throw new Error(window.DreamLanguage?.get()==='en'?'Invalid checklist response.':'Nieprawidłowa odpowiedź checklisty.');
             data = out.items.map(oldCheck);
           }
 

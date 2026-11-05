@@ -416,7 +416,7 @@ test('owner filters use every trip participant, exclude shared items for a perso
   }finally{p.close()}
   const q=await page(s,'/pages/checklisty.html');try{
    fill(q,'check-search','ciezarek');assert.ok(q.d.querySelector('.checklist-group').open);assert.equal(q.d.querySelector('.check-item-title').textContent,'Paddy ciężarek');q.d.querySelector('.check-item-left input').click();await waitFor(()=>s.DB.sqlite.prepare("SELECT packed FROM checklist_items WHERE label='Paddy ciężarek'").get().packed===1);
-   fill(q,'check-search','');q.d.getElementById('check-show-hidden').click();assert.equal(q.d.getElementById('check-show-hidden').getAttribute('aria-pressed'),'true');assert.ok(q.d.querySelector('[data-category="sprzęt"]'));
+   fill(q,'check-search','');assert.equal(q.d.getElementById('check-show-hidden'),null);assert.ok(q.d.querySelector('[data-category="sprzęt"]'));
    assert.deepEqual(q.errors,[]);
   }finally{q.close()}
  }finally{await s.close()}
@@ -431,5 +431,12 @@ test('a removed catch note field cannot erase historical notes during correction
 test('an explicit essentials trip link wins over device selection and persists for subsequent navigation',async()=>{
  const s=await testServe({seed:true});const p=await page(s,'/pages/teren.html?tripId=next-trip','another-trip');try{
   assert.equal(p.w.DREAM_TRIP.id,'next-trip');assert.equal(p.w.Dream.readTrip(),'next-trip');assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close()}
+});
+
+test('round two checklist read failure stays unavailable, not zero, and a retry restores the same trip data',async()=>{
+ const s=await testServe({seed:true}),p=await page(s,'/pages/checklisty.html','next-trip','/api/checklist?');try{
+  assert.equal(p.d.getElementById('check-all-count').textContent,'—');assert.match(p.d.getElementById('check-progress').textContent,/Nie udało/);assert.ok(p.d.querySelector('#checklist-groups [role=alert]'));assert.equal(s.DB.sqlite.prepare("SELECT count(*) n FROM checklist_items WHERE trip_id='next-trip'").get().n,2);
+  p.w.fetch=(url,opts)=>fetch(new URL(url,s.url),opts);p.d.getElementById('refresh-checklist-btn').click();await waitFor(()=>p.d.getElementById('check-all-count').textContent==='2');assert.ok(p.d.getElementById('check-progress').textContent.includes(p.w.DREAM_TRIP.name));assert.equal(p.d.getElementById('check-show-hidden'),null);
  }finally{p.close();await s.close()}
 });

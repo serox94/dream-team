@@ -1,3 +1,5 @@
+> Raport historyczny rundy 1. Aktualne poprawki po odbiorze Preview: [ROUND_TWO.md](ROUND_TWO.md). Gałąź została później opublikowana przez Work; opis dawnej blokady publikacji poniżej dotyczy pierwszej sesji.
+
 # DreamTeam — modernizacja wypraw i istniejącego Preview
 
 Gałąź: `feat/preview-carp-trip-modernization-20261105`.

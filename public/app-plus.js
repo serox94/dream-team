@@ -373,7 +373,7 @@
     toolbar.className = "check-toolbar";
     toolbar.innerHTML = `
       <div id="check-progress" class="check-progress" role="status">Wczytywanie postępu…</div>
-      <div class="check-category-tools"><button type="button" id="check-add-category" class="secondary-btn">+ Kategoria</button><button type="button" id="check-show-hidden" class="secondary-btn">Pokaż ukryte</button></div>
+      <div class="check-category-tools"><button type="button" id="check-add-category" class="secondary-btn">+ Kategoria</button></div>
       <form id="check-category-create" class="check-category-create hidden"><label for="check-category-name">Nazwa nowej kategorii</label><input id="check-category-name" maxlength="100" required><button type="submit">Dodaj kategorię</button></form>
       <details class="check-category-manager"><summary>Zarządzaj kategoriami</summary><div id="check-category-manager-list"></div></details>
       <div class="filter-bar">
@@ -414,19 +414,19 @@
       extra.innerHTML = `
         <div class="small-stat-box">
           <span>Brakuje na wyjazd</span>
-          <strong id="check-trip-open-count">0</strong>
+          <strong id="check-trip-open-count">—</strong>
         </div>
         <div class="small-stat-box">
           <span>Sprzęt otwarty</span>
-          <strong id="check-equipment-open-count">0</strong>
+          <strong id="check-equipment-open-count">—</strong>
         </div>
         <div class="small-stat-box">
           <span>Zakupy otwarte</span>
-          <strong id="check-shopping-open-count">0</strong>
+          <strong id="check-shopping-open-count">—</strong>
         </div>
         <div class="small-stat-box">
           <span>Jedzenie / picie otwarte</span>
-          <strong id="check-food-open-count">0</strong>
+          <strong id="check-food-open-count">—</strong>
         </div>
       `;
       summaryPanel.appendChild(extra);
@@ -444,8 +444,7 @@
     $('check-add-category').onclick=()=>{$('check-category-create').classList.toggle('hidden');$('check-category-name').focus();};
     $('check-category-create').onsubmit=async event=>{event.preventDefault();try{await Dream.api('/api/checklist-categories',{method:'POST',body:JSON.stringify({name:$('check-category-name').value})});$('check-category-create').reset();$('check-category-create').classList.add('hidden');await refreshChecklistCategories();Dream.notice('Dodano kategorię.');}catch(error){Dream.notice(error.message,true);}};
     $('check-owner').addEventListener('change',event=>{APP_STATE.checklistOwner=event.target.value;renderChecklistGroupsPlus(filterChecklistItems(APP_STATE.checklistItems||[]));});
-    $('check-show-hidden').setAttribute('aria-pressed',String(Boolean(APP_STATE.showHiddenCategories)));
-    $('check-show-hidden').onclick=()=>{APP_STATE.showHiddenCategories=!APP_STATE.showHiddenCategories;$('check-show-hidden').setAttribute('aria-pressed',String(APP_STATE.showHiddenCategories));$('check-show-hidden').textContent=APP_STATE.showHiddenCategories?'Ukryj nieaktywne':'Pokaż ukryte';renderChecklistGroupsPlus(filterChecklistItems(APP_STATE.checklistItems||[]));};
+
 
     toolbar.querySelectorAll("[data-filter]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -596,7 +595,7 @@
 
     const definitions=window.DREAM_CATEGORIES||[];
     const searching=Boolean(APP_STATE.checklistSearch)||(APP_STATE.checklistOwner||'all')!=='all'||APP_STATE.checklistFilter==='done'||APP_STATE.checklistFilter==='open';
-    const categories=[...definitions.filter(c=>c.active||APP_STATE.showHiddenCategories||searching&&items.some(i=>i.category===c.name)).map(c=>c.name),...new Set(items.map(item=>item.category).filter(name=>!definitions.some(c=>c.name===name)))];
+    const categories=[...definitions.filter(c=>c.active||items.some(i=>i.category===c.name)).map(c=>c.name),...new Set(items.map(item=>item.category).filter(name=>!definitions.some(c=>c.name===name)))];
     if(!categories.length){container.appendChild(createNode('div','empty-box','Brak kategorii. Dodaj pierwszą kategorię.'));return;}
     const stateKey=`dream-check-collapsed-${window.DREAM_TRIP?.id||'default'}`;
     let saved={};try{saved=JSON.parse(localStorage.getItem(stateKey)||'{}');}catch{}
@@ -679,6 +678,7 @@
     });
   }
 
+  let checklistRequest=0;
   async function renderChecklistPagePlus() {
     if (!$("checklist-groups") || typeof loadChecklistFromD1 !== "function") return;
 
@@ -689,14 +689,25 @@
     owner.replaceChildren(...choices.map(([id,label])=>{const o=document.createElement('option');o.value=id;o.textContent=label;return o;}));
     owner.value=choices.some(([id])=>id===value)?value:'all';APP_STATE.checklistOwner=owner.value;
 
-    const container = $("checklist-groups");
-    container.innerHTML = '<div class="empty-box">Ładowanie checklist...</div>';
+    const container = $("checklist-groups"),request=++checklistRequest,tripId=window.DREAM_TRIP?.id;
+    container.setAttribute('aria-busy','true');
+    container.replaceChildren(createNode('p','empty-box',english?'Loading this trip’s checklist…':'Wczytywanie checklisty wybranego wyjazdu…'));
+    for(const id of ['check-all-count','check-done-count','check-open-count','check-trip-open-count','check-equipment-open-count','check-shopping-open-count','check-food-open-count'])setText(id,'—');
+    setText('check-progress',english?'Loading…':'Wczytywanie…');
+    try{
+      const items=await loadChecklistFromD1();
+      if(request!==checklistRequest||tripId!==window.DREAM_TRIP?.id)return;
+      APP_STATE.checklistItems=items;
+      renderChecklistCategoryManager();renderChecklistSummaryPlus(items);
+      setText('check-progress',(window.DREAM_TRIP?.name||'')+' · '+(english?`Packed ${items.filter(i=>i.done).length} of ${items.length}`:`Spakowane ${items.filter(i=>i.done).length} z ${items.length}`));
+      if(!items.length)container.replaceChildren(createNode('p','empty-box',english?'No items in this trip. Choose another trip above to see its list.':'Ten wyjazd nie ma jeszcze pozycji. Wybierz inny wyjazd w nagłówku, aby zobaczyć jego listę.'));
+      else renderChecklistGroupsPlus(filterChecklistItems(items));
+    }catch(error){
+      if(request!==checklistRequest)return;
+      setText('check-progress',english?'Checklist unavailable — retry':'Nie udało się wczytać listy — odśwież');
+      const alert=createNode('p','empty-box',error.message);alert.setAttribute('role','alert');container.replaceChildren(alert);
+    }finally{if(request===checklistRequest)container.setAttribute('aria-busy','false')}
 
-    const items = await loadChecklistFromD1();
-    APP_STATE.checklistItems = items;
-    renderChecklistCategoryManager();
-    renderChecklistSummaryPlus(items);
-    renderChecklistGroupsPlus(filterChecklistItems(items));
   }
 
   function ensureDashboardExtraGrid() {

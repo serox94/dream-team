@@ -117,3 +117,9 @@
 .beam-table caption { text-align:left; font-weight:700; padding:8px 0; }
 .beam-table th,.beam-table td { padding:8px 5px; border-bottom:1px solid var(--border); text-align:left; overflow-wrap:anywhere; }
 #beam-depth[aria-invalid="true"] { border-color:#ef9c91; }
+
+[hidden]{display:none!important}
+#knowledge-search-results{margin-top:12px;min-width:0}.knowledge-search-count{font-weight:800;margin:8px 0!important}
+.knowledge-search-list{display:grid;gap:10px}.knowledge-search-hit{display:grid;gap:6px;width:100%;text-align:left;white-space:normal;padding:14px 16px;border:1px solid #42644b;border-radius:14px;background:#1b3023;color:#eef4e8}
+.knowledge-search-hit strong{font-size:1rem}.knowledge-search-hit span{font-size:.875rem;line-height:1.5;font-weight:400;color:#c2d0c2}.knowledge-search-hit:focus-visible{outline:3px solid #cce6a4;outline-offset:2px}
+.is-searching .knowledge-browser{margin:0}.is-searching .knowledge-entry{scroll-margin-top:90px}.is-searching #knowledge-library{margin-top:8px}

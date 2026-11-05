@@ -1,5 +1,8 @@
 (async () => {
-  const VERSION='20261105-trip-modernization-1';
+  const VERSION='20261105-round2-1';
+  document.querySelector('main')?.setAttribute('aria-busy','true');
+  document.querySelectorAll('form button[type=submit]').forEach(button=>{if(!button.disabled){button.disabled=true;button.dataset.loadingDisabled='true'}});
+  document.addEventListener('submit',event=>{if(document.documentElement.dataset.ready!=='true'){event.preventDefault();event.stopImmediatePropagation();}},true);
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
@@ -9,7 +12,7 @@
     const requestedTrip=new URLSearchParams(location.search).get('tripId');
     const trip=model.trips.find(t=>t.id===(requestedTrip||Dream.readTrip()))||model.trips.find(t=>t.id===model.app.activeTripId)||model.trips.find(t=>t.status!=='archived')||model.trips[0];
     if(trip&&requestedTrip===trip.id)Dream.rememberTrip(trip.id);
-    if(!trip&&document.getElementById('knowledge-root')){window.DREAM_MODEL=model;document.documentElement.dataset.ready='true';Dream.registerShell();return;}
+    if(!trip&&document.getElementById('knowledge-root')){document.querySelector('main')?.setAttribute('aria-busy','false');window.DREAM_MODEL=model;document.documentElement.dataset.ready='true';Dream.registerShell();return;}
     if(!trip)throw new Error('Brak wyjazdów w bazie.');
     window.DREAM_MODEL=model;window.DREAM_TRIP=trip;window.DREAM_VIEWED_TRIP_ID=trip.id;
     await loadScript('domain-glossary.js');
@@ -68,10 +71,14 @@
     if(document.getElementById('lake-manager'))await DreamLakeManager.mount();
     await DreamLakeManager.loadAdviceWords();
     await loadScript('help-guide.js');DreamHelp.mount();
+    await loadScript('round-two-ui.js');
+    document.querySelector('main')?.setAttribute('aria-busy','false');
+    document.querySelectorAll('[data-loading-disabled]').forEach(button=>{button.disabled=false;delete button.dataset.loadingDisabled});
     document.documentElement.dataset.ready='true';
     Dream.registerShell();
     document.dispatchEvent(new Event('dream:ready'));
   }catch(error){
+    document.querySelector('main')?.setAttribute('aria-busy','false');
     console.error('Dream Team bootstrap failed:',error);
     if(window.Dream)Dream.notice(`Nie udało się wczytać aplikacji: ${error.message} Odśwież stronę.`,true);
     const box=document.querySelector('.trip-box');if(box)box.textContent='Błąd wczytywania danych';

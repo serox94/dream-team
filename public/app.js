@@ -355,7 +355,7 @@ async function loadCatchesFromD1() {
 }
 
 async function loadChecklistFromD1() {
-  if (!d1Client) return [];
+  if (!d1Client) throw new Error('Brak połączenia z bazą.');
   const { data, error } = await d1Client
     .from("checklist_items")
     .select("*")

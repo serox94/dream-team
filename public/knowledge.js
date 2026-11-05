@@ -18,6 +18,7 @@ const data=await Promise.all(paths.map(async name=>{
 if(data){
 const [sources,encyclopedia,sonarData,tools,fieldGuides,chirpPractice]=data;
 const searchText=value=>JSON.stringify(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/Ł/g,'L').toLocaleLowerCase('pl');
+const originalTitles=new Map([...encyclopedia.articles,...sonarData.articles].map(a=>[a.id,searchText(a.title)]));
 const originalSearch=new Map([...encyclopedia.articles,...sonarData.articles].map(a=>[a.id,searchText(a)]));
 const alternateSearch=english?null:await fetch(`/data/knowledge/en/${sonar?'sonar':'encyclopedia'}.json`,{credentials:'same-origin'}).then(r=>r.ok?r.json():null).catch(()=>null);
 if(english){
@@ -80,12 +81,31 @@ if(sonar)q('knowledge-search').placeholder='np. twardość, Mid, zielsko, łódk
 const categories=['Wszystkie',...new Set(catalog.articles.map(a=>a.category))],tags=[...new Set(catalog.articles.flatMap(a=>a.tags))].sort((a,b)=>a.localeCompare(b,'pl'));
 q('knowledge-tag').insertAdjacentHTML('beforeend',tags.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join(''));
 let category='Wszystkie';
+const searchResults=document.createElement('section');searchResults.id='knowledge-search-results';searchResults.hidden=true;searchResults.setAttribute('aria-live','polite');
+q('knowledge-search').after(searchResults);
+function searchView(query,shown){
+  searchResults.hidden=!query;
+  root.classList.toggle('is-searching',Boolean(query));
+  for(const child of root.children)if(child!==q('knowledge-search').closest('.knowledge-browser'))child.hidden=Boolean(query);
+  if(!query)return;
+  searchResults.innerHTML=`<p class="knowledge-search-count" role="status">${shown.length} ${say('wyników','results')}</p><div class="knowledge-search-list">${shown.map(a=>`<button type="button" class="knowledge-search-hit" data-open-article="${esc(a.id)}" aria-controls="${esc(a.id)}"><strong>${esc(a.title)}</strong><span>${esc(a.lead.slice(0,180))}</span></button>`).join('')||`<p>${say('Brak wyników. Spróbuj innego hasła.','No results. Try another term.')}</p>`}</div>`;
+  const alignSearch=()=>{if(q('knowledge-search').value.trim()){const el=document.scrollingElement||document.documentElement;if(el.scrollTo)el.scrollTo({top:0,behavior:'instant'});else el.scrollTop=0;}};alignSearch();requestAnimationFrame(alignSearch);
+  searchResults.querySelectorAll('[data-open-article]').forEach(button=>button.onclick=()=>{
+    const library=q('knowledge-library');library.hidden=false;library.open=true;
+    library.querySelectorAll('.knowledge-entry').forEach(n=>n.hidden=n.id!==button.dataset.openArticle);
+    const article=q(button.dataset.openArticle);article.querySelector('details').open=true;
+    article.style.scrollMarginTop=((document.querySelector('.site-header')?.getBoundingClientRect().height||70)+16)+'px';
+    article.querySelector('summary').focus({preventScroll:true});article.scrollIntoView({block:'start',behavior:'instant'});
+  });
+}
+
 function filter(){
   const query=searchText(q('knowledge-search').value.trim()).replace(/^"|"$/g,''),tokens=query.split(/\s+/).filter(Boolean),tag=q('knowledge-tag').value;
+  const rank=a=>tokens.reduce((n,t)=>n+([searchText(a.title),originalTitles.get(a.id),searchText(alternateSearch?.articles?.[a.id]?.title||'')].some(v=>v?.includes(t))?100:searchText(a.lead).includes(t)?10:1),0);
   const shown=catalog.articles.filter(a=>{
     const text=[originalSearch.get(a.id),searchText(a),searchText(alternateSearch?.articles?.[a.id]||''),searchText(chirpPractice.practice[a.id]||''),a.id==='dno'?searchText(encyclopedia.substrates):'',a.id==='profile'?searchText(encyclopedia.profiles):''].join(' ');
     return (category==='Wszystkie'||a.category===category)&&(!tag||a.tags.includes(tag))&&tokens.every(token=>text.includes(token));
-  });
+  }).sort((a,b)=>rank(b)-rank(a));
   q('knowledge-results').innerHTML=shown.map(articleHtml).join('')||'<p class="panel-card">Brak wyników. Zmień filtr lub wpisz krótsze hasło.</p>';
   if(query)q('knowledge-results').querySelectorAll('.knowledge-entry > details').forEach(n=>n.open=true);
   q('knowledge-count').textContent=english?`${shown.length} of ${catalog.articles.length} topics`:`${shown.length} z ${catalog.articles.length} tematów`;
@@ -101,6 +121,7 @@ function filter(){
     if(query&&guideMatches)q('knowledge-count').textContent+=english?` · ${guideMatches} field answers`:` · ${guideMatches} odpowiedzi praktycznych`;
   }
   if(query||category!=='Wszystkie'||tag)q('knowledge-library').open=true;
+  searchView(query,shown);
   if(location.hash){const id=decodeURIComponent(location.hash.slice(1)),target=q(id);if(target?.classList.contains('knowledge-entry')){q('knowledge-library').open=true;target.querySelector('details').open=true;}}
 }
 q('knowledge-categories').innerHTML=categories.map(c=>`<button type="button" class="${c===category?'selected':''}" data-category="${esc(c)}" aria-pressed="${c===category}">${esc(c)}</button>`).join('');
