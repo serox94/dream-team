@@ -448,9 +448,9 @@ function fillCatchFormForEdit(item) {
   $("species").value = item.species || defaultCarpSpecies();
   $("weight").value = item.weight ?? "";
   $("bait").value = item.bait || "";
-  $("spot").value = item.spot || "";
+  if ($("spot")) $("spot").value = item.spot || "";
   $("spot-id").value = item.spot_id ?? "";
-  $("note").value = item.note || "";
+  if ($("note")) $("note").value = item.note || "";
   $("caught_at").value = formatDateForInput(item.caught_at);
   $("catch-form-title").textContent = "Edytuj połów";
   $("save-catch-btn").textContent = "Zapisz zmiany";
@@ -507,6 +507,9 @@ async function handleCatchSubmit(event) {
   let savedCatch = null;
   let pendingSync = false;
   if (editId) {
+    // Fields removed from the editor remain intact in historical records.
+    if (!$("note")) delete validation.payload.note;
+    if (!$("spot") && !selectedSpotId) delete validation.payload.spot;
     ({ data: savedCatch, error } = await d1Client
       .from("catches")
       .update(validation.payload)
@@ -660,7 +663,7 @@ function bindCatchesPageEvents() {
     const spots = await loadSpotsFromD1();
     const selectedSpot = spots.find(spot => Number(spot.id) === selectedId);
     if (selectedSpot && !normalizeText($("spot")?.value, 80)) {
-      $("spot").value = selectedSpot.name;
+      if ($("spot")) $("spot").value = selectedSpot.name;
     }
   });
 }
@@ -974,6 +977,9 @@ async function handleSpotSubmit(event) {
 
   let error;
   if (editId) {
+    for (const field of ["latitude","longitude","weed","rig","bait","obstacles","best_time","best_wind"]) {
+      if (!$("spot-"+field.replaceAll("_","-"))) delete validation.payload[field];
+    }
     ({ error } = await d1Client.from("spots").update(validation.payload).eq("id", Number(editId)));
   } else {
     ({ error } = await d1Client.from("spots").insert([validation.payload]));

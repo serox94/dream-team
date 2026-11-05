@@ -26,3 +26,33 @@
 #pro2 .wx-chart-times{display:flex;justify-content:space-between;gap:12px;margin:8px 0 0 62px;color:#d9e4d6;font-size:12px;line-height:1.5;font-variant-numeric:tabular-nums}
 #pro2 .wx-chart-times span:last-child{text-align:right}
 @media(max-width:767px){#pro2 .wx-chart-times{margin-left:0}#pro2 .wx-chart-frame{padding:12px 8px}}
+/* Presentation refresh: calculation, safety and forecast data remain unchanged. */
+#pro2{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:15px;line-height:1.6;--line:#375447;--muted:#bdcdbf;--lime:#c9e5ac}
+#pro2 .wx-head{gap:20px;flex-wrap:wrap;margin:12px 0 24px}
+#pro2 h2{font-size:clamp(1.65rem,3vw,2.2rem);line-height:1.2;letter-spacing:-.025em}
+#pro2 h3{font-size:1.05rem;line-height:1.4;letter-spacing:.01em}
+#pro2 .wx-card{padding:clamp(18px,2.5vw,28px);border-radius:20px;box-shadow:0 8px 24px #0000001a}
+#pro2 .wx-layout,#pro2 .wx-row{gap:20px}
+#pro2 .wx-section-title,#pro2 .wx-activity h3{margin-bottom:18px}
+#pro2 .wx-now{padding:8px 0 18px;gap:18px}
+#pro2 .wx-temp{font-variant-numeric:tabular-nums;letter-spacing:-.04em}
+#pro2 .wx-metrics{gap:12px;margin-top:18px}
+#pro2 .wx-metric{padding:14px;border-radius:12px;background:#ffffff06;line-height:1.5}
+#pro2 .wx-metric strong{display:block;margin-top:6px;font-size:1.1rem}
+#pro2 .wx-activity{background:linear-gradient(135deg,#243d2d,#15271e)}
+#pro2 .wx-activity-main{gap:20px;margin:18px 0}
+#pro2 .wx-score{font-variant-numeric:tabular-nums;line-height:1.15}
+#pro2 .wx-reasons{line-height:1.75;margin-top:16px}
+#pro2 .wx-window{padding:12px 14px;border-radius:12px;background:#ffffff08}
+#pro2 .wx-alert{padding:18px 20px;margin:20px 0;border-radius:14px;line-height:1.65}
+#pro2 .wx-alert strong{display:block;margin-bottom:6px}
+#pro2 .wx-hour-strip{gap:10px;padding:14px 2px 20px;scroll-snap-type:x proximity}
+#pro2 .wx-hour{min-width:98px;padding:14px 10px;scroll-snap-align:start;border-radius:12px;font-variant-numeric:tabular-nums}
+#pro2 .wx-days{gap:12px;margin-top:20px}
+#pro2 .wx-day{padding:18px 12px;border-radius:14px;font-variant-numeric:tabular-nums;line-height:1.7;background:#ffffff05}
+#pro2 .wx-day>small:first-child{font-size:.85rem;font-weight:700;color:var(--text)}
+#pro2 button{min-height:44px;padding:10px 16px}
+#pro2 button:focus-visible,#pro2 summary:focus-visible{outline:3px solid var(--lime);outline-offset:4px}
+#pro2 details>summary{min-height:44px;cursor:pointer;line-height:1.5}
+#pro2 .wx-update{font-size:.8rem;line-height:1.6;margin:12px 0 24px}
+@media(max-width:600px){#pro2 .wx-layout,#pro2 .wx-row{gap:14px}#pro2 .wx-card{padding:18px}#pro2 .wx-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#pro2 .wx-activity-main{align-items:flex-start}#pro2 .wx-days{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}#pro2 .wx-day:first-child{grid-column:1/-1}#pro2 .wx-hour{min-width:94px}#pro2 .wx-card,#pro2 .wx-alert{overflow-wrap:anywhere}}

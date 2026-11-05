@@ -1,4 +1,4 @@
-import {profileSources,prepareLakeProfile,drainLakeProfiles,lakeManagerProfile} from './lake-manager.js';
+import {profileSources,prepareLakeProfile,drainLakeProfiles,lakeManagerProfile,saveProfileVersion} from './lake-manager.js';
 import {processTranslations} from './automatic-translations.js';
 import {waterMeasurements} from './water-measurements.js';
 import {googlePhotosUrl} from './validation.js';
@@ -15,7 +15,7 @@ import {handleDeeperAI} from './deeper-ai.js';
 import {checklistTemplates,applyChecklistTemplates,checklistTemplateStatements} from './checklist-templates.js';
 import {authConfigured,session,login,logout,loginAssets,individualAccounts,accountUsername,accountList,changeSharedPassword} from './auth.js';
 import {tavilyUsage} from './research-provider-status.js';
-import {handleLakeResearch,handleLakeCandidates,handleSuggestions,scheduledResearch,provider} from './lake-research.js';
+import {handleLakeResearch,handleLakeCandidates,handleSuggestions,provider} from './lake-research.js';
 
 const json = (data, status = 200, extra = {}) => new Response(JSON.stringify(data), {
   status, headers: { 'content-type':'application/json; charset=utf-8', 'cache-control':'no-store', 'x-content-type-options':'nosniff', ...extra }
@@ -55,7 +55,7 @@ async function bootstrap(env) {
   const leaders = await all(env,`SELECT c.trip_id tripId,c.weight_kg weightKg,a.name anglerName FROM catches c JOIN anglers a ON a.id=c.angler_id WHERE c.deleted_at IS NULL ORDER BY c.weight_kg DESC,c.caught_at,c.id`);
   const topSpots = await all(env,`SELECT c.trip_id tripId,COALESCE(s.name,c.spot) spot,COUNT(*) cnt FROM catches c LEFT JOIN spots s ON s.id=c.spot_id AND s.trip_id=c.trip_id WHERE c.deleted_at IS NULL AND TRIM(COALESCE(s.name,c.spot,'')) NOT IN ('','Brak') GROUP BY c.trip_id,COALESCE(s.name,c.spot) ORDER BY cnt DESC,spot`);
   const trips = rawTrips.map(({factsJson,lakeSnapshotJson,...t})=>({...t,isActive:Boolean(t.isActive),facts:parseFacts(factsJson),
-    lakeProfile:lakeSnapshotJson?parseFacts(lakeSnapshotJson):lakes.find(l=>l.id===t.lakeId)||null,
+    lakeProfile:t.status==='archived'&&lakeSnapshotJson?parseFacts(lakeSnapshotJson):lakes.find(l=>l.id===t.lakeId)||(lakeSnapshotJson?parseFacts(lakeSnapshotJson):null),
     participants:anglers.filter(a=>participants.some(p=>p.tripId===t.id&&p.anglerId===a.id)),
     stats:{fishCount:0,totalWeightKg:0,biggestFishKg:0,...stats.find(s=>s.tripId===t.id),biggestFishAngler:leaders.find(s=>s.tripId===t.id)?.anglerName||null,bestSpot:topSpots.find(s=>s.tripId===t.id)?.spot||null}
   }));
@@ -109,7 +109,9 @@ async function saveTrip(request,env,id,ctx) {
     statements.push(stmt(env,`INSERT INTO checklist_items(trip_id,category,label,assigned_to,packed,quantity,notes,sort_order) SELECT ?,category,label,assigned_to,0,quantity,notes,sort_order FROM checklist_items WHERE trip_id=? AND deleted_at IS NULL`,id,x.copyChecklistFrom));
   }
   if(x.templateIds?.length){if(Object.keys(current).length)fail('Szablony wybierz przy tworzeniu wyjazdu.');statements.push(...await checklistTemplateStatements(env,id,x.templateIds));}
-  if(!Object.keys(current).length){const version=await one(env,'SELECT id FROM lake_profile_versions WHERE lake_id=? ORDER BY created_at DESC,rowid DESC LIMIT 1',lakeId);statements.push(stmt(env,'UPDATE trips SET lake_snapshot_json=?,lake_profile_version_id=? WHERE id=?',JSON.stringify({id:lakeId,name:lake.name,country:lake.country,latitude:lake.latitude,longitude:lake.longitude,imageUrl:lake.image_url,sourceUrl:lake.source_url,facts:parseFacts(lake.facts_json)}),version?.id||null,id));}
+  const archiving=status==='archived'&&current.status!=='archived';
+  const archiveVersion=archiving?await saveProfileVersion(env,lakeId):null;
+  if(!Object.keys(current).length||archiving){const version=archiveVersion?{id:archiveVersion}:await one(env,'SELECT id FROM lake_profile_versions WHERE lake_id=? ORDER BY created_at DESC,rowid DESC LIMIT 1',lakeId);statements.push(stmt(env,'UPDATE trips SET lake_snapshot_json=?,lake_profile_version_id=? WHERE id=?',JSON.stringify({id:lakeId,name:lake.name,country:lake.country,latitude:lake.latitude,longitude:lake.longitude,imageUrl:lake.image_url,sourceUrl:lake.source_url,facts:parseFacts(lake.facts_json)}),version?.id||null,id));}
   await env.DB.batch(statements);
   return json({ok:true,id},Object.keys(current).length?200:201);
 }
@@ -117,7 +119,6 @@ async function saveLake(request,env,id,ctx) {
   const x=await body(request),c=id?await one(env,'SELECT * FROM lakes WHERE id=?',id):{};
   if(!c) fail('Nie znaleziono łowiska.',404);
   const submittedSources=has(x,'sources')?profileSources(x.sources):null;
-  if(submittedSources&&!submittedSources.length)fail('Wybierz właściwe łowisko lub dodaj źródło.');
   const name=text(pick(x,'name',c.name),'Nazwa łowiska',150,true),country=text(pick(x,'country',c.country),'Kraj',100);
   if(submittedSources&&(!country||country.length<2))fail('Podaj nazwę i kraj łowiska.');
   if(!id){const duplicate=await one(env,"SELECT id FROM lakes WHERE lower(replace(replace(name,'Jezioro ',''),'Łowisko ',''))=lower(replace(replace(?,'Jezioro ',''),'Łowisko ','')) AND lower(COALESCE(country,''))=lower(COALESCE(?,'')) LIMIT 1",name,country);if(duplicate)fail('To łowisko już istnieje. Wybierz jego profil z listy.',409);}
@@ -127,12 +128,10 @@ async function saveLake(request,env,id,ctx) {
   const image=webUrl(pick(x,'imageUrl',c.image_url),'Zdjęcie'),source=webUrl(pick(x,'sourceUrl',c.source_url),'Źródło');
   if(id) await run(env,`UPDATE lakes SET name=?,country=?,latitude=?,longitude=?,image_url=?,facts_json=?,source_url=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,name,country,lat,lon,image,JSON.stringify(f),source,id);
   else {id=crypto.randomUUID();await run(env,`INSERT INTO lakes(id,name,country,latitude,longitude,image_url,facts_json,source_url) VALUES(?,?,?,?,?,?,?,?)`,id,name,country,lat,lon,image,JSON.stringify(f),source);}
-  // Confirmed URL save starts a bounded evidence pass; UI can resume its persisted job.
-  let profileError=null;if(submittedSources?.length)try{await prepareLakeProfile(env,id,submittedSources,ctx);}catch(error){profileError=error instanceof InputError?error.message:'Profil zapisano. Uruchom przygotowanie ponownie.';}
-  if(!submittedSources&&source&&source!==c.source_url&&x.researchConfirmed===true){
-    const setting=await one(env,"SELECT value FROM app_settings WHERE key='research_auto'");
-    if(setting?.value!=='off')ctx?.waitUntil(handleLakeResearch(new Request('https://internal/api/research',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url:source})}),env,id,'research').catch(()=>{}));
-  }
+  // Saving a lake is data entry, never consent to external research.
+  // Explicit preparation remains available separately; URLs stay available for review.
+  if(submittedSources?.length)await env.DB.batch(submittedSources.map(url=>stmt(env,'INSERT OR IGNORE INTO lake_sources(id,lake_id,url,title,source_type) VALUES(?,?,?,?,?)',crypto.randomUUID(),id,url,name,'manual')));
+  const profileError=null;
   return json({ok:true,id,...(profileError?{profileError}: {})},c.id?200:201);
 }
 // Delete a lake only when it is not used by any trip (including archived trips).
@@ -241,7 +240,7 @@ async function saveChecklist(request,env,id){
   const tripId=id?c.trip_id:text(x.tripId,'Wyjazd',100,true);await tripExists(env,tripId);
   if(has(x,'packed')&&typeof x.packed!=='boolean') fail('packed musi być wartością true/false.');
   const fields=[text(pick(x,'category',c.category||'sprzęt'),'Kategoria',100,true),text(pick(x,'label',c.label),'Nazwa pozycji',200,true),text(pick(x,'assignedTo',c.assigned_to),'Przypisanie',100),pick(x,'packed',Boolean(c.packed))?1:0,text(pick(x,'quantity',c.quantity),'Ilość',100),text(pick(x,'notes',c.notes),'Notatka',2000),number(pick(x,'sortOrder',c.sort_order??0),'Kolejność',0,100000,false)];
-  if(!await one(env,'SELECT id FROM checklist_categories WHERE name=? AND active=1',fields[0]))fail('Wybierz aktywną kategorię checklisty.');
+  if(!(id&&fields[0]===c.category)&&!await one(env,'SELECT id FROM checklist_categories WHERE name=? AND active=1',fields[0]))fail('Wybierz aktywną kategorię checklisty.');
   if(id){
     const expected=request.headers.get('x-offline-revision');
     if(expected!==null&&(!Number.isSafeInteger(Number(expected))||Number(expected)<0))fail('Nieprawidłowa operacja offline.');
@@ -338,12 +337,13 @@ async function settings(request,env){
       lastBackupAt=latest?.uploaded.toISOString()||null;backupStatus=lastBackupAt?'available':'missing';
     }catch{backupStatus='unavailable';}}
     const schema=await one(env,"SELECT value FROM app_settings WHERE key='schema_version'");
-    return json({ok:true,settings:Object.fromEntries(rows.map(r=>[r.key,r.value])),lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',mediaStorageAvailable:Boolean(env.MEDIA),lastBackupAt,backupStatus,environment:env.APP_ENV==='preview'?'preview':'production',build:env.APP_BUILD||null,version:'1.2.0',schemaVersion:Number(schema?.value)||null});
+    return json({ok:true,settings:{...Object.fromEntries(rows.map(r=>[r.key,r.value])),research_auto:'off'},lastResearchAt:lastRun?.completed_at||null,researchProviderConfigured:Boolean(env.TAVILY_API_KEY),workersAiAvailable:Boolean(env.AI)&&env.AI_FREE_ONLY==='true',mediaStorageAvailable:Boolean(env.MEDIA),lastBackupAt,backupStatus,environment:env.APP_ENV==='preview'?'preview':'production',build:env.APP_BUILD||null,version:'1.2.0',schemaVersion:Number(schema?.value)||null});
   }
   const x=await body(request),statements=[];
   for(const [key,value] of Object.entries(x)){
     if(!userSettingKeys.includes(key))fail('Nieznane ustawienie.');
     const v=text(value,'Ustawienie',100,true);
+    if(key==='research_auto'&&v!=='off')fail('Automatyczny research jest wyłączony. Dane łowiska uzupełnij po weryfikacji źródeł.');
     if(key==='research_auto'||key==='research_official_first'){if(!['on','off'].includes(v))fail('Wybierz on/off.');}
     if(key==='research_languages'&&(!v.split(',').every(lang=>['PL','EN','FR','DE','NL'].includes(lang))||new Set(v.split(',')).size!==v.split(',').length))fail('Nieprawidłowe języki.');
     if(key==='trip_time_zone'&&v!=='auto'){try{new Intl.DateTimeFormat('en',{timeZone:v}).format();}catch{fail('Nieprawidłowa strefa czasowa.',400,'INVALID_TIME_ZONE');}}
@@ -514,5 +514,5 @@ async function handleRequest(request,env,ctx){
 }
 export default {
   async fetch(request,env,ctx){return localizeApiResponse(await handleRequest(request,env,ctx),request);},
-  async scheduled(_event,env,ctx){try{await ensureSchema(env);}catch{console.warn('Scheduled work blocked by schema/maintenance guard.');return;}ctx.waitUntil(_event.cron==='*/5 * * * *'?drainLakeProfiles(env):scheduledResearch(env).then(()=>drainLakeProfiles(env)));}
+  async scheduled(_event,env,ctx){try{await ensureSchema(env);}catch{console.warn('Scheduled work blocked by schema/maintenance guard.');return;}ctx.waitUntil(drainLakeProfiles(env));}
 };

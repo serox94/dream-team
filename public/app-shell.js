@@ -57,7 +57,7 @@
     '</span></div><p>'+(priority?
       (english?'Your trip is approaching or underway. Keep rules, access, safety and quick actions close at hand.':'Wyjazd zbliża się lub trwa. Najważniejsze zasady, dojazd i szybkie informacje masz pod ręką.') :
       (english?'This guide is always available. Its card moves to the top 20 days before departure and stays there during the trip.':'Poradnik jest zawsze dostępny. Karta pojawia się u góry na 20 dni przed wyjazdem i pozostaje tam w trakcie wyprawy.'))+
-     '</p><a class="secondary-btn essentials-open" href="/pages/teren.html">'+(english?'Open essentials':'Otwórz najważniejsze informacje')+'</a>';
+     '</p><a class="secondary-btn essentials-open" href="/pages/teren.html?tripId='+encodeURIComponent(trip?.id||'')+'">'+(english?'Open essentials':'Otwórz najważniejsze informacje')+'</a>';
    const hero=main.querySelector('.hero-card');
    if(priority&&hero)hero.after(card);else main.append(card);
  }

@@ -31,7 +31,7 @@ test('Essentials card promotes exactly 20 days before departure through end; rem
   w.eval(shell);
   const start='2026-11-20T12:00:00.000Z',end='2026-11-27T12:00:00.000Z';
   const before20=Date.parse('2026-10-31T11:59:59Z'),at20=Date.parse('2026-10-31T12:00:00Z');
-  const trip={start,end,status:'planning',isActive:true};
+  const trip={id:'selected-trip',start,end,status:'planning',isActive:true};
   w.DREAM_TRIP=trip;
   assert.equal(w.DreamShell.essentialsPriority(trip,before20),false);
   assert.equal(w.DreamShell.essentialsPriority(trip,at20),true);
@@ -41,7 +41,7 @@ test('Essentials card promotes exactly 20 days before departure through end; rem
   assert.equal(w.DreamShell.essentialsPriority({start},Date.parse('2026-11-21T12:00:00Z')),false,'unknown end is not treated as indefinitely ongoing');
   w.DreamShell.mountEssentials(before20);
   assert.equal(w.document.querySelector('main').lastElementChild.id,'trip-essentials-card');
-  assert.ok(w.document.querySelector('#trip-essentials-card a[href="/pages/teren.html"]'));
+  assert.ok(w.document.querySelector('#trip-essentials-card a[href="/pages/teren.html?tripId=selected-trip"]'));
   w.DreamShell.mountEssentials(at20);
   assert.equal(w.document.querySelector('.hero-card').nextElementSibling.id,'trip-essentials-card');
   assert.equal(w.document.querySelectorAll('#trip-essentials-card').length,1);

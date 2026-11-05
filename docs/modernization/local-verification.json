@@ -1,0 +1,125 @@
+{
+  "environment": "LOCAL_DISPOSABLE_SQLITE",
+  "previewReady": false,
+  "results": [
+    {
+      "width": 390,
+      "test": "selected-trip essentials link",
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "test": "dynamic owners, strict shared/person filters, add/pack/search",
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "test": "simplified forms and spot save",
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "test": "sonar content search and retained tools",
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "test": "encyklopedia content search and retained tools",
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "test": "weather 48h, seven days and safety retained",
+      "result": "PASS"
+    },
+    {
+      "width": 1280,
+      "test": "selected-trip essentials link",
+      "result": "PASS"
+    },
+    {
+      "width": 1280,
+      "test": "dynamic owners, strict shared/person filters, add/pack/search",
+      "result": "PASS"
+    },
+    {
+      "width": 1280,
+      "test": "simplified forms and spot save",
+      "result": "PASS"
+    },
+    {
+      "width": 1280,
+      "test": "sonar content search and retained tools",
+      "result": "PASS"
+    },
+    {
+      "width": 1280,
+      "test": "encyklopedia content search and retained tools",
+      "result": "PASS"
+    },
+    {
+      "width": 1280,
+      "test": "weather 48h, seven days and safety retained",
+      "result": "PASS"
+    },
+    {
+      "language": "en",
+      "test": "encyklopedia Polish query with English articles",
+      "result": "PASS"
+    },
+    {
+      "language": "en",
+      "test": "sonar Polish query with English articles",
+      "result": "PASS"
+    }
+  ],
+  "screenshots": [
+    "390-home.png",
+    "390-checklist-overview.png",
+    "390-checklist-search.png",
+    "390-catch-form.png",
+    "390-map-spots.png",
+    "390-sonar-search.png",
+    "390-encyklopedia-search.png",
+    "390-weather-pro.png",
+    "390-weather-hourly.png",
+    "390-weather-seven-days.png",
+    "390-wyjazdy.png",
+    "390-dojazd.png",
+    "390-porady.png",
+    "1280-home.png",
+    "1280-checklist-overview.png",
+    "1280-checklist-search.png",
+    "1280-catch-form.png",
+    "1280-map-spots.png",
+    "1280-sonar-search.png",
+    "1280-encyklopedia-search.png",
+    "1280-weather-pro.png",
+    "1280-weather-hourly.png",
+    "1280-weather-seven-days.png",
+    "1280-wyjazdy.png",
+    "1280-dojazd.png",
+    "1280-porady.png",
+    "390-en-encyklopedia.png",
+    "390-en-sonar.png"
+  ],
+  "result": "PASS",
+  "branch": "feat/preview-carp-trip-modernization-20261105",
+  "baseMain": "e1dfde72b74aa005021330dfee52c9d0ad2c17e9",
+  "unitAndIntegration": {
+    "command": "npm test",
+    "passed": 316,
+    "failed": 0
+  },
+  "build": {
+    "command": "npm run build",
+    "result": "PASS",
+    "deployment": "DRY_RUN_ONLY"
+  },
+  "cloudPreview": {
+    "deployed": false,
+    "verified": false,
+    "backupPerformed": false,
+    "reason": "No configured Cloudflare credentials; API and Preview not allowed by enforced network policy."
+  }
+}

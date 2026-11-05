@@ -34,6 +34,7 @@ export async function saveProfileVersion(env,lakeId){
  const value={lake:p.lake,research:{...p.research,job:p.research.job?{status:p.research.job.status,completed_at:p.research.job.completed_at}:null},facts:p.facts,sources:p.sources,coverage:p.coverage,missingFields:p.missingFields};
  const content=JSON.stringify(value),digest=[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(content)))].map(x=>x.toString(16).padStart(2,'0')).join('');
  await run(env.DB,'INSERT OR IGNORE INTO lake_profile_versions(id,lake_id,digest,profile_json) VALUES(?,?,?,?)',crypto.randomUUID(),lakeId,digest,content);
+ return (await one(env.DB,'SELECT id FROM lake_profile_versions WHERE lake_id=? AND digest=?',lakeId,digest)).id;
 }
 export async function drainLakeProfiles(env){
  // One bounded batch per invocation. The indexed queue survives closed browsers.
@@ -44,8 +45,8 @@ export async function drainLakeProfiles(env){
 }
 export async function lakeManagerProfile(env,lakeId,tripId){
  let current=await profile(env,lakeId),historical=false,snapshotAt=null;
- if(tripId){const trip=await one(env.DB,'SELECT lake_id,lake_profile_version_id FROM trips WHERE id=?',tripId);if(!trip||trip.lake_id!==lakeId)throw new InputError('Nieprawidłowe łowisko wyjazdu.',409);
- if(trip.lake_profile_version_id){const v=await one(env.DB,'SELECT profile_json,created_at FROM lake_profile_versions WHERE id=? AND lake_id=?',trip.lake_profile_version_id,lakeId);if(v){current=JSON.parse(v.profile_json);historical=true;snapshotAt=v.created_at;}}}
+ if(tripId){const trip=await one(env.DB,'SELECT lake_id,status,lake_profile_version_id FROM trips WHERE id=?',tripId);if(!trip||trip.lake_id!==lakeId)throw new InputError('Nieprawidłowe łowisko wyjazdu.',409);
+ if(trip.status==='archived'&&trip.lake_profile_version_id){const v=await one(env.DB,'SELECT profile_json,created_at FROM lake_profile_versions WHERE id=? AND lake_id=?',trip.lake_profile_version_id,lakeId);if(v){current=JSON.parse(v.profile_json);historical=true;snapshotAt=v.created_at;}}}
 
  const researchedFacts=current.research.facts.map(f=>({field:f.field,value:f.evidence,url:f.url,status:current.research.conflicts.some(c=>c.field===f.field)?'sprzeczne':'potwierdzone'}));
  const rules=current.research.facts.filter(f=>['rods','leadcore','hooks','bait_boats','boats','bait','fishcare'].includes(f.field));if(rules.length)researchedFacts.push({field:'rules',value:rules.map(f=>f.evidence).join(' '),status:current.research.conflicts.some(c=>rules.some(f=>f.field===c.field))?'sprzeczne':'potwierdzone',url:rules[0].url});

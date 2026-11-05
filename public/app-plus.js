@@ -382,6 +382,8 @@
         <button type="button" class="filter-btn" data-filter="done">Zrobione</button>
       </div>
 
+      <label for="check-owner">Dla kogo</label>
+      <select id="check-owner"><option value="all">Wszystko</option><option value="shared">Wspólne</option></select>
       <label class="check-search-label" for="check-search">Szukaj na liście</label>
       <input id="check-search" type="search" placeholder="Szukaj rzeczy…" autocomplete="off" />
 
@@ -441,7 +443,9 @@
     toolbar.dataset.bound = "1";
     $('check-add-category').onclick=()=>{$('check-category-create').classList.toggle('hidden');$('check-category-name').focus();};
     $('check-category-create').onsubmit=async event=>{event.preventDefault();try{await Dream.api('/api/checklist-categories',{method:'POST',body:JSON.stringify({name:$('check-category-name').value})});$('check-category-create').reset();$('check-category-create').classList.add('hidden');await refreshChecklistCategories();Dream.notice('Dodano kategorię.');}catch(error){Dream.notice(error.message,true);}};
-    $('check-show-hidden').onclick=()=>{APP_STATE.showHiddenCategories=!APP_STATE.showHiddenCategories;$('check-show-hidden').textContent=APP_STATE.showHiddenCategories?'Ukryj nieaktywne':'Pokaż ukryte';renderChecklistGroupsPlus(filterChecklistItems(APP_STATE.checklistItems||[]));};
+    $('check-owner').addEventListener('change',event=>{APP_STATE.checklistOwner=event.target.value;renderChecklistGroupsPlus(filterChecklistItems(APP_STATE.checklistItems||[]));});
+    $('check-show-hidden').setAttribute('aria-pressed',String(Boolean(APP_STATE.showHiddenCategories)));
+    $('check-show-hidden').onclick=()=>{APP_STATE.showHiddenCategories=!APP_STATE.showHiddenCategories;$('check-show-hidden').setAttribute('aria-pressed',String(APP_STATE.showHiddenCategories));$('check-show-hidden').textContent=APP_STATE.showHiddenCategories?'Ukryj nieaktywne':'Pokaż ukryte';renderChecklistGroupsPlus(filterChecklistItems(APP_STATE.checklistItems||[]));};
 
     toolbar.querySelectorAll("[data-filter]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -559,12 +563,18 @@
     return list;
   }
 
+  const searchKey=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ł/g,'l').replace(/Ł/g,'L').toLocaleLowerCase('pl').trim();
+
   function filterChecklistItems(items) {
     let list = [...items];
 
     if (APP_STATE.checklistSearch) {
-      list = list.filter((item) => `${item.item_name} ${item.category} ${window.DreamContent?.text('checklist',item.id,'label',item.item_name)??item.item_name} ${window.DreamContent?.category(item.category)??item.category} ${item.quantity ?? ''} ${item.unit ?? ''}`.toLocaleLowerCase('pl').includes(APP_STATE.checklistSearch));
+      list = list.filter(item=>searchKey(`${item.item_name} ${item.category} ${window.DreamContent?.text('checklist',item.id,'label',item.item_name)??''} ${window.DreamContent?.category(item.category)??''} ${item.assigned_to??''} ${item.notes??''} ${item.quantity??''} ${item.unit??''}`).includes(searchKey(APP_STATE.checklistSearch)));
     }
+
+    const owner=APP_STATE.checklistOwner||'all';
+    if(owner==='shared')list=list.filter(item=>!item.assigned_to);
+    else if(owner!=='all')list=list.filter(item=>item.assigned_to===owner);
 
     if (APP_STATE.checklistFilter === "done") {
       list = list.filter((item) => item.done);
@@ -585,17 +595,20 @@
     clearNode(container);
 
     const definitions=window.DREAM_CATEGORIES||[];
-    const categories=[...definitions.filter(c=>c.active||APP_STATE.showHiddenCategories).map(c=>c.name),...new Set(items.map(item=>item.category).filter(name=>!definitions.some(c=>c.name===name)))];
+    const searching=Boolean(APP_STATE.checklistSearch)||(APP_STATE.checklistOwner||'all')!=='all'||APP_STATE.checklistFilter==='done'||APP_STATE.checklistFilter==='open';
+    const categories=[...definitions.filter(c=>c.active||APP_STATE.showHiddenCategories||searching&&items.some(i=>i.category===c.name)).map(c=>c.name),...new Set(items.map(item=>item.category).filter(name=>!definitions.some(c=>c.name===name)))];
     if(!categories.length){container.appendChild(createNode('div','empty-box','Brak kategorii. Dodaj pierwszą kategorię.'));return;}
     const stateKey=`dream-check-collapsed-${window.DREAM_TRIP?.id||'default'}`;
     let saved={};try{saved=JSON.parse(localStorage.getItem(stateKey)||'{}');}catch{}
+    if(!items.length&&(searching||APP_STATE.checklistSearch)){container.appendChild(createNode('p','empty-box',window.DreamLanguage?.get()==='en'?'No matching items.':'Brak pasujących pozycji.'));return;}
     categories.forEach((category,index) => {
-      const definition=definitions.find(c=>c.name===category),all=(APP_STATE.checklistItems||[]).filter(item=>item.category===category),done=all.filter(item=>item.done).length;
+      if(searching&&!items.some(item=>item.category===category))return;
+      const definition=definitions.find(c=>c.name===category),all=items.filter(item=>item.category===category),done=all.filter(item=>item.done).length;
       const section = createNode("details", "checklist-group");
       section.dataset.category=category;
-      section.open=saved[definition?.id||category]??index===0;
+      section.open=searching?true:(saved[definition?.id||category]??index===0);
       const header=createNode('summary','check-category-summary',`${window.DreamContent?.category(category)??category}${definition&&!definition.active?' · '+(window.DreamI18n?.lang==='en'?'hidden':'ukryta'):''}  ${done}/${all.length}`);
-      section.append(header);section.addEventListener('toggle',()=>{saved[definition?.id||category]=section.open;localStorage.setItem(stateKey,JSON.stringify(saved));});
+      section.append(header);section.addEventListener('toggle',()=>{if(searching)return;saved[definition?.id||category]=section.open;localStorage.setItem(stateKey,JSON.stringify(saved));});
       const wrap = createNode("div", "checklist-items");
       if(definition?.active){const add=createNode('button','secondary-btn check-add-in-category','+ Dodaj pozycję');add.type='button';add.onclick=()=>{const select=$('check-category');select.value=category;$('checklist-form').scrollIntoView({behavior:'smooth',block:'start'});$('check-name').focus();};wrap.append(add);}
 
@@ -671,6 +684,10 @@
 
     ensureChecklistToolbar();
     bindChecklistPlusEvents();
+    const owner=$('check-owner'),value=APP_STATE.checklistOwner||'all',english=window.DreamLanguage?.get()==='en';
+    const choices=[['all',english?'Everything':'Wszystko'],['shared',english?'Shared':'Wspólne'],...(window.DREAM_TRIP?.participants||[]).map(p=>[p.name,p.name])];
+    owner.replaceChildren(...choices.map(([id,label])=>{const o=document.createElement('option');o.value=id;o.textContent=label;return o;}));
+    owner.value=choices.some(([id])=>id===value)?value:'all';APP_STATE.checklistOwner=owner.value;
 
     const container = $("checklist-groups");
     container.innerHTML = '<div class="empty-box">Ładowanie checklist...</div>';
@@ -742,17 +759,6 @@
         </div>
       </article>
 
-      <article class="panel-card">
-        <div class="section-head">
-          <h3>🗺️ Szkic dna / notatka własna</h3>
-          <span class="section-chip">własne dane</span>
-        </div>
-
-        <div class="spot-map-hint">
-          Mapy łowiska są punktem odniesienia. Zapisuj również własne głębokości,
-          rodzaj dna, zaczepy, najlepszy czas i krótki opis tego, czego spodziewać się na danym miejscu.
-        </div>
-      </article>
     `;
     lastPanel.insertAdjacentElement("afterend", section);
   }

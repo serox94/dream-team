@@ -90,7 +90,7 @@ test('trip score uses two independent scales, a personal photo, readiness and st
 test('three-person trip automatically selects the approved Patryk-Maciek-Paddy photo',async()=>{
  const s=await testServe({seed:true});
  s.DB.sqlite.prepare('INSERT INTO anglers(id,name,pb_kg) VALUES(?,?,?)').run('paddy','Paddy',13);
- s.DB.sqlite.prepare('INSERT INTO trip_participants(trip_id,angler_id) VALUES(?,?)').run('next-trip','paddy');
+ s.DB.sqlite.prepare('INSERT OR IGNORE INTO trip_participants(trip_id,angler_id) VALUES(?,?)').run('next-trip','paddy');
  const p=await page(s,'/');
  try{
   const img=p.d.getElementById('dream-crew-photo');
@@ -162,7 +162,7 @@ test('private read cache marks stale data, rejects unsupported writes and clears
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
 });
-test('trip management reveals the editor on demand and checklist opens with the list',async()=>{
+test('trip management reveals editor on demand and checklist starts with add and summary',async()=>{
  const s=await testServe({seed:true});
  try{
   const p=await page(s,'/pages/wyjazdy.html');
@@ -174,7 +174,7 @@ test('trip management reveals the editor on demand and checklist opens with the 
    assert.deepEqual(p.errors,[]);
   }finally{p.close();}
   const checklist=await page(s,'/pages/checklisty.html');
-  try{assert.ok(checklist.d.getElementById('checklist-groups').compareDocumentPosition(checklist.d.getElementById('checklist-form')) & checklist.w.Node.DOCUMENT_POSITION_FOLLOWING);}
+  try{assert.ok(checklist.d.getElementById('checklist-form').compareDocumentPosition(checklist.d.getElementById('checklist-groups')) & checklist.w.Node.DOCUMENT_POSITION_FOLLOWING);}
   finally{checklist.close();}
  }finally{await s.close();}
 });
@@ -199,7 +199,7 @@ test('catch form persists once on double submit, timezone and correction are pre
   await waitFor(()=>p.d.getElementById('form-message').textContent.includes('dodany'));
   await waitFor(()=>p.d.getElementById('catch-count').textContent==='3'&&!p.d.getElementById('catch-form').dataset.saving,'po zapisie');
   const rows=s.DB.sqlite.prepare('SELECT * FROM catches WHERE weight_kg=19.25').all();assert.equal(rows.length,1);assert.equal(rows[0].caught_at,'2026-09-03T10:30:00.000Z');
-  await p.w.editCatch(rows[0].id);fill(p,'weight','12');fill(p,'note','');submit(p,'catch-form');
+  await p.w.editCatch(rows[0].id);fill(p,'weight','12');assert.equal(p.d.getElementById('note'),null);submit(p,'catch-form');
   await waitFor(()=>p.d.getElementById('form-message').textContent==='Zmiany zapisane.');
   const model=await(await fetch(s.url+'/api/bootstrap')).json();assert.equal(model.anglers.find(a=>a.id==='patryk').pbKg,13);assert.equal(s.DB.sqlite.prepare('SELECT notes FROM catches WHERE id=?').get(rows[0].id).notes,null);
   assert.deepEqual(p.errors,[]);
@@ -271,11 +271,12 @@ test('spot form CRUD retains optional values and renders user notes as text, nev
  const s=await testServe(),p=await page(s,'/pages/mapa.html');
  try{
   const markup='<img src=x onerror=alert(1)>';
-  fill(p,'spot-name','Testowy spot');fill(p,'spot-depth','4.5');fill(p,'spot-latitude','53.12345');fill(p,'spot-longitude','18.54321');fill(p,'spot-weed','pas zielska');fill(p,'spot-rig','Ronnie Rig');fill(p,'spot-bait','wafters 15 mm');fill(p,'spot-obstacles',markup);submit(p,'spot-form');
-  await waitFor(()=>p.d.querySelector('.spot-card'));assert.equal(p.d.querySelector('img[src="x"]'),null);assert.ok(p.d.querySelector('.spot-meta-grid').textContent.includes(markup));
-  const stored=s.DB.sqlite.prepare('SELECT latitude,longitude,weed,rig,bait FROM spots').get();assert.equal(stored.latitude,53.12345);assert.equal(stored.longitude,18.54321);assert.equal(stored.weed,'pas zielska');assert.equal(stored.rig,'Ronnie Rig');assert.equal(stored.bait,'wafters 15 mm');
-  p.d.querySelector('.spot-card .edit-btn').click();await waitFor(()=>p.d.getElementById('edit-spot-id').value);fill(p,'spot-depth','');fill(p,'spot-obstacles','');submit(p,'spot-form');
-  await waitFor(()=>p.d.getElementById('spot-message').textContent==='Zmiany zapisane.'&&p.d.querySelector('.spot-card .catch-badges')?.textContent.includes('Głębokość: brak'));assert.equal(s.DB.sqlite.prepare('SELECT depth_m FROM spots').get().depth_m,null);
+  fill(p,'spot-name','Testowy spot');fill(p,'spot-depth','4.5');fill(p,'spot-note',markup);submit(p,'spot-form');
+  await waitFor(()=>p.d.querySelector('.spot-card'));assert.equal(p.d.querySelector('img[src="x"]'),null);assert.ok(p.d.querySelector('.spot-card').textContent.includes(markup));
+  s.DB.sqlite.exec("UPDATE spots SET latitude=53.12345,longitude=18.54321,weed='pas zielska',rig='Ronnie Rig',bait='wafters 15 mm',obstacles='history'");
+  for(const id of ['spot-latitude','spot-longitude','spot-weed','spot-rig','spot-bait','spot-obstacles'])assert.equal(p.d.getElementById(id),null);
+  p.d.querySelector('.spot-card .edit-btn').click();await waitFor(()=>p.d.getElementById('edit-spot-id').value);fill(p,'spot-depth','');submit(p,'spot-form');
+  await waitFor(()=>p.d.getElementById('spot-message').textContent==='Zmiany zapisane.'&&p.d.querySelector('.spot-card .catch-badges')?.textContent.includes('Głębokość: brak'));assert.equal(s.DB.sqlite.prepare('SELECT depth_m FROM spots').get().depth_m,null);assert.equal(s.DB.sqlite.prepare('SELECT weed FROM spots').get().weed,'pas zielska');assert.equal(s.DB.sqlite.prepare('SELECT obstacles FROM spots').get().obstacles,'history');
   p.d.querySelector('.spot-card .danger-btn').click();await waitFor(()=>p.d.querySelector('#app-notice button'));p.d.querySelector('#app-notice button').click();await waitFor(()=>p.d.getElementById('app-notice').textContent==='Wpis przywrócony.');assert.equal(s.DB.sqlite.prepare('SELECT count(*) n FROM spots WHERE deleted_at IS NULL').get().n,1);
   assert.deepEqual(p.errors,[]);
  }finally{p.close();await s.close();}
@@ -396,4 +397,39 @@ test('shared account author can be selected on an older trip before joining its 
  const p=await page(s,'/pages/polowy.html','poland-2027');
  try{fill(p,'person','Third');fill(p,'weight','7.5');fill(p,'bait','test');fill(p,'caught_at','2026-10-07T12:00');submit(p,'catch-form');await waitFor(()=>s.DB.sqlite.prepare('SELECT id FROM catches WHERE trip_id=? AND angler_id=?').get('poland-2027',id),'new shared author');assert.ok(s.DB.sqlite.prepare('SELECT angler_id FROM trip_participants WHERE trip_id=? AND angler_id=?').get('poland-2027',id));}
  finally{p.close();await s.close();}
+});
+
+test('owner filters use every trip participant, exclude shared items for a person, and search reveals hidden-category matches',async()=>{
+ const s=await testServe({seed:true});
+ try{
+  const added=await(await fetch(s.url+'/api/anglers',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'Paddy',username:'Paddy',baselinePbKg:0})})).json();
+  s.DB.sqlite.prepare('INSERT OR IGNORE INTO trip_participants(trip_id,angler_id) VALUES(?,?)').run('next-trip',added.id);
+  s.DB.sqlite.exec("INSERT INTO checklist_items(trip_id,category,label,assigned_to,packed) VALUES('next-trip','sprzęt','Paddy mata','Paddy',0),('next-trip','sprzęt','Maciek haczyki','Maciek',0),('next-trip','sprzęt','Wspólny stół',NULL,0)");
+  const p=await page(s,'/pages/checklisty.html');try{
+   assert.ok([...p.d.querySelector('#check-assigned').options].some(o=>o.value==='Paddy'));
+   const owner=p.d.getElementById('check-owner'),select=value=>{owner.value=value;owner.dispatchEvent(new p.w.Event('change',{bubbles:true}))};
+   const names=()=>[...p.d.querySelectorAll('.check-item-title')].map(n=>n.textContent);
+   select('Paddy');assert.deepEqual(names(),['Paddy mata']);select('Maciek');assert.deepEqual(names(),['Maciek haczyki']);select('shared');assert.ok(names().includes('Wspólny stół'));assert.ok(!names().includes('Paddy mata'));select('all');assert.ok(names().includes('Paddy mata')&&names().includes('Maciek haczyki')&&names().includes('Wspólny stół'));
+   fill(p,'check-name','Paddy ciężarek');fill(p,'check-assigned','Paddy');submit(p,'checklist-form');await waitFor(()=>p.d.getElementById('checklist-message').textContent.includes('dodana'));
+   await fetch(s.url+'/api/checklist-categories/'+s.DB.sqlite.prepare("SELECT id FROM checklist_categories WHERE name='sprzęt'").get().id,{method:'PATCH',headers:{'content-type':'application/json'},body:JSON.stringify({active:false})});
+   await p.w.renderChecklistPagePlus(); // refresh definitions through the real loader on next navigation
+  }finally{p.close()}
+  const q=await page(s,'/pages/checklisty.html');try{
+   fill(q,'check-search','ciezarek');assert.ok(q.d.querySelector('.checklist-group').open);assert.equal(q.d.querySelector('.check-item-title').textContent,'Paddy ciężarek');q.d.querySelector('.check-item-left input').click();await waitFor(()=>s.DB.sqlite.prepare("SELECT packed FROM checklist_items WHERE label='Paddy ciężarek'").get().packed===1);
+   fill(q,'check-search','');q.d.getElementById('check-show-hidden').click();assert.equal(q.d.getElementById('check-show-hidden').getAttribute('aria-pressed'),'true');assert.ok(q.d.querySelector('[data-category="sprzęt"]'));
+   assert.deepEqual(q.errors,[]);
+  }finally{q.close()}
+ }finally{await s.close()}
+});
+
+test('a removed catch note field cannot erase historical notes during correction',async()=>{
+ const s=await testServe({seed:true});s.DB.sqlite.exec("UPDATE catches SET notes='Historyczna obserwacja' WHERE weight_kg=18");const p=await page(s,'/pages/polowy.html');try{
+  const row=s.DB.sqlite.prepare('SELECT id FROM catches WHERE weight_kg=18').get();await p.w.editCatch(row.id);fill(p,'weight','17');submit(p,'catch-form');await waitFor(()=>p.d.getElementById('form-message').textContent==='Zmiany zapisane.');assert.equal(s.DB.sqlite.prepare('SELECT notes FROM catches WHERE id=?').get(row.id).notes,'Historyczna obserwacja');
+ }finally{p.close();await s.close()}
+});
+
+test('an explicit essentials trip link wins over device selection and persists for subsequent navigation',async()=>{
+ const s=await testServe({seed:true});const p=await page(s,'/pages/teren.html?tripId=next-trip','another-trip');try{
+  assert.equal(p.w.DREAM_TRIP.id,'next-trip');assert.equal(p.w.Dream.readTrip(),'next-trip');assert.deepEqual(p.errors,[]);
+ }finally{p.close();await s.close()}
 });

@@ -14,3 +14,6 @@ node_modules
 qa-lake-manager/
 
 pr23-status/
+
+# Disposable local modernization browser evidence
+qa-modernization/
