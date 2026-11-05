@@ -121,5 +121,12 @@
     "verified": false,
     "backupPerformed": false,
     "reason": "No configured Cloudflare credentials; API and Preview not allowed by enforced network policy."
+  },
+  "implementationCommit": "4d28211a2916fdf5524554d2f5c91d3b648c0383",
+  "gitPublication": {
+    "pushed": false,
+    "attempts": 2,
+    "error": "remote: fatal error in commit_refs_rules",
+    "fallback": "verified git bundle in work-handoff.zip"
   }
 }

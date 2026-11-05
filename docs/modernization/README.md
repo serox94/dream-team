@@ -93,3 +93,24 @@ Nie zmieniono produkcji, Preview, zdalnej D1/R2 ani historycznych baz.
 Kompletna kolejność kontroli, backupów, wdrożenia i live UAT:
 [PREVIEW_HANDOFF.md](PREVIEW_HANDOFF.md). Work ma użyć WYŁĄCZNIE istniejącego
 `dream-team-preview`; niespełniony warunek backupu lub izolacji oznacza BLOCKED.
+
+### Publikacja gałęzi — dodatkowa blokada serwera Git
+
+Commit implementacji: `4d28211a2916fdf5524554d2f5c91d3b648c0383`.
+Dwie zwykłe próby wypchnięcia dokładnie tej nowej gałęzi zostały odrzucone:
+`remote: fatal error in commit_refs_rules`. Serwer nie podał dalszej przyczyny.
+Nie próbowano innego tokenu, nazwy gałęzi ani zapisu do main/PR #28.
+Gałąź jest lokalna. Do przekazania przygotowano weryfikowalny git bundle;
+nie należy traktować podanej nazwy jako opublikowanej gałęzi GitHub.
+
+Paczka lokalna `qa-modernization/work-handoff.zip` zawiera bundle implementacji,
+raport, dokumentację przekazania oraz 28 PNG. Import bez nadpisywania gałęzi:
+
+```sh
+git bundle verify /path/implementation.bundle
+git fetch /path/implementation.bundle feat/preview-carp-trip-modernization-20261105:refs/heads/feat/preview-carp-trip-modernization-20261105
+git switch feat/preview-carp-trip-modernization-20261105
+```
+
+Work może opublikować tę samą gałąź swoim prawidłowo autoryzowanym połączeniem.
+Ewentualny istniejący ref należy najpierw porównać; nie używać force-push.

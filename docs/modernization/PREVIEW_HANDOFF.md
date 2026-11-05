@@ -9,6 +9,12 @@ Gałąź: `feat/preview-carp-trip-modernization-20261105`, od
 `e1dfde72b74aa005021330dfee52c9d0ad2c17e9` (aktualny main przy rozpoczęciu).
 Nie używać PR #28, nie scalać do main i nie wdrażać `dream-team`.
 
+## 0. Pobranie kodu
+
+Publikacja gałęzi została odrzucona przez serwer Git (`commit_refs_rules`).
+Zaimportować `implementation.bundle` z paczki przekazania według README,
+zweryfikować bazę i diff; nie pobierać kodu z PR #28 ani nie używać force-push.
+
 ## 1. Odczyt tożsamości i konfiguracji — bez zmian zdalnych
 
 1. Potwierdzić dostęp Work do właściwego konta i **istniejącego** Workera
