@@ -1,8 +1,6 @@
 name: PR41 existing preview checkpoint
 on:
-  push:
-    branches: [ops/pr41-safe-release-20261106]
-    paths: [.github/workflows/pr41-preview-backup.yml]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
