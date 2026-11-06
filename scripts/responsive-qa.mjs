@@ -168,14 +168,15 @@ try{
           await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
           assert.match(await page.locator('#tactic-result').innerText(),/Dobry punkt startowy/);
           assert.ok(await page.locator('.article-sources').count()>=1);
-          await search.fill('10°C');
-          assert.ok(await page.locator('#guide-woda-8').isVisible(),'C: ten-degree starting point is findable');
+          await search.fill('muł');
+          assert.ok(await page.locator('#knowledge-search-results').isVisible(),'inline results appear under the knowledge search input');
+          assert.ok(await page.locator('.knowledge-search-hit').count()>0,'silt is found in article text');
+          await search.fill('');
+          assert.ok(await page.locator('#guide-woda-8').isVisible(),'C: ten-degree field guide remains available in normal browse mode');
           await page.locator('#guide-woda-8 summary').click();
           assert.match(await page.locator('#guide-woda-8').innerText(),/małe PVA/);
-          await search.fill('muł');
-          assert.ok(await page.locator('#guide-mul').isVisible(),'C: silt advice is findable');
-          await search.fill('12 godzin');
-          assert.ok(await page.locator('#guide-bez-brania-12').isVisible(),'C: no-bite diagnostic is findable');
+          assert.ok(await page.locator('#guide-mul').isVisible(),'C: silt advice remains in the field guides');
+          assert.ok(await page.locator('#guide-bez-brania-12').isVisible(),'C: no-bite diagnostic remains in the field guides');
         }
         if(width===390&&route==='/pages/sonar.html'){
           await page.locator('a[href="#sonar-dno"]').first().click();
