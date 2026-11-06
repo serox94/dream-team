@@ -186,38 +186,8 @@ try{
           assert.match(await page.locator('#spot-result').innerText(),/Trzy punkty/);
           await page.locator('#quiz-stage [data-quiz="0"]').click();
           assert.match(await page.locator('#quiz-feedback').innerText(),/potwierdzenia ciężarkiem/);
-          const tiny=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/kVsAAAAASUVORK5CYII=','base64');
-          await page.locator('#shot-file').setInputFiles({name:'deeper.png',mimeType:'image/png',buffer:tiny});
-          assert.equal(await page.locator('#shot-controls').isVisible(),true);
-          await page.locator('#shot-q1').selectOption('yes');
-          await page.locator('#shot-analyze').click();
-          assert.match(await page.locator('#shot-result').innerText(),/Twoich odpowiedzi/);
-          assert.equal(preview.requests.filter(r=>r.method==='POST'&&r.url.includes('knowledge')).length,0,'screenshot never uploaded');
-          await page.locator('#media-file').setInputFiles({name:'fish-deeper.png',mimeType:'image/png',buffer:tiny});
-          await page.locator('#media-name').fill('Kontrolny screen CHIRP+ 2');
-          await page.locator('#media-trip').selectOption('next-trip');
-          await page.locator('#media-form button[type="submit"]').click();
-          await page.locator('.media-card').first().waitFor();
-          assert.equal(preview.mediaObjects.size,1,'disposable R2 stores uploaded image');
-          const imageUrl=await page.locator('.media-card img').first().getAttribute('src');
-          assert.equal((await page.request.get(preview.url+imageUrl)).status(),200,'private R2 read');
-          assert.equal(await page.locator('.media-card a[target="_blank"]').first().getAttribute('href'),imageUrl,'private original opens full size');
-          assert.equal((await fetch(loginPreview.url+imageUrl)).status,401,'image URL is not readable without a session');
-          await page.locator('.media-card button').filter({hasText:'Edytuj opis'}).click();
-          await page.locator('#media-note').fill('Mój opis dna');
-          await page.locator('#media-form button[type="submit"]').click();
-          await page.locator('.media-card').getByText('Mój opis dna').waitFor();
-          await page.locator('.media-card button').filter({hasText:'Utwórz spot'}).click();
-          await page.locator('.media-card form input[name="name"]').fill('Mój spot sonarowy');
-          await page.locator('.media-card form button[type="submit"]').click();
-          await page.locator('#media-status').getByText(/Spot utworzony/).waitFor();
-          await page.locator('.media-card button').filter({hasText:'Przeanalizuj zrzut ekranu'}).click();
-          await page.locator('.media-analysis button').filter({hasText:'Zapisz analizę'}).click();
-          await page.locator('.media-card details.media-analysis').waitFor();
-          page.once('dialog',dialog=>dialog.accept());
-          await page.locator('.media-card button').filter({hasText:'Usuń obraz'}).click();
-          await page.locator('.media-card').waitFor({state:'detached'});
-          assert.equal(preview.mediaObjects.size,0,'disposable R2 object removed');
+          assert.equal(await page.locator('#shot-file,#shot-controls,#shot-analyze,#shot-result,#media-file,#media-form,.media-card').count(),0,'owner-removed screenshot upload and analysis UI stays absent');
+          assert.equal(await page.locator('#atlas-overview .deeper-shot-image').count(),17,'reference sonar atlas remains available');
         }
       }
       if(width===390&&route==='/pages/wyjazdy.html'){
