@@ -1,8 +1,6 @@
 name: PR41 live preview offline knowledge
 on:
-  push:
-    branches: [ops/pr41-safe-release-20261106]
-    paths: [.github/workflows/pr41-live-knowledge.yml]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
