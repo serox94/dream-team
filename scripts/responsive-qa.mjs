@@ -124,9 +124,7 @@ try{
               const box=await page.locator(selector).boundingBox();
               assert.ok(box&&box.y+box.height<navTop,`390px dashboard first fold: ${selector} is below navigation`);
             }
-            const checklistSnapshot=page.locator('#dashboard-check-inline');
-            await checklistSnapshot.scrollIntoViewIfNeeded();
-            assert.ok((await checklistSnapshot.innerText()).trim().length>0,'checklist snapshot is accessible after scroll');
+            assert.equal(await page.locator('.dashboard-snapshot > div:has(#dashboard-check-inline)').isVisible(),false,'redundant checklist snapshot is hidden on mobile');
             const photo=await page.locator('.hero-side-card img').boundingBox(),facts=await page.locator('.trip-facts').boundingBox();
             assert.ok(photo.y>=facts.y+facts.height,'mobile portrait follows the essential trip facts');
           }
