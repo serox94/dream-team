@@ -1,8 +1,6 @@
 name: PR41 isolated preview rollback rehearsal
 on:
-  push:
-    branches: [ops/pr41-safe-release-20261106]
-    paths: [.github/workflows/pr41-preview-rehearsal.yml]
+  workflow_dispatch:
 permissions:
   contents: read
 concurrency:
