@@ -35,6 +35,8 @@ try{
         await page.waitForFunction(()=>{const img=document.getElementById('dream-crew-photo');return img?.complete&&img.naturalWidth>0;},{timeout:10000});
         assert.equal(await page.locator('.score-chart').count(),2);
         assert.equal(await page.locator('.score-row').count(),4);
+        assert.equal(await page.locator('#dashboard-details').getAttribute('open'),null,'additional statistics stay collapsed by default');
+        await page.locator('#dashboard-details > summary').click();
         assert.match(await page.locator('#trip-score-total').innerText(),/2 ryb.*23,0 kg/);
         assert.equal(await page.locator('body').getAttribute('data-field-mode'),'before');
         assert.match(await page.locator('#field-readiness').innerText(),/Gotowość do wyjazdu/);
