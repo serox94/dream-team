@@ -3,7 +3,13 @@ on:
   workflow_dispatch:
   push:
     branches: [ops/pr41-safe-release-20261106]
-    paths: [scripts/pr41-asset-proof.mjs]
+    paths:
+      - scripts/pr41-asset-proof.mjs
+      - scripts/pr41-isolated-release.mjs
+      - scripts/pr41-production-release.mjs
+      - scripts/pr41-release-transition.mjs
+      - tests/pr41-release-transition.test.mjs
+      - .github/workflows/pr41-isolated-release.yml
 permissions:
   contents: read
 concurrency:

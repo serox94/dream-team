@@ -33,12 +33,21 @@ export async function releaseCodeOnly(io,{previous,target}) {
 // owner authorization is absent. Call before any production mutation.
 const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
 export function planDigest(plan){const {digest,...contents}=plan;return createHash('sha256').update(JSON.stringify(canonical(contents))).digest('hex');}
+// The native rollback target is the original immutable Worker version UUID,
+// with its Cloudflare-stored assets. Git history is NOT an asset export.
+export function proveImmutableSourceRollback(source,deployableVersions) {
+ check(source?.id===PR41_PREVIOUS,'ORIGINAL_VERSION_ID_MISMATCH');
+ check(source?.assets?.config&&source?.bindings?.some(b=>b.type==='assets'&&b.name==='ASSETS'),'ORIGINAL_VERSION_ASSETS_MISSING');
+ check(Array.isArray(deployableVersions)&&deployableVersions.some(v=>v.id===PR41_PREVIOUS),'ORIGINAL_VERSION_NOT_DEPLOYABLE');
+ return {status:'PASS',version:PR41_PREVIOUS,method:'DEPLOY_ORIGINAL_CLOUDFLARE_VERSION_UUID',gitRebuiltStaticEquality:'NOT_CLAIMED'};
+}
 export function authorizeEvidence(plan,{approved,approvedPlan,protectedReview}) {
  check(approved==='yes','PRODUCTION_APPROVAL_REQUIRED');
  check(protectedReview===true,'PROTECTED_ENVIRONMENT_REVIEW_REQUIRED');
  check(plan.candidate===PR41_CANDIDATE&&plan.previous===PR41_PREVIOUS&&plan.schema===32&&plan.migrations?.length===0,'PINNED_CODE_ONLY_PLAN_REQUIRED');
  check(plan.digest===approvedPlan&&plan.digest===planDigest(plan),'EXACT_PLAN_AUTHORIZATION_REQUIRED');
- for(const gate of ['sourceCode','sourceAssets','sourceConfiguration','candidateCode','candidateAssets','candidateConfiguration','restoredD1','restoredR2','sessionContinuity','rollback','failureRecovery'])check(plan.gates?.[gate]==='PASS','UNPROVEN_'+gate.toUpperCase());
+ check(plan.gates?.sourceAssets==='UNPROVEN','HISTORICAL_ASSET_IDENTITY_MUST_NOT_BE_ASSERTED');
+ for(const gate of ['sourceCode','immutableSourceRollback','sourceConfiguration','candidateCode','candidateAssets','candidateConfiguration','restoredD1','restoredR2','sessionContinuity','rollback','failureRecovery'])check(plan.gates?.[gate]==='PASS','UNPROVEN_'+gate.toUpperCase());
  return true;
 }
 export function productionGate(plan,authorization) {

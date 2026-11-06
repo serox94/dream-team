@@ -7,7 +7,7 @@ import {execFileSync} from 'node:child_process';
 import {randomBytes,createHmac} from 'node:crypto';
 import {cf,query,sha,wrangler,productionId,assertSandbox} from './recovery-common.mjs';
 import {inspectSql,restoreSnapshot,verifySnapshot,rowsDigest} from './d1-snapshot.mjs';
-import {releaseCodeOnly,planDigest,PR41_PREVIOUS,PR41_CANDIDATE} from './pr41-release-transition.mjs';
+import {releaseCodeOnly,planDigest,proveImmutableSourceRollback,PR41_PREVIOUS,PR41_CANDIDATE} from './pr41-release-transition.mjs';
 import {uploadExactAuditVersion} from './pr41-audit-artifact.mjs';
 import {verifyAuditAssetNamespace} from './pr41-asset-proof.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
@@ -32,6 +32,8 @@ try {
  const original=source.bindings;check(original.every(b=>['d1','r2_bucket','plain_text','secret_text','assets','ai'].includes(b.type)),'UNSUPPORTED_BINDING');
  check(original.filter(b=>b.type==='d1').length===1&&original.some(b=>b.type==='d1'&&(b.id||b.database_id)===productionId)&&original.filter(b=>b.type==='r2_bucket').length===2,'SOURCE_BINDINGS');
  report.sourceModules=moduleList(source);report.sourceConfigurationSha256=sha(JSON.stringify(normalized(original)));
+ report.immutableRollback=proveImmutableSourceRollback(source,await cf('/workers/scripts/dream-team/versions?deployable=true'));
+
  dir=await mkdtemp(join(tmpdir(),'pr41-isolated-'));
  const vars=Object.fromEntries(original.filter(b=>b.type==='plain_text').map(b=>[b.name,b.text]));
  const previousTree=await sourceTree(vars.APP_BUILD,'previous-static-reference'),candidateTree=await sourceTree(PR41_CANDIDATE,'candidate');
@@ -106,8 +108,10 @@ try {
  report.failedRecovery=await releaseCodeOnly({...io,verify:async()=>{throw Error('INJECTED_READINESS_FAILURE')},verifyRecovery:async()=>{throw Error('INJECTED_RECOVERY_FAILURE')}},{previous,target});check(report.failedRecovery.result==='BLOCKED'&&report.failedRecovery.recovery==='BLOCKED','RECOVERY_FAIL_OPEN');
  await verify(previous);await activeProduction();
  report.sessionContinuity='PASS_SYNTHETIC_SESSION_ON_UNMODIFIED_RESTORED_ACCOUNT';report.existingAccountAndSessionRows='BYTE_DIGEST_PRESERVED';
- const plan={candidate:PR41_CANDIDATE,previous:PR41_PREVIOUS,schema:32,migrations:[],evidenceRun:run,operatorCommit:process.env.GITHUB_SHA,sourceModuleSha256:sha(sourceBytes),sourceConfigurationSha256:report.sourceConfigurationSha256,candidateModuleSha256:sha(candidateBytes),candidateAssetsSha256:report.candidateAssets.sha256,gates:{sourceCode:'PASS',sourceAssets:'UNPROVEN',sourceConfiguration:'PASS',candidateCode:'PASS',candidateAssets:'PASS',candidateConfiguration:'PASS',restoredD1:'PASS',restoredR2:'PASS',sessionContinuity:'PASS',rollback:'PASS',failureRecovery:'PASS'}};
+ const plan={candidate:PR41_CANDIDATE,previous:PR41_PREVIOUS,schema:32,migrations:[],evidenceRun:run,operatorCommit:process.env.GITHUB_SHA,sourceModuleSha256:sha(sourceBytes),sourceConfigurationSha256:report.sourceConfigurationSha256,candidateModuleSha256:sha(candidateBytes),candidateAssetsSha256:report.candidateAssets.sha256,gates:{sourceCode:'PASS',sourceAssets:'UNPROVEN',immutableSourceRollback:'PASS',sourceConfiguration:'PASS',candidateCode:'PASS',candidateAssets:'PASS',candidateConfiguration:'PASS',restoredD1:'PASS',restoredR2:'PASS',sessionContinuity:'PASS',rollback:'PASS',failureRecovery:'PASS'}};
  plan.digest=planDigest(plan);await mkdir('pr41-release-bundle',{recursive:true});await writeFile('pr41-release-bundle/plan.json',JSON.stringify(plan,null,2));await writeFile('pr41-release-bundle/worker.js',candidateBytes);await cp(join(candidateTree,'public'),'pr41-release-bundle/public',{recursive:true});report.planDigest=plan.digest;
- report.result='PARTIAL';report.stage='COMPLETE';report.releaseBlocker='PRODUCTION_STATIC_ASSET_CONTENT_IDENTITY_NOT_PROVEN';
+ await activeProduction();
+ proveImmutableSourceRollback(await exact(PR41_PREVIOUS),await cf('/workers/scripts/dream-team/versions?deployable=true'));
+ report.result='PASS';report.stage='COMPLETE';report.releaseBlocker=null;report.sourceStaticProvenance='UNPROVEN_GIT_REBUILD_NOT_USED_FOR_ROLLBACK';
 }catch(e){report.failure={stage:report.stage,code:/^[A-Z0-9_]+$/.test(e.message)?e.message:'OPERATION_FAILED',http:e.status??null,cloudflareCode:e.code??null};process.exitCode=1;}
 finally{try{await activeProduction();report.productionActive=PR41_PREVIOUS}catch{report.productionActive='UNCONFIRMED';process.exitCode=1}if(dir)await rm(dir,{recursive:true,force:true});await mkdir('pr41-isolated-status',{recursive:true});await writeFile('pr41-isolated-status/summary.json',JSON.stringify(report,null,2));if(report.failure)console.log('::error title=PR41 isolated failure::'+JSON.stringify(report.failure));console.log('::notice title=PR41 isolated summary::'+JSON.stringify({result:report.result,stage:report.stage,productionActive:report.productionActive,sourceCodeClone:report.sourceCodeClone,sourceReferenceAssets:report.sourceReferenceAssets,candidateAssetProof:report.candidateAssetProof,restore:report.restore,rollback:report.rollback,promotion:report.promotion,failedActivation:report.failedActivation,failedReadiness:report.failedReadiness,failedRecovery:report.failedRecovery,releaseBlocker:report.releaseBlocker}));}

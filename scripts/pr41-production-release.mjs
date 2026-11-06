@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import {cf,query,wrangler,sha,productionId} from './recovery-common.mjs';
 import {rowsDigest} from './d1-snapshot.mjs';
-import {releaseCodeOnly,authorizeEvidence,productionGate,PR41_CANDIDATE,PR41_PREVIOUS} from './pr41-release-transition.mjs';
+import {releaseCodeOnly,authorizeEvidence,productionGate,proveImmutableSourceRollback,PR41_CANDIDATE,PR41_PREVIOUS} from './pr41-release-transition.mjs';
 import {uploadExactApprovedProductionVersion} from './pr41-audit-artifact.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
 const report={result:'BLOCKED',stage:'AUTHORIZATION',productionMutations:0};let dir;
@@ -41,6 +41,8 @@ try {
  report.stage='PREFLIGHT';check(await current()===PR41_PREVIOUS,'PRODUCTION_MOVED');
  const source=await exact(PR41_PREVIOUS);check(source.id===PR41_PREVIOUS&&source.modules.length===1&&sha(Buffer.from(source.modules[0].content_base64,'base64'))===plan.sourceModuleSha256,'SOURCE_CODE_CHANGED');
  check(sha(JSON.stringify(normalized(source.bindings)))===plan.sourceConfigurationSha256,'SOURCE_CONFIGURATION_CHANGED');
+ const checkNativeRollback=async()=>proveImmutableSourceRollback(await exact(PR41_PREVIOUS),await cf('/workers/scripts/dream-team/versions?deployable=true'));
+ report.nativeRollback=await checkNativeRollback();
  await state();
  // Only after ALL source/target/recovery evidence and actual owner approval.
  // Existing capture mechanism creates a NEW private snapshot, never overwrites
@@ -62,9 +64,9 @@ try {
  const target=await uploadExactApprovedProductionVersion(source,expected.filter(b=>b.type!=='secret_text'),[{name:'worker.js',content_type:source.modules[0].content_type,content_base64:module.toString('base64')}],plan,{...authorization,backup:recovery});report.productionMutations++;
  const v=await exact(target);check(v.modules.length===1&&sha(Buffer.from(v.modules[0].content_base64,'base64'))===plan.candidateModuleSha256,'UPLOADED_MODULE_MISMATCH');
  check(rowsDigest(normalized(v.bindings))===rowsDigest(normalized(expected))&&rowsDigest([v.assets.config])===rowsDigest([source.assets.config])&&v.compatibility_date===source.compatibility_date&&rowsDigest(v.compatibility_flags||[])===rowsDigest(source.compatibility_flags||[]),'UPLOADED_CONFIGURATION_MISMATCH');
- const activate=async id=>{check([PR41_PREVIOUS,target].includes(id),'UNPINNED_VERSION');await cf('/workers/scripts/dream-team/deployments','POST',{strategy:'percentage',versions:[{version_id:id,percentage:100}],annotations:{'workers/message':'Owner-approved PR41 code-only '+plan.digest}});report.productionMutations++};
+ const activate=async id=>{check([PR41_PREVIOUS,target].includes(id),'UNPINNED_VERSION');if(id===target)await checkNativeRollback();await cf('/workers/scripts/dream-team/deployments','POST',{strategy:'percentage',versions:[{version_id:id,percentage:100}],annotations:{'workers/message':'Owner-approved PR41 code-only '+plan.digest}});report.productionMutations++};
  const verify=async id=>{let ok=0;const build=id===target?PR41_CANDIDATE:vars.APP_BUILD;for(let i=0;i<30;i++){check(await current()===id,'ACTIVE_VERSION_CHANGED');try{const r=await fetch('https://dream-team.sewerynski00.workers.dev/login',{redirect:'manual',headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(5000)});const good=r.status===200&&r.headers.get('x-dreamteam-build')===build;await r.body?.cancel();if(good&&++ok===2)break;if(!good)ok=0;}catch{}if(i===29)throw Error('PRODUCTION_READINESS_TIMEOUT');await new Promise(r=>setTimeout(r,1500));}await state();check(await credentials()===beforeCredentials,'CREDENTIALS_CHANGED');};
- report.transition=await releaseCodeOnly({preflight:async()=>{productionGate(plan,{...authorization,backup:recovery});await state();},current,activate,verify,verifyRecovery:verify},{previous:PR41_PREVIOUS,target});
+ report.transition=await releaseCodeOnly({preflight:async()=>{productionGate(plan,{...authorization,backup:recovery});await checkNativeRollback();await state();},current,activate,verify,verifyRecovery:verify},{previous:PR41_PREVIOUS,target});
  report.result=report.transition.result;report.activeWorker=await current();report.targetWorker=target;report.plan=plan.digest;
  if(report.result!=='PASS')process.exitCode=1;
 }catch(e){report.failure={stage:report.stage,code:/^[A-Z0-9_]+$/.test(e.message)?e.message:'OPERATION_FAILED',http:e.status??null,cloudflareCode:e.code??null};process.exitCode=1;}

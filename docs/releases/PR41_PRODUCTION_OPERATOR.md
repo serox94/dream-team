@@ -82,16 +82,17 @@ was removed. The later namespace-proof run adds full HTTP asset-byte comparisons
 its authoritative results are the `pr41-isolated-status` and `pr41-release-bundle`
 artifacts on this operational branch.
 
-## Remaining release blockers
+## Remaining release prerequisites
 
-1. The API read for the immutable source version exposes its modules and asset
-   configuration, but no static asset contents/manifest. The recorded production
-   commit is `d39ddf632b2279573216ac81d536a7e6f0fcc240`; rebuilding its 141 public files
-   is a useful reference, **not evidence of the complete deployed asset namespace**.
-   A read of `/workers/workers/.../versions/<uuid>/assets` returns ordinary version
-   metadata, and the legacy `/scripts/.../assets` returns the generic current module.
-   Neither is treated as an asset dump. `sourceAssets` remains `UNPROVEN` in the sealed
-   plan. Production execution is therefore blocked before upload or backup refresh.
+1. The historical Git reconstruction's 141 files remain **UNPROVEN** as the
+   actual static bytes of the live production Worker. They are not the rollback
+   artifact. Instead, the immutable original Cloudflare version UUID must be
+   available among deployable versions and contain its original ASSETS binding.
+   The operator checks both conditions at rehearsal and immediately before
+   production activation, then rolls back by deploying that exact original UUID.
+   This is the documented native Cloudflare rollback mechanism; it does not
+   assert an export of the production static asset namespace. A successful
+   rehearsal for this exact operator commit remains mandatory.
 2. Owner authorization is `no`; the environment also lacks required reviewers.
    No settings were changed and no production release was dispatched. Owner action
    should be requested only after the missing static provenance has been established
