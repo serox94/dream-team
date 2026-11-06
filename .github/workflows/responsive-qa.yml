@@ -46,7 +46,7 @@ jobs:
           npx playwright install chromium
       - name: Check 15 screens, knowledge tools and offline at five viewport widths
         if: steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true' && inputs.targeted_only != true
-        run: node scripts/responsive-qa.mjs
+        run: node scripts/qa-knowledge-offline.mjs && node scripts/responsive-qa.mjs
       - name: Targeted Astra browser regression on disposable SQLite
         if: steps.scope.outputs.restore_only != 'true' && steps.scope.outputs.responsive_retained != 'true'
         run: node scripts/qa-astra-browser.mjs

@@ -10,7 +10,7 @@ const widths=[360,390,412,768,1280];
 const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'];
 const preview=await serve({seed:true,weatherFetch:async()=>Response.json(weatherFixture())});
 const loginPreview=await serve({testSession:false});
-const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PRO2_CHROMIUM_BIN?{executablePath:process.env.PRO2_CHROMIUM_BIN}:{})});
 const screenshotDir='qa-screenshots';
 await mkdir(screenshotDir,{recursive:true});
 try{
@@ -165,7 +165,7 @@ try{
           assert.match(await page.locator('#diagnostic-step').innerText(),/krok 2/i);
           for(let i=1;i<8;i++)await page.locator('#diagnostic-step [data-answer="yes"]').click();
           assert.match(await page.locator('#diagnostic-step').innerText(),/Plan na teraz/);
-          await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+          await page.locator('#tactic-form button[type=submit]').click();
           assert.match(await page.locator('#tactic-result').innerText(),/Dobry punkt startowy/);
           assert.ok(await page.locator('.article-sources').count()>=1);
           await search.fill('muł');
@@ -216,7 +216,7 @@ try{
     const submit=await login.locator('button[type="submit"]').boundingBox();assert.ok(submit&&submit.height>=44,`${width} login: small submit`);
     await login.screenshot({path:`${screenshotDir}/login-${width}.png`});
     if(width===390){
-      const offline=await context.newPage();
+      const offline=await context.newPage(),offlineErrors=[];offline.on('pageerror',error=>offlineErrors.push(error.message));
       await offline.goto(preview.url+'/pages/checklisty.html');
       await offline.locator('html[data-ready="true"]').waitFor();
       await waitForOfflineReady(offline);
@@ -238,19 +238,16 @@ try{
       await context.setOffline(true);
       for(const knowledgeRoute of ['/pages/encyklopedia.html','/pages/sonar.html']){
         await offline.goto(preview.url+knowledgeRoute,{waitUntil:'domcontentloaded'});
-        await offline.locator('.knowledge-entry').first().waitFor({state:'attached',timeout:20000});
+        await offline.locator('#knowledge-root[data-knowledge-ready="true"]').waitFor({timeout:20000});
         assert.ok(await offline.locator('.knowledge-entry').count()>=14,`${knowledgeRoute}: offline editorial data`);
         if(knowledgeRoute.includes('encyklopedia')){
           await offline.locator('#diagnostic-step [data-answer="yes"]').waitFor({state:'attached'});
-          const inspectTactic=()=>offline.evaluate(()=>({rootClass:document.querySelector('#knowledge-root')?.className,toolsHidden:document.querySelector('#knowledge-tools')?.hidden,toolsDisplay:document.querySelector('#knowledge-tools')?getComputedStyle(document.querySelector('#knowledge-tools')).display:null,formPresent:!!document.querySelector('#tactic-form'),resultHtml:(document.querySelector('#tactic-result')?.innerHTML||'').slice(0,200),online:navigator.onLine,searchValue:document.querySelector('#knowledge-search')?.value}));
-          await offline.evaluate(()=>{window.__tacticError=null;window.addEventListener('error',e=>{window.__tacticError=e.message},{once:true});});
-          await offline.locator('#tactic-form').evaluate(form=>form.requestSubmit());
-          console.log('OFFLINE_TACTIC_DEBUG '+JSON.stringify({...await inspectTactic(),lastError:await offline.evaluate(()=>window.__tacticError),valid:await offline.locator('#tactic-form').evaluate(f=>f.checkValidity())}));
+          await offline.locator('#tactic-form button[type=submit]').click();
           await offline.locator('#tactic-result .tool-result').waitFor({state:'visible',timeout:5000});
           assert.match(await offline.locator('#tactic-result').innerText(),/Dobry punkt startowy/,'offline tactic result');
         }else{
           await offline.locator('#quiz-stage [data-quiz="0"]').waitFor({state:'attached'});
-          await offline.locator('#spot-form').evaluate(form=>form.requestSubmit());
+          await offline.locator('#spot-form button[type=submit]').click();
           await offline.locator('#spot-result .tool-result').waitFor({state:'visible'});
           assert.match(await offline.locator('#spot-result').innerText(),/Trzy punkty/,'offline spot advice');
           await offline.locator('#quiz-stage [data-quiz="0"]').click();
@@ -259,6 +256,7 @@ try{
         }
       }
       await context.setOffline(false);
+      assert.deepEqual(offlineErrors,[],'offline knowledge tools must not throw JavaScript errors');
       await offline.close();
       console.log('390px offline: static shell, knowledge tools, queued checklist write and synchronization PASS.');
     }
@@ -307,7 +305,7 @@ try{
       }
       if(width===390&&route.endsWith('encyklopedia.html')){
         await page.locator('#diagnostic-step [data-answer="yes"]').waitFor({state:'attached'});
-        await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+        await page.locator('#tactic-form button[type=submit]').click();
         await page.locator('#tactic-result .tool-result').waitFor({state:'visible'});
         assert.match(await page.locator('#tactic-result').innerText(),/starting point|start/i);
       }

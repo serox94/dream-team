@@ -1,8 +1,11 @@
 (async () => {
-  const VERSION='20261105-round2-1';
+  const VERSION='20261106-knowledge-ready-1';
   document.querySelector('main')?.setAttribute('aria-busy','true');
   document.querySelectorAll('form button[type=submit]').forEach(button=>{if(!button.disabled){button.disabled=true;button.dataset.loadingDisabled='true'}});
-  document.addEventListener('submit',event=>{if(document.documentElement.dataset.ready!=='true'){event.preventDefault();event.stopImmediatePropagation();}},true);
+  document.addEventListener('submit',event=>{
+    const localReady=event.target.matches?.('#knowledge-root[data-knowledge-ready="true"] form[data-local-ready="true"]');
+    if(document.documentElement.dataset.ready!=='true'&&!localReady){event.preventDefault();event.stopImmediatePropagation();}
+  },true);
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
@@ -82,7 +85,7 @@
     console.error('Dream Team bootstrap failed:',error);
     if(window.Dream)Dream.notice(`Nie udało się wczytać aplikacji: ${error.message} Odśwież stronę.`,true);
     const box=document.querySelector('.trip-box');if(box)box.textContent='Błąd wczytywania danych';
-    document.querySelectorAll('form button').forEach(b=>b.disabled=true);
+    document.querySelectorAll('form').forEach(form=>{if(!form.matches('#knowledge-root[data-knowledge-ready="true"] form[data-local-ready="true"]'))form.querySelectorAll('button').forEach(b=>b.disabled=true);});
     document.documentElement.dataset.ready='error';
   }
 })();

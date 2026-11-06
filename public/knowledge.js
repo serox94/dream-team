@@ -206,6 +206,14 @@ function setupQuiz(questions){
   q('quiz-level').onchange=()=>{level=Number(q('quiz-level').value);position=0;score=0;draw();};draw();
 }
 if(sonar)sonarTools();else diagnostic();
+// These forms use only the editorial data above; no trip, API or write queue.
+// Publish readiness only after every handler has been bound successfully.
+for(const id of sonar?['spot-form','beam-form']:['tactic-form']){
+  const form=q(id);form.dataset.localReady='true';
+  form.querySelectorAll('[data-loading-disabled]').forEach(button=>{button.disabled=false;delete button.dataset.loadingDisabled});
+}
+root.dataset.knowledgeReady='true';root.setAttribute('aria-busy','false');
+root.dispatchEvent(new CustomEvent('dream:knowledge-ready',{bubbles:true}));
 if(location.hash){const id=decodeURIComponent(location.hash.slice(1));requestAnimationFrame(()=>q(id)?.scrollIntoView({block:'start'}));}
 }
 }

@@ -46,3 +46,5 @@ body[data-page=wyjazdy] .trip-essentials-card{display:none}
 .trip-card-actions{width:100%}.trip-card-actions>summary{cursor:pointer;font-weight:700;min-height:44px;padding:10px 0;color:var(--accent)}.trip-card-actions .form-actions{padding:8px 0}
 @media(max-width:767px){body[data-page=wyjazdy] main>.hero-card{padding:14px 16px!important}body[data-page=wyjazdy] main>.hero-card p{display:none}body[data-page=wyjazdy] main>.hero-card h2{font-size:1.5rem}body[data-page=wyjazdy] .trip-card-meta{font-size:.85rem}}
 .trip-card-foot{flex-wrap:wrap}.trip-card-actions{flex-basis:100%}
+
+#knowledge-root[data-knowledge-ready=true] form[data-local-ready=true]{opacity:1;pointer-events:auto}
