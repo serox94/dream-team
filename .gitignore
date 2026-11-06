@@ -21,3 +21,11 @@ qa-modernization/
 qa-round-two/
 
 qa-screenshots/
+
+# Release receipts, disposable artifacts and ownership records (never private SQL).
+pr41-production-status/
+pr41-isolated-status/
+pr41-identity-status/
+pr41-backup-status/
+pr41-release-bundle/
+pr41-isolated-owner.json

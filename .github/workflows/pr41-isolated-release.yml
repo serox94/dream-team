@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ops/pr41-safe-release-20261106]
-    paths: [scripts/pr41-isolated-release.mjs, scripts/pr41-isolated-cleanup.mjs, scripts/pr41-release-transition.mjs, scripts/pr41-audit-artifact.mjs, .github/workflows/pr41-isolated-release.yml]
+    paths: [scripts/pr41-asset-proof.mjs]
 permissions:
   contents: read
 concurrency:
@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --ignore-scripts
-      - run: node --test tests/pr41-release-transition.test.mjs
+      - run: node --test tests/pr41-release-transition.test.mjs tests/pr41-artifact-transport.test.mjs
       - name: Rehearse on one newly owned D1 and R2 only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

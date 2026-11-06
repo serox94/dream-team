@@ -9,6 +9,7 @@ import {cf,query,sha,wrangler,productionId,assertSandbox} from './recovery-commo
 import {inspectSql,restoreSnapshot,verifySnapshot,rowsDigest} from './d1-snapshot.mjs';
 import {releaseCodeOnly,planDigest,PR41_PREVIOUS,PR41_CANDIDATE} from './pr41-release-transition.mjs';
 import {uploadExactAuditVersion} from './pr41-audit-artifact.mjs';
+import {verifyAuditAssetNamespace} from './pr41-asset-proof.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
 const report={result:'BLOCKED',stage:'CONTEXT',productionMutations:0,sourceVersion:PR41_PREVIOUS,candidate:PR41_CANDIDATE};
 const ownerFile='pr41-isolated-owner.json';
@@ -82,6 +83,7 @@ try {
  const cookie='__Host-ryby_session='+payload+'.'+createHmac('sha256',key).update(payload).digest('base64url');
  const ready=async(id,build)=>{let good=0;for(let i=0;i<30;i++){check(await current()===id,'ACTIVE_VERSION_CHANGED');try{const r=await fetch(base+'/login',{redirect:'manual',headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(5000)}),ok=r.status===200&&r.headers.get('x-dreamteam-build')===build;await r.body?.cancel();if(ok&&++good===2)break;if(!ok)good=0;}catch{}if(i===29)throw Error('ISOLATED_READINESS_TIMEOUT');await new Promise(r=>setTimeout(r,1500));}const r=await fetch(base+'/api/bootstrap',{headers:{cookie},redirect:'manual',signal:AbortSignal.timeout(30000)});check(r.status===200,'PRESERVED_ISOLATED_SESSION_REJECTED');await r.body?.cancel();await verifySnapshot(owner.database,snapshot)};
  await ready(previous,vars.APP_BUILD);report.sourceService='PASS';
+ report.sourceReferenceAssets=await verifyAuditAssetNamespace({worker:name,source,expectedVersion:previous,root:join(previousTree,'public'),base});await ready(previous,vars.APP_BUILD);
  report.stage='CANDIDATE';
  const candidateBuildConfig=await writeConfig(config(join(candidateTree,'src/worker.js'),join(candidateTree,'public'),false,PR41_CANDIDATE),'candidate-build');
  const output=join(dir,'candidate-output');wrangler(['deploy','--dry-run','--outdir',output,'--config',candidateBuildConfig]);
@@ -94,7 +96,8 @@ try {
  check(rowsDigest(normalized(targetExact.bindings))===rowsDigest(normalized(targetBindings)),'CANDIDATE_CONFIGURATION_CHANGED');
  report.candidateCode={status:'PASS',version:target,moduleSha256:sha(candidateBytes),source:PR41_CANDIDATE,configuration:'ALL_BINDINGS_CHECKED'};
  const activate=async id=>{check([previous,target].includes(id),'UNPINNED_VERSION');assertSandbox(name);await cf('/workers/scripts/'+name+'/deployments','POST',{strategy:'percentage',versions:[{version_id:id,percentage:100}],annotations:{'workers/message':'PR41 isolated exact module rehearsal'}})};
- const verify=id=>ready(id,id===previous?vars.APP_BUILD:PR41_CANDIDATE);
+ let candidateAssetsVerified=false;
+ const verify=async id=>{await ready(id,id===previous?vars.APP_BUILD:PR41_CANDIDATE);if(id===target&&!candidateAssetsVerified){report.candidateAssetProof=await verifyAuditAssetNamespace({worker:name,source,expectedVersion:target,root:join(candidateTree,'public'),base});check(report.candidateAssetProof.sha256===report.candidateAssets.sha256,'CANDIDATE_ASSET_NAMESPACE_CHANGED');candidateAssetsVerified=true;await ready(target,PR41_CANDIDATE)}};
  const io={preflight:async()=>{await activeProduction();await verifySnapshot(owner.database,snapshot)},current,activate,verify,verifyRecovery:verify};
  report.stage='RELEASE_REHEARSAL';report.promotion=await releaseCodeOnly(io,{previous,target});check(report.promotion.result==='PASS','ISOLATED_PROMOTION_FAILED');
  await activate(previous);await verify(previous);report.rollback='PASS';
@@ -107,4 +110,4 @@ try {
  plan.digest=planDigest(plan);await mkdir('pr41-release-bundle',{recursive:true});await writeFile('pr41-release-bundle/plan.json',JSON.stringify(plan,null,2));await writeFile('pr41-release-bundle/worker.js',candidateBytes);await cp(join(candidateTree,'public'),'pr41-release-bundle/public',{recursive:true});report.planDigest=plan.digest;
  report.result='PARTIAL';report.stage='COMPLETE';report.releaseBlocker='PRODUCTION_STATIC_ASSET_CONTENT_IDENTITY_NOT_PROVEN';
 }catch(e){report.failure={stage:report.stage,code:/^[A-Z0-9_]+$/.test(e.message)?e.message:'OPERATION_FAILED',http:e.status??null,cloudflareCode:e.code??null};process.exitCode=1;}
-finally{if(dir)await rm(dir,{recursive:true,force:true});await mkdir('pr41-isolated-status',{recursive:true});await writeFile('pr41-isolated-status/summary.json',JSON.stringify(report,null,2));if(report.failure)console.log('::error title=PR41 isolated failure::'+JSON.stringify(report.failure));console.log('::notice title=PR41 isolated summary::'+JSON.stringify({result:report.result,stage:report.stage,sourceCodeClone:report.sourceCodeClone,restore:report.restore,rollback:report.rollback,promotion:report.promotion,failedActivation:report.failedActivation,failedReadiness:report.failedReadiness,failedRecovery:report.failedRecovery,releaseBlocker:report.releaseBlocker}));}
+finally{try{await activeProduction();report.productionActive=PR41_PREVIOUS}catch{report.productionActive='UNCONFIRMED';process.exitCode=1}if(dir)await rm(dir,{recursive:true,force:true});await mkdir('pr41-isolated-status',{recursive:true});await writeFile('pr41-isolated-status/summary.json',JSON.stringify(report,null,2));if(report.failure)console.log('::error title=PR41 isolated failure::'+JSON.stringify(report.failure));console.log('::notice title=PR41 isolated summary::'+JSON.stringify({result:report.result,stage:report.stage,productionActive:report.productionActive,sourceCodeClone:report.sourceCodeClone,sourceReferenceAssets:report.sourceReferenceAssets,candidateAssetProof:report.candidateAssetProof,restore:report.restore,rollback:report.rollback,promotion:report.promotion,failedActivation:report.failedActivation,failedReadiness:report.failedReadiness,failedRecovery:report.failedRecovery,releaseBlocker:report.releaseBlocker}));}
