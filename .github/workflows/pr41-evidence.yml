@@ -32,7 +32,7 @@ jobs:
             except urllib.error.HTTPError as e:
               print('::error title=PR41 evidence read failed::HTTP '+str(e.code)+' endpoint '+path.split('?')[0])
               raise
-          for run,name in [(42265431886,'pr41-isolated-status'),(42255416804,'pr41-backup-safe-status')]:
+          for run,name in [(42264565441,'pr41-identity-status')]:
             artifacts=json.loads(read('/actions/runs/'+str(run)+'/artifacts'))['artifacts']
             a=next(a for a in artifacts if a['name']==name and not a['expired'])
             archive=zipfile.ZipFile(io.BytesIO(read('/actions/artifacts/'+str(a['id'])+'/zip')))
@@ -42,5 +42,5 @@ jobs:
               print('::error title=PR41 artifact layout::'+json.dumps(names))
               raise Exception('SUMMARY_LAYOUT')
             report=json.loads(archive.read(summaries[0]))
-            for key in ['result','stage','failure','restore','sourceCodeClone','rollback','backup','d1','media','d1Before']:
-              if key in report: print('::notice title=PR41 retained '+str(run)+' '+key+'::'+json.dumps(report[key]))
+            selected={key:report[key] for key in ['result','stage','failure','approval','environment'] if key in report}
+            print('::notice title=PR41 retained '+str(run)+'::'+json.dumps(selected))
