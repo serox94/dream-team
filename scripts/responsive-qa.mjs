@@ -38,6 +38,8 @@ try{
         assert.equal(await page.locator('#dashboard-details').getAttribute('open'),null,'additional statistics stay collapsed by default');
         await page.locator('#dashboard-details > summary').click();
         assert.match(await page.locator('#trip-score-total').innerText(),/2 ryb.*23,0 kg/);
+        await page.locator('#dashboard-details > summary').click();
+        await page.evaluate(()=>window.scrollTo(0,0));
         assert.equal(await page.locator('body').getAttribute('data-field-mode'),'before');
         assert.match(await page.locator('#field-readiness').innerText(),/Gotowość do wyjazdu/);
         console.log(`Dashboard ${width}px disposable fixture: ready ${readyMs} ms, ${requests} requests after chart load.`);
