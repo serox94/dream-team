@@ -1,0 +1,23 @@
+name: PR41 read-only release approval gate
+on:
+  push:
+    branches: [ops/pr41-safe-release-20261106]
+    paths: [.github/workflows/pr41-approval-read.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Inspect approval state without changing it
+        env:
+          APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+        run: |
+          case "$APPROVED" in
+            no) echo "PRODUCTION_APPROVAL_STATE=no" ;;
+            yes) echo "PRODUCTION_APPROVAL_STATE=yes" ;;
+            '') echo "PRODUCTION_APPROVAL_STATE=unset" ;;
+            *) echo "PRODUCTION_APPROVAL_STATE=other" ;;
+          esac
