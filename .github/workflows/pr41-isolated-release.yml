@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ops/pr41-safe-release-20261106]
-    paths: [scripts/pr41-isolated-release.mjs, scripts/pr41-isolated-cleanup.mjs, scripts/pr41-release-transition.mjs, .github/workflows/pr41-isolated-release.yml]
+    paths: [scripts/pr41-isolated-release.mjs, scripts/pr41-isolated-cleanup.mjs, scripts/pr41-release-transition.mjs, scripts/pr41-audit-artifact.mjs, .github/workflows/pr41-isolated-release.yml]
 permissions:
   contents: read
 concurrency:
@@ -40,4 +40,11 @@ jobs:
         with:
           name: pr41-isolated-status
           path: pr41-isolated-status/*.json
+          retention-days: 14
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: success()
+        with:
+          name: pr41-release-bundle
+          path: pr41-release-bundle/
+          if-no-files-found: error
           retention-days: 14

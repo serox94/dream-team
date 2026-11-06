@@ -7,7 +7,8 @@ import {execFileSync} from 'node:child_process';
 import {randomBytes,createHmac} from 'node:crypto';
 import {cf,query,sha,wrangler,productionId,assertSandbox} from './recovery-common.mjs';
 import {inspectSql,restoreSnapshot,verifySnapshot,rowsDigest} from './d1-snapshot.mjs';
-import {releaseCodeOnly,PR41_PREVIOUS,PR41_CANDIDATE} from './pr41-release-transition.mjs';
+import {releaseCodeOnly,planDigest,PR41_PREVIOUS,PR41_CANDIDATE} from './pr41-release-transition.mjs';
+import {uploadExactAuditVersion} from './pr41-audit-artifact.mjs';
 const check=(v,c)=>{if(!v)throw Error(c)};
 const report={result:'BLOCKED',stage:'CONTEXT',productionMutations:0,sourceVersion:PR41_PREVIOUS,candidate:PR41_CANDIDATE};
 const ownerFile='pr41-isolated-owner.json';
@@ -64,11 +65,12 @@ try {
  owner.worker=name;await saveOwner();
  report.stage='SOURCE_CLONE';wrangler(['deploy','--config',sourceConfig]);
  const current=async()=>{const x=(await cf('/workers/scripts/'+name+'/deployments')).deployments[0].versions;check(x.length===1&&x[0].percentage===100,'SPLIT_TRAFFIC');return x[0].version_id};
- const previous=await current();
+ const previous=await uploadExactAuditVersion(name,source,rebound,source.modules);
+ await cf('/workers/scripts/'+name+'/deployments','POST',{strategy:'percentage',versions:[{version_id:previous,percentage:100}]});
  const cloneExact=async id=>cf('/workers/workers/'+name+'/versions/'+id+'?include=modules');
- const cloned=await cloneExact(previous);check(rowsDigest(moduleList(cloned))===rowsDigest(moduleList(source)),'SOURCE_CODE_BYTES_CHANGED');
+ const cloned=await cloneExact(previous);report.clonedModules=moduleList(cloned);check(rowsDigest(moduleList(cloned))===rowsDigest(moduleList(source)),'SOURCE_CODE_BYTES_CHANGED');
  check(rowsDigest(normalized(cloned.bindings))===rowsDigest(normalized(rebound)),'SOURCE_CONFIGURATION_CHANGED');
- check(rowsDigest([cloned.assets.config])===rowsDigest([source.assets.config])&&cloned.compatibility_date===source.compatibility_date&&rowsDigest(cloned.compatibility_flags||[])===rowsDigest(source.compatibility_flags||[]),'SOURCE_RUNTIME_CHANGED');
+ check(rowsDigest([cloned.assets.config])===rowsDigest([source.assets.config])&&cloned.compatibility_date===source.compatibility_date&&cloned.usage_model===source.usage_model&&rowsDigest(cloned.compatibility_flags||[])===rowsDigest(source.compatibility_flags||[]),'SOURCE_RUNTIME_CHANGED');
  report.sourceCodeClone={status:'PASS',version:previous,moduleSha256:sha(sourceBytes),bindings:'ALL_PRESERVED_EXCEPT_OWNED_D1_R2_AND_EPHEMERAL_SECRETS',staticContentIdentity:'UNPROVEN'};
  await verifySnapshot(owner.database,snapshot);
  const subdomain=await cf('/workers/subdomain'),base='https://'+name+'.'+subdomain.subdomain+'.workers.dev';
@@ -85,9 +87,10 @@ try {
  const output=join(dir,'candidate-output');wrangler(['deploy','--dry-run','--outdir',output,'--config',candidateBuildConfig]);
  const candidateBytes=await readFile(join(output,'worker.js'));
  const candidateConfig=await writeConfig(config(join(output,'worker.js'),join(candidateTree,'public'),true,PR41_CANDIDATE),'candidate');
- const upload=wrangler(['versions','upload','--config',candidateConfig]),target=upload.match(/Version ID:\s*([a-f0-9-]{36})/i)?.[1];check(target&&await current()===previous,'CANDIDATE_UPLOAD_CHANGED_TRAFFIC');
- const targetExact=await cloneExact(target);check(targetExact.modules.length===1&&sha(Buffer.from(targetExact.modules[0].content_base64,'base64'))===sha(candidateBytes),'CANDIDATE_BYTES_CHANGED');
+ const upload=wrangler(['versions','upload','--config',candidateConfig]),staged=upload.match(/Version ID:\s*([a-f0-9-]{36})/i)?.[1];check(staged&&await current()===previous,'CANDIDATE_UPLOAD_CHANGED_TRAFFIC');
  const targetBindings=rebound.map(b=>b.name==='APP_BUILD'?{...b,text:PR41_CANDIDATE}:b);
+ const target=await uploadExactAuditVersion(name,source,targetBindings,[{name:'worker.js',content_type:source.modules[0].content_type,content_base64:candidateBytes.toString('base64')}]);
+ const targetExact=await cloneExact(target);check(targetExact.modules.length===1&&sha(Buffer.from(targetExact.modules[0].content_base64,'base64'))===sha(candidateBytes),'CANDIDATE_BYTES_CHANGED');
  check(rowsDigest(normalized(targetExact.bindings))===rowsDigest(normalized(targetBindings)),'CANDIDATE_CONFIGURATION_CHANGED');
  report.candidateCode={status:'PASS',version:target,moduleSha256:sha(candidateBytes),source:PR41_CANDIDATE,configuration:'ALL_BINDINGS_CHECKED'};
  const activate=async id=>{check([previous,target].includes(id),'UNPINNED_VERSION');assertSandbox(name);await cf('/workers/scripts/'+name+'/deployments','POST',{strategy:'percentage',versions:[{version_id:id,percentage:100}],annotations:{'workers/message':'PR41 isolated exact module rehearsal'}})};
@@ -100,6 +103,8 @@ try {
  report.failedRecovery=await releaseCodeOnly({...io,verify:async()=>{throw Error('INJECTED_READINESS_FAILURE')},verifyRecovery:async()=>{throw Error('INJECTED_RECOVERY_FAILURE')}},{previous,target});check(report.failedRecovery.result==='BLOCKED'&&report.failedRecovery.recovery==='BLOCKED','RECOVERY_FAIL_OPEN');
  await verify(previous);await activeProduction();
  report.sessionContinuity='PASS_SYNTHETIC_SESSION_ON_UNMODIFIED_RESTORED_ACCOUNT';report.existingAccountAndSessionRows='BYTE_DIGEST_PRESERVED';
+ const plan={candidate:PR41_CANDIDATE,previous:PR41_PREVIOUS,schema:32,migrations:[],evidenceRun:run,operatorCommit:process.env.GITHUB_SHA,sourceModuleSha256:sha(sourceBytes),sourceConfigurationSha256:report.sourceConfigurationSha256,candidateModuleSha256:sha(candidateBytes),candidateAssetsSha256:report.candidateAssets.sha256,gates:{sourceCode:'PASS',sourceAssets:'UNPROVEN',sourceConfiguration:'PASS',candidateCode:'PASS',candidateAssets:'PASS',candidateConfiguration:'PASS',restoredD1:'PASS',restoredR2:'PASS',sessionContinuity:'PASS',rollback:'PASS',failureRecovery:'PASS'}};
+ plan.digest=planDigest(plan);await mkdir('pr41-release-bundle',{recursive:true});await writeFile('pr41-release-bundle/plan.json',JSON.stringify(plan,null,2));await writeFile('pr41-release-bundle/worker.js',candidateBytes);await cp(join(candidateTree,'public'),'pr41-release-bundle/public',{recursive:true});report.planDigest=plan.digest;
  report.result='PARTIAL';report.stage='COMPLETE';report.releaseBlocker='PRODUCTION_STATIC_ASSET_CONTENT_IDENTITY_NOT_PROVEN';
 }catch(e){report.failure={stage:report.stage,code:/^[A-Z0-9_]+$/.test(e.message)?e.message:'OPERATION_FAILED',http:e.status??null,cloudflareCode:e.code??null};process.exitCode=1;}
-finally{if(dir)await rm(dir,{recursive:true,force:true});await mkdir('pr41-isolated-status',{recursive:true});await writeFile('pr41-isolated-status/summary.json',JSON.stringify(report,null,2));for(const [key,value] of Object.entries(report))console.log('::notice title=PR41 isolated '+key+'::'+JSON.stringify(value));}
+finally{if(dir)await rm(dir,{recursive:true,force:true});await mkdir('pr41-isolated-status',{recursive:true});await writeFile('pr41-isolated-status/summary.json',JSON.stringify(report,null,2));if(report.failure)console.log('::error title=PR41 isolated failure::'+JSON.stringify(report.failure));console.log('::notice title=PR41 isolated summary::'+JSON.stringify({result:report.result,stage:report.stage,sourceCodeClone:report.sourceCodeClone,restore:report.restore,rollback:report.rollback,promotion:report.promotion,failedActivation:report.failedActivation,failedReadiness:report.failedReadiness,failedRecovery:report.failedRecovery,releaseBlocker:report.releaseBlocker}));}

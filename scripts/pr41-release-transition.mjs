@@ -1,4 +1,5 @@
 // Code-only schema32 release. No migration, maintenance switch or database restore.
+import {createHash} from 'node:crypto';
 export const PR41_CANDIDATE='5c38a2cc69657fb5ad8c2df3c716a90439688e34';
 export const PR41_PREVIOUS='31b6b9bd-8f0b-4566-9ced-6b5bf1c26f9d';
 const check=(v,c)=>{if(!v)throw Error(c)};
@@ -30,14 +31,22 @@ export async function releaseCodeOnly(io,{previous,target}) {
 
 // A successful rehearsal is insufficient when exact source/static identity or
 // owner authorization is absent. Call before any production mutation.
-export function productionGate(plan,{approved,approvedPlan,protectedReview,now=Date.now()}) {
+const canonical=x=>Array.isArray(x)?x.map(canonical):x&&typeof x==='object'?Object.fromEntries(Object.keys(x).sort().map(k=>[k,canonical(x[k])])):x;
+export function planDigest(plan){const {digest,...contents}=plan;return createHash('sha256').update(JSON.stringify(canonical(contents))).digest('hex');}
+export function authorizeEvidence(plan,{approved,approvedPlan,protectedReview}) {
  check(approved==='yes','PRODUCTION_APPROVAL_REQUIRED');
  check(protectedReview===true,'PROTECTED_ENVIRONMENT_REVIEW_REQUIRED');
  check(plan.candidate===PR41_CANDIDATE&&plan.previous===PR41_PREVIOUS&&plan.schema===32&&plan.migrations?.length===0,'PINNED_CODE_ONLY_PLAN_REQUIRED');
- check(plan.digest===approvedPlan&&/^[a-f0-9]{64}$/.test(plan.digest||''),'EXACT_PLAN_AUTHORIZATION_REQUIRED');
+ check(plan.digest===approvedPlan&&plan.digest===planDigest(plan),'EXACT_PLAN_AUTHORIZATION_REQUIRED');
  for(const gate of ['sourceCode','sourceAssets','sourceConfiguration','candidateCode','candidateAssets','candidateConfiguration','restoredD1','restoredR2','sessionContinuity','rollback','failureRecovery'])check(plan.gates?.[gate]==='PASS','UNPROVEN_'+gate.toUpperCase());
- check(plan.backup?.d1==='PASS'&&plan.backup?.r2==='PASS','VERIFIED_BACKUP_REQUIRED');
- const age=now-Date.parse(plan.backup.verifiedAt);
+ return true;
+}
+export function productionGate(plan,authorization) {
+ authorizeEvidence(plan,authorization);
+ const backup=authorization.backup??plan.backup;
+ check(backup?.d1==='PASS'&&backup?.r2==='PASS','VERIFIED_BACKUP_REQUIRED');
+ const now=authorization.now??Date.now();
+ const age=now-Date.parse(backup.verifiedAt);
  check(Number.isFinite(age)&&age>=0&&age<15*60*1000,'FRESH_BACKUP_REQUIRED');
  return true;
 }
