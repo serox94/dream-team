@@ -1,8 +1,6 @@
 name: Approved existing Preview modernization
 on:
-  push:
-    branches: [ops/pr41-safe-release-20261106]
-    paths: [.github/workflows/pr41-preview-deploy.yml]
+  workflow_dispatch:
 permissions:
   contents: read
   actions: read
