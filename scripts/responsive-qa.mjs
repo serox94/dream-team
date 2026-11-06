@@ -300,10 +300,12 @@ try{
         assert.match(await page.locator('#atlas-overview figcaption').first().innerText(),/Observed:|Interpretation:/);
         const original=await page.locator('#atlas-overview .deeper-shot-image').first().getAttribute('href');
         assert.equal((await page.request.get(preview.url+original)).status(),200);
-        assert.match(await page.locator('#deeper-media h3').innerText(),/My screenshots/);
+        assert.equal(await page.locator('#deeper-media,#media-form').count(),0,'removed screenshot gallery stays absent in English');
       }
       if(width===390&&route.endsWith('encyklopedia.html')){
+        await page.locator('#diagnostic-step [data-answer="yes"]').waitFor({state:'attached'});
         await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+        await page.locator('#tactic-result .tool-result').waitFor({state:'visible'});
         assert.match(await page.locator('#tactic-result').innerText(),/starting point|start/i);
       }
       if(width===390&&route.endsWith('ustawienia.html')){
