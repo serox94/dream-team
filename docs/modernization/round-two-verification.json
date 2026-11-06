@@ -1,0 +1,674 @@
+{
+  "environment": "LOCAL_DISPOSABLE_SQLITE",
+  "livePreviewVerified": false,
+  "queries": [
+    {
+      "width": 390,
+      "lang": "pl",
+      "module": "sonar",
+      "query": "zielsko",
+      "count": 7,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.859375,
+        "hitBottom": 443.859375,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "pl",
+      "module": "sonar",
+      "query": "muł",
+      "count": 4,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.0960388183594,
+        "hitBottom": 443.0960693359375,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "pl",
+      "module": "sonar",
+      "query": "temperatura",
+      "count": 1,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.0961608886719,
+        "hitBottom": 443.09619140625,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "pl",
+      "module": "sonar",
+      "query": "twardość",
+      "count": 6,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.0960693359375,
+        "hitBottom": 443.0960693359375,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "pl",
+      "module": "encyklopedia",
+      "query": "zielsko",
+      "count": 3,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.859375,
+        "hitBottom": 488.859375,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "pl",
+      "module": "encyklopedia",
+      "query": "muł",
+      "count": 8,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.0959167480469,
+        "hitBottom": 446.09588623046875,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "pl",
+      "module": "encyklopedia",
+      "query": "temperatura",
+      "count": 7,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.09600830078125,
+        "hitBottom": 443.09600830078125,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "pl",
+      "module": "encyklopedia",
+      "query": "twardość",
+      "count": 1,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.2209777832031,
+        "hitBottom": 446.220947265625,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "module": "sonar",
+      "query": "zielsko",
+      "count": 6,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.859375,
+        "hitBottom": 467.859375,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "module": "sonar",
+      "query": "muł",
+      "count": 4,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.22088623046875,
+        "hitBottom": 467.22088623046875,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "module": "sonar",
+      "query": "temperatura",
+      "count": 1,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.39007568359375,
+        "hitBottom": 443.39007568359375,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "module": "sonar",
+      "query": "twardość",
+      "count": 5,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.0959167480469,
+        "hitBottom": 467.0959167480469,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "module": "encyklopedia",
+      "query": "zielsko",
+      "count": 2,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.859375,
+        "hitBottom": 443.859375,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "module": "encyklopedia",
+      "query": "muł",
+      "count": 9,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.09613037109375,
+        "hitBottom": 443.09613037109375,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "module": "encyklopedia",
+      "query": "temperatura",
+      "count": 7,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.0959777832031,
+        "hitBottom": 467.09600830078125,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "lang": "en",
+      "module": "encyklopedia",
+      "query": "twardość",
+      "count": 1,
+      "geometry": {
+        "inputBottom": 243.859375,
+        "resultsTop": 267.859375,
+        "hitTop": 299.2209167480469,
+        "hitBottom": 422.2209167480469,
+        "headerBottom": 118.296875,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "pl",
+      "module": "sonar",
+      "query": "zielsko",
+      "count": 7,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 400.0625,
+        "hitBottom": 481.0625,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "pl",
+      "module": "sonar",
+      "query": "muł",
+      "count": 4,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.4237365722656,
+        "hitBottom": 501.4237365722656,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "pl",
+      "module": "sonar",
+      "query": "temperatura",
+      "count": 1,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.4239196777344,
+        "hitBottom": 501.4239196777344,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "pl",
+      "module": "sonar",
+      "query": "twardość",
+      "count": 6,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.2992858886719,
+        "hitBottom": 501.29925537109375,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "pl",
+      "module": "encyklopedia",
+      "query": "zielsko",
+      "count": 3,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 400.0625,
+        "hitBottom": 502.0625,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "pl",
+      "module": "encyklopedia",
+      "query": "muł",
+      "count": 8,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.4239501953125,
+        "hitBottom": 480.4239501953125,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "pl",
+      "module": "encyklopedia",
+      "query": "temperatura",
+      "count": 7,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.4237976074219,
+        "hitBottom": 480.4237976074219,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "pl",
+      "module": "encyklopedia",
+      "query": "twardość",
+      "count": 1,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.4239501953125,
+        "hitBottom": 480.4239501953125,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "module": "sonar",
+      "query": "zielsko",
+      "count": 6,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 400.0625,
+        "hitBottom": 502.0625,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "module": "sonar",
+      "query": "muł",
+      "count": 4,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.4238586425781,
+        "hitBottom": 501.4238586425781,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "module": "sonar",
+      "query": "temperatura",
+      "count": 1,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.4237060546875,
+        "hitBottom": 501.4237060546875,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "module": "sonar",
+      "query": "twardość",
+      "count": 5,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.4238586425781,
+        "hitBottom": 501.42388916015625,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "module": "encyklopedia",
+      "query": "zielsko",
+      "count": 2,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 400.0625,
+        "hitBottom": 502.0625,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "module": "encyklopedia",
+      "query": "muł",
+      "count": 9,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.29901123046875,
+        "hitBottom": 480.29901123046875,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "module": "encyklopedia",
+      "query": "temperatura",
+      "count": 7,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.2992858886719,
+        "hitBottom": 501.2992858886719,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "lang": "en",
+      "module": "encyklopedia",
+      "query": "twardość",
+      "count": 1,
+      "geometry": {
+        "inputBottom": 339.0625,
+        "resultsTop": 360.0625,
+        "hitTop": 399.4239196777344,
+        "hitBottom": 480.4239196777344,
+        "headerBottom": 194.5,
+        "height": 900
+      },
+      "result": "PASS"
+    }
+  ],
+  "interactions": [
+    {
+      "width": 390,
+      "test": "home",
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "test": "trips",
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "test": "weather",
+      "result": "PASS"
+    },
+    {
+      "width": 390,
+      "test": "checklist",
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "test": "home",
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "test": "trips",
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "test": "weather",
+      "result": "PASS"
+    },
+    {
+      "width": 1440,
+      "test": "checklist",
+      "result": "PASS"
+    },
+    {
+      "language": "en",
+      "test": "home",
+      "result": "PASS"
+    },
+    {
+      "language": "en",
+      "test": "trips",
+      "result": "PASS"
+    },
+    {
+      "language": "en",
+      "test": "weather",
+      "result": "PASS"
+    },
+    {
+      "language": "en",
+      "test": "menu and Escape close",
+      "result": "PASS"
+    },
+    {
+      "test": "form submission blocked until slow bootstrap completes",
+      "result": "PASS"
+    },
+    {
+      "test": "delayed checklist API does not show false zero",
+      "result": "PASS"
+    },
+    {
+      "test": "new PWA shell, offline read and queued write reconnect",
+      "shell": {
+        "complete": true,
+        "missing": 0,
+        "missingPaths": [],
+        "controlled": true,
+        "resources": 113
+      },
+      "result": "PASS"
+    }
+  ],
+  "screenshots": [
+    "before-390-pl-sonar-zielsko.png",
+    "after-390-pl-sonar-zielsko.png",
+    "after-390-pl-sonar-muł.png",
+    "after-390-pl-sonar-temperatura.png",
+    "after-390-pl-sonar-twardość.png",
+    "before-390-pl-encyklopedia-zielsko.png",
+    "after-390-pl-encyklopedia-zielsko.png",
+    "after-390-pl-encyklopedia-muł.png",
+    "after-390-pl-encyklopedia-temperatura.png",
+    "after-390-pl-encyklopedia-twardość.png",
+    "before-390-en-sonar-zielsko.png",
+    "after-390-en-sonar-zielsko.png",
+    "after-390-en-sonar-muł.png",
+    "after-390-en-sonar-temperatura.png",
+    "after-390-en-sonar-twardość.png",
+    "before-390-en-encyklopedia-zielsko.png",
+    "after-390-en-encyklopedia-zielsko.png",
+    "after-390-en-encyklopedia-muł.png",
+    "after-390-en-encyklopedia-temperatura.png",
+    "after-390-en-encyklopedia-twardość.png",
+    "before-1440-pl-sonar-zielsko.png",
+    "after-1440-pl-sonar-zielsko.png",
+    "after-1440-pl-sonar-muł.png",
+    "after-1440-pl-sonar-temperatura.png",
+    "after-1440-pl-sonar-twardość.png",
+    "before-1440-pl-encyklopedia-zielsko.png",
+    "after-1440-pl-encyklopedia-zielsko.png",
+    "after-1440-pl-encyklopedia-muł.png",
+    "after-1440-pl-encyklopedia-temperatura.png",
+    "after-1440-pl-encyklopedia-twardość.png",
+    "before-1440-en-sonar-zielsko.png",
+    "after-1440-en-sonar-zielsko.png",
+    "after-1440-en-sonar-muł.png",
+    "after-1440-en-sonar-temperatura.png",
+    "after-1440-en-sonar-twardość.png",
+    "before-1440-en-encyklopedia-zielsko.png",
+    "after-1440-en-encyklopedia-zielsko.png",
+    "after-1440-en-encyklopedia-muł.png",
+    "after-1440-en-encyklopedia-temperatura.png",
+    "after-1440-en-encyklopedia-twardość.png",
+    "before-390-home.png",
+    "after-390-home.png",
+    "before-390-trips.png",
+    "after-390-trips.png",
+    "before-390-weather.png",
+    "after-390-weather.png",
+    "before-390-checklist.png",
+    "after-390-checklist.png",
+    "before-390-menu.png",
+    "after-390-menu.png",
+    "before-1440-home.png",
+    "after-1440-home.png",
+    "before-1440-trips.png",
+    "after-1440-trips.png",
+    "before-1440-weather.png",
+    "after-1440-weather.png",
+    "before-1440-checklist.png",
+    "after-1440-checklist.png",
+    "after-390-en-home.png",
+    "after-390-en-trips.png",
+    "after-390-en-weather.png",
+    "after-390-en-menu.png"
+  ],
+  "result": "PASS",
+  "baselineCommit": "75ae1f1a599b5bfe0bd8e736c543e4dca060f4d8",
+  "branch": "feat/preview-carp-trip-modernization-20261105",
+  "unitAndIntegration": {
+    "passed": 321,
+    "failed": 0
+  },
+  "build": "PASS_DRY_RUN_ONLY",
+  "liveChecklistZeroCause": "UNVERIFIED_PROXY_CONNECT_403",
+  "productionChanged": false,
+  "remoteDataChanged": false
+}

@@ -8,7 +8,7 @@ window.initDreamSettings=async()=>{
   const profile=$('settings-version').closest('section');
   profile.id='general-settings';
   profile.querySelector('p:nth-of-type(2)').insertAdjacentHTML('beforeend',` <small>${t('(profil informacyjny; instrukcje Deeper są napisane dla tego zestawu)')}</small>`);
-  const providerStatus=document.createElement('p');providerStatus.id='research-provider-status';providerStatus.textContent=saved.researchProviderConfigured?'Automatyczne wyszukiwanie źródeł: dostawca skonfigurowany.':'AUTOMATYCZNE WYSZUKIWANIE ŹRÓDEŁ: OCZEKUJE NA TAVILY_API_KEY. Preferencje zapiszą się, a automatyka zadziała po konfiguracji.';
+  const providerStatus=document.createElement('p');providerStatus.id='research-provider-status';providerStatus.textContent=t('Nowe wyjazdy nie uruchamiają automatycznego researchu. Zweryfikowane materiały dodaj do profilu łowiska.');
   $('research-auto').closest('label').before(providerStatus);
   $('research-official').closest('label').lastChild.textContent=' Preferuj oficjalne strony w wyszukiwaniu';
   const system=document.createElement('section');system.className='panel-card';system.id='system-health';

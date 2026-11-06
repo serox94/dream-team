@@ -10,7 +10,7 @@ const widths=[360,390,412,768,1280];
 const routes=['/','/pages/wyjazdy.html','/pages/polowy.html','/pages/checklisty.html','/pages/mapa.html','/pages/teren.html','/pages/pogoda.html','/pages/dojazd.html','/pages/regulamin.html','/pages/wezly.html','/pages/rigi.html','/pages/porady.html','/pages/encyklopedia.html','/pages/sonar.html','/pages/ustawienia.html'];
 const preview=await serve({seed:true,weatherFetch:async()=>Response.json(weatherFixture())});
 const loginPreview=await serve({testSession:false});
-const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+const browser=await chromium.launch({headless:true,args:['--no-sandbox'],...(process.env.PRO2_CHROMIUM_BIN?{executablePath:process.env.PRO2_CHROMIUM_BIN}:{})});
 const screenshotDir='qa-screenshots';
 await mkdir(screenshotDir,{recursive:true});
 try{
@@ -35,7 +35,12 @@ try{
         await page.waitForFunction(()=>{const img=document.getElementById('dream-crew-photo');return img?.complete&&img.naturalWidth>0;},{timeout:10000});
         assert.equal(await page.locator('.score-chart').count(),2);
         assert.equal(await page.locator('.score-row').count(),4);
+        assert.equal(await page.locator('#dashboard-details').getAttribute('open'),null,'additional statistics stay collapsed by default');
+        await page.locator('#dashboard-details > summary').click();
         assert.match(await page.locator('#trip-score-total').innerText(),/2 ryb.*23,0 kg/);
+        await page.locator('#dashboard-details > summary').click();
+        await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+        await page.waitForFunction(()=>window.scrollY===0);
         assert.equal(await page.locator('body').getAttribute('data-field-mode'),'before');
         assert.match(await page.locator('#field-readiness').innerText(),/Gotowość do wyjazdu/);
         console.log(`Dashboard ${width}px disposable fixture: ready ${readyMs} ms, ${requests} requests after chart load.`);
@@ -115,10 +120,11 @@ try{
         if(route==='/'){
           if(width===390){
             const navTop=(await page.locator('.bottom-nav').boundingBox()).y;
-            for(const selector of ['#dashboard-trip-name','#dashboard-lake','#dashboard-peg','#dashboard-dates','#dashboard-weather-now','#dashboard-check-inline','.hero-actions a:first-child']){
+            for(const selector of ['#dashboard-trip-name','#dashboard-lake','#dashboard-peg','#dashboard-dates','#dashboard-weather-now','.hero-actions a:first-child']){
               const box=await page.locator(selector).boundingBox();
               assert.ok(box&&box.y+box.height<navTop,`390px dashboard first fold: ${selector} is below navigation`);
             }
+            assert.equal(await page.locator('.dashboard-snapshot > div:has(#dashboard-check-inline)').isVisible(),false,'redundant checklist snapshot is hidden on mobile');
             const photo=await page.locator('.hero-side-card img').boundingBox(),facts=await page.locator('.trip-facts').boundingBox();
             assert.ok(photo.y>=facts.y+facts.height,'mobile portrait follows the essential trip facts');
           }
@@ -159,17 +165,18 @@ try{
           assert.match(await page.locator('#diagnostic-step').innerText(),/krok 2/i);
           for(let i=1;i<8;i++)await page.locator('#diagnostic-step [data-answer="yes"]').click();
           assert.match(await page.locator('#diagnostic-step').innerText(),/Plan na teraz/);
-          await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+          await page.locator('#tactic-form button[type=submit]').click();
           assert.match(await page.locator('#tactic-result').innerText(),/Dobry punkt startowy/);
           assert.ok(await page.locator('.article-sources').count()>=1);
-          await search.fill('10°C');
-          assert.ok(await page.locator('#guide-woda-8').isVisible(),'C: ten-degree starting point is findable');
+          await search.fill('muł');
+          assert.ok(await page.locator('#knowledge-search-results').isVisible(),'inline results appear under the knowledge search input');
+          assert.ok(await page.locator('.knowledge-search-hit').count()>0,'silt is found in article text');
+          await search.fill('');
+          assert.ok(await page.locator('#guide-woda-8').isVisible(),'C: ten-degree field guide remains available in normal browse mode');
           await page.locator('#guide-woda-8 summary').click();
           assert.match(await page.locator('#guide-woda-8').innerText(),/małe PVA/);
-          await search.fill('muł');
-          assert.ok(await page.locator('#guide-mul').isVisible(),'C: silt advice is findable');
-          await search.fill('12 godzin');
-          assert.ok(await page.locator('#guide-bez-brania-12').isVisible(),'C: no-bite diagnostic is findable');
+          assert.ok(await page.locator('#guide-mul').isVisible(),'C: silt advice remains in the field guides');
+          assert.ok(await page.locator('#guide-bez-brania-12').isVisible(),'C: no-bite diagnostic remains in the field guides');
         }
         if(width===390&&route==='/pages/sonar.html'){
           await page.locator('a[href="#sonar-dno"]').first().click();
@@ -180,38 +187,8 @@ try{
           assert.match(await page.locator('#spot-result').innerText(),/Trzy punkty/);
           await page.locator('#quiz-stage [data-quiz="0"]').click();
           assert.match(await page.locator('#quiz-feedback').innerText(),/potwierdzenia ciężarkiem/);
-          const tiny=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/kVsAAAAASUVORK5CYII=','base64');
-          await page.locator('#shot-file').setInputFiles({name:'deeper.png',mimeType:'image/png',buffer:tiny});
-          assert.equal(await page.locator('#shot-controls').isVisible(),true);
-          await page.locator('#shot-q1').selectOption('yes');
-          await page.locator('#shot-analyze').click();
-          assert.match(await page.locator('#shot-result').innerText(),/Twoich odpowiedzi/);
-          assert.equal(preview.requests.filter(r=>r.method==='POST'&&r.url.includes('knowledge')).length,0,'screenshot never uploaded');
-          await page.locator('#media-file').setInputFiles({name:'fish-deeper.png',mimeType:'image/png',buffer:tiny});
-          await page.locator('#media-name').fill('Kontrolny screen CHIRP+ 2');
-          await page.locator('#media-trip').selectOption('next-trip');
-          await page.locator('#media-form button[type="submit"]').click();
-          await page.locator('.media-card').first().waitFor();
-          assert.equal(preview.mediaObjects.size,1,'disposable R2 stores uploaded image');
-          const imageUrl=await page.locator('.media-card img').first().getAttribute('src');
-          assert.equal((await page.request.get(preview.url+imageUrl)).status(),200,'private R2 read');
-          assert.equal(await page.locator('.media-card a[target="_blank"]').first().getAttribute('href'),imageUrl,'private original opens full size');
-          assert.equal((await fetch(loginPreview.url+imageUrl)).status,401,'image URL is not readable without a session');
-          await page.locator('.media-card button').filter({hasText:'Edytuj opis'}).click();
-          await page.locator('#media-note').fill('Mój opis dna');
-          await page.locator('#media-form button[type="submit"]').click();
-          await page.locator('.media-card').getByText('Mój opis dna').waitFor();
-          await page.locator('.media-card button').filter({hasText:'Utwórz spot'}).click();
-          await page.locator('.media-card form input[name="name"]').fill('Mój spot sonarowy');
-          await page.locator('.media-card form button[type="submit"]').click();
-          await page.locator('#media-status').getByText(/Spot utworzony/).waitFor();
-          await page.locator('.media-card button').filter({hasText:'Przeanalizuj zrzut ekranu'}).click();
-          await page.locator('.media-analysis button').filter({hasText:'Zapisz analizę'}).click();
-          await page.locator('.media-card details.media-analysis').waitFor();
-          page.once('dialog',dialog=>dialog.accept());
-          await page.locator('.media-card button').filter({hasText:'Usuń obraz'}).click();
-          await page.locator('.media-card').waitFor({state:'detached'});
-          assert.equal(preview.mediaObjects.size,0,'disposable R2 object removed');
+          assert.equal(await page.locator('#shot-file,#shot-controls,#shot-analyze,#shot-result,#media-file,#media-form,.media-card').count(),0,'owner-removed screenshot upload and analysis UI stays absent');
+          assert.equal(await page.locator('#atlas-overview .deeper-shot-image').count(),17,'reference sonar atlas remains available');
         }
       }
       if(width===390&&route==='/pages/wyjazdy.html'){
@@ -239,7 +216,7 @@ try{
     const submit=await login.locator('button[type="submit"]').boundingBox();assert.ok(submit&&submit.height>=44,`${width} login: small submit`);
     await login.screenshot({path:`${screenshotDir}/login-${width}.png`});
     if(width===390){
-      const offline=await context.newPage();
+      const offline=await context.newPage(),offlineErrors=[];offline.on('pageerror',error=>offlineErrors.push(error.message));
       await offline.goto(preview.url+'/pages/checklisty.html');
       await offline.locator('html[data-ready="true"]').waitFor();
       await waitForOfflineReady(offline);
@@ -261,24 +238,25 @@ try{
       await context.setOffline(true);
       for(const knowledgeRoute of ['/pages/encyklopedia.html','/pages/sonar.html']){
         await offline.goto(preview.url+knowledgeRoute,{waitUntil:'domcontentloaded'});
-        await offline.locator('.knowledge-entry').first().waitFor({state:'attached',timeout:20000});
+        await offline.locator('#knowledge-root[data-knowledge-ready="true"]').waitFor({timeout:20000});
         assert.ok(await offline.locator('.knowledge-entry').count()>=14,`${knowledgeRoute}: offline editorial data`);
         if(knowledgeRoute.includes('encyklopedia')){
-          await offline.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+          await offline.locator('#diagnostic-step [data-answer="yes"]').waitFor({state:'attached'});
+          await offline.locator('#tactic-form button[type=submit]').click();
+          await offline.locator('#tactic-result .tool-result').waitFor({state:'visible',timeout:5000});
           assert.match(await offline.locator('#tactic-result').innerText(),/Dobry punkt startowy/,'offline tactic result');
         }else{
-          await offline.locator('#spot-form').evaluate(form=>form.requestSubmit());
+          await offline.locator('#quiz-stage [data-quiz="0"]').waitFor({state:'attached'});
+          await offline.locator('#spot-form button[type=submit]').click();
+          await offline.locator('#spot-result .tool-result').waitFor({state:'visible'});
           assert.match(await offline.locator('#spot-result').innerText(),/Trzy punkty/,'offline spot advice');
           await offline.locator('#quiz-stage [data-quiz="0"]').click();
           assert.match(await offline.locator('#quiz-feedback').innerText(),/potwierdzenia ciężarkiem/,'offline quiz feedback');
-          const offlineShot=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/kVsAAAAASUVORK5CYII=','base64');
-          await offline.locator('#shot-file').setInputFiles({name:'offline.png',mimeType:'image/png',buffer:offlineShot});
-          await offline.locator('#shot-q1').selectOption('yes');
-          await offline.locator('#shot-analyze').click();
-          assert.match(await offline.locator('#shot-result').innerText(),/Twoich odpowiedzi/,'offline screenshot guidance');
+          assert.equal(await offline.locator('#shot-file,#shot-analyze,#media-form').count(),0,'unused screenshots features stay removed offline');
         }
       }
       await context.setOffline(false);
+      assert.deepEqual(offlineErrors,[],'offline knowledge tools must not throw JavaScript errors');
       await offline.close();
       console.log('390px offline: static shell, knowledge tools, queued checklist write and synchronization PASS.');
     }
@@ -323,10 +301,12 @@ try{
         assert.match(await page.locator('#atlas-overview figcaption').first().innerText(),/Observed:|Interpretation:/);
         const original=await page.locator('#atlas-overview .deeper-shot-image').first().getAttribute('href');
         assert.equal((await page.request.get(preview.url+original)).status(),200);
-        assert.match(await page.locator('#deeper-media h3').innerText(),/My screenshots/);
+        assert.equal(await page.locator('#deeper-media,#media-form').count(),0,'removed screenshot gallery stays absent in English');
       }
       if(width===390&&route.endsWith('encyklopedia.html')){
-        await page.locator('#tactic-form').evaluate(form=>form.requestSubmit());
+        await page.locator('#diagnostic-step [data-answer="yes"]').waitFor({state:'attached'});
+        await page.locator('#tactic-form button[type=submit]').click();
+        await page.locator('#tactic-result .tool-result').waitFor({state:'visible'});
         assert.match(await page.locator('#tactic-result').innerText(),/starting point|start/i);
       }
       if(width===390&&route.endsWith('ustawienia.html')){

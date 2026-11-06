@@ -1,12 +1,21 @@
 (async () => {
-  const VERSION='20261027-france-nav-1';
+  const VERSION='20261106-knowledge-ready-1';
+  document.querySelector('main')?.setAttribute('aria-busy','true');
+  document.querySelectorAll('form button[type=submit]').forEach(button=>{if(!button.disabled){button.disabled=true;button.dataset.loadingDisabled='true'}});
+  document.addEventListener('submit',event=>{
+    const localReady=event.target.matches?.('#knowledge-root[data-knowledge-ready="true"] form[data-local-ready="true"]');
+    if(document.documentElement.dataset.ready!=='true'&&!localReady){event.preventDefault();event.stopImmediatePropagation();}
+  },true);
   const loadScript=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=`/${src}?v=${VERSION}`;s.onload=resolve;s.onerror=()=>reject(new Error(`Nie udało się wczytać ${src}.`));document.body.append(s);});
   try{
     await loadScript('dream-core.js');
     await loadScript('app-shell.js');
     const model=await Dream.api('/api/bootstrap');
     if(model.currentUser&&window.DreamLanguage?.activate(model.currentUser)){location.reload();return;}
-    const trip=model.trips.find(t=>t.id===Dream.readTrip())||model.trips.find(t=>t.id===model.app.activeTripId)||model.trips.find(t=>t.status!=='archived')||model.trips[0];
+    const requestedTrip=new URLSearchParams(location.search).get('tripId');
+    const trip=model.trips.find(t=>t.id===(requestedTrip||Dream.readTrip()))||model.trips.find(t=>t.id===model.app.activeTripId)||model.trips.find(t=>t.status!=='archived')||model.trips[0];
+    if(trip&&requestedTrip===trip.id)Dream.rememberTrip(trip.id);
+    if(!trip&&document.getElementById('knowledge-root')){document.querySelector('main')?.setAttribute('aria-busy','false');window.DREAM_MODEL=model;document.documentElement.dataset.ready='true';Dream.registerShell();return;}
     if(!trip)throw new Error('Brak wyjazdów w bazie.');
     window.DREAM_MODEL=model;window.DREAM_TRIP=trip;window.DREAM_VIEWED_TRIP_ID=trip.id;
     await loadScript('domain-glossary.js');
@@ -64,17 +73,19 @@
     await loadScript('lake-manager.js');
     if(document.getElementById('lake-manager'))await DreamLakeManager.mount();
     await DreamLakeManager.loadAdviceWords();
-    const profileSections={dojazd:[2,3,4],mapa:[2],teren:[0,3,4],porady:[0,1]};
-    if(profileSections[document.body.dataset.page]){try{const p=await Dream.api(`/api/lakes/${encodeURIComponent(trip.lakeId)}/manager?tripId=${encodeURIComponent(trip.id)}`);const host=document.createElement('div');host.className='shared-lake-evidence';document.querySelector('main').append(host);DreamLakeManager.renderProfile(host,p,{section:profileSections[document.body.dataset.page]});}catch(error){Dream.notice(error.message,true);}}
     await loadScript('help-guide.js');DreamHelp.mount();
+    await loadScript('round-two-ui.js');
+    document.querySelector('main')?.setAttribute('aria-busy','false');
+    document.querySelectorAll('[data-loading-disabled]').forEach(button=>{button.disabled=false;delete button.dataset.loadingDisabled});
     document.documentElement.dataset.ready='true';
     Dream.registerShell();
     document.dispatchEvent(new Event('dream:ready'));
   }catch(error){
+    document.querySelector('main')?.setAttribute('aria-busy','false');
     console.error('Dream Team bootstrap failed:',error);
     if(window.Dream)Dream.notice(`Nie udało się wczytać aplikacji: ${error.message} Odśwież stronę.`,true);
     const box=document.querySelector('.trip-box');if(box)box.textContent='Błąd wczytywania danych';
-    document.querySelectorAll('form button').forEach(b=>b.disabled=true);
+    document.querySelectorAll('form').forEach(form=>{if(!form.matches('#knowledge-root[data-knowledge-ready="true"] form[data-local-ready="true"]'))form.querySelectorAll('button').forEach(b=>b.disabled=true);});
     document.documentElement.dataset.ready='error';
   }
 })();

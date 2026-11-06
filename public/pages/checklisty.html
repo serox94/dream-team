@@ -65,17 +65,6 @@
       </div>
     </section>
 
-    <section class="panel-card">
-      <div class="section-head">
-        <h3>Lista na wyjazd</h3>
-        <button id="refresh-checklist-btn" type="button" class="secondary-btn">Odśwież</button>
-      </div>
-
-      <div id="checklist-groups" class="list-grid">
-        <div class="empty-box">Ładowanie checklist...</div>
-      </div>
-    </section>
-
     <section class="two-column">
       <article class="panel-card">
         <h3 id="checklist-form-title">Dodaj pozycję</h3>
@@ -128,12 +117,24 @@
         <h3>📦 Podsumowanie</h3>
 
         <div class="mini-stats">
-          <div><span>Wszystkie pozycje</span><strong id="check-all-count">0</strong></div>
-          <div><span>Odhaczone</span><strong id="check-done-count">0</strong></div>
-          <div><span>Do ogarnięcia</span><strong id="check-open-count">0</strong></div>
+          <div><span>Wszystkie pozycje</span><strong id="check-all-count">—</strong></div>
+          <div><span>Odhaczone</span><strong id="check-done-count">—</strong></div>
+          <div><span>Do ogarnięcia</span><strong id="check-open-count">—</strong></div>
         </div>
       </article>
     </section>
+    <section class="panel-card">
+      <div class="section-head">
+        <h3>Lista na wyjazd</h3>
+        <button id="refresh-checklist-btn" type="button" class="secondary-btn">Odśwież</button>
+      </div>
+
+      <div id="checklist-groups" class="list-grid">
+        <div class="empty-box">Ładowanie checklist...</div>
+      </div>
+    </section>
+
+
 
 
   </main>  <script src="/dream-loader-v2.js?v=20260930-3"></script>

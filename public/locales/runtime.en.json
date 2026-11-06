@@ -905,5 +905,12 @@
   "Archiwum": "Archive",
   "Sekcje wyjazdów": "Trip sections",
   "Łowiska i ich profile": "Fisheries and their profiles",
-  "Zarządzaj łowiskami i dodawaj źródła researchu →": "Manage fisheries and add research sources →"
+  "Zarządzaj łowiskami i dodawaj źródła researchu →": "Manage fisheries and add research sources →",
+  "Automatyczny research jest wyłączony. Dane łowiska uzupełnij po weryfikacji źródeł.": "Automatic research is disabled. Update fishery information after checking the sources.",
+  "Nowe wyjazdy nie uruchamiają automatycznego researchu. Zweryfikowane materiały dodaj do profilu łowiska.": "New trips never start automatic research. Add verified materials to the fishery profile.",
+  "Automatyczny research wyłączony — dodawaj zweryfikowane materiały": "Automatic research disabled — add verified materials",
+  "Brak pasujących pozycji.": "No matching items.",
+  "Wszystko": "Everything",
+  "Profile łowisk i materiały źródłowe": "Fishery profiles and source materials",
+  "Zatwierdzone informacje edytuj w profilu łowiska. Surowe materiały służą do weryfikacji i nie zastępują regulaminu.": "Edit approved information in the fishery profile. Raw materials are for verification and do not replace the regulations."
 }

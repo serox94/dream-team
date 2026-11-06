@@ -195,7 +195,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     const renderGroup = (title, chip, group, fallback) => panel(title, chip, `<div class="weather-interpretation">${group.map(docNotes).join('') || note(fallback, 'info')}</div>`);
 
     m.innerHTML = `<section class="hero-card"><h2>📜 Regulamin łowiska</h2><p>Najważniejsze zasady dla ${esc(p.name||trip.lake)}. Kolory pomagają od razu odróżnić zakaz, obowiązek i rzeczy dozwolone.</p></section>
-      ${researchRules(lakeResearch,lakeResearchError)}
+      ${savedRules||!rules.length?researchRules(lakeResearch,lakeResearchError):''}
       ${showLegacy?`<section class="stats-grid">
         ${stat('🎣 Wędki', f.rods, 'info')}
         ${stat('🤖 Łódka zanętowa', f.baitBoat, /dozwol/i.test(f.baitBoat || '') ? 'success' : 'warn')}
@@ -259,6 +259,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
   async function render({ trip, documents, lakeResearch=null, lakeResearchError=null, selectedLake=null }) {
     if (!trip) return;
     const path = route();
+    documents=(documents||[]).filter(d=>['rules','equipment'].includes(d.kind)||!(/(?:tavily|surowy research|automatyczn.{0,12}raport|raport.{0,12}research)/i.test(d.title||'')&&/"(?:raw_content|response_time|search_depth|request_id)"\s*:/.test(d.content||'')));
     if (path === '' || path === '/' || path.endsWith('/index')) renderDashboard(trip);
     if (path.endsWith('/pages/teren')) window.DreamField?.renderGuide(trip, documents || []);
     if (path.endsWith('/pages/mapa')) renderMap(trip);
