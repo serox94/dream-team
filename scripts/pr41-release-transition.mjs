@@ -38,7 +38,8 @@ export function planDigest(plan){const {digest,...contents}=plan;return createHa
 export function proveImmutableSourceRollback(source,deployableVersions) {
  check(source?.id===PR41_PREVIOUS,'ORIGINAL_VERSION_ID_MISMATCH');
  check(source?.assets?.config&&source?.bindings?.some(b=>b.type==='assets'&&b.name==='ASSETS'),'ORIGINAL_VERSION_ASSETS_MISSING');
- check(Array.isArray(deployableVersions)&&deployableVersions.some(v=>v.id===PR41_PREVIOUS),'ORIGINAL_VERSION_NOT_DEPLOYABLE');
+ const versions=Array.isArray(deployableVersions)?deployableVersions:deployableVersions?.items;
+ check(Array.isArray(versions)&&versions.some(v=>v.id===PR41_PREVIOUS),'ORIGINAL_VERSION_NOT_DEPLOYABLE');
  return {status:'PASS',version:PR41_PREVIOUS,method:'DEPLOY_ORIGINAL_CLOUDFLARE_VERSION_UUID',gitRebuiltStaticEquality:'NOT_CLAIMED'};
 }
 export function authorizeEvidence(plan,{approved,approvedPlan,protectedReview}) {
