@@ -17,11 +17,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: python
         run: |
-          import urllib.request,urllib.error,os,json,zipfile,io
+          import urllib.request,urllib.error,urllib.parse,os,json,zipfile,io
+          class Redirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self,req,fp,code,msg,headers,newurl):
+              redirected=super().redirect_request(req,fp,code,msg,headers,newurl)
+              if urllib.parse.urlparse(req.full_url).netloc!=urllib.parse.urlparse(newurl).netloc:
+                redirected.remove_header('Authorization')
+              return redirected
+          opener=urllib.request.build_opener(Redirect())
           base='https://api.github.com/repos/serox94/dream-team'
           def read(path):
             req=urllib.request.Request(base+path,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
-            try: return urllib.request.urlopen(req).read()
+            try: return opener.open(req).read()
             except urllib.error.HTTPError as e:
               print('::error title=PR41 evidence read failed::HTTP '+str(e.code)+' endpoint '+path.split('?')[0])
               raise
