@@ -1,0 +1,29 @@
+name: PR41 live preview offline knowledge
+on:
+  push:
+    branches: [ops/pr41-safe-release-20261106]
+    paths: [.github/workflows/pr41-live-knowledge.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-preview-rehearsal
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false playwright@1.63.0
+      - run: npx playwright install --with-deps chromium
+      - name: Verify live Preview knowledge offline
+        env:
+          RYBY_LOGIN_PASSWORD: ${{ secrets.RYBY_LOGIN_PASSWORD }}
+        run: node scripts/pr41-live-knowledge.mjs
