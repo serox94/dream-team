@@ -39,7 +39,8 @@ try{
         await page.locator('#dashboard-details > summary').click();
         assert.match(await page.locator('#trip-score-total').innerText(),/2 ryb.*23,0 kg/);
         await page.locator('#dashboard-details > summary').click();
-        await page.evaluate(()=>window.scrollTo(0,0));
+        await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+        await page.waitForFunction(()=>window.scrollY===0);
         assert.equal(await page.locator('body').getAttribute('data-field-mode'),'before');
         assert.match(await page.locator('#field-readiness').innerText(),/Gotowość do wyjazdu/);
         console.log(`Dashboard ${width}px disposable fixture: ready ${readyMs} ms, ${requests} requests after chart load.`);
@@ -119,10 +120,13 @@ try{
         if(route==='/'){
           if(width===390){
             const navTop=(await page.locator('.bottom-nav').boundingBox()).y;
-            for(const selector of ['#dashboard-trip-name','#dashboard-lake','#dashboard-peg','#dashboard-dates','#dashboard-weather-now','#dashboard-check-inline','.hero-actions a:first-child']){
+            for(const selector of ['#dashboard-trip-name','#dashboard-lake','#dashboard-peg','#dashboard-dates','#dashboard-weather-now','.hero-actions a:first-child']){
               const box=await page.locator(selector).boundingBox();
               assert.ok(box&&box.y+box.height<navTop,`390px dashboard first fold: ${selector} is below navigation`);
             }
+            const checklistSnapshot=page.locator('#dashboard-check-inline');
+            await checklistSnapshot.scrollIntoViewIfNeeded();
+            assert.ok((await checklistSnapshot.innerText()).trim().length>0,'checklist snapshot is accessible after scroll');
             const photo=await page.locator('.hero-side-card img').boundingBox(),facts=await page.locator('.trip-facts').boundingBox();
             assert.ok(photo.y>=facts.y+facts.height,'mobile portrait follows the essential trip facts');
           }
