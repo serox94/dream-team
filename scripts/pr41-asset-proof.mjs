@@ -27,9 +27,19 @@ export async function verifyAuditAssetNamespace({worker,source,expectedVersion,r
   }
   check(ready,'ASSET_PROOF_EDGE_NOT_READY');
   for(const file of files) {
-   const r=await fetch(base+'/'+file.path.split('/').map(encodeURIComponent).join('/'),{redirect:'manual',cache:'no-store',signal:AbortSignal.timeout(10000)});
-   check(r.status===200&&r.headers.get('x-pr41-static-probe')===nonce,'ASSET_PROOF_RESPONSE_IDENTITY');
-   check(sha(Buffer.from(await r.arrayBuffer()))===file.sha256,'ASSET_PROOF_BYTES_MISMATCH');
+   const path=base+'/'+file.path.split('/').map(encodeURIComponent).join('/');
+   let verified=false,last={status:null,marker:false};
+   for(let attempt=0;attempt<5;attempt++){
+    const r=await fetch(path+'?pr41_audit='+nonce+'-'+attempt,{redirect:'manual',cache:'no-store',headers:{'cache-control':'no-cache'},signal:AbortSignal.timeout(10000)});
+    last={status:r.status,marker:r.headers.get('x-pr41-static-probe')===nonce};
+    if(last.status===200&&last.marker){
+     check(sha(Buffer.from(await r.arrayBuffer()))===file.sha256,'ASSET_PROOF_BYTES_MISMATCH');
+     verified=true;break;
+    }
+    await r.body?.cancel();
+    if(attempt<4)await new Promise(resolve=>setTimeout(resolve,1200));
+   }
+   if(!verified){console.log('::warning title=PR41 isolated static read::'+JSON.stringify({path:file.path,status:last.status,marker:last.marker}));throw Error('ASSET_PROOF_RESPONSE_IDENTITY')}
   }
   check(await current()===probe,'ASSET_PROOF_ACTIVE_CHANGED');
   return {status:'PASS',files:files.length,sha256:sha(JSON.stringify(files)),databaseBindings:0};
