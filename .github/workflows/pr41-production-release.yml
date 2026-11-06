@@ -1,0 +1,72 @@
+name: PR41 protected code-only production release
+on:
+  push:
+    branches: [ops/pr41-safe-release-20261106]
+    paths:
+      - .github/workflows/pr41-production-release.yml
+      - scripts/pr41-production-release.mjs
+      - scripts/pr41-audit-artifact.mjs
+      - scripts/pr41-release-transition.mjs
+      - tests/pr41-artifact-transport.test.mjs
+      - tests/pr41-release-transition.test.mjs
+  workflow_dispatch:
+    inputs:
+      evidence_run:
+        description: Successful isolated rehearsal on this exact operational commit
+        required: true
+        type: string
+      approved_plan_sha256:
+        description: Exact sealed plan digest reviewed by the owner
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Test operator transport, recovery and the actual no-approval entry point
+        run: node --test tests/pr41-release-transition.test.mjs tests/pr41-artifact-transport.test.mjs
+      - name: Confirm functional application code remains approved
+        run: git diff --exit-code 5c38a2cc69657fb5ad8c2df3c716a90439688e34 HEAD -- src public migrations
+  release:
+    needs: check
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/ops/pr41-safe-release-20261106' && github.run_attempt == 1
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - name: Enforce owner approval and exact evidence before any mutation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+          PR41_EVIDENCE_RUN: ${{ inputs.evidence_run }}
+          PR41_APPROVED_PLAN_SHA256: ${{ inputs.approved_plan_sha256 }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/pr41-production-release.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: pr41-production-safe-status
+          path: pr41-production-status/summary.json
+          retention-days: 30
