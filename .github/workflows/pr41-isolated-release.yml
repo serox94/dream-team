@@ -1,0 +1,43 @@
+name: PR41 exact production module isolated release rehearsal
+on:
+  workflow_dispatch:
+  push:
+    branches: [ops/pr41-safe-release-20261106]
+    paths: [scripts/pr41-isolated-release.mjs, scripts/pr41-isolated-cleanup.mjs, scripts/pr41-release-transition.mjs, .github/workflows/pr41-isolated-release.yml]
+permissions:
+  contents: read
+concurrency:
+  group: dream-team-d1-isolation
+  cancel-in-progress: false
+jobs:
+  rehearse:
+    if: github.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: npm ci --ignore-scripts
+      - run: node --test tests/pr41-release-transition.test.mjs
+      - name: Rehearse on one newly owned D1 and R2 only
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/pr41-isolated-release.mjs
+      - name: Remove only this run's recorded resources
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/pr41-isolated-cleanup.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: pr41-isolated-status
+          path: pr41-isolated-status/*.json
+          retention-days: 14
