@@ -17,15 +17,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: python
         run: |
-          import urllib.request,os,json,zipfile,io
+          import urllib.request,urllib.error,os,json,zipfile,io
           base='https://api.github.com/repos/serox94/dream-team'
           def read(path):
             req=urllib.request.Request(base+path,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json'})
-            return urllib.request.urlopen(req).read()
+            try: return urllib.request.urlopen(req).read()
+            except urllib.error.HTTPError as e:
+              print('::error title=PR41 evidence read failed::HTTP '+str(e.code)+' endpoint '+path.split('?')[0])
+              raise
           for run,name in [(42265431886,'pr41-isolated-status'),(42255416804,'pr41-backup-safe-status')]:
             artifacts=json.loads(read('/actions/runs/'+str(run)+'/artifacts'))['artifacts']
             a=next(a for a in artifacts if a['name']==name and not a['expired'])
             archive=zipfile.ZipFile(io.BytesIO(read('/actions/artifacts/'+str(a['id'])+'/zip')))
-            report=json.loads(archive.read('summary.json'))
+            names=archive.namelist()
+            summaries=[n for n in names if n.endswith('summary.json')]
+            if len(summaries)!=1:
+              print('::error title=PR41 artifact layout::'+json.dumps(names))
+              raise Exception('SUMMARY_LAYOUT')
+            report=json.loads(archive.read(summaries[0]))
             for key in ['result','stage','failure','restore','sourceCodeClone','rollback','backup','d1','media','d1Before']:
               if key in report: print('::notice title=PR41 retained '+str(run)+' '+key+'::'+json.dumps(report[key]))
