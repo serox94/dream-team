@@ -243,8 +243,9 @@ try{
         if(knowledgeRoute.includes('encyklopedia')){
           await offline.locator('#diagnostic-step [data-answer="yes"]').waitFor({state:'attached'});
           const inspectTactic=()=>offline.evaluate(()=>({rootClass:document.querySelector('#knowledge-root')?.className,toolsHidden:document.querySelector('#knowledge-tools')?.hidden,toolsDisplay:document.querySelector('#knowledge-tools')?getComputedStyle(document.querySelector('#knowledge-tools')).display:null,formPresent:!!document.querySelector('#tactic-form'),resultHtml:(document.querySelector('#tactic-result')?.innerHTML||'').slice(0,200),online:navigator.onLine,searchValue:document.querySelector('#knowledge-search')?.value}));
+          await offline.evaluate(()=>{window.__tacticError=null;window.addEventListener('error',e=>{window.__tacticError=e.message},{once:true});});
           await offline.locator('#tactic-form').evaluate(form=>form.requestSubmit());
-          console.log('OFFLINE_TACTIC_DEBUG '+JSON.stringify(await inspectTactic()));
+          console.log('OFFLINE_TACTIC_DEBUG '+JSON.stringify({...await inspectTactic(),lastError:await offline.evaluate(()=>window.__tacticError),valid:await offline.locator('#tactic-form').evaluate(f=>f.checkValidity())}));
           await offline.locator('#tactic-result .tool-result').waitFor({state:'visible',timeout:5000});
           assert.match(await offline.locator('#tactic-result').innerText(),/Dobry punkt startowy/,'offline tactic result');
         }else{
