@@ -1,8 +1,6 @@
 name: PR41 read-only release approval gate
 on:
-  push:
-    branches: [ops/pr41-safe-release-20261106]
-    paths: [.github/workflows/pr41-approval-read.yml]
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
