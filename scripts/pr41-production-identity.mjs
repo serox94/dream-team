@@ -24,6 +24,10 @@ try {
  if(report.content.type?.startsWith('multipart/')) {
   for(const [name,file] of await r.formData()) {const bytes=typeof file==='string'?Buffer.from(file):Buffer.from(await file.arrayBuffer());report.content.modules.push({name,bytes:bytes.length,sha256:digest(bytes)});}
  }else {const bytes=Buffer.from(await r.arrayBuffer());report.content.modules.push({name:'index.js',bytes:bytes.length,sha256:digest(bytes)});}
+ await active();report.stage='EXACT_VERSION_CONTENT';
+ const exact=await cf('/workers/workers/dream-team/versions/'+expected+'?include=modules');
+ report.exact={shape:shape(exact),id:exact.id,entrypoint:exact.main_module,assets:shape(exact.assets),modules:exact.modules?.map(m=>({name:m.name,shape:shape(m),sha256:typeof m.content==='string'?digest(m.content):null}))};
+ check(exact.id===expected&&exact.modules?.length>0,'EXACT_VERSION_CONTENT_UNAVAILABLE');
  await active();report.stage='BACKUP_EVIDENCE';
  const gh=async path=>{const r=await fetch('https://api.github.com/repos/serox94/dream-team'+path,{headers:{authorization:'Bearer '+process.env.GH_TOKEN,accept:'application/vnd.github+json'},signal:AbortSignal.timeout(30000)});check(r.ok,'GITHUB_EVIDENCE_READ_FAILED');return r.json()};
  const run=await gh('/actions/runs/42255416804');

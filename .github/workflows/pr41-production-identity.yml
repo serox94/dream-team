@@ -13,6 +13,7 @@ concurrency:
 jobs:
   inspect:
     if: github.run_attempt == 1
+    environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
