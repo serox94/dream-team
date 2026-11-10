@@ -50,7 +50,7 @@ async function sourceGate(){
  for(const name of ['DB','ASSETS','AI','MEDIA','BACKUP_STATUS','RYBY_SESSION_SECRET','RYBY_LOGIN_PASSWORD','TAVILY_API_KEY'])need(names.includes(name),'SOURCE_BINDING_MISSING');
  need(src.bindings.every(x=>['ai','assets','plain_text','secret_text','d1','r2_bucket'].includes(x.type)),'UNSUPPORTED_BINDING_TYPE');
  const versions=await request('/workers/scripts/dream-team/versions?deployable=true');
- need((versions.items||[]).some(x=>x.id===previous),'PREVIOUS_VERSION_NOT_DEPLOYABLE');
+ need((Array.isArray(versions)?versions:versions.items||[]).some(x=>x.id===previous),'PREVIOUS_VERSION_NOT_DEPLOYABLE');
  return src;
 }
 async function ghCheck(){
@@ -62,11 +62,11 @@ async function ghCheck(){
 async function backup(){
  report.stage='BACKUP';
  const r2=await request('/r2/buckets/dream-team-d1-backups/objects?prefix=dream-team-db%2F2026-11-&per_page=100');
- const backups=(r2.objects||[]).sort((a,b)=>String(b.uploaded||b.last_modified).localeCompare(String(a.uploaded||a.last_modified)));
+ const backups=(Array.isArray(r2)?r2:r2.objects||[]).filter(x=>typeof x.key==='string'&&x.key.startsWith('dream-team-db/')).sort((a,b)=>String(b.uploaded||b.last_modified).localeCompare(String(a.uploaded||a.last_modified)));
  const latest=backups[0],date=Date.parse(latest?.uploaded||latest?.last_modified||'');
  need(latest&&date<=Date.now()&&Date.now()-date<36*3600000,'BACKUP_NOT_CURRENT');
  const media=await request('/r2/buckets/dream-team-media/objects?per_page=100');
- need((media.objects||[]).length===0&&!media.truncated,'MEDIA_REQUIRES_INDEPENDENT_BACKUP');
+ need((Array.isArray(media)?media:media.objects||[]).length===0&&!media.truncated,'MEDIA_REQUIRES_INDEPENDENT_BACKUP');
  const file=join(directory,'export.sql');
  command('npx',['wrangler','d1','export','dream-team-db','--remote','--output',file]);
  const bytes=await readFile(file);
