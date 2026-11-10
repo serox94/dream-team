@@ -108,11 +108,39 @@
     }catch(error){box.textContent=error.message;}
   }
   async function trash(){
-    const box=document.getElementById('trash-list');box.textContent='Ładowanie…';
+    const box=document.getElementById('trash-list');
+    if(!box)return;
+    const trip=window.DREAM_TRIP,tripId=encodeURIComponent(trip.id);
+    box.textContent=T('Ładowanie…','Loading…');
     try{
-      const {items}=await Dream.api('/api/trash?tripId='+encodeURIComponent(window.DREAM_TRIP.id));
-      box.innerHTML=items.length?items.map(x=>`<div class="recovery-row"><span>${E({catches:'Połów',spots:'Spot',checklist:'Checklista'}[x.kind])}: ${E(x.label)}</span><button class="secondary-btn" data-restore="${E(x.kind)}" data-id="${x.id}" type="button">Przywróć</button></div>`).join(''):'Brak usuniętych wpisów w wybranym wyjeździe.';
-      box.querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await Dream.api(`/api/${b.dataset.restore}/${b.dataset.id}/restore?tripId=${encodeURIComponent(window.DREAM_TRIP.id)}`,{method:'POST',body:'{}'});await refresh();Dream.notice('Wpis przywrócony.');}catch(e){Dream.notice(e.message,true);b.disabled=false;}});
+      const {items}=await Dream.api('/api/trash?tripId='+tripId);
+      box.innerHTML=items.length?items.map(x=>`<div class="recovery-row"><span data-user-content>${E({catches:T('Połów','Catch'),spots:T('Spot','Spot'),checklist:T('Checklista','Checklist')}[x.kind])}: ${E(x.label)}</span><div class="form-actions"><button class="secondary-btn" data-restore="${E(x.kind)}" data-id="${x.id}" type="button">${T('Przywróć','Restore')}</button><button class="danger-btn" data-purge="${E(x.kind)}" data-id="${x.id}" type="button">${T('Usuń trwale','Delete permanently')}</button></div></div>`).join('')+`<p class="weather-note">${T('Trwałe usunięcie jest nieodwracalne w aplikacji.','Permanent deletion cannot be undone in the app.')}</p><button id="trash-clear" type="button" class="danger-btn">${T('Opróżnij kosz','Empty trash')} (${items.length})</button>`:T('Brak usuniętych wpisów w wybranym wyjeździe.','No deleted entries in the selected trip.');
+      box.querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{
+        b.disabled=true;
+        try{await Dream.api(`/api/${b.dataset.restore}/${b.dataset.id}/restore?tripId=${tripId}`,{method:'POST',body:'{}'});await refresh();Dream.notice(T('Wpis przywrócony.','Entry restored.'));}
+        catch(e){Dream.notice(e.message,true);b.disabled=false;}
+      });
+      box.querySelectorAll('[data-purge]').forEach(b=>b.onclick=async()=>{
+        if(!confirm(T('Usunąć ten wpis TRWALE? Nie będzie można go przywrócić z kosza.','Delete this entry PERMANENTLY? It cannot be restored from trash.')))return;
+        b.disabled=true;
+        try{
+          await Dream.api(`/api/trash/${b.dataset.purge}/${b.dataset.id}?tripId=${tripId}`,{method:'DELETE',body:JSON.stringify({confirmPermanent:true})});
+          await trash();
+          Dream.notice(T('Wpis trwale usunięty.','Entry permanently deleted.'));
+        }catch(e){Dream.notice(e.message,true);b.disabled=false;}
+      });
+      const clear=box.querySelector('#trash-clear');
+      if(clear)clear.onclick=async()=>{
+        const name=prompt(T('Aby trwale opróżnić kosz, wpisz dokładną nazwę wyjazdu: ','To permanently empty trash, enter the exact trip name: ')+trip.name);
+        if(name===null)return;
+        if(name!==trip.name){Dream.notice(T('Nazwa wyjazdu nie pasuje. Niczego nie usunięto.','Trip name does not match. Nothing was deleted.'),true);return;}
+        clear.disabled=true;
+        try{
+          const result=await Dream.api('/api/trash?tripId='+tripId,{method:'DELETE',body:JSON.stringify({confirmTripName:name})});
+          await trash();
+          Dream.notice(T('Opróżniono kosz. Trwale usunięto ','Trash emptied. Permanently deleted ')+result.deleted+T(' wpisów.',' entries.'));
+        }catch(e){Dream.notice(e.message,true);clear.disabled=false;}
+      };
     }catch(e){box.textContent=e.message;}
   }
   function render(){
@@ -120,7 +148,7 @@
     if(isSettings){
       root.innerHTML=`<section class="panel-card" id="lake-catalog"><h2>${T('Łowiska i research','Fisheries and research')}</h2><p>${T('Łowiska, edycja profili i wszystkie linki do researchu są teraz w jednym miejscu: Wyjazdy i archiwum → Łowiska.','Fisheries, profile editing and all research URLs now live together under Trips and archive → Fisheries.')}</p><a class="secondary-btn" href="/pages/wyjazdy.html#fisheries-area">${T('Zarządzaj łowiskami i źródłami','Manage fisheries and sources')}</a></section>
       <section class="panel-card"><h2>${T('Dodaj uczestnika','Add participant')}</h2><p>${T('Profile i PB istniejących wędkarzy edytujesz powyżej.','Edit existing angler profiles and personal bests above.')}</p><form id="angler-edit" class="form-grid"><div class="form-row">${field('angler-name','Nowy uczestnik','text','','required maxlength="60"')}${field('angler-pb','PB sprzed zapisów w aplikacji (kg)','number',0,'required min="0" max="150" step="0.01"')}</div>${m.currentUser?field('angler-login',T('Login (opcjonalnie, domyślnie imię)','Login (optional, defaults to name)'),'text','','maxlength="32"'):''}<button type="submit">Dodaj uczestnika</button></form></section>
-      <details class="panel-card management-details"><summary>Przywracanie wpisów</summary><p>${T('Usunięte wpisy z wyjazdu','Deleted entries from trip')} <span data-user-content>${E(window.DREAM_TRIP.name)}</span>.</p><div id="trash-list"></div></details>
+      <details class="panel-card management-details"><summary>${T('Przywracanie wpisów / kosz','Restore entries / trash')}</summary><p>${T('Usunięte wpisy z wyjazdu','Deleted entries from trip')} <span data-user-content>${E(window.DREAM_TRIP.name)}</span>.</p><div id="trash-list"></div></details>
       <section class="panel-card"><h2>Dostęp na tym urządzeniu</h2><p>Pozostajesz zalogowany, dopóki nie wylogujesz się lub nie usuniesz danych przeglądarki.</p><button type="button" id="ryby-logout" class="secondary-btn">Wyloguj</button></section>`;
       root.querySelector('#ryby-logout').onclick=async event=>{const button=event.currentTarget;button.disabled=true;try{await Dream.logout();}catch(e){Dream.notice(e.message,true);}finally{button.disabled=false;}};
       bind(document.getElementById('angler-edit'),async x=>{await Dream.api('/api/anglers',{method:'POST',body:JSON.stringify({name:x['angler-name'],baselinePbKg:Number(x['angler-pb']),username:x['angler-login']||undefined})});await refresh();document.dispatchEvent(new Event('dream:participants-changed'));});
