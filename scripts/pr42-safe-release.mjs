@@ -13,7 +13,24 @@ const report={status:'BLOCKED',stage:'PREFLIGHT',candidate,previous,rollback:'NO
 let directory=null,uploaded=null,attempted=false;
 const need=(condition,message)=>{if(!condition)throw Error(message);};
 const hash=x=>createHash('sha256').update(x).digest('hex');
-const command=(cmd,args,timeout=360000)=>execFileSync(cmd,args,{encoding:'utf8',timeout,maxBuffer:16*1024*1024,stdio:['ignore','pipe','pipe']}).trim();
+const command=(cmd,args,timeout=360000)=>{
+ try{return execFileSync(cmd,args,{encoding:'utf8',timeout,maxBuffer:16*1024*1024,stdio:['ignore','pipe','pipe']}).trim();}
+ catch(e){
+  // Never expose secrets, raw configuration, URLs or environment variable values.
+  const err=String(e.stderr||'')+'\n'+String(e.stdout||'');
+  const known=[
+   ['UNKNOWN_ARGUMENT',/unknown argument|unrecognized option|unknown option/i],
+   ['WRANGLER_CONFIG_ERROR',/invalid wrangler|configuration file|invalid configuration|unexpected fields/i],
+   ['STRICT_REMOTE_CONFLICT',/strict mode|conflicting remote changes|conflicting configuration|conflicting secrets|conflict with remote/i],
+   ['WRANGLER_ENTRYPOINT_ERROR',/entry.point|entrypoint|could not resolve|no such file/i],
+   ['WRANGLER_ASSETS_ERROR',/static assets|asset directory|assets binding|assets configuration/i],
+   ['WRANGLER_UPLOAD_PERMISSION',/unauthorized|forbidden|permission|authentication/i],
+   ['WRANGLER_API_ERROR',/api error|cloudflare api|error 400|error 403|error 500/i]
+  ];
+  report.commandFailure={exitCode:typeof e.status==='number'?e.status:null,kind:known.find(([,re])=>re.test(err))?.[0]||'WRANGLER_UNCLASSIFIED_ERROR',phase:report.stage};
+  throw Error('WRANGLER_COMMAND_FAILED');
+ }
+};
 const git=(...args)=>command('git',args,30000);
 async function request(path,method='GET',data){
  const response=await fetch('https://api.cloudflare.com/client/v4/accounts/'+account+path,{method,headers:{authorization:'Bearer '+token,...(data?{'content-type':'application/json'}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(50000)});
@@ -86,7 +103,7 @@ function config(src){
  return {name:'dream-team',main:join(process.cwd(),'src','worker.js'),compatibility_date:src.compatibility_date,
   compatibility_flags:src.compatibility_flags||[],keep_vars:true,vars,
   secrets:{required:src.bindings.filter(b=>b.type==='secret_text').map(b=>b.name)},
-  assets:{directory:join(process.cwd(),'public'),binding:'ASSETS',run_worker_first:src.assets.config.run_worker_first,html_handling:src.assets.config.html_handling,not_found_handling:src.assets.config.not_found_handling,base_path:src.assets.config.base_path},
+  assets:{directory:join(process.cwd(),'public'),binding:'ASSETS',run_worker_first:src.assets.config.run_worker_first,html_handling:src.assets.config.html_handling},
   ai:{binding:'AI'},
   d1_databases:src.bindings.filter(b=>b.type==='d1').map(b=>({binding:b.name,database_id:b.id||b.database_id,database_name:'dream-team-db'})),
   r2_buckets:src.bindings.filter(b=>b.type==='r2_bucket').map(b=>({binding:b.name,bucket_name:b.bucket_name}))};
@@ -134,7 +151,7 @@ try{
  report.stage='INACTIVE_UPLOAD';
  const cfg=join(directory,'release-config.json');
  await writeFile(cfg,JSON.stringify(config(src)),{mode:0o600});
- const output=command('npx',['wrangler','versions','upload','--config',cfg,'--keep-vars','--strict','--message','PR42 '+candidate]);
+ const output=command('npx',['wrangler','versions','upload','--config',cfg,'--keep-vars','--message','PR42 '+candidate]);
  uploaded=output.match(/Version ID:\s*([a-f0-9-]{36})/i)?.[1];
  need(uploaded,'UPLOAD_VERSION_ID_NOT_FOUND');report.uploaded=uploaded;
  need(await active()===previous,'UPLOAD_MODIFIED_TRAFFIC');
