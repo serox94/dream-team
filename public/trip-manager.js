@@ -114,7 +114,7 @@
     box.textContent=T('Ładowanie…','Loading…');
     try{
       const {items}=await Dream.api('/api/trash?tripId='+tripId);
-      box.innerHTML=items.length?items.map(x=>`<div class="recovery-row"><span data-user-content>${E({catches:T('Połów','Catch'),spots:T('Spot','Spot'),checklist:T('Checklista','Checklist')}[x.kind])}: ${E(x.label)}</span><div class="form-actions"><button class="secondary-btn" data-restore="${E(x.kind)}" data-id="${x.id}" type="button">${T('Przywróć','Restore')}</button><button class="danger-btn" data-purge="${E(x.kind)}" data-id="${x.id}" type="button">${T('Usuń trwale','Delete permanently')}</button></div></div>`).join('')+`<p class="weather-note">${T('Trwałe usunięcie jest nieodwracalne w aplikacji.','Permanent deletion cannot be undone in the app.')}</p><button id="trash-clear" type="button" class="danger-btn">${T('Opróżnij kosz','Empty trash')} (${items.length})</button>`:T('Brak usuniętych wpisów w wybranym wyjeździe.','No deleted entries in the selected trip.');
+      box.innerHTML=items.length?items.map(x=>`<div class="recovery-row"><span data-user-content>${E({catches:T('Połów','Catch'),spots:T('Spot','Spot'),checklist:T('Checklista','Checklist')}[x.kind])}: ${E(x.label)}</span><div class="form-actions"><button class="secondary-btn" data-restore="${E(x.kind)}" data-id="${x.id}" type="button">${T('Przywróć','Restore')}</button><button class="danger-btn" data-purge="${E(x.kind)}" data-id="${x.id}" type="button">${T('Usuń trwale','Delete permanently')}</button></div></div>`).join('')+`<p class="weather-note">${T('Trwałe usunięcie jest nieodwracalne w aplikacji.','Permanent deletion cannot be undone in the app.')}</p>`:T('Brak usuniętych wpisów w wybranym wyjeździe.','No deleted entries in the selected trip.');
       box.querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{
         b.disabled=true;
         try{await Dream.api(`/api/${b.dataset.restore}/${b.dataset.id}/restore?tripId=${tripId}`,{method:'POST',body:'{}'});await refresh();Dream.notice(T('Wpis przywrócony.','Entry restored.'));}
@@ -129,18 +129,7 @@
           Dream.notice(T('Wpis trwale usunięty.','Entry permanently deleted.'));
         }catch(e){Dream.notice(e.message,true);b.disabled=false;}
       });
-      const clear=box.querySelector('#trash-clear');
-      if(clear)clear.onclick=async()=>{
-        const name=prompt(T('Aby trwale opróżnić kosz, wpisz dokładną nazwę wyjazdu: ','To permanently empty trash, enter the exact trip name: ')+trip.name);
-        if(name===null)return;
-        if(name!==trip.name){Dream.notice(T('Nazwa wyjazdu nie pasuje. Niczego nie usunięto.','Trip name does not match. Nothing was deleted.'),true);return;}
-        clear.disabled=true;
-        try{
-          const result=await Dream.api('/api/trash?tripId='+tripId,{method:'DELETE',body:JSON.stringify({confirmTripName:name})});
-          await trash();
-          Dream.notice(T('Opróżniono kosz. Trwale usunięto ','Trash emptied. Permanently deleted ')+result.deleted+T(' wpisów.',' entries.'));
-        }catch(e){Dream.notice(e.message,true);clear.disabled=false;}
-      };
+
     }catch(e){box.textContent=e.message;}
   }
   function render(){
