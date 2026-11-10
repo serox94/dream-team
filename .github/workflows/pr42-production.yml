@@ -2,7 +2,7 @@ name: PR42 controlled code-only production release
 on:
   push:
     branches: [ops/pr42-code-release-20261110]
-    paths: [.github/workflows/pr42-production.yml]
+    paths: [.github/workflows/pr42-production.yml, scripts/pr42-safe-release.mjs]
 permissions:
   contents: read
   actions: read
