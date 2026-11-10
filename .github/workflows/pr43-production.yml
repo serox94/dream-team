@@ -1,0 +1,79 @@
+name: PR43 controlled code-only production release
+on:
+  push:
+    branches: [ops/pr43-trash-only-release-20261110]
+    paths: [.github/workflows/pr43-production.yml, scripts/pr43-safe-release.mjs]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: dream-team-production
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Exact approved application and no database/schema changes
+        run: |
+          test "$(git rev-parse refs/remotes/origin/main)" = "fa9bf8def9d9ddd5319dc33a7055c742213cadd2"
+          git diff --exit-code fa9bf8def9d9ddd5319dc33a7055c742213cadd2 HEAD -- src public migrations wrangler.jsonc package.json package-lock.json
+          node --check scripts/pr43-safe-release.mjs
+      - name: Full unit, API, DOM and security regression
+        run: npm test
+      - name: Bundle and validate the unchanged PR43 application
+        run: npm run build
+      - name: Dry-run exact versions upload CLI and temporary absolute asset paths
+        run: |
+          node --input-type=module -e "
+            import fs from 'node:fs';
+            import os from 'node:os';
+            import path from 'node:path';
+            const c=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
+            c.main=path.join(process.cwd(),'src/worker.js');
+            c.assets.directory=path.join(process.cwd(),'public');
+            c.keep_vars=true;
+            c.vars.APP_BUILD='fa9bf8def9d9ddd5319dc33a7055c742213cadd2';
+            c.secrets.required=['TAVILY_API_KEY','RYBY_LOGIN_USERNAME','RYBY_LOGIN_PASSWORD','RYBY_SESSION_SECRET'];
+            fs.writeFileSync(path.join(os.tmpdir(),'pr43-upload-smoke.json'),JSON.stringify(c));
+          "
+          npx wrangler versions upload --dry-run --config /tmp/pr43-upload-smoke.json --keep-vars --message pr43-cli-preflight
+  production:
+    needs: verify
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Prepare built static assets
+        run: node scripts/build.mjs
+      - name: Guarded D1/R2 backup, inactive upload, candidate smoke, one cutover and rollback
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          DREAMTEAM_PRODUCTION_APPROVED: ${{ vars.DREAMTEAM_PRODUCTION_APPROVED }}
+        run: node scripts/pr43-safe-release.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pr43-production-safe-status
+          path: pr43-release-status/summary.json
+          retention-days: 30
