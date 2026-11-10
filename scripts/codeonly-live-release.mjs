@@ -159,7 +159,7 @@ try{
  need(process.env.GITHUB_REF==='refs/heads/ops/production-code-only'&&process.env.GITHUB_EVENT_NAME==='push'&&process.env.GITHUB_REPOSITORY==='serox94/dream-team','RELEASE_CONTEXT_INVALID');
  need(/^[a-f0-9]{40}$/.test(candidate||'')&&git('rev-parse','HEAD')===candidate,'INVALID_RELEASE_SHA');
  need(process.env.GITHUB_ACTOR==='serox94','UNTRUSTED_RELEASE_ACTOR');
- need(process.env.DREAMTEAM_PRODUCTION_APPROVED==='yes','OWNER_PRODUCTION_FLAG_CLOSED');
+ need(process.env.CODEONLY_AUTOMATION_ENABLED==='yes','CODE_ONLY_GATE_CLOSED');
  need(account&&token&&process.env.GH_TOKEN,'DEPLOY_CREDENTIALS_MISSING');
  need(git('rev-parse','HEAD')===candidate,'RELEASE_HEAD_CHANGED');
  need(git('rev-parse','refs/remotes/origin/main')===candidate,'MAIN_HEAD_CHANGED');
