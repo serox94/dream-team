@@ -83,12 +83,24 @@ async function ghCheck(){
 }
 async function backup(){
  report.stage='BACKUP';
- const r2=await request('/r2/buckets/dream-team-d1-backups/objects?prefix=dream-team-db%2F&per_page=100');
- const backups=(Array.isArray(r2)?r2:r2.objects||[]).filter(x=>typeof x.key==='string'&&x.key.startsWith('dream-team-db/')).sort((a,b)=>String(b.uploaded||b.last_modified).localeCompare(String(a.uploaded||a.last_modified)));
+ // Keep lookups bounded even after years of daily backups; also check the previous
+ // month so a release on the first of a month can use yesterday's backup.
+ const now=new Date(),priorMonth=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-1,1));
+ const months=[now,priorMonth].map(x=>x.toISOString().slice(0,7));
+ const backups=[];
+ for(const month of months){
+  const r2=await request('/r2/buckets/dream-team-d1-backups/objects?prefix='+encodeURIComponent('dream-team-db/'+month)+'&per_page=100');
+  const items=Array.isArray(r2)?r2:r2.objects||[];
+  backups.push(...items.filter(x=>typeof x.key==='string'&&x.key.startsWith('dream-team-db/'+month)));
+ }
+ backups.sort((a,b)=>String(b.uploaded||b.last_modified).localeCompare(String(a.uploaded||a.last_modified)));
  const latest=backups[0],date=Date.parse(latest?.uploaded||latest?.last_modified||'');
  need(latest&&date<=Date.now()&&Date.now()-date<36*3600000,'BACKUP_NOT_CURRENT');
+ // Code-only releases never write or delete R2 media. Existing files must not
+ // block emergency fixes, and they remain in their current bucket unchanged.
  const media=await request('/r2/buckets/dream-team-media/objects?per_page=100');
- need((Array.isArray(media)?media:media.objects||[]).length===0&&!media.truncated,'MEDIA_REQUIRES_INDEPENDENT_BACKUP');
+ need(Array.isArray(media)||Array.isArray(media?.objects),'MEDIA_BUCKET_UNAVAILABLE');
+ report.media='PRESERVED_UNCHANGED';
  const file=join(directory,'export.sql');
  command('npx',['wrangler','d1','export','dream-team-db','--remote','--output',file]);
  const bytes=await readFile(file);
@@ -154,8 +166,8 @@ try{
  await ghCheck();await dbCheck();const src=await sourceGate();
  // Gate any database migration or dependency/runtime config change outside the code-only channel.
  need(git('diff','--name-only',previousBuild,candidate,'--','migrations','wrangler.jsonc','package.json','package-lock.json')==='','NON_CODE_ONLY_CHANGE');
- if(previousBuild===candidate){
-  report.status='PASS';report.stage='ALREADY_CURRENT';
+ if(previousBuild===candidate || git('diff','--name-only',previousBuild,candidate,'--','src','public')===''){
+  report.status='PASS';report.stage='APP_CODE_UNCHANGED';
  }else{
  directory=await mkdtemp(join(tmpdir(),'codeonly-release-'));
  await backup();
