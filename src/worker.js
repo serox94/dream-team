@@ -367,6 +367,39 @@ async function removeOrRestore(request,env,kind,id,restore){
   statements.push(stmt(env,`UPDATE ${table} SET deleted_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?`,restore?null:new Date().toISOString(),id));
   await env.DB.batch(statements);return json({ok:true,id,recoverable:true});
 }
+// Only trashed rows can be removed permanently. Preserve catch and Deeper associations.
+async function purgeTrash(request,env,kind=null,id=null){
+  const tripId=new URL(request.url).searchParams.get('tripId');
+  if(!tripId)fail('Wymagany tripId.');
+  const trip=await tripExists(env,tripId);
+  const input=await body(request);
+  if(kind){
+    if(input.confirmPermanent!==true)fail('Potwierdź trwałe usunięcie wpisu.');
+    const table=tables[kind];
+    const row=await scopedRow(request,env,table,id,true);
+    if(!row.deleted_at)fail('Można trwale usuwać wyłącznie wpisy z kosza.',409,'NOT_IN_TRASH');
+    if(kind==='spots'){
+      const used=await one(env,'SELECT id FROM catches WHERE spot_id=? LIMIT 1',id);
+      const media=await one(env,'SELECT id FROM deeper_media WHERE spot_id=? LIMIT 1',id);
+      if(used||media)fail('Spot ma powiązane połowy lub materiały Deeper. Najpierw usuń te powiązania.',409,'SPOT_IN_USE');
+    }
+    const deleted=await run(env,`DELETE FROM ${table} WHERE id=? AND trip_id=? AND deleted_at IS NOT NULL`,id,tripId);
+    if(deleted.meta?.changes!==1)fail('Wpis nie jest już w koszu.',409,'NOT_IN_TRASH');
+    return json({ok:true,deleted:1});
+  }
+  if(input.confirmTripName!==trip.name)fail('Wpisz dokładną nazwę wyjazdu, aby opróżnić kosz.');
+  const used=await one(env,`SELECT s.id FROM spots s WHERE s.trip_id=? AND s.deleted_at IS NOT NULL
+    AND (EXISTS(SELECT 1 FROM catches c WHERE c.spot_id=s.id AND (c.deleted_at IS NULL OR c.trip_id<>?))
+    OR EXISTS(SELECT 1 FROM deeper_media m WHERE m.spot_id=s.id)) LIMIT 1`,tripId,tripId);
+  if(used)fail('Kosz zawiera spot z powiązanymi połowami lub materiałami Deeper. Usuń powiązania przed opróżnieniem kosza.',409,'SPOT_IN_USE');
+  // The batch is atomic; remove child catches before trashed spots.
+  const result=await env.DB.batch([
+    stmt(env,'DELETE FROM catches WHERE trip_id=? AND deleted_at IS NOT NULL',tripId),
+    stmt(env,'DELETE FROM spots WHERE trip_id=? AND deleted_at IS NOT NULL',tripId),
+    stmt(env,'DELETE FROM checklist_items WHERE trip_id=? AND deleted_at IS NOT NULL',tripId)
+  ]);
+  return json({ok:true,deleted:result.reduce((sum,r)=>sum+(r.meta?.changes||0),0)});
+}
 async function exportData(env){
   const data={format:'dream-team-backup-v1',exportedAt:new Date().toISOString(),tables:{}};
   for(const table of ['anglers','lakes','trips','trip_participants','catches','spots','checklist_items','checklist_categories','lake_sources','lake_facts','lake_fact_changes','lake_research_runs','lake_candidate_searches','research_pages','research_observations','research_jobs','research_locations','lake_profile_versions','deeper_media','deeper_ai_attempts','offline_receipts','checklist_templates','checklist_template_items','trip_documents','trip_notes','content_translations','content_sources','translation_jobs','translation_cache','water_measurements','app_settings'])data.tables[table]=await all(env,`SELECT * FROM ${table}`);
@@ -422,7 +455,10 @@ async function privateFetch(request,env,ctx,active){
       if(researchMatch&&['GET','POST'].includes(method))return await handleSuggestions(request,env,decodeURIComponent(researchMatch[1]));
       let categoryMatch=path.match(/^\/api\/checklist-categories\/([^/]+)$/);
       if(categoryMatch&&['PATCH','DELETE'].includes(method))return await categories(request,env,decodeURIComponent(categoryMatch[1]));
-      if(path==='/api/trash'&&method==='GET'){
+      const trashItem=path.match(/^\/api\/trash\/(catches|spots|checklist)\/(\d+)$/);
+       if(trashItem&&method==='DELETE')return await purgeTrash(request,env,trashItem[1],Number(trashItem[2]));
+       if(path==='/api/trash'&&method==='DELETE')return await purgeTrash(request,env);
+       if(path==='/api/trash'&&method==='GET'){
         const tripId=url.searchParams.get('tripId');if(!tripId)fail('Wymagany tripId.');await tripExists(env,tripId);
         const items=[];
         for(const [kind,table] of Object.entries(tables)){
