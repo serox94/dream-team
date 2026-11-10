@@ -916,7 +916,5 @@
   "Potwierdź trwałe usunięcie wpisu.": "Confirm permanent deletion of the entry.",
   "Można trwale usuwać wyłącznie wpisy z kosza.": "Only entries already in the trash can be permanently deleted.",
   "Spot ma powiązane połowy lub materiały Deeper. Najpierw usuń te powiązania.": "This spot is linked to catches or Deeper media. Remove these links first.",
-  "Wpis nie jest już w koszu.": "This entry is no longer in the trash.",
-  "Wpisz dokładną nazwę wyjazdu, aby opróżnić kosz.": "Enter the exact trip name to empty the trash.",
-  "Kosz zawiera spot z powiązanymi połowami lub materiałami Deeper. Usuń powiązania przed opróżnieniem kosza.": "The trash contains a spot linked to catches or Deeper media. Remove those links before emptying the trash."
+  "Wpis nie jest już w koszu.": "This entry is no longer in the trash."
 }

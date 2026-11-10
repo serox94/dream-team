@@ -1196,4 +1196,3 @@ html.auth-locked .auth-gate {
 #trash-list .recovery-row { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.65rem; padding:.75rem; border:1px solid var(--border-strong, #b9c4af); border-radius:10px; }
 #trash-list .recovery-row > span { flex:1 1 12rem; overflow-wrap:anywhere; }
 #trash-list .recovery-row .form-actions { display:flex; flex-wrap:wrap; gap:.5rem; }
-#trash-clear { justify-self:start; }
