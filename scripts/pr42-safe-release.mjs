@@ -83,10 +83,10 @@ async function backup(){
 function config(src){
  const vars=Object.fromEntries(src.bindings.filter(b=>b.type==='plain_text').map(b=>[b.name,b.text]));
  vars.APP_BUILD=candidate;
- return {name:'dream-team',main:'src/worker.js',compatibility_date:src.compatibility_date,
+ return {name:'dream-team',main:join(process.cwd(),'src','worker.js'),compatibility_date:src.compatibility_date,
   compatibility_flags:src.compatibility_flags||[],keep_vars:true,vars,
   secrets:{required:src.bindings.filter(b=>b.type==='secret_text').map(b=>b.name)},
-  assets:{directory:'./public',binding:'ASSETS',run_worker_first:src.assets.config.run_worker_first,html_handling:src.assets.config.html_handling,not_found_handling:src.assets.config.not_found_handling,base_path:src.assets.config.base_path},
+  assets:{directory:join(process.cwd(),'public'),binding:'ASSETS',run_worker_first:src.assets.config.run_worker_first,html_handling:src.assets.config.html_handling,not_found_handling:src.assets.config.not_found_handling,base_path:src.assets.config.base_path},
   ai:{binding:'AI'},
   d1_databases:src.bindings.filter(b=>b.type==='d1').map(b=>({binding:b.name,database_id:b.id||b.database_id,database_name:'dream-team-db'})),
   r2_buckets:src.bindings.filter(b=>b.type==='r2_bucket').map(b=>({binding:b.name,bucket_name:b.bucket_name}))};
