@@ -150,10 +150,10 @@ try{
  need(process.env.DREAMTEAM_PRODUCTION_APPROVED==='yes','OWNER_PRODUCTION_FLAG_CLOSED');
  need(account&&token&&process.env.GH_TOKEN,'DEPLOY_CREDENTIALS_MISSING');
  need(git('rev-parse','HEAD')===candidate,'RELEASE_HEAD_CHANGED');
- // Gate any database migration or dependency/runtime config change outside the code-only channel.
- need(git('diff','--name-only',previousBuild,candidate,'--','migrations','wrangler.jsonc','package.json','package-lock.json')==='','NON_CODE_ONLY_CHANGE');
  need(git('rev-parse','refs/remotes/origin/main')===candidate,'MAIN_HEAD_CHANGED');
  await ghCheck();await dbCheck();const src=await sourceGate();
+ // Gate any database migration or dependency/runtime config change outside the code-only channel.
+ need(git('diff','--name-only',previousBuild,candidate,'--','migrations','wrangler.jsonc','package.json','package-lock.json')==='','NON_CODE_ONLY_CHANGE');
  if(previousBuild===candidate){
   report.status='PASS';report.stage='ALREADY_CURRENT';
  }else{
