@@ -1,4 +1,4 @@
-// Reusable controlled code-only DreamTeam release. Requires successful CI, isolated backup,
+// Autonomous code-only DreamTeam release for exact, CI-passed main SHA. Requires successful CI, isolated backup,
 // immutable Worker version, binding checks, canary and rollback. No migrations or session resets.
 import {execFileSync} from 'node:child_process';
 import {mkdtemp,readFile,writeFile,mkdir,rm} from 'node:fs/promises';
@@ -75,11 +75,13 @@ async function sourceGate(){
  need((Array.isArray(versions)?versions:versions.items||[]).some(x=>x.id===previous),'PREVIOUS_VERSION_NOT_DEPLOYABLE');
  return src;
 }
-async function ghCheck(){
+async function ghCheck(appChanged){
  need((await github('/git/ref/heads/main')).object?.sha===candidate,'MAIN_MOVED');
- const runs=(await github('/actions/runs?branch=main&per_page=30')).workflow_runs;
- for(const name of ['Validate Dream Team','Responsive UI QA'])
-  need(runs.some(x=>x.name===name&&x.head_sha===candidate&&x.conclusion==='success'&&x.status==='completed'),'CI_NOT_GREEN');
+ const runs=(await github('/actions/runs?branch=main&per_page=40')).workflow_runs;
+ const required=appChanged?['Validate Dream Team','Responsive UI QA']:['Validate Dream Team'];
+ for(const name of required)
+  need(runs.some(x=>x.name===name&&x.head_sha===candidate&&x.conclusion==='success'&&x.status==='completed'),'CI_NOT_GREEN_'+name.replaceAll(' ','_').toUpperCase());
+ // A workflow-only change must not trigger an application upload.
 }
 async function backup(){
  report.stage='BACKUP';
@@ -159,14 +161,15 @@ try{
  need(process.env.GITHUB_REF==='refs/heads/ops/production-code-only'&&process.env.GITHUB_EVENT_NAME==='push'&&process.env.GITHUB_REPOSITORY==='serox94/dream-team','RELEASE_CONTEXT_INVALID');
  need(/^[a-f0-9]{40}$/.test(candidate||'')&&git('rev-parse','HEAD')===candidate,'INVALID_RELEASE_SHA');
  need(process.env.GITHUB_ACTOR==='serox94','UNTRUSTED_RELEASE_ACTOR');
- need(process.env.CODEONLY_AUTOMATION_ENABLED==='yes','CODE_ONLY_GATE_CLOSED');
  need(account&&token&&process.env.GH_TOKEN,'DEPLOY_CREDENTIALS_MISSING');
  need(git('rev-parse','HEAD')===candidate,'RELEASE_HEAD_CHANGED');
  need(git('rev-parse','refs/remotes/origin/main')===candidate,'MAIN_HEAD_CHANGED');
- await ghCheck();await dbCheck();const src=await sourceGate();
+ await dbCheck();const src=await sourceGate();
  // Gate any database migration or dependency/runtime config change outside the code-only channel.
  need(git('diff','--name-only',previousBuild,candidate,'--','migrations','wrangler.jsonc','package.json','package-lock.json')==='','NON_CODE_ONLY_CHANGE');
- if(previousBuild===candidate || git('diff','--name-only',previousBuild,candidate,'--','src','public')===''){
+ const appChanged=git('diff','--name-only',previousBuild,candidate,'--','src','public')!=='';
+ await ghCheck(appChanged);
+ if(!appChanged){
   report.status='PASS';report.stage='APP_CODE_UNCHANGED';
  }else{
  directory=await mkdtemp(join(tmpdir(),'codeonly-release-'));
