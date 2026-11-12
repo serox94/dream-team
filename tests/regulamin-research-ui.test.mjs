@@ -113,3 +113,25 @@ test('opening Plaine 2 via Fisheries always shows its own saved regulations, eve
   assert.ok(!text.includes('UNRELATED OTHER LAKE EXTRA RULE'),'manual rules also belong to their own lake');
  }finally{dom.window.close();}
 });
+
+for (const page of ['/pages/regulamin.html', '/pages/porady.html', '/pages/dojazd.html']) {
+ test('source and verification panel is initially collapsed and can be opened: '+page,async()=>{
+  const {dom,trip}=scenario('pl',page);
+  const src='https://miloszewskie.pl/regulamin/';
+  trip.lake='Jezioro Miłoszewskie';
+  trip.lakeId='miloszewskie';
+  trip.lakeProfile={id:'miloszewskie',name:'Jezioro Miłoszewskie',sourceUrl:src,facts:{}};
+  try {
+   await dom.window.DreamTripRenderer.render({trip,documents:[{id:100,kind:'rules',title:'Regulamin',content:'2 wędki na osobę',sourceUrl:src}]});
+   const panel=dom.window.document.querySelector('details.source-panel');
+   assert.ok(panel,'source panel must remain available');
+   assert.equal(panel.open,false,'source panel must be collapsed by default');
+   assert.match(panel.querySelector('summary')?.textContent||'',/Źródła i weryfikacja/);
+   assert.equal(panel.querySelectorAll('a[href="'+src+'"]').length,1,'sources remain and URLs are deduplicated');
+   panel.querySelector('summary').click();
+   assert.equal(panel.open,true,'click expands the source panel');
+   panel.querySelector('summary').click();
+   assert.equal(panel.open,false,'second click collapses it');
+  } finally {dom.window.close();}
+ });
+}
