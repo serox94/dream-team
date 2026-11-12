@@ -50,7 +50,7 @@ const documentText=(doc,field)=>window.DreamContent?.text('documents',doc.id,fie
     if (Dream.safeUrl(profile?.sourceUrl)) seen.set(Dream.safeUrl(profile.sourceUrl), profile.name || 'Oficjalna strona łowiska');
     docs.forEach(d => { if (Dream.safeUrl(d.sourceUrl)) seen.set(Dream.safeUrl(d.sourceUrl), d.title || 'Źródło'); });
     if (!seen.size) return '';
-    return `<section class="panel-card source-panel"><div class="section-head"><h3>🔎 Źródła i weryfikacja</h3><span class="section-chip">dane łowiska</span></div><div class="quick-links">${[...seen.entries()].map(([url,label]) => `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`).join('')}</div></section>`;
+    return `<details class="panel-card source-panel"><summary><strong>🔎 Źródła i weryfikacja</strong></summary><div class="quick-links">${[...seen.entries()].map(([url,label]) => `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(label)}</a>`).join('')}</div></details>`;
   }
 
   // The crew photo belongs to the selected trip, not to the logged-in account.
