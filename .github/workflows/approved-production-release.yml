@@ -1,0 +1,62 @@
+name: Approved production release (blocked until all writers are fenced)
+on:
+  workflow_dispatch:
+    inputs:
+      plan_json:
+        description: Exact reviewed plan (SHAs, versions, D1 schemas, migration and artifact digests, configuration)
+        required: true
+        type: string
+      plan_sha256:
+        description: SHA256 of canonical plan JSON
+        required: true
+        type: string
+      operator_confirmation:
+        description: PRODUCTION followed by colon and exact plan digest
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: dream-team-production-release
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - run: node scripts/approved-production-release.mjs preflight
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_PLAN_JSON: ${{ inputs.plan_json }}
+          RELEASE_PLAN_SHA256: ${{ inputs.plan_sha256 }}
+          OPERATOR_CONFIRMATION: ${{ inputs.operator_confirmation }}
+  approved-gates:
+    needs: preflight
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      # Real approval must be visible through the run approval API. No Cloudflare
+      # credentials or deployment step while the all-writer protocol is unproven.
+      - run: node scripts/approved-production-release.mjs approved
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RELEASE_PLAN_JSON: ${{ inputs.plan_json }}
+          RELEASE_PLAN_SHA256: ${{ inputs.plan_sha256 }}
+          OPERATOR_CONFIRMATION: ${{ inputs.operator_confirmation }}

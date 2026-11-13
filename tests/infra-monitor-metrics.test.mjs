@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {workerMetrics,workerErrorAlert} from '../scripts/infra-monitor-metrics.mjs';
+test('aggregates runtime metrics without private event data',()=>assert.deepEqual(workerMetrics([{sum:{requests:40,errors:2}},{sum:{requests:60,errors:3}}]),{requests:100,errors:5}));
+test('alerts only at five errors and five percent',()=>{assert.equal(workerErrorAlert({requests:100,errors:5}),true);assert.equal(workerErrorAlert({requests:100,errors:4}),false);assert.equal(workerErrorAlert({requests:101,errors:5}),false)});
+test('rejects missing and impossible data',()=>{assert.throws(()=>workerMetrics(undefined));assert.throws(()=>workerMetrics([{sum:{requests:1,errors:2}}]));assert.throws(()=>workerMetrics([{sum:{requests:null,errors:0}}]))});
